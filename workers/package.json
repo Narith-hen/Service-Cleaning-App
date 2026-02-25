@@ -1,0 +1,22 @@
+{
+  "name": "workers",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/bookingWorker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^7.4.1",
+    "bullmq": "^5.70.0",
+    "dotenv": "^17.3.1",
+    "redis": "^5.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
