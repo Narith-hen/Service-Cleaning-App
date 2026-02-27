@@ -1,19 +1,58 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap");
 @import "tailwindcss";
-/* @import url('https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;700&display=swap'); */
-@import 'bootstrap/dist/css/bootstrap.min.css';
 
+:root {
+  --font-body: "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --font-display: "Sora", "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-body);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-@layer components {
-  .nav-link {
-    @apply px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800;
-  }
+* {
+  box-sizing: border-box;
+}
 
-  .mobile-link {
-    @apply block py-3 border-b hover:text-emerald-600;
-  }
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
 
-  .badge {
-    @apply absolute -top-1 -right-1 bg-red-600 text-white text-xs
-           rounded-full min-w-[20px] h-5 flex items-center justify-center;
-  }
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+.brand-font {
+  font-family: var(--font-display);
+}
+
+a {
+  font-weight: 500;
+  text-decoration: inherit;
 }
