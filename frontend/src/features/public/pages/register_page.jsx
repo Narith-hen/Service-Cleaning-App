@@ -211,11 +211,7 @@ const RegisterPage = () => {
 
             <div style={{ textAlign: 'center' }}>
               <Text type="secondary">Already have an account? </Text>
-<<<<<<< HEAD:frontend/src/pages/public/RegisterPage.jsx
-              <Link to="/login" style={{ color: '#32C753', fontWeight: 500 }}>
-=======
-              <Link to="/auth/login" style={{ color: '#667eea', fontWeight: 500 }}>
->>>>>>> master:frontend/src/features/public/pages/register_page.jsx
+              <Link to="/auth/login" style={{ color: '#32C753', fontWeight: 500 }}>
                 Log in
               </Link>
             </div>
