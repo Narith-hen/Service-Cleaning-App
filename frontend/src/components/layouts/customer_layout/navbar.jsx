@@ -47,21 +47,21 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 
   // Navigation items
   const navItems = [
-    { key: 'home', label: 'ទំព័រដើម', path: '/' },
-    { key: 'services', label: 'សេវាកម្ម', path: '/services' },
-    { key: 'about', label: 'អំពីយើង', path: '/about' },
-    { key: 'contact', label: 'ទំនាក់ទំនង', path: '/contact' },
+    { key: 'home', label: 'My Home', path: '/' },
+    { key: 'services', label: 'Services', path: '/services' },
+    { key: 'about', label: 'About Us', path: '/about' },
+    { key: 'contact', label: 'Contact Us', path: '/contact' },
   ];
 
   // User menu for logged in users
   const userMenu = (
     <Menu
       items={[
-        { key: 'profile', label: 'ប្រវត្តិរូប', onClick: () => navigate('/customer/profile') },
-        { key: 'bookings', label: 'ការកក់របស់ខ្ញុំ', onClick: () => navigate('/customer/bookings') },
-        { key: 'settings', label: 'ការកំណត់', onClick: () => navigate('/customer/settings') },
+        { key: 'profile', label: 'Profile', onClick: () => navigate('/customer/profile') },
+        { key: 'bookings', label: 'My Bookings', onClick: () => navigate('/customer/bookings') },
+        { key: 'settings', label: 'Settings', onClick: () => navigate('/customer/settings') },
         { type: 'divider' },
-        { key: 'logout', label: 'ចាកចេញ', danger: true, onClick: () => setIsLoggedIn(false) }
+        { key: 'logout', label: 'Logout', danger: true, onClick: () => setIsLoggedIn(false) }
       ]}
     />
   );
@@ -143,8 +143,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                 src={logoSomaet}
                 alt="Somaet logo"
                 style={{
-                  width: isMobile ? 36 : 42,
-                  height: isMobile ? 36 : 42,
+                  width: isMobile ? 42 : 50,
+                  height: isMobile ? 42 : 50,
                   objectFit: 'contain',
                   flexShrink: 0
                 }}
@@ -159,7 +159,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     fontFamily: "'Battambang', 'Khmer OS', sans-serif"
                   }}
                 >
-                  សម្អាត
+                  Somaet
                 </Text>
               </div>
             </Space>

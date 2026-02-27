@@ -94,7 +94,7 @@ export default function RegisterPage() {
             <img
               src={logoSomaet}
               alt="Somaet logo"
-              style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid #32C753", objectFit: "cover", margin: "0 auto 20px", display: "block" }}
+              style={{ width: 112, height: 112, objectFit: "contain", margin: "0 auto 20px", display: "block" }}
             />
             <Title level={2} style={{ marginBottom: 8, fontWeight: 600 }}>Create Account</Title>
             <Text type="secondary" style={{ fontSize: 15 }}>Join Somaet today</Text>

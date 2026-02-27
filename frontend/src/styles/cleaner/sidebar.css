@@ -32,11 +32,8 @@
 .cleaner-sidebar .sidebar-brand-logo {
   width: 45px;
   height: 45px;
-  object-fit: cover;
-  border-radius: 50%;
-  border: 2px solid #32C753;
+  object-fit: contain;
   flex-shrink: 0;
-  background: #ffffff;
 }
 
 .logo-text h2 {

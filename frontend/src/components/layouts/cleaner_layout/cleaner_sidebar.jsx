@@ -35,7 +35,7 @@ const CleanerSidebar = ({ darkMode }) => {
       <div className="sidebar-logo">
         <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
         <div className="logo-text">
-          <h2>Somaet Cleaner</h2>
+          <h2>Somaet</h2>
           <p>CLEANER PORTAL</p>
         </div>
       </div>

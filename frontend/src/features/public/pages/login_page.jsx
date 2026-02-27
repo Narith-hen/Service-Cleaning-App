@@ -89,33 +89,19 @@ const LoginPage = () => {
                 }}>
                     {/* Logo/Icon */}
                     <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                        <div
+                        <img
+                            src={logoSomaet}
+                            alt="Somaet logo"
                             onClick={() => navigate('/')}
                             style={{
                                 width: 112,
                                 height: 112,
-                                borderRadius: '50%',
-                                border: '2px solid #32C753',
-                                background: '#ffffff',
+                                objectFit: 'contain',
                                 margin: '0 auto 20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 6px 18px rgba(50, 199, 83, 0.18)',
+                                display: 'block',
                                 cursor: 'pointer'
                             }}
-                        >
-                            <img
-                                src={logoSomaet}
-                                alt="Somaet logo"
-                                style={{
-                                    width: 82,
-                                    height: 82,
-                                    objectFit: 'contain',
-                                    display: 'block'
-                                }}
-                            />
-                        </div>
+                        />
                         <Title level={2} style={{ marginBottom: 8, fontWeight: 600 }}>Welcome Back</Title>
                         <Text type="secondary" style={{ fontSize: 15 }}>Login to your Somaet account</Text>
                     </div>

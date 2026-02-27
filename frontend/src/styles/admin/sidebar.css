@@ -17,17 +17,36 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 14px;
+  gap: 12px;
+  justify-content: flex-start;
+  padding: 0 24px;
   margin: 0 16px 26px;
 }
 
 .admin-sidebar .sidebar-brand-logo {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
   flex-shrink: 0;
   background: transparent;
+  filter: drop-shadow(0 2px 6px rgba(50, 199, 83, 0.18));
+}
+
+.logo-text h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #16385e;
+  line-height: 1.2;
+}
+
+.logo-text p {
+  margin: 4px 0 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: #32C753;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
 /* Navigation */
