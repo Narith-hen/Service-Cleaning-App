@@ -1,34 +1,34 @@
-import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+// import React from 'react';
+// import { BrowserRouter as Router } from 'react-router-dom';
 
-// Import Bootstrap
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import 'bootstrap-icons/font/bootstrap-icons.css'; // Bootstrap Icons
+// // Import Bootstrap
+// import 'bootstrap/dist/css/bootstrap.min.css';
+// import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+// import 'bootstrap-icons/font/bootstrap-icons.css'; // Bootstrap Icons
 
-// Import router config
-import RouterConfig from './routes/router_config.jsx';
+// // Import router config
+// import RouterConfig from './routes/router_config.jsx';
 
-// Context providers
-import { TranslationProvider } from './contexts/translation_context.jsx';
-import { ThemeProvider } from './contexts/theme_context.jsx';
+// // Context providers
+// import { TranslationProvider } from './contexts/translation_context.jsx';
+// import { ThemeProvider } from './contexts/theme_context.jsx';
 
-// Styles
-import './App.css';
+// // Styles
+// import './App.css';
 
-function App() {
-  return (
-    <ThemeProvider>
-      <TranslationProvider>
-        <Router>
-          <RouterConfig />
-        </Router>
-      </TranslationProvider>
-    </ThemeProvider>
-  );
-}
+// function App() {
+//   return (
+//     <ThemeProvider>
+//       <TranslationProvider>
+//         <Router>
+//           <RouterConfig />
+//         </Router>
+//       </TranslationProvider>
+//     </ThemeProvider>
+//   );
+// }
 
-export default App;
+// export default App;
 
 
 
