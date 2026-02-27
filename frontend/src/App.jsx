@@ -1,18 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './hooks/useAuth'; // Import AuthProvider
-import CustomerLayout from './components/layout/customerLayout/Layout';
-import HomePage from './pages/public/HomePage';
+import { AuthProvider } from './hooks/useAuth';
+import AppRoutes from './routes/AppRoutes';
 
 function App() {
   return (
-    <AuthProvider> {/* Wrap everything with AuthProvider */}
-      <BrowserRouter>
-        <Routes>
-          <Route element={<CustomerLayout />}>
-            <Route path="/" element={<HomePage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <AuthProvider>
+      <AppRoutes />
     </AuthProvider>
   );
 }
