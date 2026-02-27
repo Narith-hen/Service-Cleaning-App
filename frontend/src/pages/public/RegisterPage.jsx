@@ -74,7 +74,7 @@ const RegisterPage = () => {
             <div style={{
               width: 80,
               height: 80,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, #32C753 0%, #28A745 100%)',
               borderRadius: '50%',
               margin: '0 auto 20px',
               display: 'flex',
@@ -179,7 +179,7 @@ const RegisterPage = () => {
                 style={{ 
                   borderRadius: 8,
                   height: 48,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'linear-gradient(135deg, #32C753 0%, #28A745 100%)',
                   border: 'none',
                   fontWeight: 500,
                   fontSize: 16
@@ -211,7 +211,7 @@ const RegisterPage = () => {
 
             <div style={{ textAlign: 'center' }}>
               <Text type="secondary">Already have an account? </Text>
-              <Link to="/login" style={{ color: '#667eea', fontWeight: 500 }}>
+              <Link to="/login" style={{ color: '#32C753', fontWeight: 500 }}>
                 Log in
               </Link>
             </div>
@@ -224,9 +224,9 @@ const RegisterPage = () => {
               color: '#999'
             }}>
               By signing up, you agree to our{' '}
-              <Link to="/terms" style={{ color: '#667eea' }}>Terms of Service</Link>{' '}
+              <Link to="/terms" style={{ color: '#32C753' }}>Terms of Service</Link>{' '}
               and{' '}
-              <Link to="/privacy" style={{ color: '#667eea' }}>Privacy Policy</Link>
+              <Link to="/privacy" style={{ color: '#32C753' }}>Privacy Policy</Link>
             </div>
           </Form>
         </Card>
@@ -235,7 +235,7 @@ const RegisterPage = () => {
       {/* Right Side - Image/Content */}
       <div style={{
         flex: 1,
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #32C753 0%, #28A745 100%)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',

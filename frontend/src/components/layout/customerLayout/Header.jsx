@@ -75,7 +75,7 @@ const CombinedNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOp
         <Row justify="space-between" align="middle">
           <Col>
             <Space size="large">
-              <span style={{ fontSize: 20, fontWeight: 'bold' }}>SEVANOW</span>
+              <span style={{ fontSize: 20, fontWeight: 'bold' }}>Somaet</span>
               <Space>
                 <PhoneOutlined />
                 <span>096 881 2310</span>

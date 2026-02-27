@@ -47,9 +47,7 @@ const AppRoutes = () => {
         <Route path="/login" element={
           !user ? <LoginPage /> : <Navigate to={`/${role}`} replace />
         } />
-        <Route path="/register" element={
-          !user ? <RegisterPage /> : <Navigate to={`/${role}`} replace />
-        } />
+        <Route path="/register" element={<RegisterPage />} />
 
         {/* Protected Routes */}
         <Route path="/customer/*" element={

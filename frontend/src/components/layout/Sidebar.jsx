@@ -82,7 +82,7 @@ const Sidebar = ({ collapsed }) => {
             Somaet {role}
           </span>
         ) : (
-          <span style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>S</span>
+          <span style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>Somaet</span>
         )}
       </div>
       
