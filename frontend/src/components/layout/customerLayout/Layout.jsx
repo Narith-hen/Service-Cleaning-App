@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 const { Header, Content, Footer } = Layout;
 
@@ -72,7 +73,7 @@ const CustomerLayout = ({ children }) => {
         <Row justify="space-between" align="middle" wrap>
           <Col xs={24} sm={16}>
             <Space direction="vertical" size={4}>
-              <span style={{ fontSize: 18, fontWeight: 'bold' }}>Somaet</span>
+              <img src={logoSomaet} alt="Somaet logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             </Space>
           </Col>
           <Col xs={24} sm={8} style={{ textAlign: 'right', marginTop: 4 }}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Space, Avatar, Typography, Button, Menu, Dropdown } from 'antd';
+import { Row, Col, Space, Typography, Button, Menu, Dropdown } from 'antd';
 import {
   PhoneOutlined,
   ClockCircleOutlined,
@@ -15,6 +15,7 @@ import {
   UserAddOutlined,
   DownOutlined
 } from '@ant-design/icons';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 import { MessageOutlined } from '@ant-design/icons'; // For Telegram alternative
 
@@ -138,25 +139,16 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
               onClick={() => navigate('/')}
               style={{ cursor: 'pointer' }}
             >
-              <div style={{
-                padding: isMobile ? 4 : 6,
-                background: darkMode
-                  ? 'linear-gradient(135deg, #0f766e 0%, #134e4a 100%)'
-                  : 'linear-gradient(135deg, #0f766e 0%, #dc2626 100%)',
-                borderRadius: 3,
-              }}>
-                <Avatar
-                  size={isMobile ? 28 : 32}
-                  style={{
-                    background: '#ffffff',
-                    fontWeight: 800,
-                    fontSize: isMobile ? 14 : 16,
-                    color: darkMode ? '#0f766e' : '#dc2626',
-                  }}
-                >
-                  S
-                </Avatar>
-              </div>
+              <img
+                src={logoSomaet}
+                alt="Somaet logo"
+                style={{
+                  width: isMobile ? 36 : 42,
+                  height: isMobile ? 36 : 42,
+                  objectFit: 'contain',
+                  flexShrink: 0
+                }}
+              />
               <div style={{ marginLeft: isMobile ? 4 : 8 }}>
                 <Text
                   strong

@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Divider, Form, Input, Typography } from "antd";
+import { Alert, Button, Card, Divider, Form, Grid, Input, Typography } from "antd";
 import { GoogleOutlined, LockOutlined, MailOutlined, PhoneOutlined, UserOutlined } from "@ant-design/icons";
 import { useAuth } from "../../../hooks/useAuth";
+import imgRegister from "../../../assets/imgRegister.png";
+import logoSomaet from "../../../assets/Logo_somaet.png";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -37,6 +40,7 @@ const buildUsername = (firstName, lastName) => {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const screens = useBreakpoint();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -73,13 +77,25 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{ display: "flex", width: "100vw", height: "100vh", margin: 0, padding: 0, overflow: "hidden" }}>
+    <div
+      style={{
+        display: "flex",
+        width: "100vw",
+        height: "100vh",
+        margin: 0,
+        padding: 0,
+        overflow: "hidden",
+        flexDirection: screens.lg ? "row" : "column",
+      }}
+    >
       <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", background: "#ffffff", padding: "20px", overflow: "auto" }}>
         <Card style={{ width: 480, padding: "32px 24px", boxShadow: "0 10px 40px rgba(0,0,0,0.08)", borderRadius: 12, border: "none" }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ width: 80, height: 80, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", borderRadius: "50%", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "white", fontSize: 32, fontWeight: "bold" }}>S</span>
-            </div>
+            <img
+              src={logoSomaet}
+              alt="Somaet logo"
+              style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid #32C753", objectFit: "cover", margin: "0 auto 20px", display: "block" }}
+            />
             <Title level={2} style={{ marginBottom: 8, fontWeight: 600 }}>Create Account</Title>
             <Text type="secondary" style={{ fontSize: 15 }}>Join Somaet today</Text>
           </div>
@@ -119,23 +135,38 @@ export default function RegisterPage() {
 
             <div style={{ textAlign: "center" }}>
               <Text type="secondary">Already have an account? </Text>
-              <Link to="/auth/login" style={{ color: "#2dae48", fontWeight: 500 }}>Log in</Link>
+              <Link to="/auth/login" style={{ color: "#2d5aae", fontWeight: 500 }}>Log in</Link>
             </div>
           </Form>
         </Card>
       </div>
 
-      <div style={{ flex: 1, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "40px", position: "relative", overflow: "hidden" }}>
+      <div
+        style={{
+          flex: screens.lg ? 1 : "none",
+          minHeight: screens.lg ? "100%" : 360,
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)), url(${imgRegister})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: screens.md ? "40px" : "24px 16px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.12) 0%, transparent 50%)", pointerEvents: "none" }} />
         <div style={{ maxWidth: 500, textAlign: "center", color: "white", position: "relative", zIndex: 1 }}>
           <Title level={1} style={{ color: "white", marginBottom: 20, fontWeight: 700 }}>Start Your Journey</Title>
           <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 18, display: "block", marginBottom: 30, lineHeight: 1.6 }}>
             Join thousands of satisfied customers who trust Somaet for their cleaning needs.
           </Text>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginTop: 30 }}>
+          <div style={{ display: "grid", gridTemplateColumns: screens.md ? "repeat(2, 1fr)" : "1fr", gap: 20, marginTop: 30 }}>
             {["Free estimate", "Insured and bonded", "Eco-friendly products", "100% satisfaction"].map((benefit) => (
-              <div key={benefit} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, color: "rgba(255,255,255,0.95)", background: "rgba(255,255,255,0.1)", padding: "12px 16px", borderRadius: 8, backdropFilter: "blur(10px)" }}>
-                <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>*</span>
+              <div key={benefit} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, color: "rgba(255,255,255,0.95)", background: "rgba(255,255,255,0.18)", padding: "12px 16px", borderRadius: 8, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}>
+                <span aria-hidden="true" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>*</span>
                 <span>{benefit}</span>
               </div>
             ))}
@@ -145,3 +176,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

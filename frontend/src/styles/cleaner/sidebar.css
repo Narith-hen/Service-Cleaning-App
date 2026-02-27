@@ -29,18 +29,14 @@
   margin-bottom: 30px;
 }
 
-.logo-circle {
+.cleaner-sidebar .sidebar-brand-logo {
   width: 45px;
   height: 45px;
-  background: #4361ee;
-  color: white;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 18px;
-  box-shadow: 0 4px 8px rgba(67, 97, 238, 0.2);
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #32C753;
+  flex-shrink: 0;
+  background: #ffffff;
 }
 
 .logo-text h2 {

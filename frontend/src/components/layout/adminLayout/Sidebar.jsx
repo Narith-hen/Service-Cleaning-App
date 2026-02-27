@@ -7,7 +7,6 @@ import {
   Star, 
   Settings, 
   LogOut,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Users,
@@ -15,6 +14,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 export const Sidebar = ({ 
   currentView, 
@@ -51,12 +51,12 @@ export const Sidebar = ({
         onClick={onToggle}
         className={cn("p-6 flex items-center gap-3 relative cursor-pointer group/header", isCollapsed && "justify-center px-0")}
       >
-        <div className="w-10 h-10 bg-[#00D362] rounded-xl flex items-center justify-center text-white shrink-0 group-hover/header:scale-110 transition-transform">
-          <Sparkles size={24} />
+        <div className="w-10 h-10 bg-white border border-[#00D362]/30 rounded-xl flex items-center justify-center shrink-0 group-hover/header:scale-110 transition-transform p-1">
+          <img src={logoSomaet} alt="Somaet logo" className="w-full h-full object-contain" />
         </div>
         {!isCollapsed && (
           <div className="overflow-hidden whitespace-nowrap">
-            <h1 className="font-bold text-lg leading-tight">CleanPro</h1>
+            <h1 className="font-bold text-lg leading-tight">Somaet Admin</h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-wider uppercase">Management Portal</p>
           </div>
         )}

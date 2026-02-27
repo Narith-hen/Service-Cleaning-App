@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
+import {
   DashboardOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
@@ -9,6 +9,7 @@ import {
   SettingOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 import '../../../styles/cleaner/sidebar.css';
 
 const CleanerSidebar = ({ darkMode }) => {
@@ -32,9 +33,9 @@ const CleanerSidebar = ({ darkMode }) => {
     <div className={`cleaner-sidebar ${darkMode ? 'dark' : ''}`}>
       {/* Logo Section */}
       <div className="sidebar-logo">
-        <div className="logo-circle">CP</div>
+        <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
         <div className="logo-text">
-          <h2>CleanPro</h2>
+          <h2>Somaet Cleaner</h2>
           <p>CLEANER PORTAL</p>
         </div>
       </div>
@@ -65,3 +66,4 @@ const CleanerSidebar = ({ darkMode }) => {
 };
 
 export default CleanerSidebar;
+

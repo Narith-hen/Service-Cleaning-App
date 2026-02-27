@@ -1,6 +1,6 @@
 import React from 'react';
-import { Space, Divider, Button, Typography, Avatar } from 'antd';
-import { 
+import { Space, Divider, Button, Typography } from 'antd';
+import {
   HomeOutlined, 
   InfoCircleOutlined, 
   AppstoreOutlined, 
@@ -15,6 +15,7 @@ import {
   YoutubeOutlined,
   WhatsAppOutlined
 } from '@ant-design/icons';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 const { Text } = Typography;
 
@@ -116,26 +117,16 @@ const Sidebar = ({
       }}>
         <Space align="center" style={{ width: '100%', justifyContent: 'space-between', flexWrap: 'nowrap' }}>
           <Space style={{ flexShrink: 0 }}>
-            <div style={{
-              padding: '6px',
-              background: 'linear-gradient(135deg, #0f766e 0%, #134e4a 100%)',
-              borderRadius: 3,
-              boxShadow: '0 4px 12px rgba(15, 118, 110, 0.2)',
-              flexShrink: 0
-            }}>
-              <Avatar
-                size={36}
-                style={{
-                  background: '#ffffff',
-                  fontWeight: 800,
-                  fontSize: 16,
-                  color: '#0f766e',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                }}
-              >
-                S
-              </Avatar>
-            </div>
+            <img
+              src={logoSomaet}
+              alt="Somaet logo"
+              style={{
+                width: 44,
+                height: 44,
+                objectFit: 'contain',
+                flexShrink: 0
+              }}
+            />
             <div style={{ overflow: 'hidden' }}>
               <Text strong style={{ 
                 fontSize: 18, 

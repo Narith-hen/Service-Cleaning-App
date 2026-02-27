@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, Typography, Alert, Checkbox, Divider } from 
 import { LockOutlined, MailOutlined, GoogleOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 const { Title, Text } = Typography;
 
@@ -88,18 +89,32 @@ const LoginPage = () => {
                 }}>
                     {/* Logo/Icon */}
                     <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                        <div style={{
-                            width: 80,
-                            height: 80,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            borderRadius: '50%',
-                            margin: '0 auto 20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                        }} onClick={() => navigate('/')}>
-                            <span style={{ color: 'white', fontSize: 32, fontWeight: 'bold' }}>S</span>
+                        <div
+                            onClick={() => navigate('/')}
+                            style={{
+                                width: 112,
+                                height: 112,
+                                borderRadius: '50%',
+                                border: '2px solid #32C753',
+                                background: '#ffffff',
+                                margin: '0 auto 20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 6px 18px rgba(50, 199, 83, 0.18)',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <img
+                                src={logoSomaet}
+                                alt="Somaet logo"
+                                style={{
+                                    width: 82,
+                                    height: 82,
+                                    objectFit: 'contain',
+                                    display: 'block'
+                                }}
+                            />
                         </div>
                         <Title level={2} style={{ marginBottom: 8, fontWeight: 600 }}>Welcome Back</Title>
                         <Text type="secondary" style={{ fontSize: 15 }}>Login to your Somaet account</Text>
@@ -162,7 +177,7 @@ const LoginPage = () => {
                             <Form.Item name="remember" valuePropName="checked" noStyle>
                                 <Checkbox disabled={loading}>Remember me</Checkbox>
                             </Form.Item>
-                            <Link to="/forgot-password" style={{ color: '#667eea' }}>
+                            <Link to="/forgot-password" style={{ color: '#1f82cd' }}>
                                 Forgot password?
                             </Link>
                         </div>
@@ -177,7 +192,7 @@ const LoginPage = () => {
                                 style={{
                                     borderRadius: 8,
                                     height: 48,
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    background: 'linear-gradient(135deg, #49C15D 0%, #3c9c4c 100%)',
                                     border: 'none',
                                     fontWeight: 500,
                                     fontSize: 16
@@ -209,7 +224,7 @@ const LoginPage = () => {
 
                         <div style={{ textAlign: 'center', marginBottom: 16 }}>
                             <Text type="secondary">Don't have an account? </Text>
-                            <Link to="/auth/register" style={{ color: '#667eea', fontWeight: 500 }}>
+                            <Link to="/auth/register" style={{ color: '#1959c1', fontWeight: 500 }}>
                                 Sign up
                             </Link>
                         </div>
@@ -231,111 +246,6 @@ const LoginPage = () => {
                         </Button>
                     </Form>
                 </Card>
-            </div>
-
-            {/* Right Side - Image/Content */}
-            <div style={{
-                flex: 1,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: '40px',
-                position: 'relative',
-                overflow: 'hidden'
-            }}>
-                {/* Abstract background pattern */}
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)',
-                    pointerEvents: 'none'
-                }} />
-
-                {/* Main content */}
-                <div style={{
-                    maxWidth: 500,
-                    textAlign: 'center',
-                    color: 'white',
-                    position: 'relative',
-                    zIndex: 1
-                }}>
-                    {/* Icon/Illustration */}
-                    <div style={{
-                        fontSize: 120,
-                        marginBottom: 30,
-                        opacity: 0.9,
-                        cursor: 'pointer'
-                    }} onClick={() => navigate('/')}>
-                        🧹
-                    </div>
-
-                    <Title level={1} style={{ color: 'white', marginBottom: 20, fontWeight: 700 }}>
-                        Somaet Cleaning
-                    </Title>
-
-                    <Text style={{
-                        color: 'rgba(255,255,255,0.9)',
-                        fontSize: 18,
-                        display: 'block',
-                        marginBottom: 30,
-                        lineHeight: 1.6
-                    }}>
-                        Professional cleaning services at your fingertips.
-                        Book trusted cleaners for your home or office with just a few clicks.
-                    </Text>
-
-                    {/* Features list */}
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 15,
-                        alignItems: 'flex-start',
-                        marginTop: 30
-                    }}>
-                        {[
-                            '✓ Professional & vetted cleaners',
-                            '✓ Flexible scheduling',
-                            '✓ Secure payments',
-                            '✓ Satisfaction guaranteed'
-                        ].map((feature, index) => (
-                            <div key={index} style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 10,
-                                fontSize: 16,
-                                color: 'rgba(255,255,255,0.95)'
-                            }}>
-                                <span>{feature}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Stats */}
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-around',
-                        marginTop: 50,
-                        width: '100%'
-                    }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: 32, fontWeight: 'bold' }}>10K+</div>
-                            <div style={{ fontSize: 14, opacity: 0.8 }}>Happy Customers</div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: 32, fontWeight: 'bold' }}>5K+</div>
-                            <div style={{ fontSize: 14, opacity: 0.8 }}>Cleanings Done</div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: 32, fontWeight: 'bold' }}>4.9</div>
-                            <div style={{ fontSize: 14, opacity: 0.8 }}>Rating</div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

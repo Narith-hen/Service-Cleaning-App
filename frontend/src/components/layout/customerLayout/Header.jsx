@@ -13,6 +13,7 @@ import {
   MenuOutlined
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 const { Header } = Layout;
 
@@ -75,7 +76,7 @@ const CombinedNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOp
         <Row justify="space-between" align="middle">
           <Col>
             <Space size="large">
-              <span style={{ fontSize: 20, fontWeight: 'bold' }}>Somaet</span>
+              <img src={logoSomaet} alt="Somaet logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
               <Space>
                 <PhoneOutlined />
                 <span>096 881 2310</span>

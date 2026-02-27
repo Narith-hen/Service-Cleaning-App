@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
+import {
   DashboardOutlined,
   CalendarOutlined,
   SafetyCertificateOutlined,
@@ -13,6 +13,7 @@ import {
   SettingOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 import '../../../styles/admin/sidebar.css';
 
 const AdminSidebar = () => {
@@ -54,9 +55,9 @@ const AdminSidebar = () => {
     <div className="admin-sidebar">
       {/* Logo Section */}
       <div className="sidebar-logo">
-        <div className="logo-circle">AP</div>
+        <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
         <div className="logo-text">
-          <h2>CleanPro Admin</h2>
+          <h2>Somaet Admin</h2>
           <p>Enterprise Edition</p>
         </div>
       </div>
@@ -99,3 +100,4 @@ const AdminSidebar = () => {
 };
 
 export default AdminSidebar;
+

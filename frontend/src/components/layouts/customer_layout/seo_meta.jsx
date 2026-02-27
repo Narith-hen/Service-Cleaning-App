@@ -1,4 +1,5 @@
 import React from 'react';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 const SeoMeta = ({
   title = "SevaNow Reviews - Trusted Service Reviews",
@@ -86,7 +87,7 @@ const SeoMeta = ({
           "@type": "Organization",
           "name": siteName,
           "url": siteUrl,
-          "logo": `${siteUrl}/logo.png`,
+          "logo": `${siteUrl}${logoSomaet}`,
           "contactPoint": {
             "@type": "ContactPoint",
             "telephone": "+855-968812310",
