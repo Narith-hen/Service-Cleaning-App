@@ -1,1 +1,22 @@
 @import "tailwindcss";
+<<<<<<< HEAD
+=======
+/* @import url('https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;700&display=swap'); */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+
+@layer components {
+  .nav-link {
+    @apply px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800;
+  }
+
+  .mobile-link {
+    @apply block py-3 border-b hover:text-emerald-600;
+  }
+
+  .badge {
+    @apply absolute -top-1 -right-1 bg-red-600 text-white text-xs
+           rounded-full min-w-[20px] h-5 flex items-center justify-center;
+  }
+}
+>>>>>>> master

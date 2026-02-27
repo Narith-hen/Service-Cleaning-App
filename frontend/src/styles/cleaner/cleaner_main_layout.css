@@ -1,0 +1,143 @@
+/* Main layout container */
+.admin-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+/* Dark mode */
+.admin-layout.dark {
+  background: #111827;
+}
+
+/* Right side - contains header and content */
+.admin-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  margin-left: 260px; /* Same as sidebar width */
+  width: calc(100% - 260px);
+}
+
+/* Header */
+.admin-header {
+  height: 70px;
+  background: white;
+  border-bottom: 1px solid #eaeef2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.dark .admin-header {
+  background: #1a1a1a;
+  border-bottom-color: #2d2d2d;
+}
+
+/* Main content area - scrollable */
+.admin-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: #f8fafc;
+}
+
+.dark .admin-content {
+  background: #111827;
+}
+
+/* Sidebar should have fixed width */
+.admin-sidebar {
+  width: 280px;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: white;
+  border-right: 1px solid #eaeef2;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.dark .admin-sidebar {
+  background: #1a1a1a;
+  border-right-color: #2d2d2d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .admin-right {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+/* Footer styles - shorter height */
+.admin-footer {
+  height: 50px; /* Fixed shorter height */
+  background: white;
+  border-top: 1px solid #eaeef2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* Prevent footer from shrinking */
+  padding: 0 16px;
+}
+
+.dark .admin-footer {
+  background: #1a1a1a;
+  border-top-color: #2d2d2d;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  font-size: 12px;
+}
+
+.footer-content p {
+  margin: 0;
+  line-height: 1;
+}
+
+.copyright {
+  color: #6b7280;
+}
+
+.contact {
+  color: #9ca3af;
+}
+
+.dark .copyright {
+  color: #9ca3af;
+}
+
+.dark .contact {
+  color: #6b7280;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .footer-content {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+  }
+  
+  .admin-footer {
+    height: 60px; /* Slightly taller for mobile */
+  }
+}

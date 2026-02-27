@@ -1,0 +1,127 @@
+// styles/navbar.scss
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+.custom-navbar {
+  border-bottom: 1px solid hsl(var(--border));
+  
+  &.dark {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .top-bar {
+    background-color: hsl(var(--muted));
+    padding: 8px 0;
+    
+    .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  .brand-logo {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    
+    .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: hsl(var(--primary));
+      line-height: 1;
+    }
+    
+    .logo-sub {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: hsl(var(--muted-foreground));
+    }
+  }
+
+  .hotline-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .numbers {
+      display: flex;
+      gap: 16px;
+      
+      a {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: hsl(var(--foreground));
+        text-decoration: none;
+        
+        &:hover {
+          color: hsl(var(--primary));
+        }
+      }
+    }
+  }
+
+  .bottom-bar {
+    padding: 12px 0;
+    
+    .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  .main-nav {
+    .nav-link {
+      color: hsl(var(--foreground));
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      
+      &.active {
+        background-color: hsl(var(--primary) / 0.1);
+        color: hsl(var(--primary));
+      }
+      
+      &:hover:not(.active) {
+        background-color: hsl(var(--muted));
+      }
+    }
+  }
+
+  .search-container {
+    position: relative;
+  }
+
+  .mobile-only {
+    display: none;
+  }
+
+  .desktop-only {
+    display: flex;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-only {
+      display: block;
+    }
+    
+    .desktop-only {
+      display: none;
+    }
+    
+    .top-bar .container {
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .top-right-section {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+}

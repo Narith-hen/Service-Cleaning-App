@@ -1,0 +1,296 @@
+.admin-layout-root {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+
+  &.dark-mode {
+    background-color: #1a1a1a;
+    color: #fff;
+
+    .admin-main-header {
+      background-color: #242424;
+      border-bottom-color: #333;
+    }
+
+    .stat-card {
+      background-color: #2d2d2d;
+      border-color: #404040;
+
+      .stat-label {
+        color: #999;
+      }
+
+      .stat-value {
+        color: #fff;
+      }
+    }
+  }
+}
+
+.admin-content-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.admin-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  background-color: #fff;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid transparent;
+
+  &.scrolled {
+    padding: 12px 0;
+    border-bottom-color: #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .admin-header-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+
+    .mobile-menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: inherit;
+      padding: 8px;
+
+      @media (max-width: 768px) {
+        display: block;
+      }
+    }
+
+    .welcome-section {
+      .welcome-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: #1f2937;
+
+        .admin-name {
+          color: #3b82f6;
+        }
+      }
+
+      .welcome-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+
+        strong {
+          color: #3b82f6;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  .admin-header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+
+    .notification-badge {
+      .notification-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 8px;
+        border-radius: 8px;
+        transition: all 0.2s;
+
+        &:hover {
+          background-color: #f3f4f6;
+          color: #3b82f6;
+        }
+      }
+    }
+
+    .admin-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #f3f4f6;
+      }
+
+      .admin-avatar {
+        background-color: #3b82f6;
+      }
+
+      .admin-info {
+        display: flex;
+        flex-direction: column;
+
+        @media (max-width: 768px) {
+          display: none;
+        }
+
+        .admin-name {
+          font-weight: 600;
+          color: #1f2937;
+          font-size: 14px;
+        }
+
+        .admin-role {
+          font-size: 12px;
+          color: #6b7280;
+        }
+      }
+    }
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin: 24px 0;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .stat-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+
+      &.jobs-icon {
+        background-color: #e0f2fe;
+        color: #0284c7;
+      }
+
+      &.earnings-icon {
+        background-color: #dcfce7;
+        color: #16a34a;
+      }
+
+      &.rating-icon {
+        background-color: #fef9c3;
+        color: #ca8a04;
+      }
+    }
+
+    .stat-content {
+      display: flex;
+      flex-direction: column;
+
+      .stat-label {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 4px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1f2937;
+        line-height: 1.2;
+      }
+    }
+  }
+}
+
+.admin-main-content {
+  padding: 24px 0 48px;
+  min-height: calc(100vh - 300px);
+}
+
+.dark-mode {
+  .admin-main-header {
+    background-color: #242424;
+
+    .welcome-section {
+      .welcome-title {
+        color: #fff;
+      }
+
+      .welcome-subtitle {
+        color: #9ca3af;
+      }
+    }
+  }
+
+  .admin-profile {
+    &:hover {
+      background-color: #374151;
+    }
+
+    .admin-info {
+      .admin-name {
+        color: #fff;
+      }
+    }
+  }
+
+  .notification-btn {
+    color: #9ca3af;
+
+    &:hover {
+      background-color: #374151;
+      color: #60a5fa;
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-content-container {
+    padding: 0 16px;
+  }
+
+  .welcome-section {
+    .welcome-title {
+      font-size: 20px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-main-header {
+    .admin-header-left {
+      .welcome-section {
+        .welcome-title {
+          font-size: 18px;
+        }
+
+        .welcome-subtitle {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+}
