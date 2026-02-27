@@ -1,0 +1,189 @@
+// SevaNow Color Palette
+$primary-color: #1890ff;
+$primary-dark: #096dd9;
+$primary-light: #69c0ff;
+$secondary-color: #f0f2f5;
+$success-color: #52c41a;
+$warning-color: #faad14;
+$error-color: #ff4d4f;
+$info-color: #13c2c2;
+
+// Text Colors
+$text-primary: rgba(0, 0, 0, 0.85);
+$text-secondary: rgba(0, 0, 0, 0.65);
+$text-disabled: rgba(0, 0, 0, 0.25);
+$text-white: #ffffff;
+
+// Background Colors
+$bg-white: #ffffff;
+$bg-gray: #f5f5f5;
+$bg-dark: #001529;
+
+// Border Colors
+$border-color-base: #d9d9d9;
+$border-color-split: #f0f0f0;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// Border Radius
+$border-radius-sm: 4px;
+$border-radius-base: 6px;
+$border-radius-lg: 8px;
+$border-radius-xl: 12px;
+
+// Shadows
+$shadow-1: 0 1px 2px rgba(0, 0, 0, 0.03);
+$shadow-2: 0 3px 6px rgba(0, 0, 0, 0.06);
+$shadow-3: 0 6px 16px rgba(0, 0, 0, 0.08);
+$shadow-4: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+// Typography
+$font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-family-monospace: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-base: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-xxl: 24px;
+$font-size-xxxl: 32px;
+
+$font-weight-light: 300;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+$line-height-base: 1.5715;
+$line-height-lg: 1.75;
+$line-height-sm: 1.5;
+
+// Z-index layers
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// Breakpoints
+$breakpoint-xs: 480px;
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;
+$breakpoint-xxl: 1400px;
+
+// Animation
+$animation-duration-slow: 0.3s;
+$animation-duration-base: 0.2s;
+$animation-duration-fast: 0.1s;
+
+$animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+
+// Custom variables for SevaNow
+$sevanow-blue: #1890ff;
+$sevanow-blue-dark: #096dd9;
+$sevanow-blue-light: #e6f7ff;
+$sevanow-gray: #f5f5f5;
+$sevanow-gray-dark: #8c8c8c;
+
+// Rating colors
+$rating-color: #faad14;
+$rating-empty-color: #f0f0f0;
+
+// Card variables
+$card-shadow: $shadow-2;
+$card-border-radius: $border-radius-lg;
+$card-background: $bg-white;
+
+// Button variables
+$btn-primary-bg: $primary-color;
+$btn-primary-hover-bg: $primary-dark;
+$btn-border-radius: $border-radius-base;
+
+// Input variables
+$input-height-base: 40px;
+$input-height-lg: 48px;
+$input-height-sm: 32px;
+$input-border-color: $border-color-base;
+$input-hover-border-color: $primary-color;
+$input-focus-border-color: $primary-color;
+$input-disabled-bg: $bg-gray;
+
+// Navbar variables
+$navbar-height: 64px;
+$navbar-bg: $bg-white;
+$navbar-shadow: $shadow-2;
+$navbar-link-color: $text-primary;
+$navbar-link-hover-color: $primary-color;
+$navbar-link-active-color: $primary-color;
+
+// Footer variables
+$footer-bg: #001529;
+$footer-text-color: rgba(255, 255, 255, 0.65);
+$footer-link-color: rgba(255, 255, 255, 0.65);
+$footer-link-hover-color: #ffffff;
+
+// Responsive utilities
+@mixin mobile {
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: #{$breakpoint-md}) and (max-width: #{$breakpoint-lg - 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{$breakpoint-lg}) {
+    @content;
+  }
+}
+
+@mixin xs {
+  @media (max-width: #{$breakpoint-xs - 1px}) {
+    @content;
+  }
+}
+
+@mixin sm {
+  @media (min-width: #{$breakpoint-xs}) and (max-width: #{$breakpoint-sm - 1px}) {
+    @content;
+  }
+}
+
+@mixin md {
+  @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+    @content;
+  }
+}
+
+@mixin lg {
+  @media (min-width: #{$breakpoint-md}) and (max-width: #{$breakpoint-lg - 1px}) {
+    @content;
+  }
+}
+
+@mixin xl {
+  @media (min-width: #{$breakpoint-lg}) and (max-width: #{$breakpoint-xl - 1px}) {
+    @content;
+  }
+}
+
+@mixin xxl {
+  @media (min-width: #{$breakpoint-xl}) {
+    @content;
+  }
+}

@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Battambang:wght@100;300;400;700;900&display=swap&subset=khmer');
+
 #root {
-  max-width: 1780px;
   margin: 0 auto;
-  padding: 2rem;
   text-align: center;
+  background: #fff;
+  font-family: 'Battambang', 'Khmer OS', 'MoolBoran', cursive, sans-serif;
 }
 
 .logo {
@@ -11,9 +13,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -40,3 +44,32 @@
 .read-the-docs {
   color: #888;
 }
+
+/* For Ant Design components - FIXED to use Battambang first */
+.ant-typography,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-menu,
+.ant-dropdown,
+.ant-modal,
+.ant-card,
+.ant-table,
+.ant-form,
+.ant-layout,
+.ant-space,
+.ant-row,
+.ant-col {
+  font-family: 'Battambang', 'Khmer OS', 'MoolBoran', 'Leelawadee', 'DaunPenh', 'Siemreap', 'Arial', sans-serif !important;
+}
+
+/* For all text elements - FIXED to use Battambang first */
+h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, label {
+  font-family: 'Battambang', 'Khmer OS', 'MoolBoran', 'Leelawadee', 'DaunPenh', 'Siemreap', 'Arial', sans-serif !important;
+}
+
+/* Force Ant Design Typography to use Battambang */
+.ant-typography {
+  font-family: 'Battambang', 'Khmer OS', 'MoolBoran', sans-serif !important;
+}
+
