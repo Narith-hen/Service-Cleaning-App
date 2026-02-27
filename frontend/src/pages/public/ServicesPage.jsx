@@ -255,32 +255,42 @@
 
 
 import Navbar from "../components/Navbar";
+import homeImage from "../../assets/home.png";
+import officeImage from "../../assets/office.png";
+import windowImage from "../../assets/window.png";
+import shopImage from "../../assets/shop.png";
 
 export default function ServicesPage({ embedded = false }) {
+  const services = [
+    { title: "Home Cleaning", description: "Home cleaning keeps your house clean and healthy. It removes dust and germs and makes your home feel fresh and comfortable..", image: homeImage },
+    { title: "Office Cleaning", description: "Professional office cleaning.Office cleaning keeps the workplace clean and healthy. It helps employees stay focused and creates a neat, professional environment.", image: officeImage },
+    { title: "Window Cleaning", description: "Crystal-clear window service.Window cleaning keeps glass clear and bright. It removes dust, dirt, and stains, allowing more natural light to enter and making the space look fresh and clean.", image: windowImage },
+    { title: "Shop Cleaning", description: "Shop cleaning keeps the store neat and inviting for customers. It removes dirt, dust, and trash, creating a clean and safe shopping environment..", image: shopImage },
+  ];
+
   return (
     <div>
       {!embedded && <Navbar />}
 
       <div className="max-w-6xl mx-auto py-20 px-6">
         <h2 className="text-4xl font-black text-center mb-12">
-          Our Services
+          OUR SERVICES
         </h2>
 
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white shadow-lg rounded-2xl p-8">
-            <h3 className="text-xl font-bold mb-4">Home Cleaning</h3>
-            <p className="text-gray-500">Complete home deep cleaning.</p>
-          </div>
-
-          <div className="bg-white shadow-lg rounded-2xl p-8">
-            <h3 className="text-xl font-bold mb-4">Office Cleaning</h3>
-            <p className="text-gray-500">Professional office cleaning.</p>
-          </div>
-
-          <div className="bg-white shadow-lg rounded-2xl p-8">
-            <h3 className="text-xl font-bold mb-4">Window Cleaning</h3>
-            <p className="text-gray-500">Crystal-clear window service.</p>
-          </div>
+          {services.map((service) => (
+            <div key={service.title} className="bg-white shadow-lg rounded-2xl overflow-hidden">
+              <img
+                src={service.image}
+                alt={service.title}
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-8">
+                <h3 className="text-xl font-bold mb-4">{service.title}</h3>
+                <p className="text-gray-500">{service.description}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -28,23 +28,20 @@ export default function Navbar() {
     `relative px-4 py-2 text-sm font-semibold transition-all duration-300 rounded-full
     ${
       isActive
-        ? "text-white bg-gradient-to-r from-teal-600 to-emerald-500 shadow-md"
-        : "text-slate-600 hover:text-teal-700 hover:bg-teal-50"
+        ? "text-white bg-[#32c753] shadow-md"
+        : "text-slate-600 hover:text-[#32c753] hover:bg-[#32c753]/10"
     }`;
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-
-        {/* LOGO */}
         <Link
           to="/"
-          className="text-2xl font-black tracking-tight bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent"
+          className="brand-font inline-flex items-center gap-2 text-2xl font-extrabold tracking-tight text-[#32c753]"
         >
-          ✨ CleaningPro
+          <span className="text-4xl leading-none">✨</span><span>Somaet</span>
         </Link>
 
-        {/* DESKTOP LINKS */}
         <div className="hidden md:flex items-center gap-2">
           {links.map((link) => {
             const isActive = isSectionActive(link.href);
@@ -56,7 +53,6 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* AUTH BUTTONS */}
         <div className="hidden md:flex items-center gap-3">
           <Link
             to="/login"
@@ -67,13 +63,12 @@ export default function Navbar() {
 
           <Link
             to="/register"
-            className="px-5 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-teal-600 to-emerald-500 shadow-md hover:scale-105 transition-transform duration-300"
+            className="px-5 py-2 rounded-full text-sm font-semibold text-white bg-[#32c753] shadow-md hover:scale-105 transition-transform duration-300"
           >
             Register
           </Link>
         </div>
 
-        {/* MOBILE BUTTON */}
         <button
           type="button"
           onClick={() => setMobileOpen((prev) => !prev)}
@@ -87,7 +82,6 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* MOBILE MENU */}
       {mobileOpen && (
         <div className="md:hidden bg-white border-t border-slate-200 px-6 py-4 shadow-lg animate-fadeIn">
           <div className="flex flex-col gap-2">
@@ -109,7 +103,7 @@ export default function Navbar() {
 
             <Link
               to="/register"
-              className="px-4 py-2 rounded-full text-center font-semibold text-white bg-gradient-to-r from-teal-600 to-emerald-500"
+              className="px-4 py-2 rounded-full text-center font-semibold text-white bg-[#32c753]"
             >
               Register
             </Link>
@@ -119,3 +113,5 @@ export default function Navbar() {
     </nav>
   );
 }
+
+

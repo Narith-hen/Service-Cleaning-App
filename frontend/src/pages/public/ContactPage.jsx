@@ -1,307 +1,121 @@
-// import React from 'react';
-// import { Link } from 'react-router-dom';
-// import { Row, Col, Card, Button, Typography, Layout, Menu, Space, Form, Input } from 'antd';
-// import { 
-//   HomeOutlined, 
-//   UserOutlined, 
-//   LoginOutlined, 
-//   UserAddOutlined,
-//   PhoneOutlined,
-//   InfoCircleOutlined,
-//   AppstoreOutlined,
-//   MailOutlined,
-//   EnvironmentOutlined,
-//   ClockCircleOutlined
-// } from '@ant-design/icons';
-// import { useAuth } from '../../hooks/useAuth';
-
-// const { Header, Content, Footer } = Layout;
-// const { Title, Paragraph, Text } = Typography;
-// const { TextArea } = Input;
-
-// const ContactPage = () => {
-//   const { user, role } = useAuth();
-
-//   const onFinish = (values) => {
-//     console.log('Contact form:', values);
-//     // Handle form submission
-//   };
-
-//   return (
-//     <Layout style={{ minHeight: '100vh' }}>
-//       {/* Navigation Header - same as before */}
-//       <Header style={{ 
-//         position: 'fixed', 
-//         zIndex: 1, 
-//         width: '100%', 
-//         background: 'white',
-//         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-//         display: 'flex',
-//         alignItems: 'center',
-//         justifyContent: 'space-between',
-//         padding: '0 50px'
-//       }}>
-//         <div style={{ display: 'flex', alignItems: 'center' }}>
-//           <div style={{
-//             width: 40,
-//             height: 40,
-//             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-//             borderRadius: '50%',
-//             display: 'flex',
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//             marginRight: 15,
-//             color: 'white',
-//             fontWeight: 'bold',
-//             fontSize: 20
-//           }}>
-//             S
-//           </div>
-//           <Title level={3} style={{ margin: 0, color: '#333' }}>Somaet</Title>
-//         </div>
-        
-//         <Menu mode="horizontal" style={{ border: 'none', flex: 1, justifyContent: 'center' }}>
-//           <Menu.Item key="home" icon={<HomeOutlined />}>
-//             <Link to="/">Home</Link>
-//           </Menu.Item>
-//           <Menu.Item key="services" icon={<AppstoreOutlined />}>
-//             <Link to="/services">Services</Link>
-//           </Menu.Item>
-//           <Menu.Item key="about" icon={<InfoCircleOutlined />}>
-//             <Link to="/about">About</Link>
-//           </Menu.Item>
-//           <Menu.Item key="contact" icon={<PhoneOutlined />}>
-//             <Link to="/contact">Contact</Link>
-//           </Menu.Item>
-//         </Menu>
-
-//         <Space>
-//           {user ? (
-//             <Link to={`/${role}`}>
-//               <Button type="primary" icon={<UserOutlined />}>
-//                 Dashboard
-//               </Button>
-//             </Link>
-//           ) : (
-//             <>
-//               <Link to="/login">
-//                 <Button icon={<LoginOutlined />}>Log In</Button>
-//               </Link>
-//               <Link to="/register">
-//                 <Button type="primary" icon={<UserAddOutlined />}>
-//                   Sign Up
-//                 </Button>
-//               </Link>
-//             </>
-//           )}
-//         </Space>
-//       </Header>
-
-//       <Content style={{ marginTop: 64 }}>
-//         {/* Hero Section */}
-//         <section style={{ 
-//           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-//           color: 'white',
-//           padding: '80px 20px',
-//           textAlign: 'center'
-//         }}>
-//           <Title style={{ color: 'white', fontSize: 48, marginBottom: 20 }}>
-//             Contact Us
-//           </Title>
-//           <Paragraph style={{ color: 'white', fontSize: 20, maxWidth: 600, margin: '0 auto' }}>
-//             We're here to help! Reach out with any questions or concerns
-//           </Paragraph>
-//         </section>
-
-//         {/* Contact Info and Form */}
-//         <section style={{ padding: '80px 50px', maxWidth: 1200, margin: '0 auto' }}>
-//           <Row gutter={[50, 50]}>
-//             {/* Contact Information */}
-//             <Col xs={24} md={10}>
-//               <Title level={3}>Get in Touch</Title>
-//               <Paragraph style={{ fontSize: 16, marginBottom: 30 }}>
-//                 Have questions about our services? Need help with a booking? 
-//                 Our team is here to assist you.
-//               </Paragraph>
-
-//               <div style={{ marginBottom: 30 }}>
-//                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-//                   <PhoneOutlined style={{ fontSize: 24, color: '#667eea', marginRight: 15 }} />
-//                   <div>
-//                     <Text strong>Phone</Text>
-//                     <div><Text type="secondary">+1 (555) 123-4567</Text></div>
-//                   </div>
-//                 </div>
-
-//                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-//                   <MailOutlined style={{ fontSize: 24, color: '#667eea', marginRight: 15 }} />
-//                   <div>
-//                     <Text strong>Email</Text>
-//                     <div><Text type="secondary">support@somaet.com</Text></div>
-//                   </div>
-//                 </div>
-
-//                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-//                   <EnvironmentOutlined style={{ fontSize: 24, color: '#667eea', marginRight: 15 }} />
-//                   <div>
-//                     <Text strong>Office</Text>
-//                     <div><Text type="secondary">123 Cleaning St, Suite 100<br />San Francisco, CA 94105</Text></div>
-//                   </div>
-//                 </div>
-
-//                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-//                   <ClockCircleOutlined style={{ fontSize: 24, color: '#667eea', marginRight: 15 }} />
-//                   <div>
-//                     <Text strong>Hours</Text>
-//                     <div><Text type="secondary">Mon-Fri: 9am - 6pm<br />Sat-Sun: 10am - 4pm</Text></div>
-//                   </div>
-//                 </div>
-//               </div>
-//             </Col>
-
-//             {/* Contact Form */}
-//             <Col xs={24} md={14}>
-//               <Card style={{ borderRadius: 12 }}>
-//                 <Title level={4}>Send us a Message</Title>
-//                 <Form
-//                   name="contact"
-//                   onFinish={onFinish}
-//                   layout="vertical"
-//                   size="large"
-//                 >
-//                   <Row gutter={16}>
-//                     <Col xs={24} sm={12}>
-//                       <Form.Item
-//                         name="firstName"
-//                         rules={[{ required: true, message: 'Please enter your first name' }]}
-//                       >
-//                         <Input placeholder="First Name" />
-//                       </Form.Item>
-//                     </Col>
-//                     <Col xs={24} sm={12}>
-//                       <Form.Item
-//                         name="lastName"
-//                         rules={[{ required: true, message: 'Please enter your last name' }]}
-//                       >
-//                         <Input placeholder="Last Name" />
-//                       </Form.Item>
-//                     </Col>
-//                   </Row>
-
-//                   <Form.Item
-//                     name="email"
-//                     rules={[
-//                       { required: true, message: 'Please enter your email' },
-//                       { type: 'email', message: 'Please enter a valid email' }
-//                     ]}
-//                   >
-//                     <Input placeholder="Email Address" />
-//                   </Form.Item>
-
-//                   <Form.Item
-//                     name="subject"
-//                     rules={[{ required: true, message: 'Please enter a subject' }]}
-//                   >
-//                     <Input placeholder="Subject" />
-//                   </Form.Item>
-
-//                   <Form.Item
-//                     name="message"
-//                     rules={[{ required: true, message: 'Please enter your message' }]}
-//                   >
-//                     <TextArea rows={5} placeholder="Your Message" />
-//                   </Form.Item>
-
-//                   <Form.Item>
-//                     <Button type="primary" htmlType="submit" block>
-//                       Send Message
-//                     </Button>
-//                   </Form.Item>
-//                 </Form>
-//               </Card>
-//             </Col>
-//           </Row>
-//         </section>
-
-//         {/* Map Section */}
-//         <section style={{ padding: '0 50px 80px', maxWidth: 1200, margin: '0 auto' }}>
-//           <Card style={{ padding: 0, overflow: 'hidden' }}>
-//             <div style={{ 
-//               height: 400, 
-//               background: '#f0f2f5',
-//               display: 'flex',
-//               alignItems: 'center',
-//               justifyContent: 'center'
-//             }}>
-//               <Text type="secondary">Google Maps Integration Here</Text>
-//             </div>
-//           </Card>
-//         </section>
-//       </Content>
-
-//       <Footer style={{ textAlign: 'center', background: '#f0f2f5' }}>
-//         {/* Same footer as before */}
-//         <Row gutter={[32, 32]} justify="center">
-//           <Col xs={24} md={6}>
-//             <Title level={4}>Somaet</Title>
-//             <Text type="secondary">Professional cleaning services at your fingertips</Text>
-//           </Col>
-//           <Col xs={24} md={6}>
-//             <Title level={4}>Quick Links</Title>
-//             <div><Link to="/about">About Us</Link></div>
-//             <div><Link to="/services">Services</Link></div>
-//             <div><Link to="/contact">Contact</Link></div>
-//           </Col>
-//           <Col xs={24} md={6}>
-//             <Title level={4}>Legal</Title>
-//             <div><Link to="/terms">Terms of Service</Link></div>
-//             <div><Link to="/privacy">Privacy Policy</Link></div>
-//           </Col>
-//         </Row>
-//         <div style={{ marginTop: 40 }}>
-//           <Text type="secondary">© 2026 Somaet. All rights reserved.</Text>
-//         </div>
-//       </Footer>
-//     </Layout>
-//   );
-// };
-
-// export default ContactPage;
-
 import Navbar from "../components/Navbar";
+
+const contactItems = [
+  {
+    label: "Phone",
+    value: "+1 (555) 123-4567",
+    detail: "Mon-Sun, 8:00 AM - 8:00 PM",
+  },
+  {
+    label: "Email",
+    value: "support@somaet.com",
+    detail: "Fast response within 24 hours",
+  },
+  {
+    label: "Office",
+    value: "123 Cleaning Street",
+    detail: "San Francisco, CA 94105",
+  },
+];
 
 export default function ContactPage({ embedded = false }) {
   return (
-    <div>
+    <div className="bg-slate-50 text-slate-800">
       {!embedded && <Navbar />}
 
-      <div className="max-w-xl mx-auto py-20 px-6">
-        <h2 className="text-4xl font-black mb-8 text-center">Contact Us</h2>
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#32c753]/15 via-white to-white pb-20 pt-24">
+        <div className="absolute -left-16 top-20 h-52 w-52 rounded-full bg-[#32c753]/15 blur-3xl" />
+        <div className="absolute -right-16 bottom-10 h-52 w-52 rounded-full bg-emerald-200/40 blur-3xl" />
 
-        <form className="space-y-6">
-          <input
-            type="text"
-            placeholder="Your Name"
-            className="w-full border p-3 rounded-lg"
-          />
+        <div className="relative mx-auto max-w-6xl px-6">
+          <div className="mb-12 text-center">
+            <p className="inline-block rounded-full bg-[#32c753]/10 px-4 py-1 text-sm font-semibold text-[#2dae48]">
+              Contact Somaet
+            </p>
+            <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+              Let&apos;s Make Your Space Sparkle
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-slate-600">
+              Tell us what you need and our team will get back to you quickly with the
+              best cleaning plan for your home or business.
+            </p>
+          </div>
 
-          <input
-            type="email"
-            placeholder="Your Email"
-            className="w-full border p-3 rounded-lg"
-          />
+          <div className="grid gap-8 lg:grid-cols-5">
+            <div className="space-y-4 lg:col-span-2">
+              {contactItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <p className="text-sm font-bold uppercase tracking-wide text-[#2dae48]">
+                    {item.label}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{item.value}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
+                </div>
+              ))}
 
-          <textarea
-            placeholder="Your Message"
-            className="w-full border p-3 rounded-lg"
-            rows="4"
-          ></textarea>
+              <div className="rounded-2xl bg-slate-900 p-6 text-slate-100 shadow-xl">
+                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
+                  Why Choose Us
+                </p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-200">
+                  <li>Professional and vetted cleaners</li>
+                  <li>Flexible scheduling options</li>
+                  <li>Eco-friendly cleaning products</li>
+                </ul>
+              </div>
+            </div>
 
-          <button className="w-full bg-teal-700 text-white py-3 rounded-lg font-bold">
-            Send Message
-          </button>
-        </form>
-      </div>
+            <div className="lg:col-span-3">
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl md:p-8">
+                <h3 className="text-2xl font-extrabold text-slate-900">Send Us a Message</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Fill in the form and we will contact you shortly.
+                </p>
+
+                <form className="mt-6 space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input
+                      type="text"
+                      placeholder="First name"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-[#32c753] focus:bg-white"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Last name"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-[#32c753] focus:bg-white"
+                    />
+                  </div>
+
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-[#32c753] focus:bg-white"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Subject"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-[#32c753] focus:bg-white"
+                  />
+
+                  <textarea
+                    placeholder="Your message"
+                    rows="5"
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-[#32c753] focus:bg-white"
+                  ></textarea>
+
+                  <button className="w-full rounded-xl bg-[#32c753] py-3 font-bold text-white transition hover:bg-[#2dae48]">
+                    Send Message
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
