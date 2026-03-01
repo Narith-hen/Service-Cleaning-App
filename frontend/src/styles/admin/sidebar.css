@@ -14,6 +14,12 @@
 }
 
 /* Logo Section */
+.sidebar-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -21,6 +27,18 @@
   justify-content: flex-start;
   padding: 0 24px;
   margin: 0 16px 26px;
+}
+
+.sidebar-close-btn {
+  display: none;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 34px;
+  height: 34px;
+  margin: 8px 16px 0 0;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .admin-sidebar .sidebar-brand-logo {
@@ -161,5 +179,13 @@
   padding: 30px;
   min-height: 100vh;
   background: #f8fafc;
+}
+
+@media (max-width: 1200px) {
+  .sidebar-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 

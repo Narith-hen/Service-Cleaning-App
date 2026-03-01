@@ -21,12 +21,30 @@
 }
 
 /* Logo Section */
+.sidebar-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 0 20px;
   margin-bottom: 30px;
+}
+
+.sidebar-close-btn {
+  display: none;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 34px;
+  height: 34px;
+  margin: 8px 16px 0 0;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .cleaner-sidebar .sidebar-brand-logo {
@@ -198,4 +216,12 @@
 
 .dark .main-content {
   background: #111827;
+}
+
+@media (max-width: 1200px) {
+  .sidebar-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

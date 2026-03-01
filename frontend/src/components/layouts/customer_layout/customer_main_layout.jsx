@@ -14,6 +14,7 @@ const MainLayout = () => {
   const cnyBackground = 'https://i.pinimg.com/736x/ae/1f/51/ae1f51ece38212edf8e3d87b6b1daaf6.jpg';
   
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -21,9 +22,20 @@ const MainLayout = () => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -71,7 +83,7 @@ const MainLayout = () => {
         placement="right"
         onClose={() => setMobileOpen(false)}
         open={mobileOpen}
-        size="medium"
+        width={viewportWidth < 576 ? '100%' : viewportWidth <= 1200 ? 380 : 420}
         closable={false}
         styles={{
           body: { padding: 0 },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Divider, Form, Grid, Input, Typography } from "antd";
+import { Alert, Button, Card, Divider, Form, Grid, Input, Steps, Typography } from "antd";
 import { GoogleOutlined, LockOutlined, MailOutlined, PhoneOutlined, UserOutlined } from "@ant-design/icons";
 import { useAuth } from "../../../hooks/useAuth";
 import imgRegister from "../../../assets/imgRegister.png";
@@ -40,9 +40,12 @@ const buildUsername = (firstName, lastName) => {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [form] = Form.useForm();
   const screens = useBreakpoint();
+  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const firstStepFields = ["firstName", "lastName", "email", "phone"];
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -76,6 +79,15 @@ export default function RegisterPage() {
     }
   };
 
+  const handleNext = async () => {
+    try {
+      await form.validateFields(firstStepFields);
+      setCurrentStep(1);
+    } catch {
+      // Validation errors are displayed by Form.Item automatically.
+    }
+  };
+
   return (
     <div
       style={{
@@ -89,7 +101,7 @@ export default function RegisterPage() {
       }}
     >
       <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", background: "#ffffff", padding: "20px", overflow: "auto" }}>
-        <Card style={{ width: 480, padding: "32px 24px", boxShadow: "0 10px 40px rgba(0,0,0,0.08)", borderRadius: 12, border: "none" }}>
+        <Card style={{ width: 480, padding: "32px 24px", margin: "30px 0px", boxShadow: "0 10px 40px rgba(0,0,0,0.08)", borderRadius: 12, border: "none" }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <img
               src={logoSomaet}
@@ -102,31 +114,60 @@ export default function RegisterPage() {
 
           {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 24 }} closable onClose={() => setError("")} />}
 
-          <Form name="register" onFinish={onFinish} layout="vertical" size="large">
-            <Form.Item name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
-              <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="First name" disabled={loading} style={{ borderRadius: 8 }} />
-            </Form.Item>
-            <Form.Item name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
-              <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="Last name" disabled={loading} style={{ borderRadius: 8 }} />
-            </Form.Item>
-            <Form.Item name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
-              <Input prefix={<MailOutlined style={{ color: "#bfbfbf" }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 8 }} />
-            </Form.Item>
-            <Form.Item name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
-              <Input prefix={<PhoneOutlined style={{ color: "#bfbfbf" }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 8 }} />
-            </Form.Item>
-            <Form.Item name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
-              <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Password" disabled={loading} style={{ borderRadius: 8 }} />
-            </Form.Item>
-            <Form.Item name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
-              <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Confirm password" disabled={loading} style={{ borderRadius: 8 }} />
-            </Form.Item>
+          <Steps
+            current={currentStep}
+            size="small"
+            items={[{ title: "Details" }, { title: "Security" }]}
+            style={{ marginBottom: 20 }}
+          />
 
-            <Form.Item style={{ marginTop: 24 }}>
-              <Button type="primary" htmlType="submit" block size="large" loading={loading} style={{ borderRadius: 8, height: 48, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 16 }}>
-                Sign Up
-              </Button>
-            </Form.Item>
+          <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
+            {currentStep === 0 && (
+              <>
+                <Form.Item name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
+                  <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="First name" disabled={loading} style={{ borderRadius: 8 }} />
+                </Form.Item>
+                <Form.Item name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
+                  <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="Last name" disabled={loading} style={{ borderRadius: 8 }} />
+                </Form.Item>
+                <Form.Item name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
+                  <Input prefix={<MailOutlined style={{ color: "#bfbfbf" }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 8 }} />
+                </Form.Item>
+                <Form.Item name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
+                  <Input prefix={<PhoneOutlined style={{ color: "#bfbfbf" }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 8 }} />
+                </Form.Item>
+              </>
+            )}
+
+            {currentStep === 1 && (
+              <>
+                <Form.Item name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
+                  <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Password" disabled={loading} style={{ borderRadius: 8 }} />
+                </Form.Item>
+                <Form.Item name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
+                  <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Confirm password" disabled={loading} style={{ borderRadius: 8 }} />
+                </Form.Item>
+              </>
+            )}
+
+            {currentStep === 0 ? (
+              <Form.Item style={{ marginTop: 24, marginBottom: 8 }}>
+                <Button type="primary" block size="large" onClick={handleNext} disabled={loading} style={{ borderRadius: 8, height: 48, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 16 }}>
+                  Next
+                </Button>
+              </Form.Item>
+            ) : (
+              <Form.Item style={{ marginTop: 24, marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <Button size="large" onClick={() => setCurrentStep(0)} disabled={loading} style={{ borderRadius: 8, height: 48 }}>
+                    Back
+                  </Button>
+                  <Button type="primary" htmlType="submit" size="large" loading={loading} style={{ borderRadius: 8, height: 48, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 16 }}>
+                    Sign Up
+                  </Button>
+                </div>
+              </Form.Item>
+            )}
 
             <Divider style={{ margin: "16px 0" }}><Text type="secondary" style={{ fontSize: 14 }}>OR</Text></Divider>
             <Button icon={<GoogleOutlined />} size="large" block disabled style={{ borderRadius: 8, height: 48, marginBottom: 24, borderColor: "#d9d9d9" }}>

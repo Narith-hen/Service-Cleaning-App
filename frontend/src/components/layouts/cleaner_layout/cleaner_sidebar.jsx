@@ -7,12 +7,13 @@ import {
   DollarOutlined,
   StarOutlined,
   SettingOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import '../../../styles/cleaner/sidebar.css';
 
-const CleanerSidebar = ({ darkMode }) => {
+const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = () => {} }) => {
   const navigate = useNavigate();
 
   const menuItems = [
@@ -30,14 +31,21 @@ const CleanerSidebar = ({ darkMode }) => {
   };
 
   return (
-    <div className={`cleaner-sidebar ${darkMode ? 'dark' : ''}`}>
-      {/* Logo Section */}
-      <div className="sidebar-logo">
-        <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
-        <div className="logo-text">
-          <h2>Somaet</h2>
-          <p>CLEANER PORTAL</p>
+    <div className={`cleaner-sidebar ${darkMode ? 'dark' : ''} ${isCompact ? 'compact' : ''} ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-top">
+        {/* Logo Section */}
+        <div className="sidebar-logo">
+          <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
+          <div className="logo-text">
+            <h2>Somaet</h2>
+            <p>CLEANER PORTAL</p>
+          </div>
         </div>
+        {isCompact && (
+          <button className="sidebar-close-btn" onClick={onClose} aria-label="Close sidebar">
+            <CloseOutlined />
+          </button>
+        )}
       </div>
 
       {/* Navigation Menu */}
@@ -47,6 +55,7 @@ const CleanerSidebar = ({ darkMode }) => {
             key={index}
             to={item.path}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={() => isCompact && onClose()}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-label">{item.label}</span>
@@ -56,7 +65,7 @@ const CleanerSidebar = ({ darkMode }) => {
 
       {/* Logout Button */}
       <div className="sidebar-footer">
-        <button className="logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" onClick={() => { if (isCompact) onClose(); handleLogout(); }}>
           <LogoutOutlined className="nav-icon" />
           <span>Logout</span>
         </button>

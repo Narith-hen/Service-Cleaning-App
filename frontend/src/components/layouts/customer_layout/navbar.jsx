@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Space, Typography, Button, Menu, Dropdown } from 'antd';
+import { useLocation } from 'react-router-dom';
 import {
   PhoneOutlined,
   ClockCircleOutlined,
@@ -22,6 +23,7 @@ import { MessageOutlined } from '@ant-design/icons'; // For Telegram alternative
 const { Text } = Typography;
 
 const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOpen }) => {
+  const location = useLocation();
   const [breakpoint, setBreakpoint] = useState('lg');
   const [isLoggedIn, setIsLoggedIn] = useState(false); // Change this based on auth state
 
@@ -43,7 +45,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   // Responsive values
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
   const isTablet = breakpoint === 'md';
-  const isDesktop = breakpoint === 'lg' || breakpoint === 'xl';
+  const isLaptopL = breakpoint === 'lg';
+  const isCompactNav = isMobile || isTablet || isLaptopL;
 
   // Navigation items
   const navItems = [
@@ -166,7 +169,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
           </Col>
 
           {/* Desktop Navigation Items - Hidden on mobile */}
-          {!isMobile && !isTablet && (
+          {!isCompactNav && (
             <Col lg={12} xl={10}>
               <Space size="large" style={{ justifyContent: 'center', width: '100%' }}>
                 {navItems.map(item => (
@@ -197,7 +200,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
             <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
 
               {/* Language Selector - Desktop only */}
-              {!isMobile && (
+              {!isCompactNav && (
                 <Col>
                   <Button
                     type="text"
@@ -243,7 +246,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <UserOutlined />
-                      {!isMobile && <span>គណនី</span>}
+                      {!isCompactNav && <span>គណនី</span>}
                       <DownOutlined />
                     </Button>
                   </Dropdown>
@@ -261,9 +264,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <LoginOutlined />
-                      {!isMobile && <span>ចូល</span>}
+                      {!isCompactNav && <span>ចូល</span>}
                     </Button>
-                    {!isMobile && (
+                    {!isCompactNav && (
                       <Button
                         onClick={() => navigate('/auth/register')}
                         style={{
@@ -283,7 +286,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
               </Col>
 
               {/* Mobile Menu Button */}
-              {isMobile && (
+              {isCompactNav && (
                 <Col>
                   <Button
                     type="primary"
@@ -305,3 +308,4 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 };
 
 export default ModernResponsiveNavbar;
+

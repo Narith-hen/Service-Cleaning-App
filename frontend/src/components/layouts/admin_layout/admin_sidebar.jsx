@@ -11,12 +11,13 @@ import {
   BarChartOutlined,
   LineChartOutlined,
   SettingOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import '../../../styles/admin/sidebar.css';
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) => {
   const navigate = useNavigate();
 
   const menuSections = [
@@ -52,14 +53,21 @@ const AdminSidebar = () => {
   };
 
   return (
-    <div className="admin-sidebar">
-      {/* Logo Section */}
-      <div className="sidebar-logo">
-        <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
-        <div className="logo-text">
-          <h2>Somaet Admin</h2>
-          <p>Enterprise Edition</p>
+    <div className={`admin-sidebar ${isCompact ? 'compact' : ''} ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-top">
+        {/* Logo Section */}
+        <div className="sidebar-logo">
+          <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
+          <div className="logo-text">
+            <h2>Somaet Admin</h2>
+            <p>Enterprise Edition</p>
+          </div>
         </div>
+        {isCompact && (
+          <button className="sidebar-close-btn" onClick={onClose} aria-label="Close sidebar">
+            <CloseOutlined />
+          </button>
+        )}
       </div>
 
       {/* Navigation Menu with Sections */}
@@ -74,6 +82,7 @@ const AdminSidebar = () => {
                 key={itemIndex}
                 to={item.path}
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => isCompact && onClose()}
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
@@ -85,12 +94,12 @@ const AdminSidebar = () => {
 
       {/* Settings & Logout */}
       <div className="sidebar-footer">
-        <NavLink to="/admin/settings" className="nav-item">
+        <NavLink to="/admin/settings" className="nav-item" onClick={() => isCompact && onClose()}>
           <span className="nav-icon"><SettingOutlined /></span>
           <span className="nav-label">Settings</span>
         </NavLink>
         
-        <button className="logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" onClick={() => { if (isCompact) onClose(); handleLogout(); }}>
           <LogoutOutlined className="nav-icon" />
           <span>Logout</span>
         </button>
