@@ -1,12 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   CalendarOutlined,
   CheckOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
   EllipsisOutlined,
   FileTextOutlined,
   FilterOutlined,
+  FrownOutlined,
   SearchOutlined,
+  SmileOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import '../../../styles/admin/bookings_page.css';
@@ -33,6 +37,7 @@ const bookingRows = [
     time: '09:00 AM',
     amount: 350,
     status: 'Pending',
+    pendingStartedAt: Date.now() - 8 * 60 * 1000,
   },
   {
     bookingId: '#BK-82912',
@@ -44,6 +49,7 @@ const bookingRows = [
     time: '02:00 PM',
     amount: 85,
     status: 'In Progress',
+    inProgressStartedAt: Date.now() - 22 * 60 * 1000,
   },
   {
     bookingId: '#BK-82913',
@@ -80,6 +86,107 @@ const getInitials = (name) => {
 
 const formatCurrency = (value) => `$${value.toFixed(2)}`;
 
+const formatDuration = (totalSeconds) => {
+  const safe = Math.max(0, totalSeconds);
+  const monthSeconds = 30 * 24 * 60 * 60;
+  const weekSeconds = 7 * 24 * 60 * 60;
+  const daySeconds = 24 * 60 * 60;
+  const hourSeconds = 60 * 60;
+
+  let remaining = safe;
+  const months = Math.floor(remaining / monthSeconds);
+  remaining %= monthSeconds;
+  const weeks = Math.floor(remaining / weekSeconds);
+  remaining %= weekSeconds;
+  const days = Math.floor(remaining / daySeconds);
+  remaining %= daySeconds;
+  const hours = Math.floor(remaining / hourSeconds);
+  remaining %= hourSeconds;
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+
+  const leadingUnits = [];
+  if (months > 0) leadingUnits.push(`${months}mo`);
+  if (weeks > 0 || months > 0) leadingUnits.push(`${weeks}w`);
+  if (days > 0 || weeks > 0 || months > 0) leadingUnits.push(`${days}d`);
+
+  const timePart = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return leadingUnits.length ? `${leadingUnits.join(' ')} ${timePart}` : timePart;
+};
+
+const InProgressStatus = ({ startedAt }) => {
+  const [elapsedSeconds, setElapsedSeconds] = useState(
+    Math.floor((Date.now() - startedAt) / 1000),
+  );
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [startedAt]);
+
+  return (
+    <span className="status-pill status-in-progress animated" aria-label="In progress booking">
+      <SyncOutlined className="progress-spin-icon" />
+      <span>In Progress</span>
+      <ClockCircleOutlined />
+      <span className="status-timer">{formatDuration(elapsedSeconds)}</span>
+    </span>
+  );
+};
+
+const PendingStatus = ({ startedAt }) => {
+  const [elapsedSeconds, setElapsedSeconds] = useState(
+    Math.floor((Date.now() - startedAt) / 1000),
+  );
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [startedAt]);
+
+  return (
+    <span className="status-pill status-pending animated" aria-label="Pending booking">
+      <span className="pending-dot" />
+      <span>Pending</span>
+      <ClockCircleOutlined />
+      <span className="status-timer">{formatDuration(elapsedSeconds)}</span>
+    </span>
+  );
+};
+
+const ConfirmedStatus = () => {
+  return (
+    <span className="status-pill status-confirmed animated" aria-label="Confirmed booking">
+      <SmileOutlined />
+      <span>Confirmed</span>
+    </span>
+  );
+};
+
+const CompletedStatus = () => {
+  return (
+    <span className="status-pill status-completed animated" aria-label="Completed booking">
+      <CheckCircleOutlined />
+      <span>Completed</span>
+    </span>
+  );
+};
+
+const CancelledStatus = () => {
+  return (
+    <span className="status-pill status-cancelled animated" aria-label="Cancelled booking">
+      <FrownOutlined />
+      <span>Cancelled</span>
+    </span>
+  );
+};
+
 const BookingsPage = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -104,8 +211,8 @@ const BookingsPage = () => {
   return (
     <section className="admin-bookings-page">
       <header className="admin-bookings-header">
-        <h1>BOOKING MANAGEMENT</h1>
-        <p>Manage, track and coordinate all cleaning appointments.</p>
+        <h1 className="admin-page-title">Manage Bookings</h1>
+        <p className="admin-page-subtitle">Manage, track and coordinate all cleaning appointments.</p>
       </header>
 
       <section className="admin-bookings-kpi-grid">
@@ -231,9 +338,21 @@ const BookingsPage = () => {
                     </td>
                     <td className="amount-cell">{formatCurrency(row.amount)}</td>
                     <td>
-                      <span className={`status-pill status-${row.status.toLowerCase().replace(' ', '-')}`}>
-                        {row.status}
-                      </span>
+                      {row.status === 'Confirmed' ? (
+                        <ConfirmedStatus />
+                      ) : row.status === 'Pending' ? (
+                        <PendingStatus startedAt={row.pendingStartedAt || Date.now()} />
+                      ) : row.status === 'In Progress' ? (
+                        <InProgressStatus startedAt={row.inProgressStartedAt || Date.now()} />
+                      ) : row.status === 'Completed' ? (
+                        <CompletedStatus />
+                      ) : row.status === 'Cancelled' ? (
+                        <CancelledStatus />
+                      ) : (
+                        <span className={`status-pill status-${row.status.toLowerCase().replace(' ', '-')}`}>
+                          {row.status}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <button type="button" className="row-action-btn" aria-label={`Actions for ${row.bookingId}`}>

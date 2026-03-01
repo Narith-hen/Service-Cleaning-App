@@ -71,7 +71,7 @@ const LoginPage = () => {
             overflow: 'hidden',
             justifyContent: 'center',
             alignItems: 'center',
-            background: 'linear-gradient(135deg, #1d8f45 0%, #32c753 48%, #6fdd8f 100%)'
+            background: 'linear-gradient(135deg, #1d8f45 0%, #32c753 48%, #6fdd8f 100%)',
         }}>
             <div style={{
                 position: 'absolute',

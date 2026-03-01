@@ -2,9 +2,10 @@ import React from 'react';
 
 const ReportsPage = () => {
   return (
-    <div>
-      <h1>View Reports</h1>
-    </div>
+    <section>
+      <h1 className="admin-page-title">Manage Reports</h1>
+      <p className="admin-page-subtitle">Generate and review platform performance reports.</p>
+    </section>
   );
 };
 

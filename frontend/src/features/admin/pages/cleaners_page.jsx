@@ -411,8 +411,8 @@ const CleanersPage = () => {
       {contextHolder}
       <header className="cleaners-header">
         <div>
-          <h1>CLEANERS</h1>
-          <p>Manage your cleaning staff, monitor performance and verify statuses.</p>
+          <h1 className="admin-page-title">Manage Cleaners</h1>
+          <p className="admin-page-subtitle">Manage your cleaning staff, monitor performance and verify statuses.</p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} className="add-cleaner-btn" onClick={openAddModal}>
           Add Cleaner

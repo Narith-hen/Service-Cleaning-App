@@ -94,7 +94,10 @@ const DashboardPage = () => {
   return (
     <section className="admin-dashboard-page">
       <div className="dashboard-header-row">
-        <h1>Admin Dashboard</h1>
+        <div>
+          <h1 className="admin-page-title">Admin Dashboard</h1>
+          <p className="admin-page-subtitle">View platform activity, bookings, and performance insights.</p>
+        </div>
         <button type="button" className="dashboard-action-btn">Generate Report</button>
       </div>
 

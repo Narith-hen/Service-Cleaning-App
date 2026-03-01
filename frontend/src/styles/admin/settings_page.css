@@ -1,0 +1,6 @@
+.admin-settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: #0f172a;
+}
