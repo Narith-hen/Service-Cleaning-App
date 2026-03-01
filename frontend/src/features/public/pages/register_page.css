@@ -1,0 +1,66 @@
+.register-form-card {
+  animation: registerCardEnter 0.62s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.register-hero-content {
+  animation: registerHeroFade 0.75s ease-out 0.12s both;
+}
+
+.register-benefit-pill {
+  animation: registerBenefitFloat 0.7s ease-out both, registerBenefitDrift 4.6s ease-in-out infinite;
+}
+
+@keyframes registerCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes registerHeroFade {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes registerBenefitFloat {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes registerBenefitDrift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-form-card,
+  .register-hero-content,
+  .register-benefit-pill {
+    animation: none !important;
+  }
+}

@@ -5,6 +5,7 @@ import { GoogleOutlined, LockOutlined, MailOutlined, PhoneOutlined, UserOutlined
 import { useAuth } from "../../../hooks/useAuth";
 import imgRegister from "../../../assets/imgRegister.png";
 import logoSomaet from "../../../assets/Logo_somaet.png";
+import "./register_page.css";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -101,7 +102,7 @@ export default function RegisterPage() {
       }}
     >
       <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", background: "#ffffff", padding: "20px", overflow: "auto" }}>
-        <Card style={{ width: 480, padding: "32px 24px", margin: "30px 0px", boxShadow: "0 10px 40px rgba(0,0,0,0.08)", borderRadius: 12, border: "none" }}>
+        <Card className="register-form-card" style={{ width: 480, padding: "32px 24px", margin: "30px 0px", boxShadow: "0 18px 50px rgba(11, 50, 25, 0.28)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.55)", background: "rgba(255, 255, 255, 0.94)", backdropFilter: "blur(6px)" }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <img
               src={logoSomaet}
@@ -199,14 +200,14 @@ export default function RegisterPage() {
         }}
       >
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.12) 0%, transparent 50%)", pointerEvents: "none" }} />
-        <div style={{ maxWidth: 500, textAlign: "center", color: "white", position: "relative", zIndex: 1 }}>
+        <div className="register-hero-content" style={{ maxWidth: 500, textAlign: "center", color: "white", position: "relative", zIndex: 1 }}>
           <Title level={1} style={{ color: "white", marginBottom: 20, fontWeight: 700 }}>Start Your Journey</Title>
           <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 18, display: "block", marginBottom: 30, lineHeight: 1.6 }}>
             Join thousands of satisfied customers who trust Somaet for their cleaning needs.
           </Text>
           <div style={{ display: "grid", gridTemplateColumns: screens.md ? "repeat(2, 1fr)" : "1fr", gap: 20, marginTop: 30 }}>
-            {["Free estimate", "Insured and bonded", "Eco-friendly products", "100% satisfaction"].map((benefit) => (
-              <div key={benefit} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, color: "rgba(255,255,255,0.95)", background: "rgba(255,255,255,0.18)", padding: "12px 16px", borderRadius: 8, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" }}>
+            {["Free estimate", "Insured and bonded", "Eco-friendly products", "100% satisfaction"].map((benefit, index) => (
+              <div className="register-benefit-pill" key={benefit} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, color: "rgba(255,255,255,0.95)", background: "rgba(255,255,255,0.18)", padding: "12px 16px", borderRadius: 8, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animationDelay: `${0.35 + index * 0.12}s` }}>
                 <span aria-hidden="true" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>*</span>
                 <span>{benefit}</span>
               </div>
@@ -217,4 +218,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

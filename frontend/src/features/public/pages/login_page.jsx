@@ -68,24 +68,59 @@ const LoginPage = () => {
             bottom: 0,
             margin: 0,
             padding: 0,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            justifyContent: 'center',
+            alignItems: 'center',
+            background: 'linear-gradient(135deg, #1d8f45 0%, #32c753 48%, #6fdd8f 100%)'
         }}>
+            <div style={{
+                position: 'absolute',
+                top: '-120px',
+                left: '-120px',
+                width: 360,
+                height: 360,
+                borderRadius: 32,
+                background: 'rgba(255, 255, 255, 0.12)',
+                transform: 'rotate(-32deg)'
+            }} />
+            <div style={{
+                position: 'absolute',
+                right: '-140px',
+                top: '18%',
+                width: 420,
+                height: 420,
+                borderRadius: 36,
+                background: 'rgba(20, 83, 45, 0.18)',
+                transform: 'rotate(-28deg)'
+            }} />
+            <div style={{
+                position: 'absolute',
+                left: '28%',
+                bottom: '-200px',
+                width: 520,
+                height: 420,
+                borderRadius: 40,
+                background: 'rgba(255, 255, 255, 0.08)',
+                transform: 'rotate(34deg)'
+            }} />
             {/* Left Side - Login Form */}
             <div style={{
-                flex: 1,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                background: '#ffffff',
                 padding: '20px',
-                overflowY: 'auto'
+                overflowY: 'auto',
+                position: 'relative',
+                zIndex: 1
             }}>
                 <Card style={{
                     width: 480,
                     padding: '32px 24px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                    boxShadow: '0 18px 50px rgba(11, 50, 25, 0.28)',
                     borderRadius: 12,
-                    border: 'none'
+                    border: '1px solid rgba(255,255,255,0.55)',
+                    background: 'rgba(255, 255, 255, 0.94)',
+                    backdropFilter: 'blur(6px)'
                 }}>
                     {/* Logo/Icon */}
                     <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -226,9 +261,10 @@ const LoginPage = () => {
                                 border: '1px solid #d9d9d9',
                                 fontWeight: 500,
                                 fontSize: 16
+                                
                             }}
                         >
-                            ← Back to Home
+                            {'< Back to Home'}
                         </Button>
                     </Form>
                 </Card>
