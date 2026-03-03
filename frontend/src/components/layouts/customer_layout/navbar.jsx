@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom';
 import {
   PhoneOutlined,
   ClockCircleOutlined,
-  GlobalOutlined,
   MenuOutlined,
   SunOutlined,
   MoonOutlined,
@@ -112,6 +111,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const handleNavigation = (path) => {
     navigate(path);
   };
+  const showDarkModeToggle = location.pathname !== '/';
 
   return (
     <nav
@@ -200,37 +200,20 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
           <Col xs={14} sm={16} md={18} lg={8} xl={10}>
             <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
 
-              {/* Language Selector - Desktop only */}
-              {!isCompactNav && (
+              {/* Dark Mode Toggle */}
+              {showDarkModeToggle && (
                 <Col>
                   <Button
                     type="text"
-                    size="small"
+                    shape="circle"
+                    onClick={() => setDarkMode(!darkMode)}
+                    icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      color: darkMode ? '#e5e7eb' : '#374151'
+                      color: darkMode ? '#fbbf24' : '#0f766e',
                     }}
-                    icon={<GlobalOutlined />}
-                  >
-                    <span>🇰🇭 KH</span>
-                  </Button>
+                  />
                 </Col>
               )}
-
-              {/* Dark Mode Toggle */}
-              <Col>
-                <Button
-                  type="text"
-                  shape="circle"
-                  onClick={() => setDarkMode(!darkMode)}
-                  icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
-                  style={{
-                    color: darkMode ? '#fbbf24' : '#0f766e',
-                  }}
-                />
-              </Col>
 
               {/* Login/Register or User Menu */}
               <Col>
@@ -247,7 +230,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <UserOutlined />
-                      {!isCompactNav && <span>គណនី</span>}
+                      {!isCompactNav && <span>Account</span>}
                       <DownOutlined />
                     </Button>
                   </Dropdown>
@@ -265,7 +248,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <LoginOutlined />
-                      {!isCompactNav && <span>ចូល</span>}
+                      {!isCompactNav && <span>Login</span>}
                     </Button>
                     {!isCompactNav && (
                       <Button
@@ -279,7 +262,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         }}
                       >
                         <UserAddOutlined />
-                        <span>ចុះឈ្មោះ</span>
+                        <span>Register</span>
                       </Button>
                     )}
                   </Space>
@@ -309,4 +292,5 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 };
 
 export default ModernResponsiveNavbar;
+
 

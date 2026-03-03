@@ -71,7 +71,6 @@ const LoginPage = () => {
         }}>
             <div style={{
                 position: 'absolute',
-                top: '-120px',
                 left: '-120px',
                 width: 360,
                 height: 360,
@@ -83,8 +82,6 @@ const LoginPage = () => {
                 position: 'absolute',
                 right: '-140px',
                 top: '18%',
-                width: 420,
-                height: 420,
                 borderRadius: 36,
                 background: 'rgba(20, 83, 45, 0.18)',
                 transform: 'rotate(-28deg)'
@@ -93,8 +90,6 @@ const LoginPage = () => {
                 position: 'absolute',
                 left: '28%',
                 bottom: '-200px',
-                width: 520,
-                height: 420,
                 borderRadius: 40,
                 background: 'rgba(255, 255, 255, 0.08)',
                 transform: 'rotate(34deg)'
@@ -110,7 +105,7 @@ const LoginPage = () => {
                 zIndex: 1
             }}>
                 <Card style={{
-                    width: 'min(92vw, 390px)',
+                    width: 'min(92vw, 480px)',
                     padding: '24px clamp(14px, 3vw, 22px)',
                     boxShadow: '0 18px 50px rgba(11, 50, 25, 0.28)',
                     borderRadius: 12,
@@ -165,7 +160,7 @@ const LoginPage = () => {
                             ]}
                         >
                             <Input
-                                prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+                                prefix={<MailOutlined style={{ color: '#bfbfbf', height: 30}} />}
                                 placeholder="Enter your email"
                                 disabled={loading}
                                 style={{ borderRadius: 8 }}
@@ -178,7 +173,7 @@ const LoginPage = () => {
                             rules={[{ required: true, message: 'Please enter your password' }]}
                         >
                             <Input.Password
-                                prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
+                                prefix={<LockOutlined style={{ color: '#bfbfbf', height: 30}} />}
                                 placeholder="Enter your password"
                                 disabled={loading}
                                 style={{ borderRadius: 8 }}

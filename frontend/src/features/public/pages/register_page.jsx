@@ -116,7 +116,7 @@ export default function RegisterPage() {
         <Card
           className="register-form-card"
           style={{
-            width: "min(92vw, 390px)",
+            width: "min(92vw, 480px)",
             padding: "20px clamp(12px, 2.4vw, 20px)",
             margin: screens.lg ? "10px 0" : "14px 0",
             boxShadow: "0 18px 50px rgba(11, 50, 25, 0.28)",
@@ -154,16 +154,16 @@ export default function RegisterPage() {
           <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="middle">
             {currentStep === 0 && (
               <>
-                <Form.Item name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
+                <Form.Item label="First name" name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
                   <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="First name" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
+                <Form.Item label="Last name" name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
                   <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="Last name" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
+                <Form.Item label="Email" name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
                   <Input prefix={<MailOutlined style={{ color: "#bfbfbf" }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
+                <Form.Item label="Phone number" name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
                   <Input prefix={<PhoneOutlined style={{ color: "#bfbfbf" }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
               </>
@@ -171,10 +171,10 @@ export default function RegisterPage() {
 
             {currentStep === 1 && (
               <>
-                <Form.Item name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
+                <Form.Item label="Password" name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
                   <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Password" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
+                <Form.Item label="Confirm password" name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
                   <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Confirm password" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
               </>
