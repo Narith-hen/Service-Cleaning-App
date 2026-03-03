@@ -29,7 +29,7 @@ const LoginPage = () => {
                         navigate('/admin/dashboard');
                         break;
                     case 'customer':
-                        navigate('/customer/home');
+                        navigate('/customer/dashboard');
                         break;
                     case 'cleaner':
                         navigate('/cleaner/dashboard');

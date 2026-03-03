@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Alert, Button, Card, Divider, Form, Grid, Input, Steps, Typography } from "antd";
 import { GoogleOutlined, LockOutlined, MailOutlined, PhoneOutlined, UserOutlined } from "@ant-design/icons";
-import { useAuth } from "../../../hooks/useAuth";
 import imgRegister from "../../../assets/imgRegister.png";
 import logoSomaet from "../../../assets/Logo_somaet.png";
 import "./register_page.css";
@@ -10,69 +9,47 @@ import "./register_page.css";
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-
-const normalizeRole = (roleValue) => {
-  if (!roleValue) return "customer";
-  if (typeof roleValue === "string") return roleValue.toLowerCase();
-  if (typeof roleValue === "object" && roleValue.role_name) {
-    return String(roleValue.role_name).toLowerCase();
-  }
-  return "customer";
-};
-
-const getRedirectPath = (role) => {
-  switch (role) {
-    case "admin":
-      return "/admin";
-    case "cleaner":
-      return "/cleaner";
-    default:
-      return "/customer";
-  }
-};
-
-const buildUsername = (firstName, lastName) => {
-  const normalized = `${firstName}${lastName}`.toLowerCase().replace(/\s+/g, "");
-  const suffix = Date.now().toString().slice(-5);
-  return `${normalized}_${suffix}`;
-};
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [form] = Form.useForm();
   const screens = useBreakpoint();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const firstStepFields = ["firstName", "lastName", "email", "phone"];
 
-  const onFinish = async (values) => {
+  const onFinish = async () => {
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
+      const allValues = form.getFieldsValue(true);
+
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: buildUsername(values.firstName, values.lastName),
-          email: values.email,
-          password: values.password,
-          phone_number: values.phone,
+          first_name: allValues.firstName,
+          last_name: allValues.lastName,
+          email: allValues.email,
+          password: allValues.password,
+          phone_number: allValues.phone,
         }),
       });
 
       const result = await response.json();
-      if (!response.ok || !result?.success || !result?.data) {
+      if (!response.ok) {
         throw new Error(result?.message || "Registration failed. Please try again.");
       }
 
-      const userData = result.data;
-      const role = normalizeRole(userData.role?.role_name || userData.role || userData.role_name);
-      login(userData, role);
-      navigate(getRedirectPath(role), { replace: true });
+      setSuccess("Registration successful. Redirecting to login...");
+      setTimeout(() => {
+        navigate("/auth/login", { replace: true });
+      }, 1200);
     } catch (err) {
       setError(err.message || "Unable to register right now.");
     } finally {
@@ -113,7 +90,8 @@ export default function RegisterPage() {
             <Text type="secondary" style={{ fontSize: 15 }}>Join Somaet today</Text>
           </div>
 
-          {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 24 }} closable onClose={() => setError("")} />}
+          {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} closable onClose={() => setError("")} />}
+          {success && <Alert message={success} type="success" showIcon style={{ marginBottom: 16 }} />}
 
           <Steps
             current={currentStep}
