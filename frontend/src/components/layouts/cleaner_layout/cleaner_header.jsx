@@ -9,7 +9,8 @@ import {
     CloseCircleOutlined,
     WarningOutlined,
     InfoCircleOutlined,
-    UserOutlined
+    UserOutlined,
+    SettingOutlined
 } from '@ant-design/icons';
 import { useTheme } from "../../../contexts/theme_context";
 import { useTranslation } from "../../../contexts/translation_context";
@@ -17,9 +18,9 @@ import { useAuth } from "../../../hooks/useAuth";
 import { useNotificationStore } from "../../../features/admin/stores/notification.store"; 
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from 'date-fns';
-import "../../../styles/admin/header.css";
+import "../../../styles/cleaner/cleaner_header.css";
 
-const AdminHeader = () => {
+const CleanerHeader = () => {
     const { darkMode, toggleTheme } = useTheme();
     const { language, toggleLanguage } = useTranslation();
     const { user } = useAuth();
@@ -189,7 +190,7 @@ const AdminHeader = () => {
                         <div className="dropdown-menu messages-dropdown" ref={messageRef}>
                             <div className="dropdown-header">
                                 <h3>Messages</h3>
-                                <button className="view-all-btn" onClick={() => navigate('/messages')}>
+                                <button className="view-all-btn" onClick={() => navigate('/cleaner/help/contact')}>
                                     View all
                                 </button>
                             </div>
@@ -200,7 +201,7 @@ const AdminHeader = () => {
                                         key={msg.id} 
                                         className={`dropdown-item ${msg.unread ? 'unread' : ''}`}
                                         onClick={() => {
-                                            navigate('/messages');
+                                            navigate('/cleaner/help/contact');
                                             setIsMessageOpen(false);
                                         }}
                                     >
@@ -219,7 +220,7 @@ const AdminHeader = () => {
                             </div>
                             
                             <div className="dropdown-footer">
-                                <button onClick={() => navigate('/messages/new')}>
+                                <button onClick={() => navigate('/cleaner/help/contact')}>
                                     New Message
                                 </button>
                             </div>
@@ -283,7 +284,7 @@ const AdminHeader = () => {
                                                 className="item-delete"
                                                 onClick={(e) => handleDeleteNotification(e, notification.id)}
                                             >
-                                                ×
+                                                &times;
                                             </button>
                                         </div>
                                     ))
@@ -293,7 +294,7 @@ const AdminHeader = () => {
                             {notifications.length > 0 && (
                                 <div className="dropdown-footer">
                                     <button onClick={() => {
-                                        navigate('/notifications');
+                                        navigate('/cleaner/notifications');
                                         setIsNotificationOpen(false);
                                     }}>
                                         View all notifications
@@ -337,11 +338,11 @@ const AdminHeader = () => {
                             </div>
                             
                             <div className="dropdown-list">
-                                <button className="dropdown-item-btn" onClick={() => navigate('/profile')}>
+                                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/profile')}>
                                     <UserOutlined /> My Profile
                                 </button>
-                                <button className="dropdown-item-btn" onClick={() => navigate('/settings')}>
-                                    <span className="icon">⚙️</span> Settings
+                                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/settings')}>
+                                    <SettingOutlined /> Settings
                                 </button>
                             </div>
                             
@@ -358,4 +359,5 @@ const AdminHeader = () => {
     );
 };
 
-export default AdminHeader;
+export default CleanerHeader;
+

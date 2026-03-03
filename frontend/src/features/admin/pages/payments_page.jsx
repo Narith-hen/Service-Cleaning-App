@@ -2,9 +2,10 @@ import React from 'react';
 
 const PaymentsPage = () => {
   return (
-    <div>
-      <h1>Manage Payments</h1>
-    </div>
+    <section>
+      <h1 className="admin-page-title">Manage Payments</h1>
+      <p className="admin-page-subtitle">Track transactions, payouts, and payment statuses.</p>
+    </section>
   );
 };
 

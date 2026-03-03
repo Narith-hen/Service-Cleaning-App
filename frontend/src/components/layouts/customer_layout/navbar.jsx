@@ -1,28 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Space, Avatar, Typography, Button, Menu, Dropdown } from 'antd';
+import { Row, Col, Space, Typography, Button, Dropdown } from 'antd';
+import { useLocation } from 'react-router-dom';
 import {
-  PhoneOutlined,
-  ClockCircleOutlined,
-  GlobalOutlined,
   MenuOutlined,
   SunOutlined,
   MoonOutlined,
-  FacebookOutlined,
-  InstagramOutlined,
-  TikTokOutlined,
   UserOutlined,
   LoginOutlined,
   UserAddOutlined,
-  DownOutlined
+  DownOutlined,
+  LogoutOutlined,
+  EditOutlined
 } from '@ant-design/icons';
-
-import { MessageOutlined } from '@ant-design/icons'; // For Telegram alternative
+import logoSomaet from '../../../assets/Logo_somaet.png';
+import { useAuth } from '../../../hooks/useAuth';
 
 const { Text } = Typography;
+const TARGET_SCREEN_BREAKPOINT = 1280;
+const TARGET_SCREEN_CONTAINER_WIDTH = 1280;
 
 const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOpen }) => {
+  const location = useLocation();
+  const { user, logout } = useAuth();
   const [breakpoint, setBreakpoint] = useState('lg');
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Change this based on auth state
+
+  const isCustomerArea = location.pathname.startsWith('/customer');
+  const isCustomerUser = user?.role === 'customer' || isCustomerArea;
+  const isCustomerDashboard =
+    location.pathname === '/customer/dashboard' || location.pathname === '/customer/home';
+  const displayName = user?.name || user?.first_name || 'Customer';
+  const avatarSrc = user?.avatar || 'https://i.pravatar.cc/64?img=12';
 
   useEffect(() => {
     const handleResize = () => {
@@ -30,7 +37,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
       if (width < 576) setBreakpoint('xs');
       else if (width < 768) setBreakpoint('sm');
       else if (width < 992) setBreakpoint('md');
-      else if (width < 1200) setBreakpoint('lg');
+      else if (width <= TARGET_SCREEN_BREAKPOINT) setBreakpoint('lg');
       else setBreakpoint('xl');
     };
 
@@ -39,58 +46,16 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Responsive values
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
   const isTablet = breakpoint === 'md';
-  const isDesktop = breakpoint === 'lg' || breakpoint === 'xl';
+  const isLaptopL = breakpoint === 'lg';
+  const isCompactNav = isMobile || isTablet || isLaptopL;
 
-  // Navigation items
   const navItems = [
-    { key: 'home', label: 'ទំព័រដើម', path: '/' },
-    { key: 'services', label: 'សេវាកម្ម', path: '/services' },
-    { key: 'about', label: 'អំពីយើង', path: '/about' },
-    { key: 'contact', label: 'ទំនាក់ទំនង', path: '/contact' },
-  ];
-
-  // User menu for logged in users
-  const userMenu = (
-    <Menu
-      items={[
-        { key: 'profile', label: 'ប្រវត្តិរូប', onClick: () => navigate('/customer/profile') },
-        { key: 'bookings', label: 'ការកក់របស់ខ្ញុំ', onClick: () => navigate('/customer/bookings') },
-        { key: 'settings', label: 'ការកំណត់', onClick: () => navigate('/customer/settings') },
-        { type: 'divider' },
-        { key: 'logout', label: 'ចាកចេញ', danger: true, onClick: () => setIsLoggedIn(false) }
-      ]}
-    />
-  );
-
-  // Social media configuration
-  const socialMedia = [
-    {
-      icon: <FacebookOutlined />,
-      color: '#1877F2',
-      label: 'Facebook',
-      url: 'https://facebook.com/sevanow'
-    },
-    {
-      icon: <InstagramOutlined />,
-      color: '#E4405F',
-      label: 'Instagram',
-      url: 'https://instagram.com/sevanow'
-    },
-    {
-      icon: <MessageOutlined />,
-      color: '#26A5E4',
-      label: 'Telegram',
-      url: 'https://t.me/sevanow'
-    },
-    {
-      icon: <TikTokOutlined />,
-      color: '#000000',
-      label: 'TikTok',
-      url: 'https://tiktok.com/@sevanow'
-    }
+    { key: 'home', label: 'My Home', path: isCustomerArea ? '/customer/dashboard' : '/' },
+    { key: 'services', label: 'Services', path: '/services' },
+    { key: 'about', label: 'About Us', path: '/about' },
+    { key: 'contact', label: 'Contact Us', path: '/contact' }
   ];
 
   const handleMenuClick = () => {
@@ -99,20 +64,50 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
     }
   };
 
-  const handleSocialClick = (url) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   const handleNavigation = (path) => {
     navigate(path);
+  };
+  const showDarkModeToggle = location.pathname !== '/';
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/auth/login');
+  };
+
+  const profileMenu = {
+    items: [
+      {
+        key: 'view-profile',
+        icon: <UserOutlined />,
+        label: 'View Profile'
+      },
+      {
+        key: 'update-info',
+        icon: <EditOutlined />,
+        label: 'Update Info'
+      },
+      {
+        type: 'divider'
+      },
+      {
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: 'Logout',
+        danger: true
+      }
+    ],
+    onClick: ({ key }) => {
+      if (key === 'view-profile') navigate('/customer/profile');
+      if (key === 'update-info') navigate('/customer/profile/edit');
+      if (key === 'logout') handleLogout();
+    }
   };
 
   return (
     <nav
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
+        position: 'relative',
+        zIndex: 1,
         backdropFilter: 'blur(20px) saturate(180%)',
         background: darkMode
           ? 'rgba(15, 23, 42, 0.95)'
@@ -122,62 +117,49 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
           : 'none',
         padding: isMobile ? '8px 0' : '12px 0',
         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: scrolled ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
+        boxShadow: scrolled ? '0 4px 20px rgba(0,0,0,0.1)' : 'none'
       }}
     >
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: isMobile ? '0 16px' : '0 24px'
-      }}>
+      <div
+        style={{
+          maxWidth: `${TARGET_SCREEN_CONTAINER_WIDTH}px`,
+          margin: '0 auto',
+          padding: isMobile ? '0 16px' : '0 24px'
+        }}
+      >
         <Row align="middle" justify="space-between" wrap={false} gutter={[16, 0]}>
-          {/* Logo */}
           <Col xs={10} sm={8} md={6} lg={4} xl={4}>
-            <Space
-              align="center"
-              onClick={() => navigate('/')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{
-                padding: isMobile ? 4 : 6,
-                background: darkMode
-                  ? 'linear-gradient(135deg, #0f766e 0%, #134e4a 100%)'
-                  : 'linear-gradient(135deg, #0f766e 0%, #dc2626 100%)',
-                borderRadius: 3,
-              }}>
-                <Avatar
-                  size={isMobile ? 28 : 32}
-                  style={{
-                    background: '#ffffff',
-                    fontWeight: 800,
-                    fontSize: isMobile ? 14 : 16,
-                    color: darkMode ? '#0f766e' : '#dc2626',
-                  }}
-                >
-                  S
-                </Avatar>
-              </div>
+            <Space align="center" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+              <img
+                src={logoSomaet}
+                alt="Somaet logo"
+                style={{
+                  width: isMobile ? 42 : 50,
+                  height: isMobile ? 42 : 50,
+                  objectFit: 'contain',
+                  flexShrink: 0
+                }}
+              />
               <div style={{ marginLeft: isMobile ? 4 : 8 }}>
                 <Text
                   strong
                   style={{
                     fontSize: isMobile ? 16 : 20,
                     fontWeight: 800,
-                    color: "green",
+                    color: 'green',
                     fontFamily: "'Battambang', 'Khmer OS', sans-serif"
                   }}
                 >
-                  សម្អាត
+                  Somaet
                 </Text>
               </div>
             </Space>
           </Col>
 
-          {/* Desktop Navigation Items - Hidden on mobile */}
-          {!isMobile && !isTablet && (
+          {!isCompactNav && (
             <Col lg={12} xl={10}>
               <Space size="large" style={{ justifyContent: 'center', width: '100%' }}>
-                {navItems.map(item => (
+                {navItems.map((item) => (
                   <Button
                     key={item.key}
                     type="text"
@@ -200,58 +182,54 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
             </Col>
           )}
 
-          {/* Right Side Actions */}
           <Col xs={14} sm={16} md={18} lg={8} xl={10}>
             <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
-
-              {/* Language Selector - Desktop only */}
-              {!isMobile && (
+              {showDarkModeToggle && (
                 <Col>
                   <Button
                     type="text"
-                    size="small"
+                    shape="circle"
+                    onClick={() => setDarkMode(!darkMode)}
+                    icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      color: darkMode ? '#e5e7eb' : '#374151'
+                      color: darkMode ? '#fbbf24' : '#0f766e'
                     }}
-                    icon={<GlobalOutlined />}
-                  >
-                    <span>🇰🇭 KH</span>
-                  </Button>
+                  />
                 </Col>
               )}
 
-              {/* Dark Mode Toggle */}
               <Col>
-                <Button
-                  type="text"
-                  shape="circle"
-                  onClick={() => setDarkMode(!darkMode)}
-                  icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
-                  style={{
-                    color: darkMode ? '#fbbf24' : '#0f766e',
-                  }}
-                />
-              </Col>
-
-              {/* Login/Register or User Menu */}
-              <Col>
-                {isLoggedIn ? (
-                  <Dropdown overlay={userMenu} placement="bottomRight">
+                {isCustomerUser && isCustomerDashboard ? (
+                  <Dropdown menu={profileMenu} placement="bottomRight">
                     <Button
-                      type="primary"
                       style={{
-                        background: 'green',
-                        borderColor: 'green',
+                        background: '#f6f7fb',
+                        borderColor: '#d7dbe7',
+                        color: '#1f2937',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4
+                        gap: 8,
+                        height: 42,
+                        borderRadius: 999,
+                        paddingInline: 10
                       }}
                     >
-                      <UserOutlined />
-                      {!isMobile && <span>គណនី</span>}
+                      <img
+                        src={avatarSrc}
+                        alt={displayName}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '1px solid #d1d5db'
+                        }}
+                      />
+                      {!isCompactNav && (
+                        <span style={{ fontWeight: 600, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {displayName}
+                        </span>
+                      )}
                       <DownOutlined />
                     </Button>
                   </Dropdown>
@@ -269,9 +247,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <LoginOutlined />
-                      {!isMobile && <span>ចូល</span>}
+                      {!isCompactNav && <span>Login</span>}
                     </Button>
-                    {!isMobile && (
+                    {!isCompactNav && (
                       <Button
                         onClick={() => navigate('/auth/register')}
                         style={{
@@ -283,24 +261,20 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         }}
                       >
                         <UserAddOutlined />
-                        <span>ចុះឈ្មោះ</span>
+                        <span>Register</span>
                       </Button>
                     )}
                   </Space>
                 )}
               </Col>
 
-              {/* Mobile Menu Button */}
-              {isMobile && (
+              {isCompactNav && (
                 <Col>
                   <Button
                     type="primary"
                     icon={<MenuOutlined />}
                     onClick={handleMenuClick}
-                    style={{
-                      background: "green",
-                      borderColor: "green"
-                    }}
+                    style={{ background: 'green', borderColor: 'green' }}
                   />
                 </Col>
               )}

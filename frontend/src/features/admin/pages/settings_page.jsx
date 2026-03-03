@@ -1,10 +1,14 @@
 import React from 'react';
+import '../../../styles/admin/settings_page.css';
 
 const SettingsPage = () => {
   return (
-    <div>
-      <h1>Manage Settings</h1>
-    </div>
+    <section className="admin-settings-page">
+      <header className="admin-settings-header">
+        <h1 className="admin-page-title">Manage Settings</h1>
+        <p className="admin-page-subtitle">Manage your service radius, job preferences, and notifications.</p>
+      </header>
+    </section>
   );
 };
 
