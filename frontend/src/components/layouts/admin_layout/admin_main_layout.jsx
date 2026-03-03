@@ -6,15 +6,17 @@ import { useTheme } from "../../../contexts/theme_context";
 import '../../../styles/admin/admin_main_layout.css';
 import Footer from './admin_footer';
 
+const TARGET_SCREEN_BREAKPOINT = 1280;
+
 const AdminMainLayout = () => {
   const { darkMode } = useTheme();
   const location = useLocation();
-  const [isCompactLayout, setIsCompactLayout] = useState(window.innerWidth <= 1200);
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1200);
+  const [isCompactLayout, setIsCompactLayout] = useState(window.innerWidth <= TARGET_SCREEN_BREAKPOINT);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > TARGET_SCREEN_BREAKPOINT);
 
   useEffect(() => {
     const handleResize = () => {
-      const compact = window.innerWidth <= 1200;
+      const compact = window.innerWidth <= TARGET_SCREEN_BREAKPOINT;
       setIsCompactLayout(compact);
       setSidebarOpen(!compact);
     };

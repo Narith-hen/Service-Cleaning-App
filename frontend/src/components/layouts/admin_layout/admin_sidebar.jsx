@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth';
 import {
   DashboardOutlined,
   CalendarOutlined,
@@ -19,6 +20,7 @@ import '../../../styles/admin/sidebar.css';
 
 const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const menuSections = [
     {
@@ -47,9 +49,9 @@ const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) 
     }
   ];
 
-  const handleLogout = () => {
-    // Add logout logic
-    navigate('/');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/auth/login', { replace: true });
   };
 
   return (

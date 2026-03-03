@@ -59,23 +59,18 @@ const LoginPage = () => {
     return (
         <div style={{
             display: 'flex',
-            width: '100vw',
-            height: '100vh',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            width: '100%',
+            minHeight: '100dvh',
             margin: 0,
-            padding: 0,
-            overflow: 'hidden',
+            padding: '14px 0',
+            overflowX: 'hidden',
+            overflowY: 'auto',
             justifyContent: 'center',
             alignItems: 'center',
             background: 'linear-gradient(135deg, #1d8f45 0%, #32c753 48%, #6fdd8f 100%)',
         }}>
             <div style={{
                 position: 'absolute',
-                top: '-120px',
                 left: '-120px',
                 width: 360,
                 height: 360,
@@ -87,8 +82,6 @@ const LoginPage = () => {
                 position: 'absolute',
                 right: '-140px',
                 top: '18%',
-                width: 420,
-                height: 420,
                 borderRadius: 36,
                 background: 'rgba(20, 83, 45, 0.18)',
                 transform: 'rotate(-28deg)'
@@ -97,8 +90,6 @@ const LoginPage = () => {
                 position: 'absolute',
                 left: '28%',
                 bottom: '-200px',
-                width: 520,
-                height: 420,
                 borderRadius: 40,
                 background: 'rgba(255, 255, 255, 0.08)',
                 transform: 'rotate(34deg)'
@@ -108,14 +99,14 @@ const LoginPage = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                padding: '20px',
+                padding: '10px',
                 overflowY: 'auto',
                 position: 'relative',
                 zIndex: 1
             }}>
                 <Card style={{
-                    width: 480,
-                    padding: '32px 24px',
+                    width: 'min(92vw, 480px)',
+                    padding: '24px clamp(14px, 3vw, 22px)',
                     boxShadow: '0 18px 50px rgba(11, 50, 25, 0.28)',
                     borderRadius: 12,
                     border: '1px solid rgba(255,255,255,0.55)',
@@ -129,16 +120,16 @@ const LoginPage = () => {
                             alt="Somaet logo"
                             onClick={() => navigate('/')}
                             style={{
-                                width: 112,
-                                height: 112,
+                                width: 'clamp(68px, 14vw, 88px)',
+                                height: 'clamp(68px, 14vw, 88px)',
                                 objectFit: 'contain',
-                                margin: '0 auto 20px',
+                                margin: '0 auto 14px',
                                 display: 'block',
                                 cursor: 'pointer'
                             }}
                         />
-                        <Title level={2} style={{ marginBottom: 8, fontWeight: 600 }}>Welcome Back</Title>
-                        <Text type="secondary" style={{ fontSize: 15 }}>Login to your Somaet account</Text>
+                        <Title level={2} style={{ marginBottom: 6, fontWeight: 600, fontSize: 'clamp(24px, 3.4vw, 34px)' }}>Welcome Back</Title>
+                        <Text type="secondary" style={{ fontSize: 14 }}>Login to your Somaet account</Text>
                     </div>
 
                     {/* Error Alert */}
@@ -157,7 +148,7 @@ const LoginPage = () => {
                         name="login"
                         onFinish={onFinish}
                         layout="vertical"
-                        size="large"
+                        size="middle"
                         initialValues={{ remember: true }}
                     >
                         <Form.Item
@@ -169,7 +160,7 @@ const LoginPage = () => {
                             ]}
                         >
                             <Input
-                                prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+                                prefix={<MailOutlined style={{ color: '#bfbfbf', height: 30}} />}
                                 placeholder="Enter your email"
                                 disabled={loading}
                                 style={{ borderRadius: 8 }}
@@ -182,7 +173,7 @@ const LoginPage = () => {
                             rules={[{ required: true, message: 'Please enter your password' }]}
                         >
                             <Input.Password
-                                prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
+                                prefix={<LockOutlined style={{ color: '#bfbfbf', height: 30}} />}
                                 placeholder="Enter your password"
                                 disabled={loading}
                                 style={{ borderRadius: 8 }}
@@ -193,7 +184,8 @@ const LoginPage = () => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            marginBottom: 24
+                            marginBottom: 18,
+                            gap: 8
                         }}>
                             <Form.Item name="remember" valuePropName="checked" noStyle>
                                 <Checkbox disabled={loading}>Remember me</Checkbox>
@@ -212,11 +204,11 @@ const LoginPage = () => {
                                 loading={loading}
                                 style={{
                                     borderRadius: 8,
-                                    height: 48,
+                                    height: 44,
                                     background: 'linear-gradient(135deg, #49C15D 0%, #3c9c4c 100%)',
                                     border: 'none',
                                     fontWeight: 500,
-                                    fontSize: 16
+                                    fontSize: 15
                                 }}
                             >
                                 Log In
@@ -235,8 +227,8 @@ const LoginPage = () => {
                             disabled={loading}
                             style={{
                                 borderRadius: 8,
-                                height: 48,
-                                marginBottom: 24,
+                                height: 44,
+                                marginBottom: 18,
                                 borderColor: '#d9d9d9'
                             }}
                         >
@@ -257,10 +249,10 @@ const LoginPage = () => {
                             onClick={() => navigate('/')}
                             style={{
                                 borderRadius: 8,
-                                height: 48,
+                                height: 44,
                                 border: '1px solid #d9d9d9',
                                 fontWeight: 500,
-                                fontSize: 16
+                                fontSize: 15
                                 
                             }}
                         >

@@ -7,6 +7,8 @@ import { Drawer } from 'antd';
 import Sidebar from './Sidebar'; 
 import '../../../styles/customer/customer_main_layout.css'; 
 
+const TARGET_SCREEN_BREAKPOINT = 1280;
+
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,7 +62,17 @@ const MainLayout = () => {
         />
       )}
 
-      <header className="main-header" style={{ width: '100%' }}>
+      <header
+        className="main-header"
+        style={{
+          width: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000
+        }}
+      >
         <ModernResponsiveNavbar 
           darkMode={darkMode}
           setDarkMode={setDarkMode}
@@ -74,7 +86,8 @@ const MainLayout = () => {
         width: '100%', 
         flex: 1,
         background: "white",
-        minHeight: 'calc(100vh - 140px)'
+        minHeight: 'calc(100vh - 140px)',
+        paddingTop: 90
       }}>
         <Outlet />
       </main>
@@ -83,7 +96,7 @@ const MainLayout = () => {
         placement="right"
         onClose={() => setMobileOpen(false)}
         open={mobileOpen}
-        width={viewportWidth < 576 ? '100%' : viewportWidth <= 1200 ? 380 : 420}
+        width={viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420}
         closable={false}
         styles={{
           body: { padding: 0 },

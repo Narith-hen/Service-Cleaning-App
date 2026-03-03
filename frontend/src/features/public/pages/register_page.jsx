@@ -70,24 +70,53 @@ export default function RegisterPage() {
     <div
       style={{
         display: "flex",
-        width: "100vw",
-        height: "100vh",
+        width: "100%",
+        minHeight: "100dvh",
         margin: 0,
-        padding: 0,
-        overflow: "hidden",
+        padding: screens.lg ? "0" : "12px 0",
+        overflowX: "hidden",
+        overflowY: "auto",
         flexDirection: screens.lg ? "row" : "column",
       }}
     >
-      <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", background: "#ffffff", padding: "20px", overflow: "auto" }}>
-        <Card className="register-form-card" style={{ width: 480, padding: "32px 24px", margin: "30px 0px", boxShadow: "0 18px 50px rgba(11, 50, 25, 0.28)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.55)", background: "rgba(255, 255, 255, 0.94)", backdropFilter: "blur(6px)" }}>
+      <div
+        style={{
+          flex: screens.lg ? "0 0 44%" : 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "#ffffff",
+          padding: screens.lg ? "16px 14px" : "10px",
+          overflow: "auto",
+        }}
+      >
+        <Card
+          className="register-form-card"
+          style={{
+            width: "min(92vw, 480px)",
+            padding: "20px clamp(12px, 2.4vw, 20px)",
+            margin: screens.lg ? "10px 0" : "14px 0",
+            boxShadow: "0 18px 50px rgba(11, 50, 25, 0.28)",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.55)",
+            background: "rgba(255, 255, 255, 0.94)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <img
               src={logoSomaet}
               alt="Somaet logo"
-              style={{ width: 112, height: 112, objectFit: "contain", margin: "0 auto 20px", display: "block" }}
+              style={{
+                width: "clamp(68px, 14vw, 88px)",
+                height: "clamp(68px, 14vw, 88px)",
+                objectFit: "contain",
+                margin: "0 auto 14px",
+                display: "block",
+              }}
             />
-            <Title level={2} style={{ marginBottom: 8, fontWeight: 600 }}>Create Account</Title>
-            <Text type="secondary" style={{ fontSize: 15 }}>Join Somaet today</Text>
+            <Title level={2} style={{ marginBottom: 6, fontWeight: 600, fontSize: "clamp(24px, 3.4vw, 34px)" }}>Create Account</Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>Join Somaet today</Text>
           </div>
 
           {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} closable onClose={() => setError("")} />}
@@ -100,19 +129,19 @@ export default function RegisterPage() {
             style={{ marginBottom: 20 }}
           />
 
-          <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="large">
+          <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="middle">
             {currentStep === 0 && (
               <>
-                <Form.Item name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
+                <Form.Item label="First name" name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
                   <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="First name" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
+                <Form.Item label="Last name" name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
                   <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="Last name" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
+                <Form.Item label="Email" name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
                   <Input prefix={<MailOutlined style={{ color: "#bfbfbf" }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
+                <Form.Item label="Phone number" name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
                   <Input prefix={<PhoneOutlined style={{ color: "#bfbfbf" }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
               </>
@@ -120,10 +149,10 @@ export default function RegisterPage() {
 
             {currentStep === 1 && (
               <>
-                <Form.Item name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
+                <Form.Item label="Password" name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
                   <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Password" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
-                <Form.Item name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
+                <Form.Item label="Confirm password" name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
                   <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Confirm password" disabled={loading} style={{ borderRadius: 8 }} />
                 </Form.Item>
               </>
@@ -131,17 +160,17 @@ export default function RegisterPage() {
 
             {currentStep === 0 ? (
               <Form.Item style={{ marginTop: 24, marginBottom: 8 }}>
-                <Button type="primary" block size="large" onClick={handleNext} disabled={loading} style={{ borderRadius: 8, height: 48, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 16 }}>
+                <Button type="primary" block size="large" onClick={handleNext} disabled={loading} style={{ borderRadius: 8, height: 44, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 15 }}>
                   Next
                 </Button>
               </Form.Item>
             ) : (
               <Form.Item style={{ marginTop: 24, marginBottom: 8 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <Button size="large" onClick={() => setCurrentStep(0)} disabled={loading} style={{ borderRadius: 8, height: 48 }}>
+                  <Button size="large" onClick={() => setCurrentStep(0)} disabled={loading} style={{ borderRadius: 8, height: 44 }}>
                     Back
                   </Button>
-                  <Button type="primary" htmlType="submit" size="large" loading={loading} style={{ borderRadius: 8, height: 48, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 16 }}>
+                  <Button type="primary" htmlType="submit" size="large" loading={loading} style={{ borderRadius: 8, height: 44, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 15 }}>
                     Sign Up
                   </Button>
                 </div>
@@ -149,7 +178,7 @@ export default function RegisterPage() {
             )}
 
             <Divider style={{ margin: "16px 0" }}><Text type="secondary" style={{ fontSize: 14 }}>OR</Text></Divider>
-            <Button icon={<GoogleOutlined />} size="large" block disabled style={{ borderRadius: 8, height: 48, marginBottom: 24, borderColor: "#d9d9d9" }}>
+            <Button icon={<GoogleOutlined />} size="large" block disabled style={{ borderRadius: 8, height: 44, marginBottom: 18, borderColor: "#d9d9d9" }}>
               Continue with Google
             </Button>
 
@@ -163,7 +192,7 @@ export default function RegisterPage() {
 
       <div
         style={{
-          flex: screens.lg ? 1 : "none",
+          flex: screens.lg ? "1 1 56%" : "none",
           minHeight: screens.lg ? "100%" : 360,
           backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)), url(${imgRegister})`,
           backgroundSize: "cover",
@@ -172,21 +201,21 @@ export default function RegisterPage() {
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          padding: screens.md ? "40px" : "24px 16px",
+          padding: screens.md ? "28px" : "18px 14px",
           position: "relative",
           overflow: "hidden",
         }}
       >
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.12) 0%, transparent 50%)", pointerEvents: "none" }} />
-        <div className="register-hero-content" style={{ maxWidth: 500, textAlign: "center", color: "white", position: "relative", zIndex: 1 }}>
-          <Title level={1} style={{ color: "white", marginBottom: 20, fontWeight: 700 }}>Start Your Journey</Title>
-          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 18, display: "block", marginBottom: 30, lineHeight: 1.6 }}>
+        <div className="register-hero-content" style={{ maxWidth: 450, textAlign: "center", color: "white", position: "relative", zIndex: 1 }}>
+          <Title level={2} style={{ color: "white", marginBottom: 14, fontWeight: 700, fontSize: "clamp(32px, 3.2vw, 44px)" }}>Start Your Journey</Title>
+          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 15, display: "block", marginBottom: 20, lineHeight: 1.45 }}>
             Join thousands of satisfied customers who trust Somaet for their cleaning needs.
           </Text>
-          <div style={{ display: "grid", gridTemplateColumns: screens.md ? "repeat(2, 1fr)" : "1fr", gap: 20, marginTop: 30 }}>
+          <div style={{ display: "grid", gridTemplateColumns: screens.md ? "repeat(2, 1fr)" : "1fr", gap: 12, marginTop: 16 }}>
             {["Free estimate", "Insured and bonded", "Eco-friendly products", "100% satisfaction"].map((benefit, index) => (
-              <div className="register-benefit-pill" key={benefit} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, color: "rgba(255,255,255,0.95)", background: "rgba(255,255,255,0.18)", padding: "12px 16px", borderRadius: 8, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animationDelay: `${0.35 + index * 0.12}s` }}>
-                <span aria-hidden="true" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>*</span>
+              <div className="register-benefit-pill" key={benefit} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "rgba(255,255,255,0.95)", background: "rgba(255,255,255,0.18)", padding: "10px 12px", borderRadius: 8, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animationDelay: `${0.35 + index * 0.12}s` }}>
+                <span aria-hidden="true" style={{ fontSize: 18, fontWeight: 700, lineHeight: 1 }}>*</span>
                 <span>{benefit}</span>
               </div>
             ))}

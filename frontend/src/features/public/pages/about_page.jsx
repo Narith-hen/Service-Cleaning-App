@@ -1,12 +1,7 @@
-import React from 'react';
+import AboutContent from '../../../pages/public/AboutPage';
 
 const AboutPage = () => {
-  return (
-    <div className="about-page">
-      <h1>About Us</h1>
-      <p>Learn more about SEVANOW and our mission</p>
-    </div>
-  );
+  return <AboutContent embedded />;
 };
 
-export default AboutPage; // Make sure this line exists!
+export default AboutPage;
