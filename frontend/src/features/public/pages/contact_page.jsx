@@ -1,12 +1,7 @@
-import React from 'react';
+import ContactContent from '../../../pages/public/ContactPage';
 
-const AboutPage = () => {
-  return (
-    <div className="about-page">
-      <h1>About Us</h1>
-      <p>Learn more about SEVANOW and our mission</p>
-    </div>
-  );
+const ContactPage = () => {
+  return <ContactContent embedded />;
 };
 
-export default AboutPage; // Make sure this line exists!
+export default ContactPage;

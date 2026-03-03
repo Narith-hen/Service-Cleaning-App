@@ -22,7 +22,7 @@ import "../../../styles/admin/header.css";
 const AdminHeader = () => {
     const { darkMode, toggleTheme } = useTheme();
     const { language, toggleLanguage } = useTranslation();
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const navigate = useNavigate();
 
     // Notification store
@@ -112,6 +112,12 @@ const AdminHeader = () => {
         setIsProfileOpen(!isProfileOpen);
         setIsNotificationOpen(false);
         setIsMessageOpen(false);
+    };
+
+    const handleLogout = async () => {
+        await logout();
+        navigate('/auth/login', { replace: true });
+        setIsProfileOpen(false);
     };
 
     const handleMarkAllAsRead = (e) => {
@@ -346,7 +352,7 @@ const AdminHeader = () => {
                             </div>
                             
                             <div className="dropdown-footer">
-                                <button className="logout-btn" onClick={() => navigate('/')}>
+                                <button className="logout-btn" onClick={handleLogout}>
                                     Sign Out
                                 </button>
                             </div>

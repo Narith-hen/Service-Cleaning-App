@@ -21,6 +21,8 @@ import logoSomaet from '../../../assets/Logo_somaet.png';
 import { MessageOutlined } from '@ant-design/icons'; // For Telegram alternative
 
 const { Text } = Typography;
+const TARGET_SCREEN_BREAKPOINT = 1280;
+const TARGET_SCREEN_CONTAINER_WIDTH = 1280;
 
 const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOpen }) => {
   const location = useLocation();
@@ -33,7 +35,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
       if (width < 576) setBreakpoint('xs');
       else if (width < 768) setBreakpoint('sm');
       else if (width < 992) setBreakpoint('md');
-      else if (width < 1200) setBreakpoint('lg');
+      else if (width <= TARGET_SCREEN_BREAKPOINT) setBreakpoint('lg');
       else setBreakpoint('xl');
     };
 
@@ -114,9 +116,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   return (
     <nav
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
+        position: 'relative',
+        zIndex: 1,
         backdropFilter: 'blur(20px) saturate(180%)',
         background: darkMode
           ? 'rgba(15, 23, 42, 0.95)'
@@ -130,7 +131,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
       }}
     >
       <div style={{
-        maxWidth: '1400px',
+        maxWidth: `${TARGET_SCREEN_CONTAINER_WIDTH}px`,
         margin: '0 auto',
         padding: isMobile ? '0 16px' : '0 24px'
       }}>
