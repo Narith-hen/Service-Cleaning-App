@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Space, Typography, Button, Dropdown } from 'antd';
 import { useLocation } from 'react-router-dom';
 import {
-<<<<<<< HEAD
-  GlobalOutlined,
-=======
-  PhoneOutlined,
-  ClockCircleOutlined,
->>>>>>> develop
   MenuOutlined,
   SunOutlined,
   MoonOutlined,
@@ -126,15 +120,13 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
         boxShadow: scrolled ? '0 4px 20px rgba(0,0,0,0.1)' : 'none'
       }}
     >
-<<<<<<< HEAD
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '0 16px' : '0 24px' }}>
-=======
-      <div style={{
-        maxWidth: `${TARGET_SCREEN_CONTAINER_WIDTH}px`,
-        margin: '0 auto',
-        padding: isMobile ? '0 16px' : '0 24px'
-      }}>
->>>>>>> develop
+      <div
+        style={{
+          maxWidth: `${TARGET_SCREEN_CONTAINER_WIDTH}px`,
+          margin: '0 auto',
+          padding: isMobile ? '0 16px' : '0 24px'
+        }}
+      >
         <Row align="middle" justify="space-between" wrap={false} gutter={[16, 0]}>
           <Col xs={10} sm={8} md={6} lg={4} xl={4}>
             <Space align="center" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
@@ -192,13 +184,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 
           <Col xs={14} sm={16} md={18} lg={8} xl={10}>
             <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
-<<<<<<< HEAD
-              {!isCompactNav && (
-=======
-
-              {/* Dark Mode Toggle */}
               {showDarkModeToggle && (
->>>>>>> develop
                 <Col>
                   <Button
                     type="text"
@@ -206,33 +192,12 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     onClick={() => setDarkMode(!darkMode)}
                     icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
                     style={{
-                      color: darkMode ? '#fbbf24' : '#0f766e',
+                      color: darkMode ? '#fbbf24' : '#0f766e'
                     }}
-<<<<<<< HEAD
-                    icon={<GlobalOutlined />}
-                  >
-                    <span>KH</span>
-                  </Button>
-                </Col>
-              )}
-
-              <Col>
-                <Button
-                  type="text"
-                  shape="circle"
-                  onClick={() => setDarkMode(!darkMode)}
-                  icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
-                  style={{ color: darkMode ? '#fbbf24' : '#0f766e' }}
-                />
-              </Col>
-
-=======
                   />
                 </Col>
               )}
 
-              {/* Login/Register or User Menu */}
->>>>>>> develop
               <Col>
                 {isCustomerUser && isCustomerDashboard ? (
                   <Dropdown menu={profileMenu} placement="bottomRight">
@@ -249,7 +214,6 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         paddingInline: 10
                       }}
                     >
-<<<<<<< HEAD
                       <img
                         src={avatarSrc}
                         alt={displayName}
@@ -266,10 +230,6 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                           {displayName}
                         </span>
                       )}
-=======
-                      <UserOutlined />
-                      {!isCompactNav && <span>Account</span>}
->>>>>>> develop
                       <DownOutlined />
                     </Button>
                   </Dropdown>
@@ -327,8 +287,3 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 };
 
 export default ModernResponsiveNavbar;
-<<<<<<< HEAD
-=======
-
-
->>>>>>> develop
