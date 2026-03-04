@@ -1,0 +1,19 @@
+.profile-container {
+  @apply min-h-screen bg-gray-50;
+}
+
+.profile-hero {
+  position: relative;
+
+  &::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-b from-black/10 to-transparent;
+  }
+}
+
+/* Optional: nicer input focus style */
+input:focus {
+  @apply ring-2 ring-blue-400 ring-opacity-30 border-blue-500;
+}
+
+/* You can also add dark mode later with class .dark ... */

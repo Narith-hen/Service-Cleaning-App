@@ -111,6 +111,16 @@
   color: white;
 }
 
+.admin-layout.dark .admin-sidebar .nav-item.active {
+  background: #008000;
+  color: #ffffff;
+}
+
+.admin-layout.dark .admin-sidebar .nav-item:hover {
+  background: #008000;
+  color: #ffffff;
+}
+
 .nav-icon {
   margin-right: 12px;
   font-size: 18px;

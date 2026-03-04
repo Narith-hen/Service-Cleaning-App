@@ -21,7 +21,7 @@
 .dashboard-action-btn {
   border: 0;
   border-radius: 10px;
-  background: #2f63ff;
+  background: #16a34a;
   color: #fff;
   font-weight: 600;
   padding: 10px 14px;
@@ -448,4 +448,93 @@
   .volume-track {
     max-width: 80px;
   }
+}
+
+.admin-dashboard-page.dark-mode .dashboard-header-row h1,
+.admin-dashboard-page.dark-mode .panel-head h3,
+.admin-dashboard-page.dark-mode .kpi-card-value,
+.admin-dashboard-page.dark-mode .cleaner-name,
+.admin-dashboard-page.dark-mode .review-user strong {
+  color: #f1f5f9;
+}
+
+.admin-dashboard-page.dark-mode .admin-page-subtitle,
+.admin-dashboard-page.dark-mode .kpi-card-title,
+.admin-dashboard-page.dark-mode .kpi-card-delta,
+.admin-dashboard-page.dark-mode .dashboard-table th,
+.admin-dashboard-page.dark-mode .cleaner-identity span,
+.admin-dashboard-page.dark-mode .cleaner-stats span,
+.admin-dashboard-page.dark-mode .review-user span,
+.admin-dashboard-page.dark-mode .review-row p,
+.admin-dashboard-page.dark-mode .service-meta span,
+.admin-dashboard-page.dark-mode .volume-col span {
+  color: #cbd5e1;
+}
+
+.admin-dashboard-page.dark-mode {
+  background: #0b1220;
+}
+
+.admin-dashboard-page.dark-mode .dashboard-kpi-card,
+.admin-dashboard-page.dark-mode .dashboard-panel,
+.admin-dashboard-page.dark-mode .quick-card,
+.admin-dashboard-page.dark-mode .cleaner-row {
+  background: #111b2f;
+  border-color: #23314f;
+}
+
+.admin-dashboard-page.dark-mode .quick-card {
+  color: #dbeafe;
+}
+
+.admin-dashboard-page.dark-mode .dashboard-table td,
+.admin-dashboard-page.dark-mode .dashboard-table th,
+.admin-dashboard-page.dark-mode .review-row {
+  border-bottom-color: #23314f;
+}
+
+.admin-dashboard-page.dark-mode .dashboard-table td {
+  color: #e2e8f0;
+}
+
+.admin-dashboard-page.dark-mode .panel-head a {
+  color: #86efac;
+}
+
+.admin-dashboard-page.dark-mode .panel-filter-btn {
+  background: #0f172a;
+  border-color: #2b3b5a;
+  color: #dbeafe;
+}
+
+.admin-dashboard-page.dark-mode .volume-track {
+  background: #2b3b5a;
+}
+
+.admin-dashboard-page.dark-mode .service-bar {
+  background: #2b3b5a;
+}
+
+.admin-dashboard-page.dark-mode .dashboard-action-btn {
+  background: #008000;
+  color: #f8fafc;
+}
+
+.admin-dashboard-page.dark-mode .dashboard-action-btn:hover {
+  background: #15803d;
+}
+
+.admin-dashboard-page.dark-mode .status-chip.completed {
+  background: rgba(34, 197, 94, 0.22);
+  color: #86efac;
+}
+
+.admin-dashboard-page.dark-mode .status-chip.pending {
+  background: rgba(245, 158, 11, 0.24);
+  color: #fcd34d;
+}
+
+.admin-dashboard-page.dark-mode .status-chip.in-progress {
+  background: rgba(59, 130, 246, 0.24);
+  color: #93c5fd;
 }

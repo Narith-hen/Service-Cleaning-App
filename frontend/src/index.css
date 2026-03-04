@@ -1,9 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  --font-body: "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  --font-display: "Sora", "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --font-body: "Noto Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --font-display: "Noto Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;

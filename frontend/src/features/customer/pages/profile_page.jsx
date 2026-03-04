@@ -1,36 +1,37 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CameraOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import {
+  CameraOutlined,
+  EditOutlined,
+  SaveOutlined,
+  CloseOutlined,
+} from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
-import '../../../styles/customer/profile.scss';
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
   const location = useLocation();
   const fileInputRef = useRef(null);
 
-  const baseProfile = useMemo(() => {
-    const fullName =
+  const baseProfile = useMemo(() => ({
+    name:
       user?.name ||
       [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-      'Customer';
-
-    return {
-      name: fullName,
-      email: user?.email || '',
-      phone: user?.phone || user?.phone_number || '',
-      address: user?.address || '',
-      avatar: user?.avatar || null,
-      joinDate: user?.joinDate || 'January 2024',
-      totalBookings: user?.totalBookings || 12,
-      totalSpent: user?.totalSpent || 540
-    };
-  }, [user]);
+      'Customer',
+    email: user?.email || '',
+    phone: user?.phone || user?.phone_number || '',
+    address: user?.address || '',
+    avatar: user?.avatar || null,
+    joinDate: user?.joinDate || 'January 2024',
+    totalBookings: user?.totalBookings ?? 12,
+    totalSpent: user?.totalSpent ?? 540,
+  }), [user]);
 
   const [profile, setProfile] = useState(baseProfile);
   const [draft, setDraft] = useState(baseProfile);
   const [isEditing, setIsEditing] = useState(location.pathname.endsWith('/edit'));
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -39,212 +40,247 @@ const ProfilePage = () => {
   }, [baseProfile]);
 
   useEffect(() => {
-    if (location.pathname.endsWith('/edit')) {
-      setIsEditing(true);
-    }
+    setIsEditing(location.pathname.endsWith('/edit'));
   }, [location.pathname]);
 
-  const initials = (draft.name || profile.name || 'C')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-  const handleDraftChange = (key, value) => {
-    setDraft((prev) => ({ ...prev, [key]: value }));
+  const getInitials = () => {
+    const nameStr = (draft.name || profile.name || '').trim();
+    if (!nameStr) return 'C';
+    const parts = nameStr.split(/\s+/).filter(Boolean);
+    return (parts[0]?.[0] + (parts[1]?.[0] || '')).toUpperCase();
   };
 
-  const handlePickImage = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
+  const openFilePicker = () => fileInputRef.current?.click();
 
-  const handleAvatarChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setMessage('Please choose an image file.');
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file?.type.startsWith('image/')) {
+      setMessage('Please select an image.');
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setDraft((prev) => ({ ...prev, avatar: String(reader.result) }));
-      setMessage('');
+    reader.onload = async () => {
+      const avatarUrl = reader.result;
+      setDraft((prev) => ({ ...prev, avatar: avatarUrl }));
+
+      if (!isEditing) {
+        setUploading(true);
+        const res = await updateUser({ avatar: avatarUrl });
+        if (res.success) {
+          setProfile((prev) => ({ ...prev, avatar: avatarUrl }));
+          setMessage('Profile photo updated.');
+        } else {
+          setMessage(res.error || 'Failed to update photo.');
+        }
+        setUploading(false);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleEdit = () => {
+  const startEditing = () => {
     setDraft(profile);
     setMessage('');
     setIsEditing(true);
   };
 
-  const handleCancel = () => {
+  const cancelEdit = () => {
     setDraft(profile);
     setMessage('');
     setIsEditing(false);
   };
 
-  const handleSave = async () => {
+  const saveChanges = async () => {
     setSaving(true);
     setMessage('');
 
-    const firstName = draft.name.trim().split(' ')[0] || '';
-    const lastName = draft.name.trim().split(' ').slice(1).join(' ');
-
+    const nameTrimmed = draft.name.trim();
+    const nameParts = nameTrimmed.split(/\s+/);
     const payload = {
-      name: draft.name,
-      first_name: firstName,
-      last_name: lastName,
-      email: draft.email,
-      phone: draft.phone,
-      phone_number: draft.phone,
-      address: draft.address,
-      avatar: draft.avatar
+      name: nameTrimmed,
+      first_name: nameParts[0] || '',
+      last_name: nameParts.slice(1).join(' ') || '',
+      email: draft.email.trim(),
+      phone: draft.phone.trim(),
+      phone_number: draft.phone.trim(),
+      address: draft.address.trim(),
+      avatar: draft.avatar,
     };
 
     const result = await updateUser(payload);
 
     if (result.success) {
-      const updatedProfile = {
+      setProfile({
         ...draft,
         totalBookings: profile.totalBookings,
         totalSpent: profile.totalSpent,
-        joinDate: profile.joinDate
-      };
-      setProfile(updatedProfile);
-      setDraft(updatedProfile);
+        joinDate: profile.joinDate,
+      });
       setIsEditing(false);
       setMessage('Profile updated successfully.');
     } else {
-      setMessage(result.error || 'Unable to update profile.');
+      setMessage(result.error || 'Failed to save profile.');
     }
 
     setSaving(false);
   };
 
   return (
-    <div className="customer-profile-page">
-      <section className="profile-hero-card">
-        <div className="avatar-wrap">
-          {draft.avatar ? (
-            <img src={draft.avatar} alt={draft.name} className="avatar-image" />
-          ) : (
-            <div className="avatar-fallback">{initials}</div>
-          )}
-          {isEditing && (
-            <button type="button" className="avatar-edit-btn" onClick={handlePickImage}>
-              <CameraOutlined />
-            </button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            style={{ display: 'none' }}
-          />
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Hero / Header */}
+        <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden mb-8">
+          <div className="px-6 py-8 sm:p-10 text-center sm:text-left relative">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8">
+              {/* Avatar + upload button */}
+              <div className="relative mx-auto sm:mx-0 shrink-0">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100">
+                  {draft.avatar ? (
+                    <img
+                      src={draft.avatar}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-gray-400">
+                      {getInitials()}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openFilePicker}
+                  disabled={uploading || saving}
+                  className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2.5 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-60"
+                >
+                  <CameraOutlined className="text-base" />
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  hidden
+                />
+              </div>
+
+              {/* Name, join date, actions */}
+              <div className="flex-1">
+                {isEditing ? (
+                  <input
+                    className="text-3xl sm:text-4xl font-bold text-gray-900 bg-transparent border-b-2 border-blue-500 focus:border-blue-600 focus:outline-none pb-1 w-full max-w-md"
+                    value={draft.name}
+                    onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Your full name"
+                  />
+                ) : (
+                  <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
+                    {profile.name || 'Customer'}
+                  </h1>
+                )}
+
+                <p className="text-gray-600 mb-6">
+                  Member since {profile.joinDate}
+                </p>
+
+                <div className="flex flex-wrap justify-center sm:justify-start gap-4">
+                  {!isEditing ? (
+                    <button
+                      onClick={startEditing}
+                      className="inline-flex items-center px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm"
+                    >
+                      <EditOutlined className="mr-2" /> Edit Profile
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={cancelEdit}
+                        className="inline-flex items-center px-6 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
+                      >
+                        <CloseOutlined className="mr-2" /> Cancel
+                      </button>
+                      <button
+                        onClick={saveChanges}
+                        disabled={saving}
+                        className="inline-flex items-center px-7 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 transition shadow-sm"
+                      >
+                        <SaveOutlined className="mr-2" />
+                        {saving ? 'Saving…' : 'Save Changes'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="profile-hero-text">
-          <h1>{draft.name || 'Customer'}</h1>
-          <p>Member since {profile.joinDate}</p>
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg text-center border ${
+              message.toLowerCase().includes('success')
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Personal Info */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow border border-gray-200 p-7">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Personal Information</h2>
+
+            <div className="space-y-5">
+              {[
+                { label: 'Full Name', key: 'name', type: 'text' },
+                { label: 'Email Address', key: 'email', type: 'email' },
+                { label: 'Phone Number', key: 'phone', type: 'tel' },
+                { label: 'Address', key: 'address', type: 'text' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                    {field.label}
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type={field.type}
+                      value={draft[field.key]}
+                      onChange={(e) => setDraft((p) => ({ ...p, [field.key]: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                      placeholder={`Enter your ${field.label.toLowerCase()}`}
+                    />
+                  ) : (
+                    <p className="text-gray-900 font-medium">
+                      {profile[field.key] || <span className="text-gray-400">Not provided</span>}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 p-7 h-fit">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Your Activity</h2>
+
+            <div className="space-y-6">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600">Total Bookings</span>
+                <span className="text-2xl font-semibold text-blue-700">{profile.totalBookings}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600">Total Spent</span>
+                <span className="text-2xl font-semibold text-blue-700">${profile.totalSpent}</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="hero-actions">
-          {!isEditing ? (
-            <button type="button" className="btn-primary" onClick={handleEdit}>
-              <EditOutlined /> Edit Profile
-            </button>
-          ) : (
-            <>
-              <button type="button" className="btn-ghost" onClick={handleCancel}>
-                <CloseOutlined /> Cancel
-              </button>
-              <button type="button" className="btn-primary" onClick={handleSave} disabled={saving}>
-                <SaveOutlined /> {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </>
-          )}
-        </div>
-      </section>
-
-      {message && <div className="profile-message">{message}</div>}
-
-      <section className="profile-grid">
-        <article className="profile-field">
-          <label>Full Name</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={draft.name}
-              onChange={(e) => handleDraftChange('name', e.target.value)}
-              placeholder="Enter your full name"
-            />
-          ) : (
-            <p>{profile.name || '-'}</p>
-          )}
-        </article>
-
-        <article className="profile-field">
-          <label>Email</label>
-          {isEditing ? (
-            <input
-              type="email"
-              value={draft.email}
-              onChange={(e) => handleDraftChange('email', e.target.value)}
-              placeholder="Enter your email"
-            />
-          ) : (
-            <p>{profile.email || '-'}</p>
-          )}
-        </article>
-
-        <article className="profile-field">
-          <label>Phone</label>
-          {isEditing ? (
-            <input
-              type="tel"
-              value={draft.phone}
-              onChange={(e) => handleDraftChange('phone', e.target.value)}
-              placeholder="Enter your phone"
-            />
-          ) : (
-            <p>{profile.phone || '-'}</p>
-          )}
-        </article>
-
-        <article className="profile-field">
-          <label>Address</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={draft.address}
-              onChange={(e) => handleDraftChange('address', e.target.value)}
-              placeholder="Enter your address"
-            />
-          ) : (
-            <p>{profile.address || '-'}</p>
-          )}
-        </article>
-      </section>
-
-      <section className="profile-stats">
-        <article>
-          <span>Total Bookings</span>
-          <strong>{profile.totalBookings}</strong>
-        </article>
-        <article>
-          <span>Total Spent</span>
-          <strong>${profile.totalSpent}</strong>
-        </article>
-      </section>
+      </div>
     </div>
   );
 };
