@@ -1,4 +1,5 @@
 import Navbar from "../components/Navbar";
+import MissionSection from "../components/MissionSection";
 
 export default function AboutPage({ embedded = false }) {
   return (
@@ -16,19 +17,17 @@ export default function AboutPage({ embedded = false }) {
           </div>
 
           <div>
-            <h2 className="text-4xl font-black mb-6">
-              About <span className="text-[#32c753]">Somaet</span>
-            </h2>
+            <h2 className="text-4xl font-black mb-6">About</h2>
 
             <p className="text-gray-600 text-lg mb-4">
-             Somaet has been delivering professional cleaning services
-              for over 10 years. We specialize in residential and commercial
-              cleaning solutions that create healthier and happier environments.
+              Somaet has been delivering professional cleaning services for over 10 years.
+              We specialize in residential and commercial cleaning solutions that create
+              healthier and happier environments.
             </p>
 
             <p className="text-gray-600 mb-6">
-              Our trained team uses eco-friendly products and modern equipment
-              to ensure every space is spotless, sanitized, and fresh.
+              Our trained team uses eco-friendly products and modern equipment to ensure
+              every space is spotless, sanitized, and fresh.
             </p>
 
             <ul className="space-y-4">
@@ -67,5 +66,17 @@ export default function AboutPage({ embedded = false }) {
         </footer>
       )}
     </div>
+  );
+}
+export default function MissionSection() {
+  return (
+    <section className="py-24 bg-gray-100">
+      <div className="max-w-4xl mx-auto px-8 text-center">
+        <h2 className="text-3xl font-bold mb-6">Our Mission</h2>
+        <p className="text-gray-600 text-lg">
+          We aim to deliver the best cleaning services with care and trust.
+        </p>
+      </div>
+    </section>
   );
 }

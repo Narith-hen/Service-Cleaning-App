@@ -4,18 +4,18 @@ const contactItems = [
   {
     label: "Phone",
     value: "+1 (555) 123-4567",
-    detail: "Mon-Sun, 8:00 AM - 8:00 PM",
+    detail: "Everytime",
   },
   {
     label: "Email",
     value: "support@somaet.com",
     detail: "Fast response within 24 hours",
   },
-  {
-    label: "Office",
-    value: "123 Cleaning Street",
-    detail: "San Francisco, CA 94105",
-  },
+  // {
+  //   label: "Office",
+  //   value: "123 Cleaning Street",
+  //   detail: "San Francisco, CA 94105",
+  // },
 ];
 
 export default function ContactPage({ embedded = false }) {
@@ -56,7 +56,7 @@ export default function ContactPage({ embedded = false }) {
                 </div>
               ))}
 
-              <div className="rounded-2xl bg-slate-900 p-6 text-slate-100 shadow-xl">
+              {/* <div className="rounded-2xl bg-slate-900 p-6 text-slate-100 shadow-xl">
                 <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
                   Why Choose Us
                 </p>
@@ -65,7 +65,7 @@ export default function ContactPage({ embedded = false }) {
                   <li>Flexible scheduling options</li>
                   <li>Eco-friendly cleaning products</li>
                 </ul>
-              </div>
+              </div> */}
             </div>
 
             <div className="lg:col-span-3">
