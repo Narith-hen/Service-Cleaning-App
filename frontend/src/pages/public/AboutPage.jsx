@@ -1,5 +1,4 @@
 import Navbar from "../components/Navbar";
-import MissionSection from "../components/MissionSection";
 
 export default function AboutPage({ embedded = false }) {
   return (
@@ -66,17 +65,5 @@ export default function AboutPage({ embedded = false }) {
         </footer>
       )}
     </div>
-  );
-}
-export default function MissionSection() {
-  return (
-    <section className="py-24 bg-gray-100">
-      <div className="max-w-4xl mx-auto px-8 text-center">
-        <h2 className="text-3xl font-bold mb-6">Our Mission</h2>
-        <p className="text-gray-600 text-lg">
-          We aim to deliver the best cleaning services with care and trust.
-        </p>
-      </div>
-    </section>
   );
 }
