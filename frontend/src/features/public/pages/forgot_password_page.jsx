@@ -13,7 +13,7 @@ const ForgotPasswordPage = () => {
   return (
     <div className="forgot-password-page">
       <div className="container">
-        <h1>Reset Password</h1>
+        <h1 className="roboto roboto-700">Reset Password</h1>
         {!submitted ? (
           <>
             <p>Enter your email address and we'll send you a link to reset your password.</p>
@@ -25,7 +25,7 @@ const ForgotPasswordPage = () => {
                 placeholder="Enter your email"
                 required
               />
-              <button type="submit">Send Reset Link</button>
+              <button type="submit" className="roboto roboto-500">Send Reset Link</button>
             </form>
           </>
         ) : (

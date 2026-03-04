@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Space, Avatar, Typography, Button, Menu, Dropdown } from 'antd';
+import { Row, Col, Space, Typography, Button, Menu, Dropdown } from 'antd';
+import { useLocation } from 'react-router-dom';
 import {
   PhoneOutlined,
   ClockCircleOutlined,
-  GlobalOutlined,
   MenuOutlined,
   SunOutlined,
   MoonOutlined,
@@ -15,12 +15,16 @@ import {
   UserAddOutlined,
   DownOutlined
 } from '@ant-design/icons';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 
 import { MessageOutlined } from '@ant-design/icons'; // For Telegram alternative
 
 const { Text } = Typography;
+const TARGET_SCREEN_BREAKPOINT = 1280;
+const TARGET_SCREEN_CONTAINER_WIDTH = 1280;
 
 const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOpen }) => {
+  const location = useLocation();
   const [breakpoint, setBreakpoint] = useState('lg');
   const [isLoggedIn, setIsLoggedIn] = useState(false); // Change this based on auth state
 
@@ -30,7 +34,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
       if (width < 576) setBreakpoint('xs');
       else if (width < 768) setBreakpoint('sm');
       else if (width < 992) setBreakpoint('md');
-      else if (width < 1200) setBreakpoint('lg');
+      else if (width <= TARGET_SCREEN_BREAKPOINT) setBreakpoint('lg');
       else setBreakpoint('xl');
     };
 
@@ -42,25 +46,26 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   // Responsive values
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
   const isTablet = breakpoint === 'md';
-  const isDesktop = breakpoint === 'lg' || breakpoint === 'xl';
+  const isLaptopL = breakpoint === 'lg';
+  const isCompactNav = isMobile || isTablet || isLaptopL;
 
   // Navigation items
   const navItems = [
-    { key: 'home', label: 'ទំព័រដើម', path: '/' },
-    { key: 'services', label: 'សេវាកម្ម', path: '/services' },
-    { key: 'about', label: 'អំពីយើង', path: '/about' },
-    { key: 'contact', label: 'ទំនាក់ទំនង', path: '/contact' },
+    { key: 'home', label: 'My Home', path: '/' },
+    { key: 'services', label: 'Services', path: '/services' },
+    { key: 'about', label: 'About Us', path: '/about' },
+    { key: 'contact', label: 'Contact Us', path: '/contact' },
   ];
 
   // User menu for logged in users
   const userMenu = (
     <Menu
       items={[
-        { key: 'profile', label: 'ប្រវត្តិរូប', onClick: () => navigate('/customer/profile') },
-        { key: 'bookings', label: 'ការកក់របស់ខ្ញុំ', onClick: () => navigate('/customer/bookings') },
-        { key: 'settings', label: 'ការកំណត់', onClick: () => navigate('/customer/settings') },
+        { key: 'profile', label: 'Profile', onClick: () => navigate('/customer/profile') },
+        { key: 'bookings', label: 'My Bookings', onClick: () => navigate('/customer/bookings') },
+        { key: 'settings', label: 'Settings', onClick: () => navigate('/customer/settings') },
         { type: 'divider' },
-        { key: 'logout', label: 'ចាកចេញ', danger: true, onClick: () => setIsLoggedIn(false) }
+        { key: 'logout', label: 'Logout', danger: true, onClick: () => setIsLoggedIn(false) }
       ]}
     />
   );
@@ -106,13 +111,13 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const handleNavigation = (path) => {
     navigate(path);
   };
+  const showDarkModeToggle = location.pathname !== '/';
 
   return (
     <nav
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
+        position: 'relative',
+        zIndex: 1,
         backdropFilter: 'blur(20px) saturate(180%)',
         background: darkMode
           ? 'rgba(15, 23, 42, 0.95)'
@@ -126,7 +131,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
       }}
     >
       <div style={{
-        maxWidth: '1400px',
+        maxWidth: `${TARGET_SCREEN_CONTAINER_WIDTH}px`,
         margin: '0 auto',
         padding: isMobile ? '0 16px' : '0 24px'
       }}>
@@ -138,25 +143,16 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
               onClick={() => navigate('/')}
               style={{ cursor: 'pointer' }}
             >
-              <div style={{
-                padding: isMobile ? 4 : 6,
-                background: darkMode
-                  ? 'linear-gradient(135deg, #0f766e 0%, #134e4a 100%)'
-                  : 'linear-gradient(135deg, #0f766e 0%, #dc2626 100%)',
-                borderRadius: 3,
-              }}>
-                <Avatar
-                  size={isMobile ? 28 : 32}
-                  style={{
-                    background: '#ffffff',
-                    fontWeight: 800,
-                    fontSize: isMobile ? 14 : 16,
-                    color: darkMode ? '#0f766e' : '#dc2626',
-                  }}
-                >
-                  S
-                </Avatar>
-              </div>
+              <img
+                src={logoSomaet}
+                alt="Somaet logo"
+                style={{
+                  width: isMobile ? 42 : 50,
+                  height: isMobile ? 42 : 50,
+                  objectFit: 'contain',
+                  flexShrink: 0
+                }}
+              />
               <div style={{ marginLeft: isMobile ? 4 : 8 }}>
                 <Text
                   strong
@@ -167,14 +163,14 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     fontFamily: "'Battambang', 'Khmer OS', sans-serif"
                   }}
                 >
-                  សម្អាត
+                  Somaet
                 </Text>
               </div>
             </Space>
           </Col>
 
           {/* Desktop Navigation Items - Hidden on mobile */}
-          {!isMobile && !isTablet && (
+          {!isCompactNav && (
             <Col lg={12} xl={10}>
               <Space size="large" style={{ justifyContent: 'center', width: '100%' }}>
                 {navItems.map(item => (
@@ -204,37 +200,20 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
           <Col xs={14} sm={16} md={18} lg={8} xl={10}>
             <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
 
-              {/* Language Selector - Desktop only */}
-              {!isMobile && (
+              {/* Dark Mode Toggle */}
+              {showDarkModeToggle && (
                 <Col>
                   <Button
                     type="text"
-                    size="small"
+                    shape="circle"
+                    onClick={() => setDarkMode(!darkMode)}
+                    icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      color: darkMode ? '#e5e7eb' : '#374151'
+                      color: darkMode ? '#fbbf24' : '#0f766e',
                     }}
-                    icon={<GlobalOutlined />}
-                  >
-                    <span>🇰🇭 KH</span>
-                  </Button>
+                  />
                 </Col>
               )}
-
-              {/* Dark Mode Toggle */}
-              <Col>
-                <Button
-                  type="text"
-                  shape="circle"
-                  onClick={() => setDarkMode(!darkMode)}
-                  icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
-                  style={{
-                    color: darkMode ? '#fbbf24' : '#0f766e',
-                  }}
-                />
-              </Col>
 
               {/* Login/Register or User Menu */}
               <Col>
@@ -251,7 +230,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <UserOutlined />
-                      {!isMobile && <span>គណនី</span>}
+                      {!isCompactNav && <span>Account</span>}
                       <DownOutlined />
                     </Button>
                   </Dropdown>
@@ -269,9 +248,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       }}
                     >
                       <LoginOutlined />
-                      {!isMobile && <span>ចូល</span>}
+                      {!isCompactNav && <span>Login</span>}
                     </Button>
-                    {!isMobile && (
+                    {!isCompactNav && (
                       <Button
                         onClick={() => navigate('/auth/register')}
                         style={{
@@ -283,7 +262,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         }}
                       >
                         <UserAddOutlined />
-                        <span>ចុះឈ្មោះ</span>
+                        <span>Register</span>
                       </Button>
                     )}
                   </Space>
@@ -291,7 +270,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
               </Col>
 
               {/* Mobile Menu Button */}
-              {isMobile && (
+              {isCompactNav && (
                 <Col>
                   <Button
                     type="primary"
@@ -313,3 +292,5 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 };
 
 export default ModernResponsiveNavbar;
+
+

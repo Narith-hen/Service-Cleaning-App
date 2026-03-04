@@ -7,6 +7,8 @@ import { Drawer } from 'antd';
 import Sidebar from './Sidebar'; 
 import '../../../styles/customer/customer_main_layout.css'; 
 
+const TARGET_SCREEN_BREAKPOINT = 1280;
+
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const MainLayout = () => {
   const cnyBackground = 'https://i.pinimg.com/736x/ae/1f/51/ae1f51ece38212edf8e3d87b6b1daaf6.jpg';
   
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -21,9 +24,20 @@ const MainLayout = () => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -48,7 +62,17 @@ const MainLayout = () => {
         />
       )}
 
-      <header className="main-header" style={{ width: '100%' }}>
+      <header
+        className="main-header"
+        style={{
+          width: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000
+        }}
+      >
         <ModernResponsiveNavbar 
           darkMode={darkMode}
           setDarkMode={setDarkMode}
@@ -62,7 +86,8 @@ const MainLayout = () => {
         width: '100%', 
         flex: 1,
         background: "white",
-        minHeight: 'calc(100vh - 140px)'
+        minHeight: 'calc(100vh - 140px)',
+        paddingTop: 90
       }}>
         <Outlet />
       </main>
@@ -71,7 +96,7 @@ const MainLayout = () => {
         placement="right"
         onClose={() => setMobileOpen(false)}
         open={mobileOpen}
-        size="medium"
+        width={viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420}
         closable={false}
         styles={{
           body: { padding: 0 },

@@ -58,16 +58,16 @@
 
 .header-icon-btn:hover {
   background: #e5e9f0;
-  color: #4361ee;
+  color: #32C753;
 }
 
 .dark-mode .header-icon-btn:hover {
   background: #3d3d3d;
-  color: #60a5fa;
+  color: #58d972;
 }
 
 .header-icon-btn.active {
-  background: #4361ee;
+  background: #32C753;
   color: white;
 }
 
@@ -144,7 +144,7 @@
 .mark-read-btn {
   background: none;
   border: none;
-  color: #4361ee;
+  color: #32C753;
   font-size: 13px;
   cursor: pointer;
   padding: 4px 8px;
@@ -154,7 +154,7 @@
 
 .view-all-btn:hover,
 .mark-read-btn:hover {
-  background: #f0f4ff;
+  background: #f0fdf4;
 }
 
 .dark-mode .view-all-btn:hover,
@@ -190,11 +190,11 @@
 }
 
 .dropdown-item.unread {
-  background: #f0f7ff;
+  background: #ecfdf3;
 }
 
 .dark-mode .dropdown-item.unread {
-  background: #1e3a5f;
+  background: #14532d;
 }
 
 .item-icon,
@@ -202,12 +202,12 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #f0f4ff;
+  background: #f0fdf4;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 12px;
-  color: #4361ee;
+  color: #32C753;
   flex-shrink: 0;
 }
 
@@ -318,7 +318,7 @@
   background: #f8fafc;
   border: none;
   border-radius: 8px;
-  color: #4361ee;
+  color: #32C753;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -327,7 +327,7 @@
 
 .dark-mode .dropdown-footer button {
   background: #3d3d3d;
-  color: #60a5fa;
+  color: #58d972;
 }
 
 .dropdown-footer button:hover {
@@ -448,12 +448,12 @@
 
 .dropdown-item-btn:hover {
   background: #f8fafc;
-  color: #4361ee;
+  color: #32C753;
 }
 
 .dark-mode .dropdown-item-btn:hover {
   background: #3d3d3d;
-  color: #60a5fa;
+  color: #58d972;
 }
 
 .logout-btn {
@@ -473,3 +473,4 @@
   background: #ef4444;
   color: white;
 }
+
