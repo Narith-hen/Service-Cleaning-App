@@ -9,8 +9,7 @@ import {
   LoginOutlined,
   UserAddOutlined,
   DownOutlined,
-  LogoutOutlined,
-  EditOutlined
+  LogoutOutlined
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import { useAuth } from '../../../hooks/useAuth';
@@ -26,10 +25,12 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 
   const isCustomerArea = location.pathname.startsWith('/customer');
   const isCustomerUser = user?.role === 'customer' || isCustomerArea;
-  const isCustomerDashboard =
-    location.pathname === '/customer/dashboard' || location.pathname === '/customer/home';
+  const showCustomerProfileMenu = isCustomerArea && isCustomerUser;
   const displayName = user?.name || user?.first_name || 'Customer';
-  const avatarSrc = user?.avatar || 'https://i.pravatar.cc/64?img=12';
+  const avatarSrc = user?.avatar || '';
+  const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
+  const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
+  const fallbackInitials = (firstInitial + lastInitial) || String(displayName).trim().charAt(0).toUpperCase() || 'C';
 
   useEffect(() => {
     const handleResize = () => {
@@ -67,7 +68,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const handleNavigation = (path) => {
     navigate(path);
   };
-  const showDarkModeToggle = location.pathname !== '/';
+  const showDarkModeToggle = true;
 
   const handleLogout = async () => {
     await logout();
@@ -82,11 +83,6 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
         label: 'View Profile'
       },
       {
-        key: 'update-info',
-        icon: <EditOutlined />,
-        label: 'Update Info'
-      },
-      {
         type: 'divider'
       },
       {
@@ -98,7 +94,6 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
     ],
     onClick: ({ key }) => {
       if (key === 'view-profile') navigate('/customer/profile');
-      if (key === 'update-info') navigate('/customer/profile/edit');
       if (key === 'logout') handleLogout();
     }
   };
@@ -147,7 +142,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     fontSize: isMobile ? 16 : 20,
                     fontWeight: 800,
                     color: 'green',
-                    fontFamily: "'Battambang', 'Khmer OS', sans-serif"
+                    fontFamily: "'Noto Sans', sans-serif"
                   }}
                 >
                   Somaet
@@ -170,7 +165,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       color: darkMode ? '#e5e7eb' : '#374151',
                       padding: '8px 16px',
                       height: 'auto',
-                      fontFamily: "'Battambang', 'Khmer OS', sans-serif",
+                      fontFamily: "'Noto Sans', sans-serif",
                       borderBottom: location.pathname === item.path ? '2px solid green' : 'none',
                       borderRadius: 0
                     }}
@@ -199,34 +194,60 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
               )}
 
               <Col>
-                {isCustomerUser && isCustomerDashboard ? (
+                {showCustomerProfileMenu ? (
                   <Dropdown menu={profileMenu} placement="bottomRight">
                     <Button
+                      type="text"
                       style={{
-                        background: '#f6f7fb',
-                        borderColor: '#d7dbe7',
+                        background: '#f8fafc',
+                        border: 'none',
+                        borderColor: 'transparent',
+                        outline: 'none',
                         color: '#1f2937',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
-                        height: 42,
+                        gap: 10,
+                        height: 50,
                         borderRadius: 999,
-                        paddingInline: 10
+                        paddingInline: 12,
+                        boxShadow: 'none',
+                        // backgroundColor: '#fff9c3',
                       }}
                     >
-                      <img
-                        src={avatarSrc}
-                        alt={displayName}
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '1px solid #d1d5db'
-                        }}
-                      />
+                      {avatarSrc ? (
+                        <img
+                          src={avatarSrc}
+                          alt={displayName}
+                          style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: darkMode ? 'none' : '1px solid #cbd5e1'
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            border: darkMode ? 'none' : '2px solid #008000',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#e2e8f0',
+                            color: '#111827',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            lineHeight: 1
+                          }}
+                        >
+                          {fallbackInitials}
+                        </div>
+                      )}
                       {!isCompactNav && (
-                        <span style={{ fontWeight: 600, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontWeight: 700, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {displayName}
                         </span>
                       )}
@@ -243,7 +264,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         borderColor: 'green',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4
+                        gap: 4,
+                        padding: '18px 16px',
                       }}
                     >
                       <LoginOutlined />
@@ -257,7 +279,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                           alignItems: 'center',
                           gap: 4,
                           borderColor: 'green',
-                          color: 'green'
+                          color: 'green',
+                          padding: '18px 14px',
                         }}
                       >
                         <UserAddOutlined />

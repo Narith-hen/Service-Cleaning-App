@@ -75,6 +75,14 @@
   text-align: left !important;
 }
 
+.admin-layout.dark .admin-content .admin-page-title {
+  color: #f8fafc;
+}
+
+.admin-layout.dark .admin-content .admin-page-subtitle {
+  color: #94a3b8;
+}
+
 /* Sidebar should have fixed width */
 .admin-sidebar {
   width: 280px;
@@ -191,6 +199,62 @@
 
 .dark .contact {
   color: #6b7280;
+}
+
+body.dark-mode .ant-dropdown .ant-dropdown-menu,
+body.dark-mode .ant-select-dropdown,
+body.dark-mode .ant-picker-dropdown,
+body.dark-mode .ant-modal .ant-modal-content {
+  background: #111827 !important;
+  border: 1px solid #334155 !important;
+}
+
+body.dark-mode .ant-dropdown .ant-dropdown-menu-item,
+body.dark-mode .ant-dropdown .ant-dropdown-menu-title-content,
+body.dark-mode .ant-select-dropdown .ant-select-item,
+body.dark-mode .ant-picker-dropdown .ant-picker-cell {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-dropdown .ant-dropdown-menu-item:hover,
+body.dark-mode .ant-select-dropdown .ant-select-item-option-active {
+  background: #1e293b !important;
+}
+
+body.dark-mode .ant-modal .ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+body.dark-mode .ant-modal .ant-modal-title,
+body.dark-mode .ant-modal .ant-modal-close {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .ant-modal .ant-modal-body,
+body.dark-mode .ant-modal .ant-form-item-label > label,
+body.dark-mode .ant-modal .ant-input,
+body.dark-mode .ant-modal .ant-input-number,
+body.dark-mode .ant-modal .ant-input-number-input,
+body.dark-mode .ant-modal .ant-input-affix-wrapper,
+body.dark-mode .ant-modal .ant-select-selector,
+body.dark-mode .ant-modal .ant-input::placeholder {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .ant-modal .ant-input,
+body.dark-mode .ant-modal .ant-input-number,
+body.dark-mode .ant-modal .ant-input-affix-wrapper,
+body.dark-mode .ant-modal .ant-select-selector,
+body.dark-mode .ant-modal .ant-input-number-handler-wrap {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .ant-modal .ant-btn-default {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
 }
 
 /* Responsive */

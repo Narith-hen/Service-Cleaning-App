@@ -10,6 +10,7 @@ const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const CUSTOMER_ROLE_ID = 2;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ export default function RegisterPage() {
           email: allValues.email,
           password: allValues.password,
           phone_number: allValues.phone,
+          role_id: CUSTOMER_ROLE_ID,
         }),
       });
 
@@ -73,10 +75,13 @@ export default function RegisterPage() {
         width: "100%",
         minHeight: "100dvh",
         margin: 0,
-        padding: screens.lg ? "0" : "12px 0",
+        padding: screens.lg ? "0" : "8px 0",
         overflowX: "hidden",
-        overflowY: "auto",
+        overflowY: screens.lg ? "hidden" : "auto",
         flexDirection: screens.lg ? "row" : "column",
+        backgroundImage: `linear-gradient(rgba(18, 11, 28, 0.58), rgba(6, 17, 33, 0.68)), url(${imgRegister})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
       }}
     >
       <div
@@ -85,106 +90,121 @@ export default function RegisterPage() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          background: "#ffffff",
-          padding: screens.lg ? "16px 14px" : "10px",
-          overflow: "auto",
+          background: "transparent",
+          padding: screens.lg ? "8px 12px" : "8px",
+          overflow: screens.lg ? "hidden" : "auto",
+          borderRight: "none",
         }}
       >
         <Card
           className="register-form-card"
           style={{
-            width: "min(92vw, 480px)",
-            padding: "20px clamp(12px, 2.4vw, 20px)",
-            margin: screens.lg ? "10px 0" : "14px 0",
-            boxShadow: "0 18px 50px rgba(11, 50, 25, 0.28)",
-            borderRadius: 12,
-            border: "1px solid rgba(255,255,255,0.55)",
-            background: "rgba(255, 255, 255, 0.94)",
-            backdropFilter: "blur(6px)",
+            width: "min(92vw, 452px)",
+            padding: "14px clamp(10px, 2.2vw, 14px)",
+            margin: screens.lg ? "6px 0" : "10px 0",
+            boxShadow: "0 24px 70px rgba(8, 12, 28, 0.48)",
+            borderRadius: 16,
+            border: "1px solid rgba(255,255,255,0.22)",
+            background: "linear-gradient(145deg, rgba(35, 40, 58, 0.62), rgba(26, 31, 48, 0.50))",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
           }}
         >
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
             <img
               src={logoSomaet}
               alt="Somaet logo"
               style={{
-                width: "clamp(68px, 14vw, 88px)",
-                height: "clamp(68px, 14vw, 88px)",
+                width: "clamp(54px, 10vw, 68px)",
+                height: "clamp(54px, 10vw, 68px)",
                 objectFit: "contain",
-                margin: "0 auto 14px",
+                margin: "0 auto 8px",
                 display: "block",
               }}
             />
-            <Title level={2} style={{ marginBottom: 6, fontWeight: 600, fontSize: "clamp(24px, 3.4vw, 34px)" }}>Create Account</Title>
-            <Text type="secondary" style={{ fontSize: 14 }}>Join Somaet today</Text>
+            <Title level={2} style={{ marginBottom: 2, fontWeight: 600, fontSize: "clamp(20px, 3vw, 30px)", color: "#f8fafc" }}>Create Account</Title>
+            <Text style={{ fontSize: 13, color: "#dbe4f0" }}>Join Somaet today</Text>
           </div>
 
           {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} closable onClose={() => setError("")} />}
           {success && <Alert message={success} type="success" showIcon style={{ marginBottom: 16 }} />}
 
           <Steps
+            className="register-glass-steps"
             current={currentStep}
             size="small"
             items={[{ title: "Details" }, { title: "Security" }]}
-            style={{ marginBottom: 20 }}
+            style={{ marginBottom: 10 }}
           />
 
-          <Form form={form} name="register" onFinish={onFinish} layout="vertical" size="middle">
+          <Form className="register-glass-form" form={form} name="register" onFinish={onFinish} layout="vertical" size="middle">
             {currentStep === 0 && (
               <>
-                <Form.Item label="First name" name="firstName" rules={[{ required: true, message: "Please enter your first name" }]}>
-                  <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="First name" disabled={loading} style={{ borderRadius: 8 }} />
+                <div style={{ display: "flex", gap: 12, flexDirection: screens.sm ? "row" : "column" }}>
+                  <Form.Item
+                    style={{ flex: 1, marginBottom: screens.sm ? 24 : 0 }}
+                    label={<span style={{ color: "#e2e8f0" }}>First name</span>}
+                    name="firstName"
+                    rules={[{ required: true, message: "Please enter your first name" }]}
+                  >
+                    <Input prefix={<UserOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="First name" disabled={loading} style={{ borderRadius: 8, height: 40, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
+                  </Form.Item>
+                  <Form.Item
+                    style={{ flex: 1 }}
+                    label={<span style={{ color: "#e2e8f0" }}>Last name</span>}
+                    name="lastName"
+                    rules={[{ required: true, message: "Please enter your last name" }]}
+                  >
+                    <Input prefix={<UserOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Last name" disabled={loading} style={{ borderRadius: 8, height: 40, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
+                  </Form.Item>
+                </div>
+                <Form.Item label={<span style={{ color: "#e2e8f0" }}>Email</span>} name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
+                  <Input prefix={<MailOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 8, height: 40, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
                 </Form.Item>
-                <Form.Item label="Last name" name="lastName" rules={[{ required: true, message: "Please enter your last name" }]}>
-                  <Input prefix={<UserOutlined style={{ color: "#bfbfbf" }} />} placeholder="Last name" disabled={loading} style={{ borderRadius: 8 }} />
-                </Form.Item>
-                <Form.Item label="Email" name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
-                  <Input prefix={<MailOutlined style={{ color: "#bfbfbf" }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 8 }} />
-                </Form.Item>
-                <Form.Item label="Phone number" name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
-                  <Input prefix={<PhoneOutlined style={{ color: "#bfbfbf" }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 8 }} />
+                <Form.Item label={<span style={{ color: "#e2e8f0" }}>Phone number</span>} name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
+                  <Input prefix={<PhoneOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 8, height: 40, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
                 </Form.Item>
               </>
             )}
 
             {currentStep === 1 && (
               <>
-                <Form.Item label="Password" name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
-                  <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Password" disabled={loading} style={{ borderRadius: 8 }} />
+                <Form.Item label={<span style={{ color: "#e2e8f0" }}>Password</span>} name="password" rules={[{ required: true, message: "Please enter your password" }, { min: 6, message: "Password must be at least 6 characters" }]}>
+                  <Input.Password prefix={<LockOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Password" disabled={loading} style={{ borderRadius: 8, height: 40, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
                 </Form.Item>
-                <Form.Item label="Confirm password" name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
-                  <Input.Password prefix={<LockOutlined style={{ color: "#bfbfbf" }} />} placeholder="Confirm password" disabled={loading} style={{ borderRadius: 8 }} />
+                <Form.Item label={<span style={{ color: "#e2e8f0" }}>Confirm password</span>} name="confirmPassword" dependencies={["password"]} rules={[{ required: true, message: "Please confirm your password" }, ({ getFieldValue }) => ({ validator(_, value) { return !value || getFieldValue("password") === value ? Promise.resolve() : Promise.reject(new Error("Passwords do not match")); } })]}>
+                  <Input.Password prefix={<LockOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Confirm password" disabled={loading} style={{ borderRadius: 8, height: 40, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
                 </Form.Item>
               </>
             )}
 
             {currentStep === 0 ? (
-              <Form.Item style={{ marginTop: 24, marginBottom: 8 }}>
-                <Button type="primary" block size="large" onClick={handleNext} disabled={loading} style={{ borderRadius: 8, height: 44, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 15 }}>
+              <Form.Item style={{ marginTop: 8, marginBottom: 6 }}>
+                <Button type="primary" block size="large" onClick={handleNext} disabled={loading} style={{ borderRadius: 8, height: 40, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 15 }}>
                   Next
                 </Button>
               </Form.Item>
             ) : (
-              <Form.Item style={{ marginTop: 24, marginBottom: 8 }}>
+              <Form.Item style={{ marginTop: 8, marginBottom: 6 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <Button size="large" onClick={() => setCurrentStep(0)} disabled={loading} style={{ borderRadius: 8, height: 44 }}>
+                  <Button size="large" onClick={() => setCurrentStep(0)} disabled={loading} style={{ borderRadius: 8, height: 40, border: "1px solid rgba(226, 232, 240, 0.8)", color: "#f8fafc", background: "transparent" }}>
                     Back
                   </Button>
-                  <Button type="primary" htmlType="submit" size="large" loading={loading} style={{ borderRadius: 8, height: 44, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 15 }}>
+                  <Button type="primary" htmlType="submit" size="large" loading={loading} style={{ borderRadius: 8, height: 40, background: "linear-gradient(135deg, #2dae48 0%, #32c753 100%)", border: "none", fontWeight: 500, fontSize: 15 }}>
                     Sign Up
                   </Button>
                 </div>
               </Form.Item>
             )}
 
-            <Divider style={{ margin: "16px 0" }}><Text type="secondary" style={{ fontSize: 14 }}>OR</Text></Divider>
-            <Button icon={<GoogleOutlined />} size="large" block disabled style={{ borderRadius: 8, height: 44, marginBottom: 18, borderColor: "#d9d9d9" }}>
+            <Divider style={{ margin: "10px 0", borderColor: "rgba(255,255,255,0.22)" }}><Text style={{ fontSize: 14, color: "#cbd5e1" }}>OR</Text></Divider>
+            <Button className="google-register-btn" icon={<GoogleOutlined />} size="large" block disabled style={{ borderRadius: 8, height: 40, marginBottom: 10, borderColor: "#d9d9d9",color: "#f8fafc" }}>
               Continue with Google
             </Button>
 
             <div style={{ textAlign: "center" }}>
-              <Text type="secondary">Already have an account? </Text>
-              <Link to="/auth/login" style={{ color: "#2d5aae", fontWeight: 500 }}>Log in</Link>
+              <Text style={{ color: "#dbe4f0" }}>Already have an account? </Text>
+              <Link to="/auth/login" style={{ color: "#46BA5A", fontWeight: 500 }}>Log in</Link>
             </div>
           </Form>
         </Card>
@@ -194,9 +214,7 @@ export default function RegisterPage() {
         style={{
           flex: screens.lg ? "1 1 56%" : "none",
           minHeight: screens.lg ? "100%" : 360,
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)), url(${imgRegister})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          background: "transparent",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -222,6 +240,53 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+      <style>
+        {`
+          .register-glass-form .ant-input,
+          .register-glass-form .ant-input-password input {
+            color: #f8fafc !important;
+          }
+          .register-glass-form .ant-input::placeholder,
+          .register-glass-form .ant-input-password input::placeholder {
+            color: rgba(226, 232, 240, 0.78) !important;
+          }
+          .register-glass-form .ant-input-prefix,
+          .register-glass-form .ant-input-password-icon {
+            color: #cbd5e1 !important;
+          }
+          .register-glass-form .ant-input-password-icon:hover {
+            color: #f8fafc !important;
+          }
+          .register-glass-form .ant-form-item .ant-form-item-label > label.ant-form-item-required::before {
+            color: #46ba5a !important;
+          }
+          .register-glass-form .ant-form-item {
+            margin-bottom: 12px !important;
+          }
+          .register-glass-form .ant-form-item-label {
+            padding-bottom: 4px !important;
+          }
+          .register-glass-steps .ant-steps-item-title {
+            color: #dbe4f0 !important;
+          }
+          .register-glass-steps .ant-steps-item-tail::after {
+            background-color: #ffffff !important;
+          }
+          .register-glass-steps .ant-steps-item-title::after {
+            background-color: #ffffff !important;
+          }
+          .register-glass-steps .ant-steps-item-process .ant-steps-item-icon {
+            background-color: #46ba5a !important;
+            border-color: #46ba5a !important;
+          }
+          .register-glass-steps .ant-steps-item-finish .ant-steps-item-icon {
+            border-color: #46ba5a !important;
+          }
+          .register-glass-steps .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
+            color: #46ba5a !important;
+          }
+        `}
+      </style>
     </div>
   );
 }
