@@ -16,7 +16,7 @@ const CleanerDashboardPage = () => {
   const navigate = useNavigate();
 
   const cleanerData = {
-    name: 'Maria',
+    name: 'Narith',
     todayAppointments: 4,
     rating: 4.9,
     ratingTier: 'Top 5%',

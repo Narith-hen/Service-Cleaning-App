@@ -4,6 +4,7 @@ import { LockOutlined, MailOutlined, GoogleOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import logoSomaet from '../../../assets/Logo_somaet.png';
+import imgRegister from '../../../assets/imgRegister.png';
 
 const { Title, Text } = Typography;
 
@@ -29,7 +30,7 @@ const LoginPage = () => {
                         navigate('/admin/dashboard');
                         break;
                     case 'customer':
-                        navigate('/customer/home');
+                        navigate('/customer/dashboard');
                         break;
                     case 'cleaner':
                         navigate('/cleaner/dashboard');
@@ -40,7 +41,7 @@ const LoginPage = () => {
             } else {
                 setError('Invalid email or password');
             }
-        } catch (err) {
+        } catch {
             setError('An error occurred. Please try again.');
         } finally {
             setLoading(false);
@@ -62,74 +63,52 @@ const LoginPage = () => {
             width: '100%',
             minHeight: '100dvh',
             margin: 0,
-            padding: '14px 0',
+            padding: '8px 0',
             overflowX: 'hidden',
-            overflowY: 'auto',
+            overflowY: 'hidden',
             justifyContent: 'center',
             alignItems: 'center',
-            background: 'linear-gradient(135deg, #1d8f45 0%, #32c753 48%, #6fdd8f 100%)',
+            backgroundImage: `linear-gradient(rgba(18, 11, 28, 0.58), rgba(6, 17, 33, 0.68)), url(${imgRegister})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
         }}>
-            <div style={{
-                position: 'absolute',
-                left: '-120px',
-                width: 360,
-                height: 360,
-                borderRadius: 32,
-                background: 'rgba(255, 255, 255, 0.12)',
-                transform: 'rotate(-32deg)'
-            }} />
-            <div style={{
-                position: 'absolute',
-                right: '-140px',
-                top: '18%',
-                borderRadius: 36,
-                background: 'rgba(20, 83, 45, 0.18)',
-                transform: 'rotate(-28deg)'
-            }} />
-            <div style={{
-                position: 'absolute',
-                left: '28%',
-                bottom: '-200px',
-                borderRadius: 40,
-                background: 'rgba(255, 255, 255, 0.08)',
-                transform: 'rotate(34deg)'
-            }} />
             {/* Left Side - Login Form */}
             <div style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                padding: '10px',
-                overflowY: 'auto',
+                padding: '8px',
+                overflowY: 'hidden',
                 position: 'relative',
                 zIndex: 1
             }}>
                 <Card style={{
-                    width: 'min(92vw, 480px)',
-                    padding: '24px clamp(14px, 3vw, 22px)',
-                    boxShadow: '0 18px 50px rgba(11, 50, 25, 0.28)',
-                    borderRadius: 12,
-                    border: '1px solid rgba(255,255,255,0.55)',
-                    background: 'rgba(255, 255, 255, 0.94)',
-                    backdropFilter: 'blur(6px)'
+                    width: 'min(92vw, 400px)',
+                    padding: '14px clamp(10px, 2vw, 14px)',
+                    boxShadow: '0 24px 70px rgba(8, 12, 28, 0.48)',
+                    borderRadius: 16,
+                    border: '1px solid rgba(255,255,255,0.22)',
+                    background: 'linear-gradient(145deg, rgba(35, 40, 58, 0.62), rgba(26, 31, 48, 0.50))',
+                    backdropFilter: 'blur(14px)',
+                    WebkitBackdropFilter: 'blur(14px)'
                 }}>
                     {/* Logo/Icon */}
-                    <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <div style={{ textAlign: 'center', marginBottom: 12 }}>
                         <img
                             src={logoSomaet}
                             alt="Somaet logo"
                             onClick={() => navigate('/')}
                             style={{
-                                width: 'clamp(68px, 14vw, 88px)',
-                                height: 'clamp(68px, 14vw, 88px)',
+                                width: 'clamp(52px, 10vw, 66px)',
+                                height: 'clamp(52px, 10vw, 66px)',
                                 objectFit: 'contain',
-                                margin: '0 auto 14px',
+                                margin: '0 auto 8px',
                                 display: 'block',
                                 cursor: 'pointer'
                             }}
                         />
-                        <Title level={2} style={{ marginBottom: 6, fontWeight: 600, fontSize: 'clamp(24px, 3.4vw, 34px)' }}>Welcome Back</Title>
-                        <Text type="secondary" style={{ fontSize: 14 }}>Login to your Somaet account</Text>
+                        <Title level={2} style={{ marginBottom: 2, fontWeight: 600, fontSize: 'clamp(20px, 3vw, 30px)', color: '#f8fafc' }}>Welcome Back</Title>
+                        <Text style={{ fontSize: 13, color: '#dbe4f0' }}>Login to your Somaet account</Text>
                     </div>
 
                     {/* Error Alert */}
@@ -145,6 +124,7 @@ const LoginPage = () => {
                     )}
 
                     <Form
+                        className="login-glass-form"
                         name="login"
                         onFinish={onFinish}
                         layout="vertical"
@@ -153,30 +133,29 @@ const LoginPage = () => {
                     >
                         <Form.Item
                             name="email"
-                            label="Email"
+                            label={<span style={{ color: '#e2e8f0' }}>Email</span>}
                             rules={[
-                                { required: true, message: 'Please enter your email' },
-                                { type: 'email', message: 'Please enter a valid email' }
+                                { required: true, message: 'Please enter your email' }
                             ]}
                         >
                             <Input
-                                prefix={<MailOutlined style={{ color: '#bfbfbf', height: 30}} />}
+                                prefix={<MailOutlined style={{ color: '#cbd5e1', height: 22}} />}
                                 placeholder="Enter your email"
                                 disabled={loading}
-                                style={{ borderRadius: 8 }}
+                                style={{ borderRadius: 8, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
                             />
                         </Form.Item>
 
                         <Form.Item
                             name="password"
-                            label="Password"
+                            label={<span style={{ color: '#e2e8f0' }}>Password</span>}
                             rules={[{ required: true, message: 'Please enter your password' }]}
                         >
                             <Input.Password
-                                prefix={<LockOutlined style={{ color: '#bfbfbf', height: 30}} />}
+                                prefix={<LockOutlined style={{ color: '#cbd5e1', height: 22}} />}
                                 placeholder="Enter your password"
                                 disabled={loading}
-                                style={{ borderRadius: 8 }}
+                                style={{ borderRadius: 8, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
                             />
                         </Form.Item>
 
@@ -184,13 +163,13 @@ const LoginPage = () => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            marginBottom: 18,
+                            marginBottom: 12,
                             gap: 8
                         }}>
                             <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox disabled={loading}>Remember me</Checkbox>
+                                <Checkbox disabled={loading} style={{ color: '#e2e8f0' }}>Remember me</Checkbox>
                             </Form.Item>
-                            <Link to="/forgot-password" style={{ color: '#1f82cd' }}>
+                            <Link to="/forgot-password" style={{ color: '#46BA5A' }}>
                                 Forgot password?
                             </Link>
                         </div>
@@ -204,7 +183,7 @@ const LoginPage = () => {
                                 loading={loading}
                                 style={{
                                     borderRadius: 8,
-                                    height: 44,
+                                    height: 40,
                                     background: 'linear-gradient(135deg, #49C15D 0%, #3c9c4c 100%)',
                                     border: 'none',
                                     fontWeight: 500,
@@ -215,11 +194,12 @@ const LoginPage = () => {
                             </Button>
                         </Form.Item>
 
-                        <Divider style={{ margin: '16px 0' }}>
-                            <Text type="secondary" style={{ fontSize: 14 }}>OR</Text>
+                        <Divider style={{ margin: '10px 0', borderColor: 'rgba(255,255,255,0.22)' }}>
+                            <Text style={{ fontSize: 14, color: '#cbd5e1' }}>OR</Text>
                         </Divider>
 
                         <Button
+                            className="google-login-btn"
                             icon={<GoogleOutlined />}
                             size="large"
                             block
@@ -227,17 +207,17 @@ const LoginPage = () => {
                             disabled={loading}
                             style={{
                                 borderRadius: 8,
-                                height: 44,
-                                marginBottom: 18,
+                                height: 40,
+                                marginBottom: 10,
                                 borderColor: '#d9d9d9'
                             }}
                         >
                             Continue with Google
                         </Button>
 
-                        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                            <Text type="secondary">Don't have an account? </Text>
-                            <Link to="/auth/register" style={{ color: '#1959c1', fontWeight: 500 }}>
+                        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+                            <Text style={{ color: '#dbe4f0' }}>Don't have an account? </Text>
+                            <Link to="/auth/register" style={{ color: '#46BA5A', fontWeight: 500 }}>
                                 Sign up
                             </Link>
                         </div>
@@ -249,10 +229,11 @@ const LoginPage = () => {
                             onClick={() => navigate('/')}
                             style={{
                                 borderRadius: 8,
-                                height: 44,
-                                border: '1px solid #d9d9d9',
+                                height: 40,
+                                border: '1px solid rgba(226, 232, 240, 0.8)',
                                 fontWeight: 500,
-                                fontSize: 15
+                                fontSize: 15,
+                                color: '#f8fafc'
                                 
                             }}
                         >
@@ -261,6 +242,53 @@ const LoginPage = () => {
                     </Form>
                 </Card>
             </div>
+            <style>
+                {`
+                    .login-glass-form .ant-input,
+                    .login-glass-form .ant-input-password input {
+                        color: #f8fafc !important;
+                    }
+                    .login-glass-form .ant-input::placeholder,
+                    .login-glass-form .ant-input-password input::placeholder {
+                        color: rgba(226, 232, 240, 0.78) !important;
+                    }
+                    .login-glass-form .ant-input-prefix,
+                    .login-glass-form .ant-input-password-icon {
+                        color: #cbd5e1 !important;
+                    }
+                    .login-glass-form .ant-input-password-icon:hover {
+                        color: #f8fafc !important;
+                    }
+                    .google-login-btn:hover,
+                    .google-login-btn:focus,
+                    .google-login-btn:active {
+                        color: #008000 !important;
+                    }
+                    .google-login-btn:hover .anticon,
+                    .google-login-btn:focus .anticon,
+                    .google-login-btn:active .anticon {
+                        color: #008000 !important;
+                    }
+                    .login-glass-form .ant-checkbox-checked .ant-checkbox-inner {
+                        background-color: #46BA5A !important;
+                        border-color: #46BA5A !important;
+                    }
+                    .login-glass-form .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+                    .login-glass-form .ant-checkbox:hover .ant-checkbox-inner,
+                    .login-glass-form .ant-checkbox-input:focus + .ant-checkbox-inner {
+                        border-color: #46BA5A !important;
+                    }
+                    .login-glass-form .ant-form-item .ant-form-item-label > label.ant-form-item-required::before {
+                        color: #46BA5A !important;
+                    }
+                    .login-glass-form .ant-form-item {
+                        margin-bottom: 12px !important;
+                    }
+                    .login-glass-form .ant-form-item-label {
+                        padding-bottom: 4px !important;
+                    }
+                `}
+            </style>
         </div>
     );
 };
