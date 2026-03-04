@@ -26,6 +26,10 @@ export const customerRoutes = {
       element: <Navigate to="dashboard" replace />
     },
     {
+      path: 'home',
+      element: <Navigate to="/customer/dashboard" replace />
+    },
+    {
       path: 'dashboard',
       element: <CustomerDashboard />
     },

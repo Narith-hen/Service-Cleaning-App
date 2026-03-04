@@ -13,7 +13,6 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
-  const cnyBackground = 'https://i.pinimg.com/736x/ae/1f/51/ae1f51ece38212edf8e3d87b6b1daaf6.jpg';
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
@@ -85,11 +84,11 @@ const MainLayout = () => {
       <main className="main-contents" style={{ 
         width: '100%', 
         flex: 1,
-        background: "white",
+        background: darkMode ? '#0b1220' : 'white',
         minHeight: 'calc(100vh - 140px)',
         paddingTop: 90
       }}>
-        <Outlet />
+        <Outlet context={{ darkMode }} />
       </main>
       
       <Drawer

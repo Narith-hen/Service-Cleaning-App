@@ -4,3 +4,7 @@
   gap: 16px;
   color: #0f172a;
 }
+
+.admin-layout.dark .admin-settings-page {
+  color: #f8fafc;
+}

@@ -16,6 +16,15 @@
   border-radius: 14px;
 }
 
+.admin-layout.dark .admin-services-page {
+  --page-bg: #111827;
+  --panel-bg: #0f172a;
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --line: #334155;
+  --track: #1e293b;
+}
+
 .services-header,
 .inventory-header {
   display: flex;
@@ -76,7 +85,7 @@
 }
 
 .svc-btn-secondary {
-  background: #ffffff;
+  background: var(--panel-bg);
   border-color: var(--line);
   color: var(--text-main);
 }
@@ -99,7 +108,7 @@
 
 .service-card {
   background: var(--panel-bg);
-  border: 1px solid #dae3ee;
+  border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
@@ -133,8 +142,8 @@
   height: 22px;
   border: 0;
   border-radius: 6px;
-  background: #eef3f8;
-  color: #475569;
+  background: var(--track);
+  color: var(--text-sub);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -149,7 +158,7 @@
 
 .icon-btn:hover,
 .plain-icon-btn:hover {
-  background: #dce5ef;
+  background: #334155;
 }
 
 .service-body {
@@ -197,7 +206,7 @@
 .inventory-table-wrap {
   margin-top: 12px;
   background: var(--panel-bg);
-  border: 1px solid #dae3ee;
+  border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -211,13 +220,13 @@
   text-align: left;
   font-size: 10px;
   letter-spacing: 0.03em;
-  color: #7a8a9b;
+  color: var(--text-sub);
   padding: 12px 14px;
-  border-bottom: 1px solid #e7edf4;
+  border-bottom: 1px solid var(--line);
 }
 
 .inventory-table tbody td {
-  border-bottom: 1px solid #eef3f8;
+  border-bottom: 1px solid var(--line);
   padding: 12px 14px;
   font-size: 13px;
   color: var(--text-main);
@@ -242,7 +251,7 @@
   height: 36px;
   border-radius: 8px;
   object-fit: cover;
-  border: 1px solid #d8e4ef;
+  border: 1px solid var(--line);
 }
 
 .product-meta {
@@ -257,7 +266,7 @@
 
 .product-sku {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--text-sub);
 }
 
 .svc-badge.svc-category {
@@ -333,7 +342,7 @@
 }
 
 .inventory-footer {
-  border-top: 1px solid #e7edf4;
+  border-top: 1px solid var(--line);
   padding: 12px 14px;
   display: flex;
   align-items: center;
@@ -343,7 +352,7 @@
 
 .pagination-info {
   font-size: 12px;
-  color: #7b8ca0;
+  color: var(--text-sub);
 }
 
 .pagination-actions {
@@ -359,14 +368,14 @@
 
 .pagination-page-label {
   font-size: 12px;
-  color: #475569;
+  color: var(--text-main);
   min-width: 90px;
   text-align: center;
 }
 
 .inventory-empty {
   text-align: center;
-  color: #64748b;
+  color: var(--text-sub);
   font-size: 13px;
   padding: 24px 12px;
 }
@@ -434,7 +443,7 @@
   height: 220px;
   object-fit: cover;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--line);
 }
 
 .service-view-info {
@@ -446,7 +455,7 @@
 .service-view-title {
   margin: 0;
   font-size: 20px;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 .service-view-price {
@@ -458,14 +467,14 @@
 
 .service-view-price span {
   margin-left: 4px;
-  color: #64748b;
+  color: var(--text-sub);
   font-size: 12px;
   font-weight: 500;
 }
 
 .service-view-description {
   margin: 0;
-  color: #475569;
+  color: var(--text-sub);
   line-height: 1.5;
   font-size: 13px;
 }
@@ -481,7 +490,7 @@
   height: 220px;
   object-fit: cover;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--line);
 }
 
 .inventory-view-info {
@@ -493,14 +502,19 @@
 .inventory-view-title {
   margin: 0;
   font-size: 20px;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 .inventory-view-meta {
   margin: 0;
-  color: #475569;
+  color: var(--text-sub);
   line-height: 1.5;
   font-size: 13px;
+}
+
+.admin-layout.dark .admin-services-page .svc-category-empty {
+  background: #334155;
+  color: #cbd5e1;
 }
 
 @media (max-width: 1240px) {
