@@ -21,6 +21,12 @@
 }
 
 /* Logo Section */
+.sidebar-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
@@ -29,18 +35,23 @@
   margin-bottom: 30px;
 }
 
-.logo-circle {
+.sidebar-close-btn {
+  display: none;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 34px;
+  height: 34px;
+  margin: 8px 16px 0 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cleaner-sidebar .sidebar-brand-logo {
   width: 45px;
   height: 45px;
-  background: #4361ee;
-  color: white;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 18px;
-  box-shadow: 0 4px 8px rgba(67, 97, 238, 0.2);
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .logo-text h2 {
@@ -205,4 +216,12 @@
 
 .dark .main-content {
   background: #111827;
+}
+
+@media (max-width: 1280px) {
+  .sidebar-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

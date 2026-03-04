@@ -1,490 +1,481 @@
 .cleaner-dashboard {
-  max-width: 1200px;
+  max-width: 1140px;
   margin: 0 auto;
-  padding: 24px;
-
-  @media (max-width: 768px) {
-    padding: 16px;
-  }
+  padding: 8px 0 18px;
+  color: #0f172a;
+  font-family: Manrope, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-// Welcome Section
 .welcome-section {
-  margin-bottom: 32px;
+  margin-bottom: 14px;
 
   .welcome-title {
-    font-size: 28px;
-    font-weight: 600;
-    color: #1f2937;
-    margin: 0 0 8px 0;
+    margin: 0;
+    font-size: 36px;
+    line-height: 1.14;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+  }
 
-    @media (max-width: 768px) {
-      font-size: 24px;
-    }
-
-    .cleaner-name {
-      color: #3b82f6;
-    }
+  .cleaner-name {
+    color: #111827;
   }
 
   .welcome-subtitle {
-    font-size: 16px;
-    color: #6b7280;
-    margin: 0;
-
-    strong {
-      color: #3b82f6;
-      font-weight: 600;
-    }
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #7c8aa0;
+    font-weight: 500;
   }
 }
 
-// Stats Grid
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
 
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
+.stat-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 10px 12px;
+
+  .stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
   }
 
-  .stat-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+  .stat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    &.jobs-icon {
+      color: #22c55e;
+      background: #dcfce7;
     }
 
-    .stat-header {
-      margin-bottom: 12px;
-
-      .stat-change {
-        font-size: 14px;
-        font-weight: 500;
-        padding: 4px 8px;
-        border-radius: 20px;
-        display: inline-block;
-
-        &.positive {
-          background-color: #d1fae5;
-          color: #065f46;
-        }
-      }
+    &.earnings-icon {
+      color: #3b82f6;
+      background: #dbeafe;
     }
 
-    .stat-content {
-      display: flex;
-      align-items: center;
-      gap: 16px;
+    &.rating-icon {
+      color: #f59e0b;
+      background: #fef3c7;
+    }
 
-      .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
+    &.cancel-icon {
+      color: #ef4444;
+      background: #fee2e2;
+    }
+  }
 
-        &.earnings-icon {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          color: #fff;
-        }
+  .stat-change {
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
 
-        &.rating-icon {
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color: #fff;
-        }
-      }
+    &.positive {
+      color: #16a34a;
+      background: #dcfce7;
+    }
 
-      .stat-info {
-        display: flex;
-        flex-direction: column;
+    &.cancel {
+      color: #b91c1c;
+      background: #fee2e2;
+    }
+  }
 
-        .stat-label {
-          font-size: 14px;
-          color: #6b7280;
-          margin-bottom: 4px;
-        }
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
 
-        .stat-value {
-          font-size: 24px;
-          font-weight: 600;
-          color: #1f2937;
-          line-height: 1.2;
-        }
-      }
+  .stat-label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+  }
+
+  .rating-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+
+    .stat-value {
+      font-size: 20px;
+    }
+
+    .star-text {
+      margin-bottom: 0;
+      color: #f59e0b;
+      font-size: 11px;
+      letter-spacing: 1px;
     }
   }
 }
 
-// Bookings Section
 .bookings-section {
-  margin-bottom: 40px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+}
 
-  .section-header {
-    margin-bottom: 20px;
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e2e8f0;
 
-    h2 {
-      font-size: 20px;
-      font-weight: 600;
-      color: #1f2937;
-      margin: 0;
-    }
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.02em;
   }
 
-  // Desktop Table View
-  .bookings-table.desktop-view {
-    @media (max-width: 768px) {
-      display: none;
-    }
+  .calendar-link {
+    border: none;
+    background: transparent;
+    color: #16a34a;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      margin-bottom: 24px;
-
-      th {
-        text-align: left;
-        padding: 16px;
-        background-color: #f9fafb;
-        font-size: 14px;
-        font-weight: 600;
-        color: #4b5563;
-        border-bottom: 1px solid #e5e7eb;
-      }
-
-      td {
-        padding: 16px;
-        border-bottom: 1px solid #e5e7eb;
-        color: #1f2937;
-        font-size: 14px;
-
-        &.booking-date {
-          font-weight: 500;
-          color: #3b82f6;
-        }
-
-        &.booking-time {
-          color: #6b7280;
-        }
-
-        &.booking-location {
-          color: #4b5563;
-        }
-      }
-
-      tr:last-child td {
-        border-bottom: none;
-      }
-    }
+.booking-list {
+  .booking-main {
+    text-align: left;
+    justify-self: start;
   }
 
-  // Mobile Cards View
-  .booking-cards.mobile-view {
-    display: none;
-    margin-bottom: 24px;
-
-    @media (max-width: 768px) {
-      display: block;
-    }
-
-    .booking-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e5e7eb;
-
-      .booking-datetime {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 8px;
-
-        .date {
-          font-weight: 600;
-          color: #3b82f6;
-        }
-
-        .time {
-          color: #6b7280;
-        }
-      }
-
-      .booking-location {
-        color: #4b5563;
-      }
-    }
-  }
-
-  // Booking Details Cards
-  .booking-details-grid {
+  .booking-row {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
-    margin: 24px 0;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    align-items: center;
+  }
 
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-      gap: 16px;
+  .booking-date-box {
+    width: 52px;
+    border-radius: 10px;
+    border: 1px solid #dbe2ea;
+    background: #f8fafc;
+    text-align: center;
+    padding: 8px 0 6px;
+
+    .month {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 1px;
     }
 
-    .booking-detail-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e5e7eb;
-      transition: all 0.3s ease;
-
-      &:hover {
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      .booking-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 12px;
-
-        h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0;
-          flex: 1;
-        }
-
-        .booking-status {
-          font-size: 12px;
-          font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 20px;
-          white-space: nowrap;
-          margin-left: 12px;
-
-          &.status-early {
-            background-color: #d1fae5;
-            color: #065f46;
-          }
-
-          &.status-tomorrow {
-            background-color: #e0f2fe;
-            color: #0369a1;
-          }
-        }
-      }
-
-      .booking-pricing {
-        margin-bottom: 16px;
-
-        .amount {
-          font-size: 20px;
-          font-weight: 600;
-          color: #1f2937;
-          margin-right: 8px;
-        }
-
-        .rate-type {
-          font-size: 14px;
-          color: #6b7280;
-        }
-      }
-
-      .view-details-btn {
-        background: none;
-        border: none;
-        color: #3b82f6;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 12px;
-        transition: all 0.2s;
-
-        &:hover {
-          color: #2563eb;
-          gap: 8px;
-        }
-
-        .anticon {
-          font-size: 12px;
-        }
-      }
-
-      .property-manager {
-        font-size: 14px;
-        color: #6b7280;
-        font-style: italic;
-        padding-top: 8px;
-        border-top: 1px dashed #e5e7eb;
-      }
+    .day {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 800;
+      color: #0f172a;
     }
   }
 
-  // Show All Link
-  .show-all-link {
-    text-align: center;
-    margin-top: 24px;
+  .booking-title {
+    margin: 0;
+    text-align: left;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+  }
 
-    .show-all-btn {
-      background: none;
-      border: none;
-      color: #3b82f6;
-      font-size: 16px;
-      font-weight: 500;
-      cursor: pointer;
-      padding: 8px 16px;
+  .booking-meta {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    span {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
+      gap: 5px;
+      font-size: 13px;
+      color: #64748b;
+    }
+  }
 
-      &:hover {
-        color: #2563eb;
-        gap: 12px;
-      }
+  .property-manager {
+    margin: 8px 0 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .booking-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .booking-price {
+    min-width: 92px;
+    text-align: right;
+
+    .amount {
+      display: block;
+      font-size: 18px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.03em;
+    }
+
+    .rate-type {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+  }
+
+  .details-btn {
+    height: 34px;
+    border: 1px solid #d2d8e1;
+    background: #f8fafc;
+    border-radius: 8px;
+    color: #1f2937;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .booking-status {
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+
+    &.early {
+      background: #e2e8f0;
+      color: #94a3b8;
+    }
+
+    &.tomorrow {
+      background: #dbeafe;
+      color: #64748b;
     }
   }
 }
 
-// Support Section
-.support-section {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  border-radius: 16px;
-  padding: 32px;
+.show-all-row {
+  padding: 10px 16px;
   text-align: center;
-  margin-bottom: 40px;
+  background: #f8fafc;
+
+  .show-all-btn {
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+.support-section {
+  margin-top: 18px;
+  background: #0f172a;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .support-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .support-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
 
   h3 {
+    margin: 0;
+    color: #f8fafc;
     font-size: 20px;
-    font-weight: 600;
-    color: #1f2937;
-    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+    font-weight: 700;
   }
 
   p {
-    font-size: 16px;
-    color: #6b7280;
-    margin: 0 0 20px 0;
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 13px;
   }
 
   .support-btn {
-    background: #3b82f6;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 700;
     border-radius: 8px;
-    padding: 12px 32px;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 500;
+    height: 44px;
+    padding: 0 20px;
     cursor: pointer;
-    transition: all 0.2s;
-
-    &:hover {
-      background: #2563eb;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
   }
 }
 
-// Mobile Logout
 .mobile-logout {
   display: none;
-  text-align: center;
-  margin-top: 24px;
+}
 
-  @media (max-width: 768px) {
-    display: block;
+@media (max-width: 1080px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .logout-btn {
-    background: #fee2e2;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-    padding: 12px 24px;
-    color: #ef4444;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
+  .booking-list .booking-row {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
 
-    &:hover {
-      background: #ef4444;
-      color: #fff;
-      border-color: #ef4444;
+  .booking-list .booking-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+    margin-top: 6px;
+  }
+
+  .support-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+
+    .support-btn {
+      width: 100%;
     }
   }
 }
 
-// Dark Mode Support
-@media (prefers-color-scheme: dark) {
+@media (max-width: 700px) {
   .cleaner-dashboard {
+    padding-top: 2px;
+  }
+
+  .welcome-section {
     .welcome-title {
-      color: #fff;
+      font-size: 24px;
     }
 
-    .stat-card {
-      background: #1f2937;
-      border-color: #374151;
+    .welcome-subtitle {
+      font-size: 13px;
+    }
+  }
 
-      .stat-value {
-        color: #fff;
-      }
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-card .rating-wrap .stat-value {
+    font-size: 18px;
+  }
+
+  .section-header {
+    h2 {
+      font-size: 24px;
+    }
+  }
+
+  .booking-list {
+    .booking-row {
+      padding: 14px;
     }
 
-    .bookings-table.desktop-view {
-      table {
-        background: #1f2937;
-
-        th {
-          background-color: #374151;
-          color: #9ca3af;
-          border-bottom-color: #4b5563;
-        }
-
-        td {
-          color: #e5e7eb;
-          border-bottom-color: #374151;
-        }
-      }
+    .booking-title {
+      font-size: 17px;
     }
 
-    .booking-card,
-    .booking-detail-card {
-      background: #1f2937;
-      border-color: #374151;
-
-      h3 {
-        color: #fff;
-      }
+    .booking-actions {
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
-    .support-section {
-      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    .booking-price {
+      text-align: left;
+      min-width: auto;
 
-      h3 {
-        color: #fff;
+      .amount {
+        font-size: 20px;
       }
+    }
+  }
+
+  .support-section {
+    h3 {
+      font-size: 20px;
+    }
+  }
+
+  .mobile-logout {
+    display: block;
+    margin-top: 14px;
+
+    .logout-btn {
+      width: 100%;
+      height: 44px;
+      border-radius: 8px;
+      border: 1px solid #fecaca;
+      background: #fee2e2;
+      color: #ef4444;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
   }
 }

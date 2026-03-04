@@ -1,10 +1,9 @@
-import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 
 // Import Bootstrap
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import 'bootstrap-icons/font/bootstrap-icons.css'; // Bootstrap Icons
+import './bootstrap.js';
 
 // Import router config
 import RouterConfig from './routes/router_config.jsx';
@@ -29,20 +28,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-// import React from 'react';
-// import ApiTester from './components/ApiTester';
-
-// function App() {
-//   return (
-//     <div className="App">
-//       <ApiTester />
-//     </div>
-//   );
-// }
-
-// export default App;

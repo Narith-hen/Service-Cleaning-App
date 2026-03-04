@@ -1,0 +1,52 @@
+/* Roboto Flex utility classes
+   Usage: add a class like .roboto-400 or .roboto-700 to set weight,
+   and .roboto-wdth-100 to control width, or use inline CSS variables.
+*/
+
+:root {
+  --roboto-wght: 400;
+  --roboto-wdth: 100; /* percentage relative to font's axis */
+  --roboto-opsz: 14; /* optical size */
+}
+
+.roboto {
+  font-family: 'Roboto Flex', Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-style: normal;
+  font-optical-sizing: auto;
+  font-variation-settings: "wdth" var(--roboto-wdth), "opsz" var(--roboto-opsz);
+  font-weight: var(--roboto-wght);
+}
+
+/* weight helpers */
+.roboto-100 { --roboto-wght: 100; font-weight: 100; }
+.roboto-200 { --roboto-wght: 200; font-weight: 200; }
+.roboto-300 { --roboto-wght: 300; font-weight: 300; }
+.roboto-400 { --roboto-wght: 400; font-weight: 400; }
+.roboto-500 { --roboto-wght: 500; font-weight: 500; }
+.roboto-600 { --roboto-wght: 600; font-weight: 600; }
+.roboto-700 { --roboto-wght: 700; font-weight: 700; }
+.roboto-800 { --roboto-wght: 800; font-weight: 800; }
+.roboto-900 { --roboto-wght: 900; font-weight: 900; }
+
+/* width helpers (values map roughly to Roboto Flex 'wdth' axis) */
+.roboto-wdth-75  { --roboto-wdth: 75; }
+.roboto-wdth-100 { --roboto-wdth: 100; }
+.roboto-wdth-125 { --roboto-wdth: 125; }
+
+/* optical size helpers */
+.roboto-opsz-8  { --roboto-opsz: 8; }
+.roboto-opsz-14 { --roboto-opsz: 14; }
+.roboto-opsz-24 { --roboto-opsz: 24; }
+
+/* Example uniquifier pattern: .roboto-<uniquifier>-<weight>
+   We'll provide an example class to match the user's pattern: .roboto-xyz-400
+*/
+.roboto-xyz-100 { composes: roboto roboto-100; }
+.roboto-xyz-400 { composes: roboto roboto-400; }
+.roboto-xyz-700 { composes: roboto roboto-700; }
+
+/* Fallbacks for older browsers */
+.roboto, .roboto-100, .roboto-400, .roboto-700 {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

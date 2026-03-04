@@ -2,9 +2,10 @@ import React from 'react';
 
 const AnalyticsPage = () => {
   return (
-    <div>
-      <h1>Analytics Dashboard</h1>
-    </div>
+    <section>
+      <h1 className="admin-page-title">Manage Analytics</h1>
+      <p className="admin-page-subtitle">Analyze trends, operations, and growth metrics.</p>
+    </section>
   );
 };
 
