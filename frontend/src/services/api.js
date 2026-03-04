@@ -1,37 +1,35 @@
-// src/services/api.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/api';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_URL = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
-  },
+    'Content-Type': 'application/json'
+  }
 });
 
-// Add a request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
-    console.log(`📤 Making ${config.method.toUpperCase()} request to: ${config.url}`);
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      const token = savedUser?.token || localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // Ignore malformed local storage payloads
+    }
+
     return config;
   },
-  (error) => {
-    console.error('❌ Request error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add a response interceptor for debugging
 api.interceptors.response.use(
-  (response) => {
-    console.log('📥 Response received:', response.data);
-    return response;
-  },
-  (error) => {
-    console.error('❌ Response error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
+  (response) => response,
+  (error) => Promise.reject(error)
 );
 
 export default api;

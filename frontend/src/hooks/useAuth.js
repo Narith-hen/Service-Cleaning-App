@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 
 // Mock users for testing
 const MOCK_USERS = {
@@ -81,6 +82,7 @@ export const useAuth = () => {
         email: userData.email,
         phone: userData.phone_number,
         role_id: userData.role_id,
+        token: userData.token,
         role: (userData.role || userData.role_name || (userData.role_id === 1 ? 'admin' : userData.role_id === 3 ? 'cleaner' : 'customer')).toLowerCase()
       };
 
