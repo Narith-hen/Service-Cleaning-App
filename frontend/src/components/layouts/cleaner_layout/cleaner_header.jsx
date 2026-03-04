@@ -1,18 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-<<<<<<< HEAD
-    BellOutlined,
-    MessageOutlined,
-    SunOutlined,
-    MoonOutlined,
-    CheckOutlined,
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    WarningOutlined,
-    InfoCircleOutlined,
-    UserOutlined,
-    SettingOutlined
-=======
   BellOutlined,
   MessageOutlined,
   SunOutlined,
@@ -25,7 +12,6 @@ import {
   UserOutlined,
   EditOutlined,
   LogoutOutlined
->>>>>>> develop
 } from '@ant-design/icons';
 import { useTheme } from "../../../contexts/theme_context";
 import { useTranslation } from "../../../contexts/translation_context";
@@ -36,17 +22,10 @@ import { formatDistanceToNow } from 'date-fns';
 import "../../../styles/cleaner/cleaner_header.css";
 
 const CleanerHeader = () => {
-<<<<<<< HEAD
-    const { darkMode, toggleTheme } = useTheme();
-    const { language, toggleLanguage } = useTranslation();
-    const { user } = useAuth();
-    const navigate = useNavigate();
-=======
   const { darkMode, toggleTheme } = useTheme();
   const { language, toggleLanguage } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
->>>>>>> develop
 
   const {
     notifications,
@@ -250,194 +229,9 @@ const CleanerHeader = () => {
                 ))}
               </div>
 
-<<<<<<< HEAD
-                {/* Messages Dropdown */}
-                <div className="dropdown-wrapper">
-                    <button 
-                        ref={messageButtonRef}
-                        className={`header-icon-btn ${isMessageOpen ? 'active' : ''}`}
-                        onClick={handleMessageClick}
-                        title="Messages"
-                    >
-                        <MessageOutlined />
-                        {unreadMessages > 0 && (
-                            <span className="badge">{unreadMessages}</span>
-                        )}
-                    </button>
-
-                    {isMessageOpen && (
-                        <div className="dropdown-menu messages-dropdown" ref={messageRef}>
-                            <div className="dropdown-header">
-                                <h3>Messages</h3>
-                                <button className="view-all-btn" onClick={() => navigate('/cleaner/help/contact')}>
-                                    View all
-                                </button>
-                            </div>
-                            
-                            <div className="dropdown-list">
-                                {messages.map(msg => (
-                                    <div 
-                                        key={msg.id} 
-                                        className={`dropdown-item ${msg.unread ? 'unread' : ''}`}
-                                        onClick={() => {
-                                            navigate('/cleaner/help/contact');
-                                            setIsMessageOpen(false);
-                                        }}
-                                    >
-                                        <div className="item-avatar">
-                                            <UserOutlined />
-                                        </div>
-                                        <div className="item-content">
-                                            <div className="item-header">
-                                                <span className="item-title">{msg.sender}</span>
-                                                <span className="item-time">{msg.time}</span>
-                                            </div>
-                                            <p className="item-preview">{msg.message}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            
-                            <div className="dropdown-footer">
-                                <button onClick={() => navigate('/cleaner/help/contact')}>
-                                    New Message
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Notifications Dropdown */}
-                <div className="dropdown-wrapper">
-                    <button 
-                        ref={notificationButtonRef}
-                        className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
-                        onClick={handleBellClick}
-                        title="Notifications"
-                    >
-                        <BellOutlined />
-                        {unreadCount > 0 && (
-                            <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-                        )}
-                    </button>
-
-                    {isNotificationOpen && (
-                        <div className="dropdown-menu notifications-dropdown" ref={notificationRef}>
-                            <div className="dropdown-header">
-                                <h3>Notifications</h3>
-                                {unreadCount > 0 && (
-                                    <button className="mark-read-btn" onClick={handleMarkAllAsRead}>
-                                        <CheckOutlined /> Mark all read
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="dropdown-list">
-                                {loading ? (
-                                    <div className="dropdown-empty">Loading...</div>
-                                ) : notifications.length === 0 ? (
-                                    <div className="dropdown-empty">
-                                        <BellOutlined />
-                                        <p>No notifications</p>
-                                    </div>
-                                ) : (
-                                    notifications.slice(0, 5).map(notification => (
-                                        <div
-                                            key={notification.id}
-                                            className={`dropdown-item ${!notification.is_read ? 'unread' : ''}`}
-                                            onClick={() => handleNotificationClick(notification)}
-                                        >
-                                            <div className="item-icon">
-                                                {getNotificationIcon(notification.type)}
-                                            </div>
-                                            <div className="item-content">
-                                                <div className="item-header">
-                                                    <span className="item-title">{notification.title}</span>
-                                                    <span className="item-time">
-                                                        {formatTime(notification.created_at)}
-                                                    </span>
-                                                </div>
-                                                <p className="item-preview">{notification.message}</p>
-                                            </div>
-                                            <button 
-                                                className="item-delete"
-                                                onClick={(e) => handleDeleteNotification(e, notification.id)}
-                                            >
-                                                &times;
-                                            </button>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            {notifications.length > 0 && (
-                                <div className="dropdown-footer">
-                                    <button onClick={() => {
-                                        navigate('/cleaner/notifications');
-                                        setIsNotificationOpen(false);
-                                    }}>
-                                        View all notifications
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Profile Dropdown */}
-                <div className="dropdown-wrapper">
-                    <button 
-                        ref={profileButtonRef}
-                        className="profile-btn"
-                        onClick={handleProfileClick}
-                    >
-                        <img 
-                            src={user?.avatar || 'https://via.placeholder.com/32'} 
-                            alt="profile"
-                            className="profile-avatar"
-                        />
-                        <div className="profile-info">
-                            <span className="profile-name">{user?.name || 'Admin User'}</span>
-                            <span className="profile-role">{user?.role || 'Administrator'}</span>
-                        </div>
-                    </button>
-
-                    {isProfileOpen && (
-                        <div className="dropdown-menu profile-dropdown" ref={profileRef}>
-                            <div className="profile-header">
-                                <img 
-                                    src={user?.avatar || 'https://via.placeholder.com/48'} 
-                                    alt="profile"
-                                    className="profile-large"
-                                />
-                                <div className="profile-details">
-                                    <h4>{user?.name || 'Admin User'}</h4>
-                                    <p>{user?.email || 'admin@example.com'}</p>
-                                </div>
-                            </div>
-                            
-                            <div className="dropdown-list">
-                                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/profile')}>
-                                    <UserOutlined /> My Profile
-                                </button>
-                                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/settings')}>
-                                    <SettingOutlined /> Settings
-                                </button>
-                            </div>
-                            
-                            <div className="dropdown-footer">
-                                <button className="logout-btn" onClick={() => navigate('/')}>
-                                    Sign Out
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-=======
               <div className="dropdown-footer">
                 <button onClick={() => navigate('/messages/new')}>New Message</button>
               </div>
->>>>>>> develop
             </div>
           )}
         </div>
@@ -561,7 +355,3 @@ const CleanerHeader = () => {
 };
 
 export default CleanerHeader;
-<<<<<<< HEAD
-
-=======
->>>>>>> develop
