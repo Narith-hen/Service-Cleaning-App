@@ -11,10 +11,8 @@ import {
   PhoneOutlined,
   PlusOutlined,
   SearchOutlined,
-  ShoppingCartOutlined,
   StopOutlined,
   TeamOutlined,
-  TrophyOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Button, Dropdown, Form, Input, Modal, Select, notification } from 'antd';
@@ -171,16 +169,8 @@ const CustomersPage = () => {
   const pagedCustomers = filteredCustomers.slice((page - 1) * pageSize, page * pageSize);
 
   const totalCustomers = customers.length;
-  const newThisMonth = customers.filter((customer) => {
-    const parsedDate = Date.parse(customer.joiningDate);
-    if (Number.isNaN(parsedDate)) return false;
-    const joinedDate = new Date(parsedDate);
-    const now = new Date();
-    return joinedDate.getMonth() === now.getMonth() && joinedDate.getFullYear() === now.getFullYear();
-  }).length;
-  const avgBookings = totalCustomers
-    ? customers.reduce((sum, customer) => sum + customer.totalBookings, 0) / totalCustomers
-    : 0;
+  const activeCustomers = customers.filter((customer) => customer.status === 'Active').length;
+  const inactiveCustomers = customers.filter((customer) => customer.status === 'Inactive').length;
 
   const openAddModal = () => {
     setEditingCustomer(null);
@@ -435,19 +425,19 @@ const CustomersPage = () => {
           <div className="kpi-icon tone-blue"><TeamOutlined /></div>
           <span className="kpi-label">TOTAL CUSTOMERS</span>
           <h3>{totalCustomers.toLocaleString()}</h3>
-          <span className="kpi-note positive">+8% from last month</span>
+          <span className="kpi-note neutral">Registered customer accounts</span>
         </article>
         <article className="customers-kpi-card">
-          <div className="kpi-icon tone-green"><TrophyOutlined /></div>
-          <span className="kpi-label">NEW THIS MONTH</span>
-          <h3>{newThisMonth}</h3>
-          <span className="kpi-note neutral">Verified registrations</span>
+          <div className="kpi-icon tone-green"><UserOutlined /></div>
+          <span className="kpi-label">ACTIVE CUSTOMERS</span>
+          <h3>{activeCustomers.toLocaleString()}</h3>
+          <span className="kpi-note positive">Can place bookings now</span>
         </article>
         <article className="customers-kpi-card">
-          <div className="kpi-icon tone-amber"><ShoppingCartOutlined /></div>
-          <span className="kpi-label">AVG BOOKINGS</span>
-          <h3>{avgBookings.toFixed(1)}</h3>
-          <span className="kpi-note positive">Stable booking trend</span>
+          <div className="kpi-icon tone-amber"><StopOutlined /></div>
+          <span className="kpi-label">INACTIVE CUSTOMERS</span>
+          <h3>{inactiveCustomers.toLocaleString()}</h3>
+          <span className="kpi-note neutral">Temporarily blocked accounts</span>
         </article>
       </section>
 

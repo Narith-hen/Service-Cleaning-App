@@ -1,5 +1,6 @@
 const db = require('../../config/db');
 const bcrypt = require("bcryptjs");
+const { generateToken } = require('../../utils/jwt.util');
 
 exports.register = async (req, res) => {
   const first_name = req.body.first_name || req.body.firstName;
@@ -159,6 +160,7 @@ exports.login = async (req, res) => {
     }
 
     const role = String(user.role_name || "").toLowerCase() || "customer";
+    const token = generateToken({ user_id: user.user_id, email: user.email });
 
     return res.status(200).json({
       success: true,
@@ -171,14 +173,18 @@ exports.login = async (req, res) => {
         email: user.email,
         phone_number: user.phone_number,
         role_id: user.role_id,
+        token,
         role,
       },
     });
   } catch (err) {
     console.error(err);
+    const isAuthConfigError = String(err?.message || "").includes("JWT_SECRET");
     return res.status(500).json({
       success: false,
-      message: "Login failed",
+      message: isAuthConfigError
+        ? "Server authentication configuration error (missing JWT_SECRET)"
+        : "Login failed",
     });
   }
 };
