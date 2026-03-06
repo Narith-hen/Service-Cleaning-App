@@ -1,5 +1,6 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import homeImage from '../../../assets/image.png';
+import ctaBgImage from '../../../assets/WelcomeService.png';
 import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
 import molikaImage from '../../../assets/molika.png';
@@ -198,10 +199,13 @@ export default function PublicHomePage() {
       ))}
     </div>
 
-    Call to Action
-   <div className="mx-auto mt-20 max-w-5xl rounded-[50px] bg-gradient-to-tr from-[#1c3a22] via-[#32c753] to-[#0b1f3c] px-12 py-20 text-center text-white shadow-2xl relative overflow-hidden">
-  {/* Decorative Gradient Overlay */}
-  <div className="absolute inset-0 -z-10 rounded-[50px] bg-gradient-to-tr from-[#32ff1a]/15 via-[#0b1f3c]/25 to-[#146f27]/15"></div>
+ 
+   <div
+    className="mx-auto mt-20 max-w-5xl rounded-[50px] bg-cover bg-center px-12 py-20 text-center text-white shadow-2xl relative overflow-hidden"
+    style={{
+      backgroundImage: `linear-gradient(rgba(9, 22, 37, 0.72), rgba(15, 38, 28, 0.72)), url(${ctaBgImage})`
+    }}
+  >
 
   {/* Heading */}
   <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight drop-shadow-lg">
@@ -218,7 +222,7 @@ export default function PublicHomePage() {
     {/* Primary Button */}
     <Link
       to="/auth/register"
-      className="relative inline-block rounded-3xl bg-gradient-to-r from-[#32ff1a] to-[#28cc1a] px-10 py-4 text-base md:text-lg font-extrabold text-[#114a1b] shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
+      className="relative inline-block rounded-3xl bg-[#32c753] px-10 py-4 text-base md:text-lg font-extrabold text-[#114a1b] shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
     >
       Book Now - 20% Off First Clean
     </Link>

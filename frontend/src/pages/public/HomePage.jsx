@@ -95,7 +95,7 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                to="/auth/register"
+                to="/register"
                 className="inline-flex rounded-xl bg-[#32c753] px-6 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]"
               >
                 Book Your Clean Now
@@ -227,7 +227,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/auth/register"
-                className="rounded-xl bg-[#32ff1a] px-6 py-3 text-sm font-black text-[#114a1b] shadow-[0_0_25px_rgba(50,255,26,0.45)] transition hover:brightness-95"
+                className="rounded-xl bg-[#32c753] px-6 py-3 text-sm font-black text-white shadow-[0_0_25px_rgba(50,199,83,0.45)] transition hover:brightness-95"
               >
                 Book Now - 20% Off First Clean
               </Link>

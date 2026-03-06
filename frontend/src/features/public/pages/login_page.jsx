@@ -217,7 +217,7 @@ const LoginPage = () => {
 
                         <div style={{ textAlign: 'center', marginBottom: 10 }}>
                             <Text style={{ color: '#dbe4f0' }}>Don't have an account? </Text>
-                            <Link to="/auth/register" style={{ color: '#46BA5A', fontWeight: 500 }}>
+                            <Link to="/auth/register" style={{ color: '#32c753', fontWeight: 500 }}>
                                 Sign up
                             </Link>
                         </div>
