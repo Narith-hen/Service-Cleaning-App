@@ -1,5 +1,8 @@
-import { SearchCheck, ShieldCheck, Images, Star, Clock3 } from 'lucide-react';
+import { ArrowLeft, SearchCheck, ShieldCheck, Images, Star, Clock3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import deepCleanImage from '../../../assets/image.png';
+import homeImage from '../../../assets/home.png';
+import officeImage from '../../../assets/office.png';
 import '../../../styles/customer/booking_match.scss';
 
 const steps = ['01', '02', '03', '04', '05', '06', '07'];
@@ -43,6 +46,19 @@ const BookingMatchPage = () => {
       </div>
 
       <section className="match-panel">
+        <div className="match-top-row">
+          <button type="button" className="back-link" onClick={() => navigate('/customer/bookings')}>
+            <ArrowLeft size={16} />
+            Back
+          </button>
+
+          <div className="mini-photos" aria-label="Previous uploaded photos">
+            <img src={homeImage} alt="Previous upload 1" />
+            <img src={officeImage} alt="Previous upload 2" />
+            <img src={deepCleanImage} alt="Previous upload 3" />
+          </div>
+        </div>
+
         <div className="pulse-wrap" aria-hidden>
           <span />
           <span />
