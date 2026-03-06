@@ -1,223 +1,186 @@
-import React, { useState } from 'react';
-import {
-  CalendarOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  EnvironmentOutlined,
-  HomeOutlined,
-  RightOutlined,
-  SearchOutlined,
-  ShopOutlined,
-  StarFilled,
-  StarOutlined,
-  ToolOutlined,
-  UserOutlined
-} from '@ant-design/icons';
+import { CheckCircleFilled, SafetyCertificateOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import heroImage from '../../../assets/home.png';
+import deepCleanImage from '../../../assets/image.png';
+import regularImage from '../../../assets/window.png';
+import officeImage from '../../../assets/office.png';
 import '../../../styles/customer/home.scss';
 
 const services = [
   {
-    id: 1,
-    name: 'Regular Cleaning',
-    description: 'Weekly or bi-weekly upkeep for your home.',
-    price: 45,
-    duration: '2 hours',
-    icon: <HomeOutlined />,
-    theme: 'mint'
+    title: 'Deep Clean',
+    description: 'A thorough, top-to-bottom cleaning of every nook and cranny in your home.',
+    image: deepCleanImage
   },
   {
-    id: 2,
-    name: 'Deep Cleaning',
-    description: 'Top-to-bottom cleaning for hard-to-reach areas.',
-    price: 120,
-    duration: '4 hours',
-    icon: <ToolOutlined />,
-    theme: 'amber'
+    title: 'Regular Cleaning',
+    description: 'Weekly or bi-weekly maintenance to keep your living space consistently fresh.',
+    image: regularImage
   },
   {
-    id: 3,
-    name: 'Move In/Out',
-    description: 'Detailed cleaning before move-in or handover.',
-    price: 160,
-    duration: '6 hours',
-    icon: <ShopOutlined />,
-    theme: 'sky'
-  },
-  {
-    id: 4,
-    name: 'Window Cleaning',
-    description: 'Interior and exterior window care and shine.',
-    price: 80,
-    duration: '2 hours',
-    icon: <EnvironmentOutlined />,
-    theme: 'rose'
+    title: 'Office Cleaning',
+    description: 'Professional sanitation and cleaning for productive workspaces and offices.',
+    image: officeImage
   }
 ];
 
-const recentBookings = [
+const testimonials = [
   {
-    id: 'BK001',
-    service: 'Regular Cleaning',
-    date: 'Oct 24, 2024',
-    time: '02:00 PM',
-    status: 'completed',
-    cleaner: 'Maria Garcia',
-    rating: 5
+    quote:
+      '"PureShine has changed my life. I come home to a fresh-smelling house every Friday without lifting a finger."',
+    name: 'Sarah Jenkins',
+    role: 'HOMEOWNER'
   },
   {
-    id: 'BK002',
-    service: 'Deep Cleaning',
-    date: 'Oct 26, 2024',
-    time: '10:00 AM',
-    status: 'upcoming',
-    cleaner: 'David Lee',
-    rating: null
+    quote:
+      '"Our office has never been cleaner. The team arrives on time, follows all protocols, and the booking system is so smooth."',
+    name: 'Michael Rivera',
+    role: 'OFFICE MANAGER'
+  },
+  {
+    quote:
+      '"I booked a deep clean after renovation and they did an incredible job. They even cleaned the inside of the oven."',
+    name: 'Emily Lawson',
+    role: 'APARTMENT RESIDENT'
   }
 ];
 
 const CustomerHomePage = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const userData = {
-    name: 'John',
-    upcomingBookings: 2,
-    completedJobs: 14,
-    favoriteServices: 6
-  };
 
   return (
-    <div className="customer-home">
-      <section className="home-hero">
+    <div className="customer-home-landing">
+      <section className="hero-section">
         <div className="hero-text">
-          <p className="eyebrow">Customer Dashboard</p>
-          <h1>Hello, {userData.name}</h1>
-          <p className="subtitle">Plan your next cleaning session in less than a minute.</p>
+          <p className="trust-badge">TRUSTED BY 5000+ HOUSEHOLDS</p>
+          <h1>
+            Professional Cleaning for a <span>Spotless Home</span>
+          </h1>
+          <p>
+            Experience the joy of a pristine living space with our reliable residential and
+            commercial cleaning services. Eco-friendly, vetted, and flexible.
+          </p>
 
-          <div className="search-wrap">
-            <SearchOutlined className="search-icon" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search services, cleaners, or locations"
-            />
-            <button type="button" onClick={() => navigate('/services')}>Search</button>
+          <div className="hero-actions">
+            <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
+              Book Your Service Cleaning
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/services')}>
+              View Pricing
+            </button>
+          </div>
+
+          <div className="hero-rating">
+            <div className="avatars">
+              <span className="avatar one" />
+              <span className="avatar two" />
+            </div>
+            <span>4.9/5 stars from over 2,000 reviews</span>
           </div>
         </div>
 
-        <div className="hero-stats">
-          <article>
-            <span>Upcoming</span>
-            <strong>{userData.upcomingBookings}</strong>
-          </article>
-          <article>
-            <span>Completed</span>
-            <strong>{userData.completedJobs}</strong>
-          </article>
-          <article>
-            <span>Favorites</span>
-            <strong>{userData.favoriteServices}</strong>
-          </article>
+        <div className="hero-media">
+          <img src={heroImage} alt="Modern clean room" />
         </div>
-      </section>
-
-      <section className="quick-actions">
-        <button type="button" onClick={() => navigate('/customer/bookings')}>
-          <CalendarOutlined />
-          <span>My Bookings</span>
-        </button>
-        <button type="button" onClick={() => navigate('/customer/favorites')}>
-          <StarOutlined />
-          <span>Favorites</span>
-        </button>
-        <button type="button" onClick={() => navigate('/customer/profile')}>
-          <UserOutlined />
-          <span>Profile</span>
-        </button>
       </section>
 
       <section className="services-section">
-        <div className="section-head">
-          <h2>Popular Services</h2>
-          <button type="button" onClick={() => navigate('/services')}>
-            View all <RightOutlined />
-          </button>
-        </div>
+        <h2>Our Specialized Services</h2>
+        <p className="section-subtitle">
+          Tailored cleaning solutions for every need, from one-time deep cleans to recurring office
+          maintenance.
+        </p>
 
         <div className="services-grid">
-          {services.map((service) => (
-            <article key={service.id} className={`service-card ${service.theme}`}>
-              <div className="service-top">
-                <span className="service-icon">{service.icon}</span>
-                <span className="service-duration">
-                  <ClockCircleOutlined /> {service.duration}
-                </span>
-              </div>
-              <h3>{service.name}</h3>
+          {services.map((service, index) => (
+            <article key={service.title} className="service-card">
+              <img src={service.image} alt={service.title} />
+              <h3>
+                {service.title}
+                {index === 0 && <span className="tag">Popular</span>}
+              </h3>
               <p>{service.description}</p>
-              <div className="service-bottom">
-                <strong>${service.price}</strong>
-                <button type="button" onClick={() => navigate('/customer/bookings')}>
-                  Book now
-                </button>
+              <button type="button" onClick={() => navigate('/services')}>
+                Learn More
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="why-section">
+        <div className="why-left">
+          <h2>Why PureShine is the Best Choice</h2>
+          <div className="feature-list">
+            <div>
+              <CheckCircleFilled style={{ fontSize: 18 }} />
+              <div>
+                <h4>Eco-Friendly Products</h4>
+                <p>We use 100% biodegradable and non-toxic cleaning agents safe for kids and pets.</p>
+              </div>
+            </div>
+            <div>
+              <SafetyCertificateOutlined style={{ fontSize: 18 }} />
+              <div>
+                <h4>Background Checked Staff</h4>
+                <p>Our cleaning professionals undergo rigorous identity and criminal record checks.</p>
+              </div>
+            </div>
+            <div>
+              <CalendarOutlined style={{ fontSize: 18 }} />
+              <div>
+                <h4>Flexible Scheduling</h4>
+                <p>Book, reschedule or cancel in seconds through our seamless web application.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="why-stats">
+          {[
+            ['98%', 'Satisfaction Rate'],
+            ['15k+', 'Cleanings Done'],
+            ['24/7', 'Customer Support'],
+            ['100%', 'Insured Service']
+          ].map(([value, label]) => (
+            <article key={label}>
+              <strong>{value}</strong>
+              <span>{label}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="testimonials-section">
+        <h2>What Our Customers Say</h2>
+        <div className="testimonials-grid">
+          {testimonials.map((item) => (
+            <article key={item.name} className="testimonial-card">
+              <p className="stars">*****</p>
+              <p className="quote">{item.quote}</p>
+              <div className="author">
+                <span className="avatar-sm" />
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.role}</span>
+                </div>
               </div>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="bookings-section">
-        <div className="section-head">
-          <h2>Recent Bookings</h2>
-          <button type="button" onClick={() => navigate('/customer/bookings')}>
-            View all <RightOutlined />
+      <section className="cta-section">
+        <h2>Ready for a Cleaner, Healthier Space?</h2>
+        <p>Book your first cleaning in less than 60 seconds. No credit card required to start.</p>
+        <div className="cta-actions">
+          <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
+            Book Your First Cleaning
+          </button>
+          <button type="button" className="btn-secondary dark" onClick={() => navigate('/contact')}>
+            Contact Sales
           </button>
         </div>
-
-        <div className="bookings-grid">
-          {recentBookings.map((booking) => (
-            <article key={booking.id} className="booking-card">
-              <div className="booking-main">
-                <h3>{booking.service}</h3>
-                <span className={`status ${booking.status}`}>{booking.status}</span>
-              </div>
-              <p className="booking-time">
-                <CalendarOutlined /> {booking.date} at {booking.time}
-              </p>
-              <p className="booking-cleaner">Cleaner: {booking.cleaner}</p>
-
-              <div className="booking-foot">
-                {booking.rating ? (
-                  <span className="rating">
-                    <StarFilled /> {booking.rating.toFixed(1)}
-                  </span>
-                ) : (
-                  <span className="rating pending">
-                    <CheckCircleOutlined /> Waiting for review
-                  </span>
-                )}
-
-                {booking.status === 'completed' && !booking.rating && (
-                  <button type="button" onClick={() => navigate(`/customer/write-review/${booking.id}`)}>
-                    Write review
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="support-banner">
-        <div>
-          <h3>Need help choosing a service?</h3>
-          <p>Chat with support and get a recommendation based on your home and schedule.</p>
-        </div>
-        <button type="button" onClick={() => navigate('/customer/help/contact')}>
-          Contact support
-        </button>
       </section>
     </div>
   );

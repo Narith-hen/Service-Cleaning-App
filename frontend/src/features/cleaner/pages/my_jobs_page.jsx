@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ClockCircleOutlined,
   EnvironmentOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   PauseCircleOutlined,
-  ArrowRightOutlined,
+  SendOutlined,
+  CaretRightOutlined,
   LockOutlined,
-  SearchOutlined
+  SearchOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import homeImage from '../../../assets/home.png';
 import officeImage from '../../../assets/office.png';
@@ -17,6 +19,9 @@ import '../../../styles/cleaner/my_jobs.scss';
 const jobs = [
   {
     id: 1,
+    jobType: 'Deep Clean',
+    status: 'Ongoing',
+    scheduledDate: '2026-03-04',
     tag: 'ONGOING',
     tagType: 'green',
     title: 'Full Apartment Deep Clean',
@@ -34,6 +39,9 @@ const jobs = [
   },
   {
     id: 2,
+    jobType: 'Home',
+    status: 'Starting Soon',
+    scheduledDate: '2026-03-04',
     tag: 'STARTS IN 45M',
     tagType: 'amber',
     title: 'Standard Recurring Clean',
@@ -45,12 +53,15 @@ const jobs = [
       { label: 'DISTANCE', value: '1.2 miles away', icon: <EnvironmentOutlined /> }
     ],
     actions: [
-      { label: 'Navigate', type: 'light', icon: <ArrowRightOutlined /> },
-      { label: 'Start Cleaning', type: 'soft-green', icon: <ArrowRightOutlined /> }
+      { label: 'Navigate', type: 'light', icon: <SendOutlined /> },
+      { label: 'Start Cleaning', type: 'soft-green', icon: <CaretRightOutlined /> }
     ]
   },
   {
     id: 3,
+    jobType: 'Office',
+    status: 'Scheduled',
+    scheduledDate: '2026-03-05',
     tag: 'SCHEDULED',
     tagType: 'gray',
     title: 'Move-out Sanitation',
@@ -69,6 +80,67 @@ const jobs = [
 ];
 
 const MyJobsPage = () => {
+  const [selectedType, setSelectedType] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id ?? null);
+  const [activeJob, setActiveJob] = useState(null);
+  const fromDateRef = useRef(null);
+  const toDateRef = useRef(null);
+
+  const jobTypeOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.jobType))], []);
+  const statusOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.status))], []);
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      if (selectedType !== 'all' && job.jobType !== selectedType) return false;
+      if (selectedStatus !== 'all' && job.status !== selectedStatus) return false;
+
+      if (dateFrom && job.scheduledDate < dateFrom) return false;
+      if (dateTo && job.scheduledDate > dateTo) return false;
+
+      return true;
+    });
+  }, [selectedType, selectedStatus, dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (filteredJobs.length === 0) {
+      setSelectedJobId(null);
+      return;
+    }
+
+    const stillExists = filteredJobs.some((job) => job.id === selectedJobId);
+    if (!stillExists) {
+      setSelectedJobId(filteredJobs[0].id);
+    }
+  }, [filteredJobs, selectedJobId]);
+
+  const formatDisplayDate = (value) => {
+    if (!value) return '';
+    const [year, month, day] = value.split('-');
+    if (!year || !month || !day) return '';
+    return `${month}/${day}/${year}`;
+  };
+
+  const openDatePicker = (ref) => {
+    if (!ref.current) return;
+    if (typeof ref.current.showPicker === 'function') {
+      ref.current.showPicker();
+      return;
+    }
+    ref.current.click();
+  };
+
+  const handleOpenJobDetails = (job) => {
+    setSelectedJobId(job.id);
+    setActiveJob(job);
+  };
+
+  const handleCloseJobDetails = () => {
+    setActiveJob(null);
+  };
+
   return (
     <div className="cleaner-my-jobs-page">
       <div className="my-jobs-headline">
@@ -108,29 +180,89 @@ const MyJobsPage = () => {
       <div className="filter-bar">
         <div className="filter-item">
           <label>JOB TYPE</label>
-          <select defaultValue="all">
-            <option value="all">All Types</option>
+          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+            {jobTypeOptions.map((type) => (
+              <option key={type} value={type}>
+                {type === 'all' ? 'All Types' : type}
+              </option>
+            ))}
           </select>
         </div>
         <div className="filter-item">
           <label>STATUS</label>
-          <select defaultValue="all">
-            <option value="all">All Statuses</option>
+          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status === 'all' ? 'All Statuses' : status}
+              </option>
+            ))}
           </select>
         </div>
         <div className="filter-item date-range">
           <label>DATE RANGE</label>
           <div className="date-inputs">
-            <input type="text" placeholder="mm/dd/yyyy" />
+            <div className="date-picker-field">
+              <input
+                type="text"
+                className="date-display-input"
+                value={formatDisplayDate(dateFrom)}
+                onClick={() => openDatePicker(fromDateRef)}
+                placeholder="mm/dd/yyyy"
+                readOnly
+              />
+              <button type="button" className="calendar-trigger" onClick={() => openDatePicker(fromDateRef)}>
+                <CalendarOutlined />
+              </button>
+              <input
+                ref={fromDateRef}
+                type="date"
+                className="hidden-native-date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                aria-label="From date"
+              />
+            </div>
             <span>to</span>
-            <input type="text" placeholder="mm/dd/yyyy" />
+            <div className="date-picker-field">
+              <input
+                type="text"
+                className="date-display-input"
+                value={formatDisplayDate(dateTo)}
+                onClick={() => openDatePicker(toDateRef)}
+                placeholder="mm/dd/yyyy"
+                readOnly
+              />
+              <button type="button" className="calendar-trigger" onClick={() => openDatePicker(toDateRef)}>
+                <CalendarOutlined />
+              </button>
+              <input
+                ref={toDateRef}
+                type="date"
+                className="hidden-native-date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                aria-label="To date"
+              />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="jobs-list">
-        {jobs.map((job) => (
-          <article className={`job-item ${job.id === 1 ? 'highlight' : ''}`} key={job.id}>
+        {filteredJobs.map((job) => (
+          <article
+            className={`job-item ${job.id === selectedJobId ? 'highlight' : ''}`}
+            key={job.id}
+            onClick={() => handleOpenJobDetails(job)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenJobDetails(job);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
             <div className="job-image-wrap">
               <span className={`job-tag ${job.tagType}`}>{job.tag}</span>
               <img src={job.image} alt={job.title} />
@@ -139,7 +271,7 @@ const MyJobsPage = () => {
             <div className="job-body">
               <div className="job-top">
                 <div>
-                  <span className="job-type">{job.id === 1 ? 'DEEP CLEAN' : job.id === 2 ? 'HOME' : 'OFFICE'}</span>
+                  <span className="job-type">{job.jobType.toUpperCase()}</span>
                   <h3>{job.title}</h3>
                   <p className="job-client">Client: {job.client}</p>
                 </div>
@@ -167,7 +299,60 @@ const MyJobsPage = () => {
             </div>
           </article>
         ))}
+        {filteredJobs.length === 0 && <div className="summary-card">No jobs found for the selected filters.</div>}
       </div>
+      {activeJob && (
+        <div className="job-modal-overlay" onClick={handleCloseJobDetails}>
+          <div className="job-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="job-modal-close" aria-label="Close details" onClick={handleCloseJobDetails}>
+              <CloseOutlined />
+            </button>
+
+            <div className="job-modal-image-wrap">
+              <span className={`job-tag ${activeJob.tagType}`}>{activeJob.tag}</span>
+              <img src={activeJob.image} alt={activeJob.title} />
+            </div>
+
+            <div className="job-modal-body">
+              <div className="job-top">
+                <div>
+                  <span className="job-type">{activeJob.jobType.toUpperCase()}</span>
+                  <h3>{activeJob.title}</h3>
+                  <p className="job-client">Client: {activeJob.client}</p>
+                </div>
+                <div className="job-price">{activeJob.price}</div>
+              </div>
+
+              <div className="job-details-grid">
+                {activeJob.details.map((detail, index) => (
+                  <div className="job-detail" key={`${activeJob.id}-modal-${index}`}>
+                    <span className="label">{detail.label}</span>
+                    <p>
+                      {detail.icon} {detail.value}
+                    </p>
+                  </div>
+                ))}
+                <div className="job-detail">
+                  <span className="label">STATUS</span>
+                  <p>{activeJob.status}</p>
+                </div>
+                <div className="job-detail">
+                  <span className="label">SCHEDULED DATE</span>
+                  <p>{formatDisplayDate(activeJob.scheduledDate)}</p>
+                </div>
+              </div>
+
+              <div className="job-actions">
+                {activeJob.actions.map((action, idx) => (
+                  <button key={`${activeJob.id}-modal-action-${idx}`} type="button" className={`action-btn ${action.type}`}>
+                    {action.icon} {action.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

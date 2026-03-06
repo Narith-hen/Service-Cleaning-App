@@ -135,9 +135,9 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      <section className={`py-20 ${darkMode ? 'bg-[#111b2f]' : 'bg-[#f2f4f3]'}`}>
+      <section className={`py-20 ${darkMode ? 'bg-[#111b2 f]' : 'bg-[#f2f4f3]'}`}>
         <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-16">
-          <div className="mb-10 flex items-center justify-between gap-4">
+          <div className=" mb-10 items-center justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#32c753]">
                 Testimonials
@@ -145,14 +145,6 @@ export default function PublicHomePage() {
               <h2 className={`mt-3 text-4xl font-black ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
                 What Our Customers Are Saying
               </h2>
-            </div>
-            <div className="hidden items-center gap-2 md:flex">
-              <button className="h-10 w-10 rounded-full border border-slate-300 text-slate-500">
-                {'<'}
-              </button>
-              <button className="h-10 w-10 rounded-full border border-slate-300 text-slate-500">
-                {'>'}
-              </button>
             </div>
           </div>
 
