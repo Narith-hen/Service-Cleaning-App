@@ -34,8 +34,8 @@ const Footer = () => {
           <h4 className="text-white font-semibold mb-3">Contact</h4>
           <ul className="space-y-2">
             <li>Email: info@somaet.com</li>
-            <li>Phone: +1 (555) 123-4567</li>
-            <li>Location: San Francisco, CA</li>
+            <li>Phone: +855 97 298 6450</li>
+            <li>Location: 39b Street 371, Phnom Penh</li>
           </ul>
         </div>
       </div>

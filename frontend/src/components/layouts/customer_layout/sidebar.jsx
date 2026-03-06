@@ -13,9 +13,12 @@ import {
   MessageOutlined,
   InstagramOutlined,
   YoutubeOutlined,
-  WhatsAppOutlined
+  WhatsAppOutlined,
+  UserAddOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
+import { useAuth } from '../../../hooks/useAuth';
 
 const { Text } = Typography;
 
@@ -27,6 +30,7 @@ const Sidebar = ({
   darkMode,
   onContactClick 
 }) => {
+  const { user, logout } = useAuth();
   
   // Navigation menu items
   const menuItems = [
@@ -90,6 +94,40 @@ const Sidebar = ({
     window.open('tel:0968812310');
     onClose();
   };
+
+  const handleAuthAction = async () => {
+    if (user) {
+      await logout();
+      onNavigate('/auth/login');
+      onClose();
+      return;
+    }
+
+    onNavigate('/auth/register');
+    onClose();
+  };
+
+  const authItem = user
+    ? {
+      key: 'logout',
+      label: 'Log out',
+      description: 'Sign out of your account',
+      icon: <LogoutOutlined />,
+      color: '#dc2626',
+      cardBg: 'rgba(220, 38, 38, 0.06)',
+      cardBorder: 'rgba(220, 38, 38, 0.2)',
+      iconBg: '#dc2626'
+    }
+    : {
+      key: 'register',
+      label: 'Register',
+      description: 'Create a new account',
+      icon: <UserAddOutlined />,
+      color: 'green',
+      cardBg: 'rgba(15, 118, 110, 0.08)',
+      cardBorder: 'rgba(15, 118, 110, 0.2)',
+      iconBg: 'green'
+    };
 
   return (
     <div style={{ 
@@ -289,6 +327,93 @@ const Sidebar = ({
           margin: '24px',
           borderColor: '#f1f5f9'
         }} />
+
+        <div style={{ padding: '0 24px 0' }}>
+          <Text strong style={{ 
+            fontSize: 11,
+            color: 'green',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            marginBottom: 16,
+            display: 'block',
+            fontWeight: 700
+          }}>
+            Account
+          </Text>
+
+          <div
+            onClick={handleAuthAction}
+            style={{
+              padding: '14px 16px',
+              marginBottom: 8,
+              borderRadius: 3,
+              background: authItem.cardBg,
+              border: `1px solid ${authItem.cardBorder}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+              width: '100%',
+              boxSizing: 'border-box',
+              overflow: 'hidden'
+            }}
+          >
+            <Space size={14} align="center" style={{ width: '100%' }}>
+              <div style={{
+                padding: '8px',
+                background: authItem.iconBg,
+                borderRadius: 3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 2px 8px ${authItem.cardBorder}`,
+                flexShrink: 0
+              }}>
+                {React.cloneElement(authItem.icon, {
+                  style: {
+                    fontSize: 16,
+                    color: '#ffffff'
+                  }
+                })}
+              </div>
+              <div style={{ 
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden'
+              }}>
+                <Text strong style={{ 
+                  fontSize: 14, 
+                  color: authItem.color,
+                  display: 'block',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {authItem.label}
+                </Text>
+                <Text style={{ 
+                  fontSize: 11, 
+                  color: '#64748b',
+                  marginTop: 2,
+                  display: 'block',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {authItem.description}
+                </Text>
+              </div>
+              <div style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: authItem.color,
+                flexShrink: 0
+              }} />
+            </Space>
+          </div>
+        </div>
 
         {/* Contact Information */}
         {/* <div style={{ padding: '0 24px 20px', width: '100%', boxSizing: 'border-box' }}>
