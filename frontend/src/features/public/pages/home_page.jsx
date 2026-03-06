@@ -145,7 +145,7 @@ export default function PublicHomePage() {
      <section className={`py-24 ${darkMode ? 'bg-[#0f1a2b]' : 'bg-[#f9fafb]'}`}>
   <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-16">
     {/* Header */}
-    <div className="mb-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <div className="mb-12 flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-[#32c753]">
           Testimonials
@@ -153,14 +153,6 @@ export default function PublicHomePage() {
         <h2 className={`mt-3 text-4xl md:text-5xl font-extrabold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
           What Our Customers Are Saying
         </h2>
-      </div>
-      <div className="hidden md:flex items-center gap-3">
-        <button className="h-10 w-10 flex items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-200/20 transition">
-          {'<'}
-        </button>
-        <button className="h-10 w-10 flex items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-200/20 transition">
-          {'>'}
-        </button>
       </div>
     </div>
 
