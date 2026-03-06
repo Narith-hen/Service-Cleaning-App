@@ -1,136 +1,79 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BellOutlined,
-  SlidersOutlined,
-  CheckOutlined,
-  UserOutlined,
-  EditOutlined,
   CameraOutlined,
-  PhoneOutlined,
-  CloseOutlined
+  EditOutlined
 } from '@ant-design/icons';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import '../../../styles/cleaner/settings.scss';
 
 const SettingsPage = () => {
   const { user, updateUser } = useAuth();
-  const location = useLocation();
   const fileInputRef = useRef(null);
-
-  const [selectedTypes, setSelectedTypes] = useState(['Home Cleaning', 'Office Cleaning']);
-  const [notifications, setNotifications] = useState({
-    emailAlerts: true,
-    pushNotifications: true,
-    smsUpdates: false
-  });
-  const [profile, setProfile] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    avatar: null
-  });
-  const [draft, setDraft] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    avatar: null
-  });
   const [profileMessage, setProfileMessage] = useState('');
-  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false);
-  const [savingQuickEdit, setSavingQuickEdit] = useState(false);
 
-  const profileBase = useMemo(() => {
+  const profileData = useMemo(() => {
     const fullName =
       user?.name ||
       [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
       'Cleaner';
 
+    const completedJobsValue =
+      user?.completedJobs ??
+      user?.completed_jobs ??
+      user?.jobs_completed ??
+      user?.total_completed_jobs ??
+      0;
+
+    const ratingValue =
+      user?.rating ??
+      user?.avg_rating ??
+      user?.average_rating ??
+      0;
+
     return {
       name: fullName,
-      email: user?.email || '',
-      phone: user?.phone || user?.phone_number || '',
-      address: user?.address || '',
-      avatar: user?.avatar || null
+      email: user?.email || '-',
+      phone: user?.phone || user?.phone_number || '-',
+      address: user?.address || '-',
+      avatar: user?.avatar || null,
+      completedJobs: completedJobsValue,
+      rating: Number(ratingValue).toFixed(1).replace('.0', '')
     };
   }, [user]);
 
-  const toggleType = (type) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type]
-    );
-  };
-
-  const toggleNotification = (key) => {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const jobTypes = ['Home Cleaning', 'Office Cleaning', 'Deep Cleaning', 'Sanitation'];
-  const searchParams = new URLSearchParams(location.search);
-  const showProfileSettings = searchParams.get('section') === 'profile';
+  const [profile, setProfile] = useState(profileData);
 
   useEffect(() => {
-    setProfile(profileBase);
-    setDraft(profileBase);
-  }, [profileBase]);
+    setProfile(profileData);
+  }, [profileData]);
 
-  useEffect(() => {
-    if (showProfileSettings) setProfileMessage('');
-  }, [location.search, showProfileSettings]);
+  const isOnline = useMemo(() => {
+    const rawStatus =
+      user?.is_online ??
+      user?.isOnline ??
+      user?.online ??
+      user?.availability_status ??
+      user?.status;
+
+    if (typeof rawStatus === 'boolean') return rawStatus;
+    if (typeof rawStatus === 'number') return rawStatus === 1;
+    if (typeof rawStatus === 'string') {
+      const normalized = rawStatus.trim().toLowerCase();
+      if (['online', 'active', 'available', 'true', '1'].includes(normalized)) return true;
+      if (['offline', 'inactive', 'unavailable', 'false', '0'].includes(normalized)) return false;
+    }
+    return true;
+  }, [user]);
+
+  const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
+  const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
+  const initials = (firstInitial + lastInitial) || String(profile.name || 'C').trim().charAt(0).toUpperCase() || 'C';
 
   const handlePickAvatar = () => {
     fileInputRef.current?.click();
   };
 
-  const handleOpenQuickEdit = () => {
-    setDraft(profile);
-    setProfileMessage('');
-    setIsQuickEditOpen(true);
-  };
-
-  const handleCloseQuickEdit = () => {
-    setDraft(profile);
-    setIsQuickEditOpen(false);
-  };
-
-  const handleQuickField = (key, value) => {
-    setDraft((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleSaveQuickEdit = async () => {
-    setSavingQuickEdit(true);
-    setProfileMessage('');
-
-    const firstName = draft.name.trim().split(' ')[0] || '';
-    const lastName = draft.name.trim().split(' ').slice(1).join(' ');
-    const payload = {
-      name: draft.name,
-      first_name: firstName,
-      last_name: lastName,
-      email: profile.email,
-      phone: draft.phone,
-      phone_number: draft.phone,
-      address: profile.address,
-      avatar: profile.avatar
-    };
-
-    const result = await updateUser(payload);
-    if (result?.success) {
-      const updated = { ...profile, name: draft.name, phone: draft.phone };
-      setProfile(updated);
-      setDraft(updated);
-      setIsQuickEditOpen(false);
-      setProfileMessage('');
-    } else {
-      setProfileMessage(result?.error || 'Unable to update profile.');
-    }
-
-    setSavingQuickEdit(false);
-  };
-
-  const handleAvatarChange = (event) => {
+  const handleAvatarChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -142,145 +85,53 @@ const SettingsPage = () => {
     const reader = new FileReader();
     reader.onload = async () => {
       const avatarData = String(reader.result);
-      const nextDraft = { ...draft, avatar: avatarData };
-      setDraft(nextDraft);
+      const nextProfile = { ...profile, avatar: avatarData };
+      setProfile(nextProfile);
 
-      const firstName = nextDraft.name.trim().split(' ')[0] || '';
-      const lastName = nextDraft.name.trim().split(' ').slice(1).join(' ');
+      const firstName = String(profile.name).trim().split(' ')[0] || '';
+      const lastName = String(profile.name).trim().split(' ').slice(1).join(' ');
+
       const payload = {
-        name: nextDraft.name,
+        name: profile.name,
         first_name: firstName,
         last_name: lastName,
-        email: nextDraft.email,
-        phone: nextDraft.phone,
-        phone_number: nextDraft.phone,
-        address: nextDraft.address,
-        avatar: nextDraft.avatar
+        email: profile.email === '-' ? '' : profile.email,
+        phone: profile.phone === '-' ? '' : profile.phone,
+        phone_number: profile.phone === '-' ? '' : profile.phone,
+        address: profile.address === '-' ? '' : profile.address,
+        avatar: avatarData
       };
 
       const result = await updateUser(payload);
-      if (result?.success) {
-        setProfile(nextDraft);
-        setProfileMessage('');
-      } else {
+      if (!result?.success) {
         setProfileMessage(result?.error || 'Unable to update profile photo.');
+      } else {
+        setProfileMessage('');
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const initials = String(draft.name || 'C')
-    .trim()
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join('');
-  const roleLabel = user?.role || 'cleaner';
-  const isOnline = useMemo(() => {
-    const rawStatus =
-      user?.is_online ??
-      user?.isOnline ??
-      user?.online ??
-      user?.availability_status ??
-      user?.status;
-
-    if (typeof rawStatus === 'boolean') return rawStatus;
-    if (typeof rawStatus === 'number') return rawStatus === 1;
-
-    if (typeof rawStatus === 'string') {
-      const normalized = rawStatus.trim().toLowerCase();
-      if (['online', 'active', 'available', 'true', '1'].includes(normalized)) return true;
-      if (['offline', 'inactive', 'unavailable', 'false', '0'].includes(normalized)) return false;
-    }
-
-    return true;
-  }, [user]);
-
   return (
     <div className="cleaner-settings-page">
-      <div className="settings-headline">
-        <h1>Account Settings</h1>
-        <p>Manage your service radius, job preferences, and notifications.</p>
-      </div>
+      <section className="settings-profile-card">
+        <div className="settings-profile-banner">
+          <button type="button" className="settings-profile-edit" onClick={handlePickAvatar} aria-label="Edit profile photo">
+            <EditOutlined />
+          </button>
+          <h1>{profile.name || 'Cleaner'}</h1>
+        </div>
 
-      <div className="settings-grid">
-        {showProfileSettings && (
-          <section className="settings-card profile-settings-card">
-            <h2>
-              <UserOutlined /> Profile Settings
-            </h2>
-            <span className="section-label">EDITABLE PROFILE</span>
-
-            {profileMessage && <div className="profile-message">{profileMessage}</div>}
-
-            <div className="profile-preview-card">
-              <div className="profile-preview-top">
-                <div className="preview-actions">
-                  <button type="button" className="preview-icon-btn" onClick={handleOpenQuickEdit} aria-label="Edit profile">
-                    <EditOutlined />
-                  </button>
-                </div>
-
-                <h3>{draft.name || 'Cleaner'}</h3>
-                <p className="profile-role-row">{roleLabel}</p>
-              </div>
-
-              <div className="profile-preview-bottom">
-                <button type="button" className="avatar-hero-btn" onClick={handlePickAvatar} aria-label="Change photo">
-                  {draft.avatar ? (
-                    <img src={draft.avatar} alt={draft.name || 'Profile'} className="settings-avatar-image" />
-                  ) : (
-                    <div className="settings-avatar-fallback">{initials || 'C'}</div>
-                  )}
-                  <span className="avatar-hero-badge">
-                    <CameraOutlined />
-                  </span>
-                </button>
-
-                <p className={`profile-online ${isOnline ? 'is-online' : 'is-offline'}`}>{isOnline ? 'online' : 'offline'}</p>
-              </div>
-            </div>
-
-            {isQuickEditOpen && (
-              <div className="quick-edit-panel">
-                <div className="quick-edit-header">
-                  <h4>Edit Profile</h4>
-                  <button type="button" onClick={handleCloseQuickEdit} aria-label="Close edit">
-                    <CloseOutlined />
-                  </button>
-                </div>
-
-                <label className="quick-edit-row">
-                  <span className="row-label">
-                    <UserOutlined /> Name
-                  </span>
-                  <input
-                    type="text"
-                    value={draft.name}
-                    onChange={(e) => handleQuickField('name', e.target.value)}
-                    placeholder="Enter your name"
-                  />
-                </label>
-
-                <label className="quick-edit-row">
-                  <span className="row-label">
-                    <PhoneOutlined /> Phone number
-                  </span>
-                  <input
-                    type="tel"
-                    value={draft.phone}
-                    onChange={(e) => handleQuickField('phone', e.target.value)}
-                    placeholder="Enter your phone number"
-                  />
-                </label>
-
-                <button type="button" className="quick-save-btn" onClick={handleSaveQuickEdit} disabled={savingQuickEdit}>
-                  {savingQuickEdit ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+        <div className="settings-profile-lower">
+          <div className="settings-profile-avatar-wrap">
+            {profile.avatar ? (
+              <img src={profile.avatar} alt={profile.name || 'Profile'} className="settings-profile-avatar" />
+            ) : (
+              <div className="settings-profile-fallback">{initials}</div>
             )}
-
+            <button type="button" className="settings-profile-camera" onClick={handlePickAvatar} aria-label="Change profile photo">
+              <CameraOutlined />
+            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -288,108 +139,44 @@ const SettingsPage = () => {
               onChange={handleAvatarChange}
               style={{ display: 'none' }}
             />
-          </section>
-        )}
-
-        <section className="settings-card">
-          <h2>
-            <SlidersOutlined /> Service Preferences
-          </h2>
-
-          <div className="section-label">PREFERRED JOB TYPES</div>
-          <div className="job-types-grid">
-            {jobTypes.map((type) => {
-              const active = selectedTypes.includes(type);
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  className={`type-chip ${active ? 'active' : ''}`}
-                  onClick={() => toggleType(type)}
-                >
-                  <span className="check">{active ? <CheckOutlined /> : null}</span>
-                  {type}
-                </button>
-              );
-            })}
           </div>
+          <p className={`settings-profile-status ${isOnline ? 'is-online' : 'is-offline'}`}>
+            {isOnline ? 'online' : 'offline'}
+          </p>
+        </div>
 
-          <div className="radius-row">
-            <span className="section-label">SERVICE RADIUS (MILES)</span>
-            <strong>15 mi</strong>
-          </div>
-          <div className="radius-track">
-            <span />
-          </div>
-          <div className="radius-scale">
-            <span>1 MI</span>
-            <span>50 MI</span>
-          </div>
+        {profileMessage && <div className="settings-profile-message">{profileMessage}</div>}
+      </section>
 
-          <button type="button" className="save-btn">
-            Save Preferences
-          </button>
-        </section>
+      <section className="settings-profile-grid">
+        <article className="settings-profile-field">
+          <label>Full Name</label>
+          <p>{profile.name || '-'}</p>
+        </article>
+        <article className="settings-profile-field">
+          <label>Email</label>
+          <p>{profile.email || '-'}</p>
+        </article>
+        <article className="settings-profile-field">
+          <label>Phone</label>
+          <p>{profile.phone || '-'}</p>
+        </article>
+        <article className="settings-profile-field">
+          <label>Address</label>
+          <p>{profile.address || '-'}</p>
+        </article>
+      </section>
 
-        <section className="settings-card">
-          <h2>
-            <BellOutlined /> Notification Settings
-          </h2>
-
-          <div className="section-label dark">COMMUNICATION</div>
-
-          <div className="notify-list">
-            <div className="notify-row">
-              <div>
-                <h3>Email Alerts</h3>
-                <p>New jobs and payment updates</p>
-              </div>
-              <button
-                type="button"
-                className={`toggle ${notifications.emailAlerts ? 'on' : ''}`}
-                onClick={() => toggleNotification('emailAlerts')}
-                aria-label="Toggle Email Alerts"
-              >
-                <span />
-              </button>
-            </div>
-
-            <div className="notify-row">
-              <div>
-                <h3>Push Notifications</h3>
-                <p>Direct messages and job reminders</p>
-              </div>
-              <button
-                type="button"
-                className={`toggle ${notifications.pushNotifications ? 'on' : ''}`}
-                onClick={() => toggleNotification('pushNotifications')}
-                aria-label="Toggle Push Notifications"
-              >
-                <span />
-              </button>
-            </div>
-
-            <div className="notify-row">
-              <div>
-                <h3>SMS Updates</h3>
-                <p>Urgent schedule changes only</p>
-              </div>
-              <button
-                type="button"
-                className={`toggle ${notifications.smsUpdates ? 'on' : ''}`}
-                onClick={() => toggleNotification('smsUpdates')}
-                aria-label="Toggle SMS Updates"
-              >
-                <span />
-              </button>
-            </div>
-          </div>
-
-          <button type="button" className="update-btn">
-            Update Notifications
-          </button>
-        </section>
-      </div>
+      <section className="settings-profile-stats">
+        <article>
+          <span>Completed Jobs</span>
+          <strong>{profile.completedJobs}</strong>
+        </article>
+        <article>
+          <span>Rating</span>
+          <strong>{profile.rating}</strong>
+        </article>
+      </section>
     </div>
   );
 };
