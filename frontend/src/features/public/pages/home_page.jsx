@@ -1,5 +1,9 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import homeImage from '../../../assets/image.png';
+import narithImage from '../../../assets/narith.png';
+import meyImage from '../../../assets/mey.JPG';
+import molikaImage from '../../../assets/molika.png';
+
 
 export default function PublicHomePage() {
   const { darkMode = false } = useOutletContext() || {};
@@ -7,20 +11,23 @@ export default function PublicHomePage() {
     {
       quote:
         '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."',
-      name: 'Sarah Jenkins',
-      role: 'Homeowner in Seattle'
+      name: 'Hen Narith',
+      role: 'Homeowner in Seattle',
+      image: narithImage
     },
     {
       quote:
         '"The cleaners are so professional and detailed. They even got the pet hair out of my carpets."',
-      name: 'Michael Chen',
-      role: 'Regular Customer'
+      name: 'Lon Molika',
+      role: 'Regular Customer',
+      image: molikaImage
     },
     {
       quote:
         '"I used them for a move-out clean and got my full security deposit back without stress."',
-      name: 'Emma Thompson',
-      role: 'New Resident'
+      name: 'Van sievmey',
+      role: 'New Resident',
+      image: meyImage
     }
   ];
 
@@ -135,65 +142,112 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      <section className={`py-20 ${darkMode ? 'bg-[#111b2f]' : 'bg-[#f2f4f3]'}`}>
-        <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-16">
-          <div className="mb-10 flex items-center justify-between gap-4">
+     <section className={`py-24 ${darkMode ? 'bg-[#0f1a2b]' : 'bg-[#f9fafb]'}`}>
+  <div className="mx-auto max-w-7xl px-6 md:px-10 lg:px-16">
+    {/* Header */}
+    <div className="mb-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-[#32c753]">
+          Testimonials
+        </p>
+        <h2 className={`mt-3 text-4xl md:text-5xl font-extrabold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+          What Our Customers Are Saying
+        </h2>
+      </div>
+      <div className="hidden md:flex items-center gap-3">
+        <button className="h-10 w-10 flex items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-200/20 transition">
+          {'<'}
+        </button>
+        <button className="h-10 w-10 flex items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-200/20 transition">
+          {'>'}
+        </button>
+      </div>
+    </div>
+
+    {/* Testimonials Grid */}
+    <div className="grid gap-8 md:grid-cols-3">
+      {testimonials.map((item) => (
+        <article
+          key={item.name}
+          className={`relative rounded-2xl p-6 shadow-lg transition hover:shadow-2xl ${
+            darkMode ? 'bg-gradient-to-tr from-slate-800 via-slate-900 to-slate-800 text-slate-100' : 'bg-white'
+          }`}
+        >
+          <div className="mb-5 flex items-center gap-4">
+            {item.image ? (
+              <img
+                src={item.image}
+                alt={item.name}
+                className="h-16 w-16 rounded-full object-cover ring-2 ring-[#32c753]/40"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = homeImage;
+                }}
+              />
+            ) : (
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#d39a6f] text-xl font-bold text-white">
+                {item.name?.charAt(0)}
+              </span>
+            )}
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#32c753]">
-                Testimonials
-              </p>
-              <h2 className={`mt-3 text-4xl font-black ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-                What Our Customers Are Saying
-              </h2>
-            </div>
-            <div className="hidden items-center gap-2 md:flex">
-              <button className="h-10 w-10 rounded-full border border-slate-300 text-slate-500">
-                {'<'}
-              </button>
-              <button className="h-10 w-10 rounded-full border border-slate-300 text-slate-500">
-                {'>'}
-              </button>
+              <p className="font-extrabold">{item.name}</p>
+              <p className="text-xs text-slate-400">{item.role}</p>
             </div>
           </div>
+          <p className="mt-3 text-sm md:text-base leading-relaxed">{item.quote}</p>
+          <div className="mt-5 flex gap-1">
+            {Array(5)
+              .fill(0)
+              .map((_, i) => (
+                <span key={i} className="text-yellow-400 text-xl">★</span>
+              ))}
+          </div>
+        </article>
+      ))}
+    </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {testimonials.map((item) => (
-              <article key={item.name} className={`rounded-2xl p-6 shadow-sm ${darkMode ? 'bg-slate-900' : 'bg-white'}`}>
-                <p className="text-sm font-bold tracking-wider text-[#f4b400]">*****</p>
-                <p className={`mt-4 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>{item.quote}</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <span className="h-10 w-10 rounded-full bg-[#d39a6f]" />
-                  <div>
-                    <p className={`font-extrabold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{item.name}</p>
-                    <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{item.role}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+    Call to Action
+   <div className="mx-auto mt-20 max-w-5xl rounded-[50px] bg-gradient-to-tr from-[#1c3a22] via-[#32c753] to-[#0b1f3c] px-12 py-20 text-center text-white shadow-2xl relative overflow-hidden">
+  {/* Decorative Gradient Overlay */}
+  <div className="absolute inset-0 -z-10 rounded-[50px] bg-gradient-to-tr from-[#32ff1a]/15 via-[#0b1f3c]/25 to-[#146f27]/15"></div>
 
-          <div className="mx-auto mt-14 max-w-5xl rounded-[28px] bg-gradient-to-r from-[#146f27] via-[#128227] to-[#0b1f3c] px-8 py-12 text-center text-white shadow-2xl">
-            <h3 className="text-4xl font-black">Ready to Come Home to Clean?</h3>
-            <p className="mt-3 text-sm text-emerald-100">
-              Join thousands of happy customers and book your first cleaning today.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link
-                to="/auth/register"
-                className="rounded-xl bg-[#32ff1a] px-6 py-3 text-sm font-black text-[#114a1b] shadow-[0_0_25px_rgba(50,255,26,0.45)] transition hover:brightness-95"
-              >
-                Book Now - 20% Off First Clean
-              </Link>
-              <Link
-                to="/contact"
-                className="rounded-xl bg-white/15 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/25"
-              >
-                Contact Sales
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+  {/* Heading */}
+  <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight drop-shadow-lg">
+    Ready to Come Home to Clean?
+  </h3>
+
+  {/* Subtitle */}
+  <p className="mt-5 text-lg md:text-xl text-emerald-100 max-w-3xl mx-auto leading-relaxed">
+    Join thousands of happy customers and book your first cleaning today. Experience a spotless home with ease.
+  </p>
+
+  {/* Buttons */}
+  <div className="mt-12 flex flex-wrap justify-center gap-6">
+    {/* Primary Button */}
+    <Link
+      to="/auth/register"
+      className="relative inline-block rounded-3xl bg-gradient-to-r from-[#32ff1a] to-[#28cc1a] px-10 py-4 text-base md:text-lg font-extrabold text-[#114a1b] shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
+    >
+      Book Now - 20% Off First Clean
+    </Link>
+
+    {/* Secondary Button */}
+    <Link
+      to="/contact"
+      className="rounded-3xl bg-white/20 px-10 py-4 text-base md:text-lg font-bold text-white backdrop-blur-sm transition hover:bg-white/30 hover:scale-105 hover:shadow-lg"
+    >
+      Contact Sales
+    </Link>
+  </div>
+
+  {/* Subtle Glow Effect */}
+  <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-72 h-72 bg-[#32ff1a]/20 rounded-full blur-3xl animate-pulse-slow"></div>
+</div>
+  </div>
+</section>
     </div>
   );
 }
+
+
+
