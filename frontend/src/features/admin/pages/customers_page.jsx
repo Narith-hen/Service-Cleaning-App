@@ -2,20 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarOutlined,
   DeleteOutlined,
-  EditOutlined,
   EnvironmentOutlined,
   EyeOutlined,
-  FilterOutlined,
   MailOutlined,
-  MoreOutlined,
   PhoneOutlined,
-  PlusOutlined,
   SearchOutlined,
   StopOutlined,
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Form, Input, Modal, Select, notification } from 'antd';
+import { Button, Form, Input, Modal, Select, notification } from 'antd';
+import { userService } from '../services/userService';
 import '../../../styles/admin/customers_page.css';
 
 const starterCustomers = [
@@ -112,7 +109,6 @@ const starterCustomers = [
 ];
 
 const statusFilters = ['All', 'Active', 'Inactive'];
-const tierFilters = ['All', 'VIP', 'Regular', 'New Customer', 'One-Time / Monthly'];
 
 const getInitials = (fullName) => {
   const [first = '', last = ''] = fullName.split(' ');
@@ -120,13 +116,59 @@ const getInitials = (fullName) => {
 };
 
 const getStatusClass = (status) => status.toLowerCase().replace(/\s+/g, '-');
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const normalizeProfileImage = (avatar) => {
+  if (!avatar) return '';
+  const value = String(avatar).trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:')) return value;
+  if (value.startsWith('/')) return `${API_BASE_URL}${value}`;
+  if (value.startsWith('uploads/')) return `${API_BASE_URL}/${value}`;
+  return value;
+};
+
+const formatDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
+};
+
+const mapCustomerFromApi = (user) => {
+  const fullName = user.username || user.email || `Customer ${user.user_id}`;
+  const isActive = typeof user.is_active === 'boolean' ? user.is_active : true;
+
+  return {
+    id: String(user.user_id),
+    name: fullName,
+    email: user.email || '-',
+    phone: user.phone_number || '-',
+    profileImage: normalizeProfileImage(user.avatar),
+    dateOfBirth: user.date_of_birth || '',
+    gender: user.gender || '',
+    address: user.address || '',
+    city: user.city || '',
+    preferredService: user.preferred_service || '',
+    specialNotes: user.notes || '',
+    status: isActive ? 'Active' : 'Inactive',
+    totalBookings: Number(user?._count?.bookings || 0),
+    customerTier: 'Regular',
+    joiningDate: formatDate(user.created_at),
+    lastBookingDate: '-',
+  };
+};
 
 const CustomersPage = () => {
   const [notificationApi, contextHolder] = notification.useNotification();
-  const [customers, setCustomers] = useState(starterCustomers);
+  const [customers, setCustomers] = useState(starterCustomers.slice(0, 0));
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [tierFilter, setTierFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
 
@@ -154,15 +196,45 @@ const CustomersPage = () => {
     dismissedUndoRef.current.clear();
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCustomers = async () => {
+      try {
+        const response = await userService.getUsers({ role: 'customer', page: 1, limit: 1000 });
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        const mapped = rows.map(mapCustomerFromApi);
+
+        if (isMounted) {
+          setCustomers(mapped);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setCustomers([]);
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Failed to load customers',
+          description: error?.response?.data?.message || 'Could not fetch customer data from backend database.',
+          duration: 3,
+        });
+      }
+    };
+
+    loadCustomers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [notificationApi]);
+
   const filteredCustomers = useMemo(() => {
     return customers.filter((customer) => {
       const target = `${customer.id} ${customer.name} ${customer.email} ${customer.phone}`.toLowerCase();
       const bySearch = target.includes(searchText.toLowerCase());
       const byStatus = statusFilter === 'All' || customer.status === statusFilter;
-      const byTier = tierFilter === 'All' || customer.customerTier === tierFilter;
-      return bySearch && byStatus && byTier;
+      return bySearch && byStatus;
     });
-  }, [customers, searchText, statusFilter, tierFilter]);
+  }, [customers, searchText, statusFilter]);
 
   const pages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
   const page = Math.min(currentPage, pages);
@@ -415,9 +487,6 @@ const CustomersPage = () => {
           <h1 className="admin-page-title">Manage Customers</h1>
           <p className="admin-page-subtitle">View and manage your registered customer database.</p>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} className="add-customer-btn" onClick={openAddModal}>
-          Add Customer
-        </Button>
       </header>
 
       <section className="customers-kpi-grid">
@@ -441,40 +510,33 @@ const CustomersPage = () => {
         </article>
       </section>
 
-      <section className="customers-filter-row">
-        <div className="search-box">
-          <SearchOutlined />
-          <input
-            type="text"
-            placeholder="Search by name, email or phone..."
-            value={searchText}
-            onChange={(event) => {
-              setSearchText(event.target.value);
+      <section className="customers-list-header">
+        <div className="section-copy">
+          <h2 className="customers-section-title roboto roboto-700">Customers List</h2>
+        </div>
+        <div className="customers-header-actions">
+          <div className="customers-search-box">
+            <SearchOutlined />
+            <input
+              type="text"
+              placeholder="Search by name, email or phone..."
+              value={searchText}
+              onChange={(event) => {
+                setSearchText(event.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onChange={(value) => {
+              setStatusFilter(value);
               setCurrentPage(1);
             }}
+            options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
+            className="customers-filter-select"
           />
         </div>
-        <Select
-          value={statusFilter}
-          onChange={(value) => {
-            setStatusFilter(value);
-            setCurrentPage(1);
-          }}
-          options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
-          className="filter-select"
-        />
-        <Select
-          value={tierFilter}
-          onChange={(value) => {
-            setTierFilter(value);
-            setCurrentPage(1);
-          }}
-          options={tierFilters.map((tier) => ({ label: tier === 'All' ? 'Tier: All' : tier, value: tier }))}
-          className="filter-select"
-        />
-        <button type="button" className="compact-filter-btn" aria-label="more filters">
-          <FilterOutlined />
-        </button>
       </section>
 
       <section className="customers-table-panel">
@@ -483,8 +545,8 @@ const CustomersPage = () => {
             <thead>
               <tr>
                 <th>CUSTOMER</th>
+                <th>PHONE NUMBER</th>
                 <th>TOTAL BOOKINGS</th>
-                <th>LAST SERVICE</th>
                 <th>ACCOUNT STATUS</th>
                 <th>ACTIONS</th>
               </tr>
@@ -497,7 +559,12 @@ const CustomersPage = () => {
                       <div className="customer-cell">
                         <span className="avatar">
                           {customer.profileImage ? (
-                            <img src={customer.profileImage} alt={customer.name} className="avatar-img" />
+                            <img
+                              src={customer.profileImage}
+                              alt={customer.name}
+                              className="avatar-img"
+                              onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                            />
                           ) : (
                             getInitials(customer.name)
                           )}
@@ -509,66 +576,49 @@ const CustomersPage = () => {
                       </div>
                     </td>
                     <td>
-                      <div className="bookings-cell">
-                        <strong>{customer.totalBookings} Bookings</strong>
-                        <span>{customer.customerTier}</span>
-                      </div>
+                      <span className="phone-cell">{customer.phone}</span>
                     </td>
                     <td>
-                      <div className="service-cell">
-                        <strong>{customer.lastBookingDate || '-'}</strong>
-                        <span>{customer.preferredService || '-'}</span>
+                      <div className="bookings-cell">
+                        <strong>{customer.totalBookings} Bookings</strong>
                       </div>
                     </td>
                     <td>
                       <span className={`status-tag ${getStatusClass(customer.status)}`}>{customer.status}</span>
                     </td>
                     <td>
-                      <Dropdown
-                        menu={{
-                          items: [
-                            {
-                              key: 'view',
-                              icon: <EyeOutlined />,
-                              label: 'View',
-                              onClick: () => openViewModal(customer),
-                            },
-                            {
-                              key: 'edit',
-                              icon: <EditOutlined />,
-                              label: 'Edit',
-                              onClick: () => openEditModal(customer),
-                            },
-                            {
-                              key: 'block',
-                              icon: <StopOutlined />,
-                              label: customer.status === 'Inactive' ? 'Unblock (Active)' : 'Block (Inactive)',
-                              onClick: () => handleBlockToggle(customer),
-                            },
-                            {
-                              type: 'divider',
-                            },
-                            {
-                              key: 'delete',
-                              icon: <DeleteOutlined />,
-                              label: 'Delete',
-                              danger: true,
-                              onClick: () => handleDeleteCustomer(customer),
-                            },
-                          ],
-                        }}
-                        trigger={['click']}
-                      >
-                        <button type="button" className="action-btn" aria-label={`actions for ${customer.name}`}>
-                          <MoreOutlined />
+                      <div className="action-group">
+                        <button
+                          className="plain-icon-btn action-view"
+                          title="View customer"
+                          type="button"
+                          onClick={() => openViewModal(customer)}
+                        >
+                          <EyeOutlined />
                         </button>
-                      </Dropdown>
+                        <button
+                          className="plain-icon-btn action-edit"
+                          title={customer.status === 'Inactive' ? 'Unblock (Active)' : 'Block (Inactive)'}
+                          type="button"
+                          onClick={() => handleBlockToggle(customer)}
+                        >
+                          <StopOutlined />
+                        </button>
+                        <button
+                          className="plain-icon-btn action-delete"
+                          title="Delete customer"
+                          type="button"
+                          onClick={() => handleDeleteCustomer(customer)}
+                        >
+                          <DeleteOutlined />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="empty" colSpan={5}>No customers found for current filters.</td>
+                  <td className="empty" colSpan={6}>No customers found for current filters.</td>
                 </tr>
               )}
             </tbody>
@@ -610,7 +660,12 @@ const CustomersPage = () => {
             <div className="profile-photo-card">
               <span className="avatar preview">
                 {profileImageValue ? (
-                  <img src={profileImageValue} alt={nameValue || 'Customer profile'} className="avatar-img" />
+                  <img
+                    src={normalizeProfileImage(profileImageValue)}
+                    alt={nameValue || 'Customer profile'}
+                    className="avatar-img"
+                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                  />
                 ) : (
                   getInitials(nameValue || 'Customer Profile')
                 )}
@@ -754,7 +809,12 @@ const CustomersPage = () => {
               <div className="profile-photo-card">
                 <span className="avatar preview">
                   {viewingCustomer.profileImage ? (
-                    <img src={viewingCustomer.profileImage} alt={viewingCustomer.name} className="avatar-img" />
+                    <img
+                      src={normalizeProfileImage(viewingCustomer.profileImage)}
+                      alt={viewingCustomer.name}
+                      className="avatar-img"
+                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                    />
                   ) : (
                     getInitials(viewingCustomer.name)
                   )}
