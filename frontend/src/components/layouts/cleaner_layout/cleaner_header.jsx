@@ -120,9 +120,10 @@ const CleanerHeader = () => {
   };
 
   const handleProfileClick = () => {
-    setIsProfileOpen(!isProfileOpen);
+    setIsProfileOpen(false);
     setIsNotificationOpen(false);
     setIsMessageOpen(false);
+    navigate('/cleaner/settings?section=profile&edit=1');
   };
 
   const handleLogout = async () => {
@@ -333,10 +334,22 @@ const CleanerHeader = () => {
               </div>
 
               <div className="dropdown-list">
-                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/profile')}>
+                <button
+                  className="dropdown-item-btn"
+                  onClick={() => {
+                    navigate('/cleaner/settings?section=profile');
+                    setIsProfileOpen(false);
+                  }}
+                >
                   <UserOutlined /> View Profile
                 </button>
-                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/profile/edit')}>
+                <button
+                  className="dropdown-item-btn"
+                  onClick={() => {
+                    navigate('/cleaner/settings?section=profile&edit=1');
+                    setIsProfileOpen(false);
+                  }}
+                >
                   <EditOutlined /> Edit Profile
                 </button>
               </div>

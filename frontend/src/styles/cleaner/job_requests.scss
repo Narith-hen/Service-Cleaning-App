@@ -57,6 +57,13 @@
   display: grid;
   grid-template-columns: 42% 58%;
   min-height: 160px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    border-color: #c6d4e3;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
 }
 
 .job-image-wrap {
@@ -88,6 +95,22 @@
       background: #3b82f6;
     }
   }
+
+  .job-image-title {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    margin: 0;
+    max-width: calc(100% - 20px);
+    font-size: 14px;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #ffffff;
+    background: rgba(15, 23, 42, 0.62);
+    border-radius: 8px;
+    padding: 6px 9px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
 }
 
 .job-content {
@@ -98,17 +121,8 @@
 
 .job-top-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
-
-  h3 {
-    margin: 0;
-    font-size: 15px;
-    line-height: 1.25;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: #0f172a;
-  }
 
   .job-price {
     white-space: nowrap;
@@ -174,6 +188,101 @@
     color: #94a3b8;
     cursor: pointer;
     font-size: 13px;
+  }
+}
+
+.job-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.job-modal {
+  width: min(920px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid #dbe3ed;
+  border-radius: 14px;
+  box-shadow: 0 24px 56px rgba(2, 6, 23, 0.32);
+  position: relative;
+}
+
+.job-modal-head {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.job-modal-close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.job-modal-body {
+  display: grid;
+  grid-template-columns: 42% 58%;
+  gap: 0;
+  align-items: stretch;
+
+  .job-modal-image-wrap {
+    position: relative;
+    height: 100%;
+    min-height: 260px;
+    background: #e2e8f0;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.job-modal-info {
+  padding: 12px;
+
+  h4 {
+    margin: 10px 0 6px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+}
+
+.job-modal-price {
+  color: #22c55e;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.job-modal-extra-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+
+  li {
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.4;
   }
 }
 
@@ -275,10 +384,6 @@
   }
 
   .job-top-row {
-    h3 {
-      font-size: 15px;
-    }
-
     .job-price {
       font-size: 17px;
     }
@@ -294,5 +399,13 @@
 
   .job-support-strip h3 {
     font-size: 20px;
+  }
+
+  .job-modal-body {
+    grid-template-columns: 1fr;
+
+    .job-modal-image-wrap {
+      min-height: 200px;
+    }
   }
 }

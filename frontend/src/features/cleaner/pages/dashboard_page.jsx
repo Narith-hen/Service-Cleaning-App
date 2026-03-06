@@ -142,9 +142,6 @@ const CleanerDashboardPage = () => {
       <div className="bookings-section">
         <div className="section-header">
           <h2>Bookings</h2>
-          <button className="calendar-link" type="button">
-            View Calendar
-          </button>
         </div>
 
         <div className="booking-list">
