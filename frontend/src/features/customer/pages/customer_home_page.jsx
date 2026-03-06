@@ -1,4 +1,4 @@
-import { BadgeCheck, Shield, CalendarClock } from 'lucide-react';
+import { CheckCircleFilled, SafetyCertificateOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import heroImage from '../../../assets/home.png';
 import deepCleanImage from '../../../assets/image.png';
@@ -113,21 +113,21 @@ const CustomerHomePage = () => {
           <h2>Why PureShine is the Best Choice</h2>
           <div className="feature-list">
             <div>
-              <BadgeCheck size={18} />
+              <CheckCircleFilled style={{ fontSize: 18 }} />
               <div>
                 <h4>Eco-Friendly Products</h4>
                 <p>We use 100% biodegradable and non-toxic cleaning agents safe for kids and pets.</p>
               </div>
             </div>
             <div>
-              <Shield size={18} />
+              <SafetyCertificateOutlined style={{ fontSize: 18 }} />
               <div>
                 <h4>Background Checked Staff</h4>
                 <p>Our cleaning professionals undergo rigorous identity and criminal record checks.</p>
               </div>
             </div>
             <div>
-              <CalendarClock size={18} />
+              <CalendarOutlined style={{ fontSize: 18 }} />
               <div>
                 <h4>Flexible Scheduling</h4>
                 <p>Book, reschedule or cancel in seconds through our seamless web application.</p>
