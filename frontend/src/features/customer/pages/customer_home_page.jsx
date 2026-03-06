@@ -63,7 +63,7 @@ const CustomerHomePage = () => {
 
           <div className="hero-actions">
             <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
-              Book Now
+              Book Your Service Cleaning
             </button>
             <button type="button" className="btn-secondary" onClick={() => navigate('/services')}>
               View Pricing
