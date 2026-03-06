@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+<<<<<<< HEAD
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const AUTH_USER_UPDATED_EVENT = 'auth-user-updated';
@@ -57,6 +58,32 @@ const fetchProfileFromApi = async (token) => {
   }
 
   return result.data || {};
+=======
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const AUTH_USER_UPDATED_EVENT = 'auth:user-updated';
+
+const readStoredUser = () => {
+  const savedUser = localStorage.getItem('user');
+  if (!savedUser) return null;
+
+  try {
+    return JSON.parse(savedUser);
+  } catch (e) {
+    console.error('Failed to parse saved user:', e);
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
+const persistUser = (nextUser) => {
+  if (nextUser) {
+    localStorage.setItem('user', JSON.stringify(nextUser));
+  } else {
+    localStorage.removeItem('user');
+  }
+
+  window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+>>>>>>> develop
 };
 
 // Mock users for testing
@@ -97,6 +124,7 @@ export const useAuth = () => {
 
   // Check for saved user in localStorage on mount
   useEffect(() => {
+<<<<<<< HEAD
     let isMounted = true;
 
     const hydrateUser = async () => {
@@ -150,6 +178,15 @@ export const useAuth = () => {
       isMounted = false;
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncFromStorage);
+=======
+    setUser(readStoredUser());
+    const handleUserUpdated = () => setUser(readStoredUser());
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
+    setLoading(false);
+
+    return () => {
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
+>>>>>>> develop
     };
   }, []);
 
@@ -184,8 +221,12 @@ export const useAuth = () => {
       }
 
       setUser(normalizedUser);
+<<<<<<< HEAD
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
+      persistUser(normalizedUser);
+>>>>>>> develop
 
       return { success: true, user: normalizedUser };
     } catch (err) {
@@ -201,8 +242,12 @@ export const useAuth = () => {
 
       if (userToLogin && password === 'password123') {
         setUser(userToLogin);
+<<<<<<< HEAD
         localStorage.setItem('user', JSON.stringify(userToLogin));
         window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
+        persistUser(userToLogin);
+>>>>>>> develop
         return { success: true, user: userToLogin };
       }
 
@@ -224,8 +269,12 @@ export const useAuth = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 300));
       setUser(null);
+<<<<<<< HEAD
       localStorage.removeItem('user');
       window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
+      persistUser(null);
+>>>>>>> develop
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -291,8 +340,12 @@ export const useAuth = () => {
 
       const updatedUser = normalizeUserData(result.data || {}, user);
       setUser(updatedUser);
+<<<<<<< HEAD
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
+      persistUser(updatedUser);
+>>>>>>> develop
       
       return { success: true, user: updatedUser };
     } catch (err) {

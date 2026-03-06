@@ -20,28 +20,24 @@ const DashboardPage = () => {
     {
       title: 'Today Bookings',
       value: '42',
-      delta: '+12% from yesterday',
       icon: <CalendarOutlined />,
       tone: 'blue',
     },
     {
       title: 'Active Cleaners',
       value: '18',
-      delta: '3 on break right now',
       icon: <TeamOutlined />,
       tone: 'green',
     },
     {
       title: 'Monthly Revenue',
       value: '$12,840',
-      delta: '+8.4% this month',
       icon: <DollarOutlined />,
       tone: 'amber',
     },
     {
       title: 'Open Complaints',
       value: '5',
-      delta: '-2 since last week',
       icon: <ClockCircleOutlined />,
       tone: 'red',
     },
@@ -100,7 +96,6 @@ const DashboardPage = () => {
           <h1 className="admin-page-title">Admin Dashboard</h1>
           <p className="admin-page-subtitle">View platform activity, bookings, and performance insights.</p>
         </div>
-        <button type="button" className="dashboard-action-btn">Generate Report</button>
       </div>
 
       <div className="dashboard-kpi-grid">
@@ -109,7 +104,7 @@ const DashboardPage = () => {
             <div className="kpi-card-icon">{card.icon}</div>
             <p className="kpi-card-title">{card.title}</p>
             <h2 className="kpi-card-value">{card.value}</h2>
-            <span className="kpi-card-delta">{card.delta}</span>
+            {card.delta ? <span className="kpi-card-delta">{card.delta}</span> : null}
           </article>
         ))}
       </div>

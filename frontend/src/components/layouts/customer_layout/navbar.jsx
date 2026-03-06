@@ -255,7 +255,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     </Button>
                   </Dropdown>
                 ) : (
-                  <Space size={4}>
+                  <Space size={isCompactNav ? 6 : 4}>
                     <Button
                       type="primary"
                       onClick={() => navigate('/auth/login')}
@@ -265,28 +265,40 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         display: 'flex',
                         alignItems: 'center',
                         gap: 4,
-                        padding: '18px 16px',
+                        padding: isCompactNav ? 0 : '18px 16px',
+                        ...(isCompactNav
+                          ? {
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8
+                          }
+                          : {})
                       }}
                     >
                       <LoginOutlined />
                       {!isCompactNav && <span>Login</span>}
                     </Button>
-                    {!isCompactNav && (
-                      <Button
-                        onClick={() => navigate('/auth/register')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          borderColor: 'green',
-                          color: 'green',
-                          padding: '18px 14px',
-                        }}
-                      >
-                        <UserAddOutlined />
-                        <span>Register</span>
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => navigate('/auth/register')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        borderColor: 'green',
+                        color: 'green',
+                        padding: isCompactNav ? 0 : '18px 14px',
+                        ...(isCompactNav
+                          ? {
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8
+                          }
+                          : {})
+                      }}
+                    >
+                      <UserAddOutlined />
+                      {!isCompactNav && <span>Register</span>}
+                    </Button>
                   </Space>
                 )}
               </Col>

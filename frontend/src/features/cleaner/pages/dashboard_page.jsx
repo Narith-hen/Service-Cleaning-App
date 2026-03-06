@@ -1,32 +1,28 @@
-import React, { useState } from 'react';
-import { 
-  CalendarOutlined, 
-  DollarOutlined, 
+import React from 'react';
+import {
+  CalendarOutlined,
   StarOutlined,
-  RiseOutlined,
+  CloseCircleOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
   UserOutlined,
   LogoutOutlined,
-  RightOutlined
+  CustomerServiceOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/cleaner/dashboard.scss';
 
 const CleanerDashboardPage = () => {
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState('week');
 
-  // Mock data - replace with actual data from hooks/services
   const cleanerData = {
-    name: 'Alex',
+    name: 'Narith',
     todayAppointments: 4,
-    totalEarnings: 128.50,
-    earningsChange: '+1',
-    earningsChangePeriod: 'today',
     rating: 4.9,
-    ratingChange: '+15%',
-    ratingChangePeriod: 'week',
+    ratingTier: 'Top 5%',
+    totalService: 124,
+    oneMonthService: 18,
+    cancelCount: 2,
     bookings: [
       {
         id: 1,
@@ -35,7 +31,7 @@ const CleanerDashboardPage = () => {
         time: '02:00 PM - 04:00 PM',
         location: '1200 Lakeview Towers, #402',
         client: 'James Chen',
-        amount: 45.00,
+        amount: 45.0,
         rateType: 'Flat Rate',
         status: 'early',
         propertyManager: null
@@ -47,7 +43,7 @@ const CleanerDashboardPage = () => {
         time: '08:00 AM - 02:00 PM',
         location: '88 Pine St, Suite 10',
         client: null,
-        amount: 160.00,
+        amount: 160.0,
         rateType: 'Commercial',
         status: 'tomorrow',
         propertyManager: 'Modern Property Mgmt'
@@ -56,154 +52,170 @@ const CleanerDashboardPage = () => {
   };
 
   const handleLogout = () => {
-    // Add logout logic
     navigate('/login');
   };
 
-  const getStatusClass = (status) => {
-    switch(status) {
-      case 'early': return 'status-early';
-      case 'tomorrow': return 'status-tomorrow';
-      default: return '';
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'early':
+        return 'Early';
+      case 'tomorrow':
+        return 'Tomorrow';
+      default:
+        return '';
     }
+  };
+
+  const formatDate = (value) => {
+    const [month, day] = value.split(' ');
+    return { month, day };
   };
 
   return (
     <div className="cleaner-dashboard">
-      {/* Welcome Section */}
       <div className="welcome-section">
         <h1 className="welcome-title">
           Welcome back, <span className="cleaner-name">{cleanerData.name}</span>
         </h1>
         <p className="welcome-subtitle">
-          You have <strong>{cleanerData.todayAppointments} appointments</strong> scheduled for today. 
-          You're on a roll!
+          You have {cleanerData.todayAppointments} appointments scheduled for today. You're on a roll!
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="stats-grid">
-        {/* Total Earnings Card */}
         <div className="stat-card">
           <div className="stat-header">
-            <span className="stat-change positive">+{cleanerData.earningsChange} today</span>
+            <div className="stat-icon rating-icon">
+              <StarOutlined />
+            </div>
+            <span className="stat-change positive">{cleanerData.ratingTier}</span>
           </div>
           <div className="stat-content">
-            <div className="stat-icon earnings-icon">
-              <DollarOutlined />
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">Total Earnings</span>
-              <span className="stat-value">${cleanerData.totalEarnings.toFixed(2)}</span>
+            <span className="stat-label">Rating</span>
+            <div className="rating-wrap">
+              <span className="stat-value">{cleanerData.rating}</span>
+              <span className="star-text">★★★★★</span>
             </div>
           </div>
         </div>
 
-        {/* Rating Card */}
         <div className="stat-card">
           <div className="stat-header">
-            <span className="stat-change positive">+{cleanerData.ratingChange} week</span>
+            <div className="stat-icon jobs-icon">
+              <CalendarOutlined />
+            </div>
+            <span className="stat-change positive">All time</span>
           </div>
           <div className="stat-content">
-            <div className="stat-icon rating-icon">
-              <StarOutlined />
+            <span className="stat-label">Total Service</span>
+            <span className="stat-value">{cleanerData.totalService}</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-header">
+            <div className="stat-icon earnings-icon">
+              <ClockCircleOutlined />
             </div>
-            <div className="stat-info">
-              <span className="stat-label">Current Rating</span>
-              <span className="stat-value">{cleanerData.rating} ★★★★★</span>
+            <span className="stat-change positive">This month</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Service One Month</span>
+            <span className="stat-value">{cleanerData.oneMonthService}</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-header">
+            <div className="stat-icon cancel-icon">
+              <CloseCircleOutlined />
             </div>
+            <span className="stat-change cancel">Low rate</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Cancel</span>
+            <span className="stat-value">{cleanerData.cancelCount}</span>
           </div>
         </div>
       </div>
 
-      {/* Bookings Section */}
       <div className="bookings-section">
         <div className="section-header">
           <h2>Bookings</h2>
         </div>
 
-        {/* Bookings Table - Desktop View */}
-        <div className="bookings-table desktop-view">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cleanerData.bookings.map(booking => (
-                <tr key={booking.id}>
-                  <td className="booking-date">{booking.date}</td>
-                  <td className="booking-time">{booking.time}</td>
-                  <td className="booking-location">{booking.location}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="booking-list">
+          {cleanerData.bookings.map((booking) => {
+            const date = formatDate(booking.date);
 
-        {/* Booking Cards - Mobile View */}
-        <div className="booking-cards mobile-view">
-          {cleanerData.bookings.map(booking => (
-            <div key={booking.id} className="booking-card">
-              <div className="booking-datetime">
-                <span className="date">{booking.date}</span>
-                <span className="time">{booking.time}</span>
-              </div>
-              <div className="booking-location">{booking.location}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Booking Details Cards */}
-        <div className="booking-details-grid">
-          {cleanerData.bookings.map(booking => (
-            <div key={booking.id} className="booking-detail-card">
-              <div className="booking-header">
-                <h3>{booking.title}</h3>
-                <span className={`booking-status ${getStatusClass(booking.status)}`}>
-                  {booking.status === 'early' ? 'Early' : 'Tomorrow'}
-                </span>
-              </div>
-              
-              <div className="booking-pricing">
-                <span className="amount">${booking.amount.toFixed(2)}</span>
-                <span className="rate-type">{booking.rateType}</span>
-              </div>
-
-              <button className="view-details-btn">
-                View Details <RightOutlined />
-              </button>
-
-              {booking.propertyManager && (
-                <div className="property-manager">
-                  <em>{booking.propertyManager}</em>
+            return (
+              <div key={booking.id} className="booking-row">
+                <div className="booking-date-box" aria-label={booking.date}>
+                  <span className="month">{date.month}</span>
+                  <span className="day">{date.day}</span>
                 </div>
-              )}
-            </div>
-          ))}
+
+                <div className="booking-main">
+                  <h3 className="booking-title">{booking.title}</h3>
+                  <div className="booking-meta">
+                    <span>
+                      <ClockCircleOutlined /> {booking.time}
+                    </span>
+                    <span>
+                      <EnvironmentOutlined /> {booking.location}
+                    </span>
+                    {booking.client && (
+                      <span>
+                        <UserOutlined /> {booking.client}
+                      </span>
+                    )}
+                  </div>
+                  {booking.propertyManager && (
+                    <p className="property-manager">
+                      <UserOutlined /> {booking.propertyManager}
+                    </p>
+                  )}
+                </div>
+
+                <div className="booking-actions">
+                  <div className="booking-price">
+                    <span className="amount">${booking.amount.toFixed(2)}</span>
+                    <span className="rate-type">{booking.rateType}</span>
+                  </div>
+                  <button type="button" className="details-btn">
+                    View Details
+                  </button>
+                  <span className={`booking-status ${booking.status}`}>{getStatusLabel(booking.status)}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Show All Link */}
-        <div className="show-all-link">
-          <button className="show-all-btn">
-            Show All Upcoming Jobs <RightOutlined />
+        <div className="show-all-row">
+          <button className="show-all-btn" type="button">
+            Show All Upcoming Jobs
           </button>
         </div>
       </div>
 
-      {/* Support Section */}
       <div className="support-section">
-        <h3>Need help with a job?</h3>
-        <p>Our support team is available 24/7 for urgent issues.</p>
-        <button className="support-btn">Contact Support</button>
+        <div className="support-left">
+          <div className="support-icon">
+            <CustomerServiceOutlined />
+          </div>
+          <div>
+            <h3>Need help with a job?</h3>
+            <p>Our support team is available 24/7 for urgent issues.</p>
+          </div>
+        </div>
+        <button className="support-btn" type="button">
+          Contact Support
+        </button>
       </div>
 
-      {/* Logout Button - Mobile */}
       <div className="mobile-logout">
-        <button className="logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" type="button" onClick={handleLogout}>
           <LogoutOutlined /> Logout
         </button>
       </div>
