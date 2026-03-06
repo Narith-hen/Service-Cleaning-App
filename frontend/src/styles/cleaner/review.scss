@@ -206,8 +206,20 @@
   }
 
   .stars-inline {
-    color: #facc15;
-    letter-spacing: 1px;
+    display: inline-flex;
+    gap: 1px;
+
+    .star {
+      line-height: 1;
+    }
+
+    .star.filled {
+      color: #facc15;
+    }
+
+    .star.empty {
+      color: #cbd5e1;
+    }
   }
 }
 
@@ -342,6 +354,11 @@
       border-color: #22c55e;
       color: #fff;
       font-weight: 700;
+    }
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   }
 }

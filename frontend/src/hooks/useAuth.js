@@ -1,7 +1,30 @@
 import { useState, useEffect } from 'react';
 
-const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const AUTH_USER_UPDATED_EVENT = 'auth:user-updated';
+
+const readStoredUser = () => {
+  const savedUser = localStorage.getItem('user');
+  if (!savedUser) return null;
+
+  try {
+    return JSON.parse(savedUser);
+  } catch (e) {
+    console.error('Failed to parse saved user:', e);
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
+const persistUser = (nextUser) => {
+  if (nextUser) {
+    localStorage.setItem('user', JSON.stringify(nextUser));
+  } else {
+    localStorage.removeItem('user');
+  }
+
+  window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+};
 
 // Mock users for testing
 const MOCK_USERS = {
@@ -41,16 +64,14 @@ export const useAuth = () => {
 
   // Check for saved user in localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        console.error('Failed to parse saved user:', e);
-        localStorage.removeItem('user');
-      }
-    }
+    setUser(readStoredUser());
+    const handleUserUpdated = () => setUser(readStoredUser());
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
     setLoading(false);
+
+    return () => {
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
+    };
   }, []);
 
   // Login function
@@ -87,7 +108,7 @@ export const useAuth = () => {
       };
 
       setUser(normalizedUser);
-      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      persistUser(normalizedUser);
 
       return { success: true, user: normalizedUser };
     } catch (err) {
@@ -103,7 +124,7 @@ export const useAuth = () => {
 
       if (userToLogin && password === 'password123') {
         setUser(userToLogin);
-        localStorage.setItem('user', JSON.stringify(userToLogin));
+        persistUser(userToLogin);
         return { success: true, user: userToLogin };
       }
 
@@ -125,7 +146,7 @@ export const useAuth = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 300));
       setUser(null);
-      localStorage.removeItem('user');
+      persistUser(null);
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -180,7 +201,7 @@ export const useAuth = () => {
 
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      persistUser(updatedUser);
       
       return { success: true, user: updatedUser };
     } catch (err) {
