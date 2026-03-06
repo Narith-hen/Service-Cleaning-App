@@ -116,6 +116,17 @@ const MyJobsPage = () => {
     }
   }, [filteredJobs, selectedJobId]);
 
+  useEffect(() => {
+    if (!activeJob) return undefined;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [activeJob]);
+
   const formatDisplayDate = (value) => {
     if (!value) return '';
     const [year, month, day] = value.split('-');

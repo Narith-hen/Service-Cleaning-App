@@ -483,21 +483,22 @@
   inset: 0;
   background: rgba(15, 23, 42, 0.55);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 18px;
+  overflow-y: auto;
   z-index: 1200;
 }
 
 .job-modal {
-  width: min(1100px, 100%);
-  max-height: 92vh;
-  overflow: auto;
+  width: min(1280px, 98vw);
+  margin: auto 0;
+  overflow: hidden;
   border-radius: 14px;
   border: 1px solid #dce4ee;
   background: #fff;
   display: grid;
-  grid-template-columns: 34% 66%;
+  grid-template-columns: 32% 68%;
   position: relative;
 }
 
@@ -520,6 +521,7 @@
 
 .job-modal-image-wrap {
   position: relative;
+  min-height: 320px;
 
   img {
     width: 100%;
@@ -529,20 +531,44 @@
   }
 
   .job-tag {
+    position: absolute;
     top: 12px;
     left: 12px;
+    z-index: 2;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0f172a;
+    background: #e2e8f0;
+
+    &.green {
+      background: #22c55e;
+      color: #052e16;
+    }
+
+    &.amber {
+      background: #fde68a;
+      color: #78350f;
+    }
+
+    &.gray {
+      background: #e2e8f0;
+      color: #334155;
+    }
   }
 }
 
 .job-modal-body {
-  padding: 18px 16px;
+  padding: 22px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .job-modal .job-top {
   align-items: flex-start;
+  padding-right: 48px;
 
   > div:first-child {
     min-width: 0;
@@ -552,7 +578,7 @@
   h3 {
     margin-top: 6px;
     margin-bottom: 4px;
-    font-size: 22px;
+    font-size: 24px;
     line-height: 1.08;
     letter-spacing: -0.03em;
   }
@@ -581,7 +607,7 @@
   background: #f8fafc;
   border: 1px solid #dce4ee;
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
 
   p {
     min-height: 28px;
@@ -594,18 +620,57 @@
   width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .job-modal .action-btn {
-  height: 46px;
-  font-size: 15px;
+  height: 44px;
+  font-size: 14px;
   font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  border-color: #dce4ee;
   min-width: 0;
   width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.job-modal .action-btn.dark {
+  background: #0b1736;
+  border-color: #0b1736;
+  color: #ffffff;
+}
+
+.job-modal .action-btn.green {
+  background: #25d85a;
+  border-color: #25d85a;
+  color: #0b1736;
+}
+
+.job-modal .action-btn.light {
+  background: #f8fafc;
+  border-color: #d1d9e4;
+  color: #334155;
+}
+
+.job-modal .action-btn.soft-green {
+  background: #bae6c8;
+  border-color: #bae6c8;
+  color: #1f2937;
+}
+
+.job-modal .action-btn.locked {
+  background: #eef2f7;
+  border-color: #eef2f7;
+  color: #94a3b8;
 }
 
 @media (max-width: 1080px) {
