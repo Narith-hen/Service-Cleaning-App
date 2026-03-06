@@ -1,10 +1,12 @@
 
 import Navbar from "../components/Navbar";
+import { Link } from "react-router-dom";
 import homeImage from "../../assets/home.png";
 import officeImage from "../../assets/office.png";
 import windowImage from "../../assets/window.png";
 import shopImage from "../../assets/shop.png";
 import moveImage from "../../assets/move.png";
+import proImage from "../../assets/pro.png";
 
 export default function ServicesPage({ embedded = false }) {
   const services = [
@@ -12,12 +14,6 @@ export default function ServicesPage({ embedded = false }) {
       title: "Home Cleaning",
       description:
         "Keep your home fresh and healthy with routine dust, stain, and floor care.",
-      image: homeImage
-    },
-    {
-      title: "Deep Cleaning",
-      description:
-        "A full top-to-bottom clean for kitchens, bathrooms, corners, and hard-to-reach areas.",
       image: homeImage
     },
     {
@@ -29,7 +25,7 @@ export default function ServicesPage({ embedded = false }) {
     {
       title: "Window Cleaning",
       description:
-        "Crystal-clear windows that brighten every room with more natural light.",
+        "Window cleaning is the process of washing and wiping windows using water, cleaning liquid.",
       image: windowImage
     },
     {
@@ -41,14 +37,14 @@ export default function ServicesPage({ embedded = false }) {
     {
       title: "Shop Cleaning",
       description:
-        "Maintain a neat and welcoming store that leaves a strong first impression.",
+        "Shop cleaning is the process of removing dust, dirt, and trash from a shop to keep the environment clean and organized.make you happy",
       image: shopImage
     },
     {
       title: "Post-Construction Cleaning",
       description:
-        "Remove dust, debris, and residue after renovation or construction work.",
-      image: shopImage
+        "Post-construction cleaning is a specialized deep cleaning service performed after building",
+      image: proImage
     }
   ];
 
@@ -88,9 +84,12 @@ export default function ServicesPage({ embedded = false }) {
                   {service.title}
                 </h3>
                 <p className="text-gray-500">{service.description}</p>
-                <button className="mt-6 rounded-lg border border-[#32c753] px-4 py-2 text-sm font-bold text-[#32c753] transition-all duration-300 hover:bg-[#32c753] hover:text-white">
+                <Link
+                  to="/auth/register"
+                  className="mt-6 inline-flex rounded-lg border border-[#32c753] px-4 py-2 text-sm font-bold text-[#32c753] transition-all duration-300 hover:bg-[#32c753] hover:text-white"
+                >
                   Book Service
-                </button>
+                </Link>
               </div>
             </div>
           ))}

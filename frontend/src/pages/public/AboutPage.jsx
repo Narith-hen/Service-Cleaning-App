@@ -6,6 +6,9 @@ import redbus from "../../assets/redbus.png";
 import easybook from "../../assets/easybook.png";
 import agoda from "../../assets/agoda.png";
 import ravel from "../../assets/ravel.png";
+import book from "../../assets/book.png";
+import vet from "../../assets/vet.png";
+import larryta from "../../assets/larryta.png";
 
 export default function AboutPage({ embedded = false }) {
   const partnerLogos = [
@@ -16,6 +19,9 @@ export default function AboutPage({ embedded = false }) {
     { src: easybook, name: "easybook" },
     { src: agoda, name: "agoda" },
     { src: ravel, name: "Travel Book" },
+    { src: book, name: " Book cambodia" },
+    { src: vet, name: " VirakBuntham cambodia" },
+    { src: larryta, name: " Larryta cambodia" },
   ];
 
   return (
