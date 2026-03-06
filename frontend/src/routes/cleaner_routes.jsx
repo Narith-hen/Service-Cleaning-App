@@ -7,6 +7,7 @@ import ProtectedRoute from './protected_routes';
 import CleanerDashboard from '../features/cleaner/pages/dashboard_page';
 import CleanerTasks from '../features/cleaner/pages/job_requests_page';
 import CleanerSchedule from '../features/cleaner/pages/schedule_page';
+import MyJobsPage from '../features/cleaner/pages/my_jobs_page';
 import CleanerEarnings from '../features/cleaner/pages/earnings_page';
 import CleanerProfile from '../features/cleaner/pages/profile_page';
 import CleanerAvailability from '../features/cleaner/pages/availability_page';
@@ -36,6 +37,10 @@ export const cleanerRoutes = {
       element: <CleanerTasks />
     },
     {
+      path: 'job-requests',
+      element: <CleanerTasks />
+    },
+    {
       path: 'tasks/upcoming',
       element: <CleanerTasks />
     },
@@ -54,6 +59,10 @@ export const cleanerRoutes = {
     {
       path: 'schedule',
       element: <CleanerSchedule />
+    },
+    {
+      path: 'my-jobs',
+      element: <MyJobsPage />
     },
     {
       path: 'schedule/weekly',

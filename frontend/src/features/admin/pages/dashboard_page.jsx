@@ -12,8 +12,10 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import '../../../styles/admin/dashboard_page.css';
+import { useTheme } from '../../../contexts/theme_context';
 
 const DashboardPage = () => {
+  const { darkMode } = useTheme();
   const kpiCards = [
     {
       title: 'Today Bookings',
@@ -92,7 +94,7 @@ const DashboardPage = () => {
   ];
 
   return (
-    <section className="admin-dashboard-page">
+    <section className={`admin-dashboard-page ${darkMode ? 'dark-mode' : ''}`}>
       <div className="dashboard-header-row">
         <div>
           <h1 className="admin-page-title">Admin Dashboard</h1>

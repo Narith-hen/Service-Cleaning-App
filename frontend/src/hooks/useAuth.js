@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
 // Mock users for testing
 const MOCK_USERS = {
   admin: {
@@ -50,45 +53,62 @@ export const useAuth = () => {
     setLoading(false);
   }, []);
 
-  // Login function - pass role to select which user to login as
+  // Login function
   const login = async (email, password, role = 'customer') => {
     setLoading(true);
     setError(null);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Real API login
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
 
-      // Find user by role or email
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Invalid email or password');
+      }
+
+      const userData = result.data || {};
+      const normalizedUser = {
+        id: userData.user_id,
+        user_id: userData.user_id,
+        user_code: userData.user_code,
+        name: [userData.first_name, userData.last_name].filter(Boolean).join(' ').trim(),
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email,
+        phone: userData.phone_number,
+        role_id: userData.role_id,
+        token: userData.token,
+        role: (userData.role || userData.role_name || (userData.role_id === 1 ? 'admin' : userData.role_id === 3 ? 'cleaner' : 'customer')).toLowerCase()
+      };
+
+      setUser(normalizedUser);
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+
+      return { success: true, user: normalizedUser };
+    } catch (err) {
+      // Mock fallback for local testing without API
       let userToLogin = null;
-      
       if (email) {
-        // Find by email (case insensitive)
         userToLogin = Object.values(MOCK_USERS).find(
           u => u.email.toLowerCase() === email.toLowerCase()
         );
       } else {
-        // Default to role-based login for testing
         userToLogin = MOCK_USERS[role];
       }
 
-      if (!userToLogin) {
-        throw new Error('Invalid email or password');
+      if (userToLogin && password === 'password123') {
+        setUser(userToLogin);
+        localStorage.setItem('user', JSON.stringify(userToLogin));
+        return { success: true, user: userToLogin };
       }
 
-      // Mock password check (in real app, this would be done on backend)
-      if (password && password !== 'password123') {
-        throw new Error('Invalid password');
-      }
-
-      // Set user and save to localStorage
-      setUser(userToLogin);
-      localStorage.setItem('user', JSON.stringify(userToLogin));
-      
-      return { success: true, user: userToLogin };
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+      setError(err.message || 'Invalid email or password');
+      return { success: false, error: err.message || 'Invalid email or password' };
     } finally {
       setLoading(false);
     }
@@ -136,6 +156,7 @@ export const useAuth = () => {
       const newUser = {
         id: Date.now(),
         ...userData,
+        role_id: userData.role_id || 2,
         role: userData.role || 'customer'
       };
 
