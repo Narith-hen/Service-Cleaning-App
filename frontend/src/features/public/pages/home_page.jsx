@@ -80,13 +80,6 @@ export default function PublicHomePage() {
               >
                 Book Your Clean Now
               </Link>
-              <Link
-                to="/about"
-                className={`rounded-xl border px-4 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${darkMode ? 'border-slate-600 bg-slate-800 text-[#008000]' : 'border-slate-200 bg-white text-[#008000]'}`}
-                style={{ color: '#008000' }}
-              >
-                See How It Works
-              </Link>
             </div>
 
             <div className={`mt-7 flex items-center gap-3 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>
@@ -133,15 +126,15 @@ export default function PublicHomePage() {
             </h2>
           </div>
 
-          <div className="relative mt-14 grid gap-10 md:grid-cols-3">
+          <div className="relative mt-14 grid gap-12 md:grid-cols-3 md:gap-20 lg:gap-24">
             <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
 
             {processSteps.map((step) => (
-              <article key={step.number} className="relative text-center">
+              <article key={step.number} className="relative px-3 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
                   {step.number}
                 </div>
-                <h3 className={`mt-6 text-2xl font-extrabold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{step.title}</h3>
+                <h3 className={`mt-10 text-2xl font-extrabold ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>{step.title}</h3>
                 <p className={`mx-auto mt-3 max-w-xs ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>{step.description}</p>
               </article>
             ))}

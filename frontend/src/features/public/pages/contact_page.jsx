@@ -1,7 +1,9 @@
+import { useOutletContext } from 'react-router-dom';
 import ContactContent from '../../../pages/public/ContactPage';
 
 const ContactPage = () => {
-  return <ContactContent embedded />;
+  const { darkMode = false } = useOutletContext() || {};
+  return <ContactContent embedded darkMode={darkMode} />;
 };
 
 export default ContactPage;

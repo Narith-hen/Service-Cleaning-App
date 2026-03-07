@@ -95,16 +95,10 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                to="/register"
+                to="/auth/register"
                 className="inline-flex rounded-xl bg-[#32c753] px-6 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]"
               >
                 Book Your Clean Now
-              </Link>
-              <Link
-                to="/about"
-                className="inline-flex rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-              >
-                See How It Works
               </Link>
             </div>
 
@@ -152,15 +146,15 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="relative mt-14 grid gap-10 md:grid-cols-3">
+          <div className="relative mt-14 grid gap-12 md:grid-cols-3 md:gap-20 lg:gap-24">
             <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
 
             {processSteps.map((step) => (
-              <article key={step.number} className="relative text-center">
+              <article key={step.number} className="relative px-3 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
                   {step.number}
                 </div>
-                <h3 className="mt-6 text-2xl font-extrabold text-slate-900">{step.title}</h3>
+                <h3 className="mt-100 text-2xl font-extrabold text-slate-900">{step.title}</h3>
                 <p className="mx-auto mt-3 max-w-xs text-slate-500">{step.description}</p>
               </article>
             ))}

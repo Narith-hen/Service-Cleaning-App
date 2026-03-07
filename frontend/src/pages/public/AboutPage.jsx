@@ -10,7 +10,7 @@ import book from "../../assets/book.png";
 import vet from "../../assets/vet.png";
 import larryta from "../../assets/larryta.png";
 
-export default function AboutPage({ embedded = false }) {
+export default function AboutPage({ embedded = false, darkMode = false }) {
   const partnerLogos = [
     { src: grabLogo, name: "Grab" },
     { src: tada, name: "tada" },
@@ -25,10 +25,10 @@ export default function AboutPage({ embedded = false }) {
   ];
 
   return (
-    <div className="bg-slate-50 font-sans text-slate-800">
+    <div className={`${darkMode ? "bg-[#0b1220] text-slate-100" : "bg-slate-50 text-slate-800"} font-sans`}>
       {!embedded && <Navbar />}
 
-      <section className="bg-white py-20 md:py-24">
+      <section className={`${darkMode ? "bg-[#111b2f]" : "bg-white"} py-20 md:py-24`}>
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 md:grid-cols-2 md:gap-14 md:px-8">
           <div className="relative">
             <div className="absolute -left-4 -top-4 h-20 w-20 rounded-2xl bg-emerald-100 blur-2xl" />
@@ -46,37 +46,37 @@ export default function AboutPage({ embedded = false }) {
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
               About Company
             </p>
-            <h2 className="mb-6 text-4xl font-black leading-tight md:text-5xl">
+            <h2 className={`mb-6 text-4xl font-black leading-tight md:text-5xl ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
               About <span className="text-[#32c753]">Somaet</span>
             </h2>
 
-            <p className="mb-4 text-lg text-slate-600">
+            <p className={`mb-4 text-lg ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
               Somaet has been delivering professional cleaning services for over 10
               years. We specialize in residential and commercial
               cleaning solutions that create healthier and happier environments.
             </p>
 
-            <p className="mb-7 text-slate-600">
+            <p className={`mb-7 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
               Our trained team uses eco-friendly products and modern equipment to
               ensure every space is spotless, sanitized, and fresh.
             </p>
 
             <ul className="space-y-3">
-              <li className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+              <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
                   ✓
                 </span>
                 Experienced and Certified Team
               </li>
 
-              <li className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+              <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
                   ✓
                 </span>
                 Eco-Friendly Products
               </li>
 
-              <li className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+              <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
                   ✓
                 </span>
@@ -91,9 +91,15 @@ export default function AboutPage({ embedded = false }) {
         </div>
       </section>
 
-      <section className="bg-gradient-to-br from-emerald-50 via-white to-slate-100 py-20 md:py-24">
+      <section
+        className={`py-20 md:py-24 ${
+          darkMode
+            ? "bg-gradient-to-br from-[#0b1220] via-[#111b2f] to-[#0f2036]"
+            : "bg-gradient-to-br from-emerald-50 via-white to-slate-100"
+        }`}
+      >
         <div className="mx-auto max-w-6xl px-6 md:px-8">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className={`overflow-hidden rounded-3xl border shadow-2xl ${darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
             <div className="relative flex h-28 w-full items-end bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-6 pb-4 md:h-32">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">
                 Our Partnerships
@@ -101,11 +107,11 @@ export default function AboutPage({ embedded = false }) {
             </div>
 
             <div className="p-8 text-center md:p-12">
-              <h2 className="mb-4 text-3xl font-black tracking-tight text-slate-800 md:text-4xl">
+              <h2 className={`mb-4 text-3xl font-black tracking-tight md:text-4xl ${darkMode ? "text-slate-100" : "text-slate-800"}`}>
                 Clients We Are Proud Of
               </h2>
 
-              <p className="mx-auto mb-10 max-w-2xl text-slate-500 md:text-lg">
+              <p className={`mx-auto mb-10 max-w-2xl md:text-lg ${darkMode ? "text-slate-300" : "text-slate-500"}`}>
                 Trusted by respected businesses and organizations who rely on our
                 professional cleaning services for excellence and reliability.
               </p>
@@ -114,7 +120,11 @@ export default function AboutPage({ embedded = false }) {
                 {partnerLogos.map((partner, index) => (
                   <div
                     key={index}
-                    className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-4 shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_30px_rgba(15,23,42,0.14)]"
+                    className={`group relative overflow-hidden rounded-2xl border p-4 transition duration-300 hover:-translate-y-1 ${
+                      darkMode
+                        ? "border-slate-700 bg-slate-800 shadow-[0_8px_18px_rgba(2,6,23,0.4)] hover:shadow-[0_16px_30px_rgba(2,6,23,0.6)]"
+                        : "border-slate-200 bg-gradient-to-b from-white to-slate-50 shadow-[0_8px_18px_rgba(15,23,42,0.08)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.14)]"
+                    }`}
                   >
                     <div className="flex h-[98px] items-center justify-center rounded-xl bg-white md:h-[110px]">
                       <img
@@ -123,7 +133,7 @@ export default function AboutPage({ embedded = false }) {
                         className="h-[72px] w-[170px] object-contain transition duration-300 group-hover:scale-105 md:h-[82px] md:w-[185px]"
                       />
                     </div>
-                    <p className="mt-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <p className={`mt-3 text-center text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-slate-300" : "text-slate-500"}`}>
                       {partner.name}
                     </p>
                   </div>
