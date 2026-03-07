@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CameraOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { CameraOutlined, EditOutlined } from '@ant-design/icons';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import '../../../styles/customer/profile.scss';
 
 const ProfilePage = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const fileInputRef = useRef(null);
 
@@ -30,7 +30,6 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState(baseProfile);
   const [draft, setDraft] = useState(baseProfile);
   const [isEditing, setIsEditing] = useState(location.pathname.endsWith('/edit'));
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -41,6 +40,24 @@ const ProfilePage = () => {
   useEffect(() => {
     setIsEditing(location.pathname.endsWith('/edit'));
   }, [location.pathname]);
+
+  const isOnline = useMemo(() => {
+    const rawStatus =
+      user?.is_online ??
+      user?.isOnline ??
+      user?.online ??
+      user?.availability_status ??
+      user?.status;
+
+    if (typeof rawStatus === 'boolean') return rawStatus;
+    if (typeof rawStatus === 'number') return rawStatus === 1;
+    if (typeof rawStatus === 'string') {
+      const normalized = rawStatus.trim().toLowerCase();
+      if (['online', 'active', 'available', 'true', '1'].includes(normalized)) return true;
+      if (['offline', 'inactive', 'unavailable', 'false', '0'].includes(normalized)) return false;
+    }
+    return true;
+  }, [user]);
 
   const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
   const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
@@ -77,93 +94,48 @@ const ProfilePage = () => {
     setIsEditing(true);
   };
 
-  const handleCancel = () => {
-    setDraft(profile);
-    setMessage('');
-    setIsEditing(false);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setMessage('');
-
-    const firstName = draft.name.trim().split(' ')[0] || '';
-    const lastName = draft.name.trim().split(' ').slice(1).join(' ');
-
-    const payload = {
-      name: draft.name,
-      first_name: firstName,
-      last_name: lastName,
-      email: draft.email,
-      phone: draft.phone,
-      phone_number: draft.phone,
-      address: draft.address,
-      avatar: draft.avatar
-    };
-
-    const result = await updateUser(payload);
-
-    if (result.success) {
-      const updatedProfile = {
-        ...draft,
-        completedJobs: profile.completedJobs,
-        rating: profile.rating,
-        joinDate: profile.joinDate
-      };
-      setProfile(updatedProfile);
-      setDraft(updatedProfile);
-      setIsEditing(false);
-      setMessage('Profile updated successfully.');
-    } else {
-      setMessage(result.error || 'Unable to update profile.');
-    }
-
-    setSaving(false);
-  };
-
   return (
     <div className="customer-profile-page">
       <section className="profile-hero-card">
-        <div className="avatar-wrap">
-          {draft.avatar ? (
-            <img src={draft.avatar} alt={draft.name} className="avatar-image" />
-          ) : (
-            <div className="avatar-fallback">{initials}</div>
-          )}
-          {isEditing && (
-            <button type="button" className="avatar-edit-btn" onClick={handlePickImage}>
+        <div className="hero-banner">
+          <div className="hero-top-actions">
+            <button
+              type="button"
+              className="hero-icon-btn"
+              onClick={handleEdit}
+              aria-label="Edit profile"
+            >
+              <EditOutlined />
+            </button>
+          </div>
+
+          <div className="profile-hero-text">
+            <h1>{draft.name || 'Cleaner'}</h1>
+          </div>
+        </div>
+
+        <div className="hero-lower">
+          <div className="avatar-wrap">
+            {draft.avatar ? (
+              <img src={draft.avatar} alt={draft.name} className="avatar-image" />
+            ) : (
+              <div className="avatar-fallback">{initials}</div>
+            )}
+            <button type="button" className="avatar-edit-btn" onClick={handlePickImage} aria-label="Change photo">
               <CameraOutlined />
             </button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            style={{ display: 'none' }}
-          />
-        </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              style={{ display: 'none' }}
+            />
+          </div>
 
-        <div className="profile-hero-text">
-          <h1>{draft.name || 'Cleaner'}</h1>
-          <p>Member since {profile.joinDate}</p>
-        </div>
-
-        <div className="hero-actions">
-          {!isEditing ? (
-            <button type="button" className="btn-primary" onClick={handleEdit}>
-              <EditOutlined /> Edit Profile
-            </button>
-          ) : (
-            <>
-              <button type="button" className="btn-ghost" onClick={handleCancel}>
-                <CloseOutlined /> Cancel
-              </button>
-              <button type="button" className="btn-primary" onClick={handleSave} disabled={saving}>
-                <SaveOutlined /> {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </>
-          )}
+          <p className={`hero-status ${isOnline ? 'is-online' : 'is-offline'}`}>
+            {isOnline ? 'online' : 'offline'}
+          </p>
         </div>
       </section>
 

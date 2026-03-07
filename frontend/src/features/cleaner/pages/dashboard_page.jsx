@@ -1,19 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CalendarOutlined,
   StarOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-  EnvironmentOutlined,
-  UserOutlined,
-  LogoutOutlined,
-  CustomerServiceOutlined
+  LogoutOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/cleaner/dashboard.scss';
 
 const CleanerDashboardPage = () => {
   const navigate = useNavigate();
+  const [selectedStatKey, setSelectedStatKey] = useState('rating');
 
   const cleanerData = {
     name: 'Narith',
@@ -22,53 +20,15 @@ const CleanerDashboardPage = () => {
     ratingTier: 'Top 5%',
     totalService: 124,
     oneMonthService: 18,
-    cancelCount: 2,
-    bookings: [
-      {
-        id: 1,
-        title: 'Regular Bi-Weekly Maintenance',
-        date: 'OCT 24',
-        time: '02:00 PM - 04:00 PM',
-        location: '1200 Lakeview Towers, #402',
-        client: 'James Chen',
-        amount: 45.0,
-        rateType: 'Flat Rate',
-        status: 'early',
-        propertyManager: null
-      },
-      {
-        id: 2,
-        title: 'Move-Out End of Tenancy',
-        date: 'OCT 25',
-        time: '08:00 AM - 02:00 PM',
-        location: '88 Pine St, Suite 10',
-        client: null,
-        amount: 160.0,
-        rateType: 'Commercial',
-        status: 'tomorrow',
-        propertyManager: 'Modern Property Mgmt'
-      }
-    ]
+    cancelCount: 2
   };
 
   const handleLogout = () => {
     navigate('/login');
   };
 
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'early':
-        return 'Early';
-      case 'tomorrow':
-        return 'Tomorrow';
-      default:
-        return '';
-    }
-  };
-
-  const formatDate = (value) => {
-    const [month, day] = value.split(' ');
-    return { month, day };
+  const handleStatClick = (statKey) => {
+    setSelectedStatKey(statKey);
   };
 
   return (
@@ -83,7 +43,18 @@ const CleanerDashboardPage = () => {
       </div>
 
       <div className="stats-grid">
-        <div className="stat-card">
+        <div
+          className={`stat-card ${selectedStatKey === 'rating' ? 'active' : ''}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleStatClick('rating')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleStatClick('rating');
+            }
+          }}
+        >
           <div className="stat-header">
             <div className="stat-icon rating-icon">
               <StarOutlined />
@@ -94,12 +65,23 @@ const CleanerDashboardPage = () => {
             <span className="stat-label">Rating</span>
             <div className="rating-wrap">
               <span className="stat-value">{cleanerData.rating}</span>
-              <span className="star-text">★★★★★</span>
+              <span className="star-text">*****</span>
             </div>
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className={`stat-card ${selectedStatKey === 'totalService' ? 'active' : ''}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleStatClick('totalService')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleStatClick('totalService');
+            }
+          }}
+        >
           <div className="stat-header">
             <div className="stat-icon jobs-icon">
               <CalendarOutlined />
@@ -112,7 +94,18 @@ const CleanerDashboardPage = () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className={`stat-card ${selectedStatKey === 'oneMonthService' ? 'active' : ''}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleStatClick('oneMonthService')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleStatClick('oneMonthService');
+            }
+          }}
+        >
           <div className="stat-header">
             <div className="stat-icon earnings-icon">
               <ClockCircleOutlined />
@@ -125,7 +118,18 @@ const CleanerDashboardPage = () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className={`stat-card ${selectedStatKey === 'cancel' ? 'active' : ''}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleStatClick('cancel')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleStatClick('cancel');
+            }
+          }}
+        >
           <div className="stat-header">
             <div className="stat-icon cancel-icon">
               <CloseCircleOutlined />
@@ -139,80 +143,52 @@ const CleanerDashboardPage = () => {
         </div>
       </div>
 
-      <div className="bookings-section">
-        <div className="section-header">
-          <h2>Bookings</h2>
-        </div>
+      {selectedStatKey === 'rating' && (
+        <section className="review-chart">
+          <div className="chart-header">
+            <h3>Review Chart</h3>
+            <p>Customer rating distribution</p>
+          </div>
 
-        <div className="booking-list">
-          {cleanerData.bookings.map((booking) => {
-            const date = formatDate(booking.date);
-
-            return (
-              <div key={booking.id} className="booking-row">
-                <div className="booking-date-box" aria-label={booking.date}>
-                  <span className="month">{date.month}</span>
-                  <span className="day">{date.day}</span>
-                </div>
-
-                <div className="booking-main">
-                  <h3 className="booking-title">{booking.title}</h3>
-                  <div className="booking-meta">
-                    <span>
-                      <ClockCircleOutlined /> {booking.time}
-                    </span>
-                    <span>
-                      <EnvironmentOutlined /> {booking.location}
-                    </span>
-                    {booking.client && (
-                      <span>
-                        <UserOutlined /> {booking.client}
-                      </span>
-                    )}
-                  </div>
-                  {booking.propertyManager && (
-                    <p className="property-manager">
-                      <UserOutlined /> {booking.propertyManager}
-                    </p>
-                  )}
-                </div>
-
-                <div className="booking-actions">
-                  <div className="booking-price">
-                    <span className="amount">${booking.amount.toFixed(2)}</span>
-                    <span className="rate-type">{booking.rateType}</span>
-                  </div>
-                  <button type="button" className="details-btn">
-                    View Details
-                  </button>
-                  <span className={`booking-status ${booking.status}`}>{getStatusLabel(booking.status)}</span>
-                </div>
+          <div className="chart-bars">
+            <div className="chart-row">
+              <span className="chart-label">5 Stars</span>
+              <div className="chart-track">
+                <span className="chart-fill level-5" />
               </div>
-            );
-          })}
-        </div>
-
-        <div className="show-all-row">
-          <button className="show-all-btn" type="button">
-            Show All Upcoming Jobs
-          </button>
-        </div>
-      </div>
-
-      <div className="support-section">
-        <div className="support-left">
-          <div className="support-icon">
-            <CustomerServiceOutlined />
+              <strong>72%</strong>
+            </div>
+            <div className="chart-row">
+              <span className="chart-label">4 Stars</span>
+              <div className="chart-track">
+                <span className="chart-fill level-4" />
+              </div>
+              <strong>19%</strong>
+            </div>
+            <div className="chart-row">
+              <span className="chart-label">3 Stars</span>
+              <div className="chart-track">
+                <span className="chart-fill level-3" />
+              </div>
+              <strong>6%</strong>
+            </div>
+            <div className="chart-row">
+              <span className="chart-label">2 Stars</span>
+              <div className="chart-track">
+                <span className="chart-fill level-2" />
+              </div>
+              <strong>2%</strong>
+            </div>
+            <div className="chart-row">
+              <span className="chart-label">1 Star</span>
+              <div className="chart-track">
+                <span className="chart-fill level-1" />
+              </div>
+              <strong>1%</strong>
+            </div>
           </div>
-          <div>
-            <h3>Need help with a job?</h3>
-            <p>Our support team is available 24/7 for urgent issues.</p>
-          </div>
-        </div>
-        <button className="support-btn" type="button">
-          Contact Support
-        </button>
-      </div>
+        </section>
+      )}
 
       <div className="mobile-logout">
         <button className="logout-btn" type="button" onClick={handleLogout}>

@@ -9,7 +9,6 @@ import CleanerTasks from '../features/cleaner/pages/job_requests_page';
 import CleanerSchedule from '../features/cleaner/pages/schedule_page';
 import MyJobsPage from '../features/cleaner/pages/my_jobs_page';
 import CleanerEarnings from '../features/cleaner/pages/earnings_page';
-import CleanerProfile from '../features/cleaner/pages/profile_page';
 import CleanerAvailability from '../features/cleaner/pages/availability_page';
 import CleanerReviews from '../features/cleaner/pages/review_page';
 import CleanerNotifications from '../features/cleaner/pages/notification_page';
@@ -98,15 +97,15 @@ export const cleanerRoutes = {
     },
     {
       path: 'profile',
-      element: <CleanerProfile />
+      element: <Navigate to="/cleaner/settings" replace />
     },
     {
       path: 'profile/edit',
-      element: <CleanerProfile />
+      element: <Navigate to="/cleaner/settings" replace />
     },
     {
       path: 'profile/documents',
-      element: <CleanerProfile />
+      element: <Navigate to="/cleaner/settings" replace />
     },
     {
       path: 'reviews',

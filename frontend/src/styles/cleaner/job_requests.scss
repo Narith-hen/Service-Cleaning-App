@@ -191,7 +191,7 @@
   }
 }
 
-.job-modal-backdrop {
+.job-request-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
@@ -201,7 +201,7 @@
   padding: 16px;
 }
 
-.job-modal {
+.job-request-modal {
   width: min(920px, 100%);
   max-height: 90vh;
   overflow: auto;
@@ -212,14 +212,14 @@
   position: relative;
 }
 
-.job-modal-head {
+.job-request-modal-head {
   position: absolute;
   top: 10px;
   right: 10px;
   z-index: 3;
 }
 
-.job-modal-close {
+.job-request-modal-close {
   width: 34px;
   height: 34px;
   border: none;
@@ -233,13 +233,13 @@
   font-size: 14px;
 }
 
-.job-modal-body {
+.job-request-modal-body {
   display: grid;
   grid-template-columns: 42% 58%;
   gap: 0;
   align-items: stretch;
 
-  .job-modal-image-wrap {
+  .job-request-modal-image-wrap {
     position: relative;
     height: 100%;
     min-height: 260px;
@@ -253,9 +253,25 @@
     object-fit: cover;
     display: block;
   }
+
+  .job-image-title {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    margin: 0;
+    max-width: calc(100% - 20px);
+    font-size: 14px;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #ffffff;
+    background: rgba(15, 23, 42, 0.62);
+    border-radius: 8px;
+    padding: 6px 9px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
 }
 
-.job-modal-info {
+.job-request-modal-info {
   padding: 12px;
 
   h4 {
@@ -266,14 +282,14 @@
   }
 }
 
-.job-modal-price {
+.job-request-modal-price {
   color: #22c55e;
   font-size: 24px;
   font-weight: 800;
   margin-bottom: 8px;
 }
 
-.job-modal-extra-list {
+.job-request-modal-extra-list {
   margin: 0;
   padding-left: 18px;
   display: grid;
@@ -401,10 +417,10 @@
     font-size: 20px;
   }
 
-  .job-modal-body {
+  .job-request-modal-body {
     grid-template-columns: 1fr;
 
-    .job-modal-image-wrap {
+    .job-request-modal-image-wrap {
       min-height: 200px;
     }
   }

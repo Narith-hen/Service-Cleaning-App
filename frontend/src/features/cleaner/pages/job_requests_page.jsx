@@ -178,22 +178,27 @@ const JobRequestsPage = () => {
       </div>
 
       {selectedJob ? (
-        <div className="job-modal-backdrop" onClick={() => setSelectedJob(null)}>
+        <div className="job-request-modal-backdrop" onClick={() => setSelectedJob(null)}>
           <div
-            className="job-modal"
+            className="job-request-modal"
             role="dialog"
             aria-modal="true"
             aria-label={`${selectedJob.title} details`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="job-modal-head">
-              <button type="button" className="job-modal-close" aria-label="Close details" onClick={() => setSelectedJob(null)}>
+            <div className="job-request-modal-head">
+              <button
+                type="button"
+                className="job-request-modal-close"
+                aria-label="Close details"
+                onClick={() => setSelectedJob(null)}
+              >
                 <CloseOutlined />
               </button>
             </div>
 
-            <div className="job-modal-body">
-              <div className="job-modal-image-wrap">
+            <div className="job-request-modal-body">
+              <div className="job-request-modal-image-wrap">
                 <img
                   src={selectedJob.image}
                   alt={selectedJob.title}
@@ -204,8 +209,8 @@ const JobRequestsPage = () => {
                 <div className="job-image-title">{selectedJob.title}</div>
               </div>
 
-              <div className="job-modal-info">
-                <div className="job-modal-price">{selectedJob.price}</div>
+              <div className="job-request-modal-info">
+                <div className="job-request-modal-price">{selectedJob.price}</div>
                 <ul className="job-meta-list">
                   {selectedJob.details.map((detail, idx) => (
                     <li key={`${selectedJob.id}-modal-${idx}`}>
@@ -216,7 +221,7 @@ const JobRequestsPage = () => {
                 </ul>
 
                 <h4>More Details</h4>
-                <ul className="job-modal-extra-list">
+                <ul className="job-request-modal-extra-list">
                   {selectedJob.extraDetails.map((item, idx) => (
                     <li key={`${selectedJob.id}-extra-${idx}`}>{item}</li>
                   ))}
