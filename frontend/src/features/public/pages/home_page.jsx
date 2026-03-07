@@ -14,6 +14,8 @@ export default function PublicHomePage() {
         '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."',
       name: 'Hen Narith',
       role: 'Homeowner in Seattle',
+      date: 'Feb 20, 2026',
+      rating: '4.9',
       image: narithImage
     },
     {
@@ -21,6 +23,8 @@ export default function PublicHomePage() {
         '"The cleaners are so professional and detailed. They even got the pet hair out of my carpets."',
       name: 'Lon Molika',
       role: 'Regular Customer',
+      date: 'Jan 31, 2026',
+      rating: '4.8',
       image: molikaImage
     },
     {
@@ -28,6 +32,8 @@ export default function PublicHomePage() {
         '"I used them for a move-out clean and got my full security deposit back without stress."',
       name: 'Van sievmey',
       role: 'New Resident',
+      date: 'Jan 17, 2026',
+      rating: '5.0',
       image: meyImage
     }
   ];
@@ -159,44 +165,49 @@ export default function PublicHomePage() {
 
     {/* Testimonials Grid */}
     <div className="grid gap-8 md:grid-cols-3">
-      {testimonials.map((item) => (
-        <article
-          key={item.name}
-          className={`relative rounded-2xl p-6 shadow-lg transition hover:shadow-2xl ${
-            darkMode ? 'bg-gradient-to-tr from-slate-800 via-slate-900 to-slate-800 text-slate-100' : 'bg-white'
-          }`}
-        >
-          <div className="mb-5 flex items-center gap-4">
-            {item.image ? (
-              <img
-                src={item.image}
-                alt={item.name}
-                className="h-16 w-16 rounded-full object-cover ring-2 ring-[#32c753]/40"
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = homeImage;
-                }}
-              />
-            ) : (
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#d39a6f] text-xl font-bold text-white">
-                {item.name?.charAt(0)}
-              </span>
-            )}
-            <div>
-              <p className="font-extrabold">{item.name}</p>
-              <p className="text-xs text-slate-400">{item.role}</p>
+      {testimonials.map((item) => {
+        return (
+          <article
+            key={item.name}
+            className={`relative rounded-3xl border p-6 transition hover:shadow-xl ${
+              darkMode
+                ? 'border-slate-700 bg-slate-900 text-slate-100'
+                : 'border-slate-200 bg-white text-slate-900 shadow-lg'
+            } flex h-full flex-col`}
+          >
+            <div className="flex items-center gap-2 text-base font-bold">
+              <span className="text-yellow-500">★</span>
+              <span className={darkMode ? 'text-indigo-300' : 'text-indigo-600'}>{item.rating}</span>
             </div>
-          </div>
-          <p className="mt-3 text-sm md:text-base leading-relaxed">{item.quote}</p>
-          <div className="mt-5 flex gap-1">
-            {Array(5)
-              .fill(0)
-              .map((_, i) => (
-                <span key={i} className="text-yellow-400 text-xl">★</span>
-              ))}
-          </div>
-        </article>
-      ))}
+            <p className={`mt-5 text-lg leading-relaxed ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+              {item.quote}
+            </p>
+            <div className={`mt-6 border-t pt-5 ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-3">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="h-12 w-12 rounded-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = homeImage;
+                    }}
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#d39a6f] text-sm font-bold text-white">
+                    {item.name?.charAt(0)}
+                  </span>
+                )}
+                <div className="min-w-0 text-left">
+                  <p className="font-extrabold">{item.name}</p>
+                  <p className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}>{item.role}</p>
+                </div>
+              </div>
+            </div>
+          </article>
+        );
+      })}
     </div>
 
  
@@ -244,6 +255,7 @@ export default function PublicHomePage() {
     </div>
   );
 }
+
 
 
 

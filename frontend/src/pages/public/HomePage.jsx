@@ -208,12 +208,12 @@ export default function HomePage() {
                       {item.name?.charAt(0)}
                     </span>
                   )}
-                  <div>
+                  <div className="text-left">
                     <p className="font-extrabold text-slate-900">{item.name}</p>
+                    <p className="text-2xl font-extrabold tracking-wider text-[#f4b400]">*****</p>
                     <p className="text-xs text-slate-500">{item.role}</p>
                   </div>
                 </div>
-                <p className="text-2xl font-extrabold tracking-wider text-[#f4b400]">*****</p>
                 <p className="mt-4 text-slate-600">{item.quote}</p>
               </article>
             ))}
