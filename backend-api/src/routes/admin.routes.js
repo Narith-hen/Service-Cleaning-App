@@ -5,6 +5,7 @@ const {
 } = require('../controllers');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
+const { upload } = require('../middlewares/upload.middleware');
 
 const router = express.Router();
 
@@ -45,27 +46,57 @@ router.get('/services', [
   query('limit').optional().isInt()
 ], validate, admin.getAllServices);
 
+router.get('/services/:id', [
+  param('id').isInt()
+], validate, admin.getServiceById);
+
 router.post('/services', [
   body('name').notEmpty(),
-  body('price').isFloat({ min: 0 }),
+  body('status').optional().isIn(['active', 'inactive', 'Active', 'Inactive']),
   body('description').notEmpty(),
-  body('category').optional(),
-  body('duration').optional().isInt()
+  body('image_url').optional().isString()
 ], validate, admin.createService);
 
 router.put('/services/:id', [
   param('id').isInt(),
   body('name').optional(),
-  body('price').optional().isFloat({ min: 0 }),
   body('description').optional(),
-  body('category').optional(),
-  body('duration').optional().isInt(),
-  body('is_available').optional().isBoolean()
+  body('status').optional().isIn(['active', 'inactive', 'Active', 'Inactive']),
+  body('image_url').optional().isString()
 ], validate, admin.updateService);
+
+router.post('/services/:id/image', [
+  param('id').isInt()
+], validate, upload.single('images'), admin.updateService);
 
 router.delete('/services/:id', [
   param('id').isInt()
 ], validate, admin.deleteService);
+
+// Cleaner management
+router.get('/cleaners', admin.getAllCleaners);
+
+router.post('/cleaners',
+  upload.single('avatar'),
+[
+  body('companyName').notEmpty(),
+  body('companyEmail').isEmail(),
+  body('phoneNumber').notEmpty(),
+  body('teamMember').notEmpty(),
+  body('serviceType').notEmpty(),
+  body('address').optional(),
+  body('latitude').optional(),
+  body('longitude').optional(),
+  body('password').isLength({ min: 6 }),
+], validate, admin.createCleaner);
+
+router.put('/cleaners/:id',
+  upload.single('avatar'),
+[
+  param('id').notEmpty(),
+  body('companyEmail').optional().isEmail(),
+  body('password').optional().isLength({ min: 6 }),
+], validate, admin.updateCleaner);
 
 // Booking management
 router.get('/bookings', [

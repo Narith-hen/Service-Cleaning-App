@@ -18,6 +18,18 @@ const buildDisplayName = (row) => {
 };
 
 const mapUserRow = (row) => ({
+  // Support both schemas: boolean `is_active` and string `status`.
+  // If only `status` exists, treat anything other than "inactive" as active.
+  ...(() => {
+    const hasIsActive = row.is_active !== null && row.is_active !== undefined;
+    const statusText = String(row.status || '').trim().toLowerCase();
+    const activeFromStatus = statusText ? statusText !== 'inactive' : true;
+    const isActive = hasIsActive ? Boolean(row.is_active) : activeFromStatus;
+    return {
+      is_active: isActive,
+      status: isActive ? 'Active' : 'Inactive',
+    };
+  })(),
   user_id: row.user_id,
   user_code: row.user_code ?? null,
   username: buildDisplayName(row),
@@ -28,7 +40,6 @@ const mapUserRow = (row) => ({
   avatar: row.avatar ?? null,
   created_at: row.created_at ?? null,
   role_id: row.role_id ?? null,
-  is_active: row.is_active === null || row.is_active === undefined ? true : Boolean(row.is_active),
   role: {
     role_id: row.role_id ?? null,
     role_name: row.role_name ?? null,
@@ -60,6 +71,7 @@ const getAllUsers = async (req, res, next) => {
       'u.created_at',
       'u.role_id',
       columns.has('is_active') ? 'u.is_active' : 'NULL AS is_active',
+      columns.has('status') ? 'u.status' : 'NULL AS status',
       'r.role_name',
       'COALESCE(bk.total_bookings, 0) AS bookings_count',
       'COALESCE(rv.total_reviews, 0) AS reviews_count',
@@ -209,6 +221,7 @@ const createUser = async (req, res, next) => {
           u.created_at,
           u.role_id,
           ${columns.has('is_active') ? 'u.is_active' : 'NULL AS is_active'},
+          ${columns.has('status') ? 'u.status' : 'NULL AS status'},
           r.role_name,
           COALESCE(bk.total_bookings, 0) AS bookings_count,
           COALESCE(rv.total_reviews, 0) AS reviews_count
@@ -245,7 +258,7 @@ const createUser = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { username, email, phone_number, role_id, is_active } = req.body;
+    const { username, email, phone_number, role_id, is_active, status } = req.body;
     const userId = parseInt(id, 10);
     const columns = await getUserTableColumns();
     const updates = [];
@@ -263,9 +276,28 @@ const updateUser = async (req, res, next) => {
       updates.push('role_id = ?');
       values.push(parseInt(role_id, 10));
     }
-    if (is_active !== undefined && columns.has('is_active')) {
+    const normalizedStatus = status === undefined
+      ? undefined
+      : (String(status).trim().toLowerCase() === 'inactive' ? 'inactive' : 'active');
+    const normalizedIsActive = is_active === undefined
+      ? undefined
+      : Boolean(is_active);
+
+    if (normalizedIsActive !== undefined && columns.has('is_active')) {
       updates.push('is_active = ?');
-      values.push(Boolean(is_active) ? 1 : 0);
+      values.push(normalizedIsActive ? 1 : 0);
+    }
+    if (normalizedStatus !== undefined && columns.has('status')) {
+      updates.push('status = ?');
+      values.push(normalizedStatus);
+    }
+    if (normalizedIsActive !== undefined && normalizedStatus === undefined && columns.has('status')) {
+      updates.push('status = ?');
+      values.push(normalizedIsActive ? 'active' : 'inactive');
+    }
+    if (normalizedStatus !== undefined && normalizedIsActive === undefined && columns.has('is_active')) {
+      updates.push('is_active = ?');
+      values.push(normalizedStatus === 'active' ? 1 : 0);
     }
     if (username !== undefined) {
       if (columns.has('username')) {
@@ -317,6 +349,7 @@ const updateUser = async (req, res, next) => {
           u.created_at,
           u.role_id,
           ${columns.has('is_active') ? 'u.is_active' : 'NULL AS is_active'},
+          ${columns.has('status') ? 'u.status' : 'NULL AS status'},
           r.role_name,
           COALESCE(bk.total_bookings, 0) AS bookings_count,
           COALESCE(rv.total_reviews, 0) AS reviews_count

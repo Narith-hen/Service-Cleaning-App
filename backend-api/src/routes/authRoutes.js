@@ -22,7 +22,13 @@ const authenticate = (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
     const decoded = verifyToken(token);
-    req.user = { user_id: decoded.user_id, email: decoded.email };
+    req.user = {
+      user_id: decoded.user_id,
+      email: decoded.email,
+      role_id: decoded.role_id,
+      role: decoded.role,
+      account_source: decoded.account_source || "users",
+    };
     return next();
   } catch (error) {
     return res.status(401).json({

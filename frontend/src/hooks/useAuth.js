@@ -63,7 +63,7 @@ const normalizeUserData = (payload = {}, previous = null) => {
       payload.role ||
       payload.role_name ||
       previous?.role ||
-      (roleId === 1 ? 'admin' : roleId === 3 ? 'cleaner' : 'customer')
+      (payload.role_id === 1 ? 'admin' : payload.role_id === 2 ? 'cleaner' : 'customer')
     ).toLowerCase(),
   };
 };
@@ -196,7 +196,9 @@ export const useAuth = () => {
       }
 
       setUser(normalizedUser);
-      persistUser(normalizedUser);
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+
       return { success: true, user: normalizedUser };
     } catch (error) {
       // Mock fallback for local testing without API
@@ -211,7 +213,8 @@ export const useAuth = () => {
 
       if (userToLogin && password === 'password123') {
         setUser(userToLogin);
-        persistUser(userToLogin);
+        localStorage.setItem('user', JSON.stringify(userToLogin));
+        window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
         return { success: true, user: userToLogin };
       }
 
@@ -233,7 +236,8 @@ export const useAuth = () => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
       setUser(null);
-      persistUser(null);
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
       return { success: true };
     } catch (logoutError) {
       setError(logoutError.message);
@@ -302,7 +306,9 @@ export const useAuth = () => {
 
       const updatedUser = normalizeUserData(result.data || {}, user);
       setUser(updatedUser);
-      persistUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+      
       return { success: true, user: updatedUser };
     } catch (updateError) {
       setError(updateError.message);

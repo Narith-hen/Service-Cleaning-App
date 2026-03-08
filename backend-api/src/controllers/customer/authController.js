@@ -69,6 +69,55 @@ const buildProfileResponse = async (userId) => {
   };
 };
 
+const buildCleanerProfileResponse = async (cleanerId) => {
+  const promiseDb = db.promise();
+  const [rows] = await promiseDb.query(
+    `
+      SELECT
+        cp.cleaner_id,
+        cp.cleaner_code,
+        cp.company_name,
+        cp.company_email,
+        cp.phone_number,
+        cp.profile_image,
+        cp.total_jobs,
+        cp.created_at,
+        cp.role_id,
+        r.role_name
+      FROM cleaner_profile cp
+      LEFT JOIN roles r ON r.role_id = cp.role_id
+      WHERE cp.cleaner_id = ?
+      LIMIT 1
+    `,
+    [cleanerId]
+  );
+
+  const cleaner = rows?.[0];
+  if (!cleaner) return null;
+
+  const createdAt = cleaner.created_at ? new Date(cleaner.created_at) : null;
+  const joinDate = createdAt
+    ? createdAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : null;
+
+  return {
+    user_id: cleaner.cleaner_id,
+    user_code: cleaner.cleaner_code || null,
+    name: cleaner.company_name || null,
+    first_name: cleaner.company_name || null,
+    last_name: null,
+    email: cleaner.company_email || null,
+    phone_number: cleaner.phone_number || null,
+    avatar: cleaner.profile_image || null,
+    joinDate,
+    totalBookings: Number(cleaner.total_jobs || 0),
+    totalSpent: 0,
+    role_id: Number(cleaner.role_id || 2),
+    role: String(cleaner.role_name || 'cleaner').toLowerCase(),
+    account_source: 'cleaner_profile',
+  };
+};
+
 exports.register = async (req, res) => {
   const first_name = req.body.first_name || req.body.firstName;
   const last_name = req.body.last_name || req.body.lastName;
@@ -185,11 +234,35 @@ exports.login = async (req, res) => {
     WHERE u.email = ? OR u.user_code = ?
     LIMIT 1
   `;
+  const findCleanerSql = `
+    SELECT
+      cp.cleaner_id AS user_id,
+      cp.cleaner_code AS user_code,
+      cp.company_name AS first_name,
+      NULL AS last_name,
+      cp.company_email AS email,
+      cp.phone_number,
+      cp.profile_image AS avatar,
+      cp.password,
+      cp.role_id,
+      r.role_name
+    FROM cleaner_profile cp
+    LEFT JOIN roles r ON r.role_id = cp.role_id
+    WHERE cp.company_email = ? OR cp.cleaner_code = ?
+    LIMIT 1
+  `;
 
   try {
     const promiseDb = db.promise();
-    const [rows] = await promiseDb.query(findUserSql, [loginId, loginId]);
-    const user = rows?.[0];
+    let accountSource = "users";
+    let [rows] = await promiseDb.query(findUserSql, [loginId, loginId]);
+    let user = rows?.[0];
+
+    if (!user) {
+      accountSource = "cleaner_profile";
+      [rows] = await promiseDb.query(findCleanerSql, [loginId, loginId]);
+      user = rows?.[0];
+    }
 
     if (!user) {
       return res.status(401).json({
@@ -212,10 +285,17 @@ exports.login = async (req, res) => {
       if (isPasswordValid) {
         const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
         const upgradedHash = await bcrypt.hash(password, saltRounds);
-        await promiseDb.query(
-          "UPDATE users SET password = ? WHERE user_id = ?",
-          [upgradedHash, user.user_id]
-        );
+        if (accountSource === "users") {
+          await promiseDb.query(
+            "UPDATE users SET password = ? WHERE user_id = ?",
+            [upgradedHash, user.user_id]
+          );
+        } else {
+          await promiseDb.query(
+            "UPDATE cleaner_profile SET password = ? WHERE cleaner_id = ?",
+            [upgradedHash, user.user_id]
+          );
+        }
       }
     }
 
@@ -226,8 +306,16 @@ exports.login = async (req, res) => {
       });
     }
 
-    const role = String(user.role_name || "").toLowerCase() || "customer";
-    const token = generateToken({ user_id: user.user_id, email: user.email });
+    const role = String(
+      user.role_name || (Number(user.role_id) === 1 ? "admin" : Number(user.role_id) === 2 ? "cleaner" : "customer")
+    ).toLowerCase();
+    const token = generateToken({
+      user_id: user.user_id,
+      email: user.email,
+      role_id: user.role_id,
+      role,
+      account_source: accountSource,
+    });
 
     return res.status(200).json({
       success: true,
@@ -239,9 +327,11 @@ exports.login = async (req, res) => {
         last_name: user.last_name,
         email: user.email,
         phone_number: user.phone_number,
+        avatar: user.avatar || null,
         role_id: user.role_id,
         token,
         role,
+        account_source: accountSource,
       },
     });
   } catch (err) {
@@ -259,6 +349,7 @@ exports.login = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user?.user_id;
+    const accountSource = String(req.user?.account_source || '').trim().toLowerCase();
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -266,7 +357,16 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    const profile = await buildProfileResponse(userId);
+    let profile = null;
+    if (accountSource === 'cleaner_profile') {
+      profile = await buildCleanerProfileResponse(userId);
+    } else {
+      profile = await buildProfileResponse(userId);
+      if (!profile) {
+        profile = await buildCleanerProfileResponse(userId);
+      }
+    }
+
     if (!profile) {
       return res.status(404).json({
         success: false,

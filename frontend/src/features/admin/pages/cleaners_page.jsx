@@ -1,24 +1,36 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CreditCardOutlined,
   DeleteOutlined,
   EditOutlined,
-  EnvironmentOutlined,
   EyeOutlined,
-  FilterOutlined,
+  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
   StarFilled,
   TeamOutlined,
   ThunderboltOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
-import { Button, Form, Input, Modal, Select, notification } from 'antd';
+import { Button, Dropdown, Form, Input, Modal, Select, notification } from 'antd';
+import { cleanerService } from '../services/cleanerService';
+import { serviceService } from '../services/serviceService';
 import '../../../styles/admin/cleaners_page.css';
-import { starterCleaners } from '../data/cleaners_data';
 
 const statusFilters = ['All', 'Active', 'Pending', 'Suspended', 'Inactive'];
 const ratingFilters = ['All', '4.5+', '4.0+', '3.5+'];
+const defaultServiceTypeOptions = [
+  { label: 'Home Cleaning', value: 'Home Cleaning' },
+  { label: 'Office Cleaning', value: 'Office Cleaning' },
+  { label: 'Deep Cleaning', value: 'Deep Cleaning' },
+  { label: 'Move In / Move Out', value: 'Move In / Move Out' },
+  { label: 'Post Construction', value: 'Post Construction' },
+];
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${apiHost}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
 
 const getInitials = (fullName) => {
   const [first = '', last = ''] = fullName.split(' ');
@@ -26,10 +38,75 @@ const getInitials = (fullName) => {
 };
 
 const getStatusClass = (status) => status.toLowerCase().replace(/\s+/g, '-');
+const normalizeStatus = (status) => {
+  const value = String(status || '').trim().toLowerCase();
+  if (!value) return 'Active';
+  if (value === 'pending') return 'Pending';
+  if (value === 'suspended') return 'Suspended';
+  if (value === 'inactive') return 'Inactive';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const extractCleanerRows = (response) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.cleaners)) return response.cleaners;
+  if (Array.isArray(response?.rows)) return response.rows;
+  if (Array.isArray(response?.result)) return response.result;
+  if (Array.isArray(response?.payload)) return response.payload;
+  if (Array.isArray(response?.data?.data)) return response.data.data;
+  return [];
+};
+
+const toNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const toRating = (value, fallback = 3) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const mapCleanerFromApi = (item) => ({
+  id: String(
+    item.id
+    || item.cleanerCode
+    || item.cleaner_code
+    || item.cleaner_id
+    || item.user_id
+    || item.companyEmail
+    || item.company_email
+    || `ROW-${item.phone || item.phone_number || 'UNKNOWN'}`
+  ),
+  cleanerCode: item.cleaner_code || item.cleanerCode || null,
+  name: item.name || item.companyName || item.company_name || 'Cleaner',
+  email: item.email || item.companyEmail || item.company_email || '',
+  phone: item.phone || item.phone_number || '',
+  profileImage: toAbsoluteImageUrl(item.profileImage || item.profile_image || item.avatar || ''),
+  companyName: item.companyName || item.company_name || item.name || '',
+  companyEmail: item.companyEmail || item.company_email || item.email || '',
+  teamMember: item.teamMember || item.team_member || '',
+  serviceType: item.serviceType || item.service_type || '',
+  address: item.address || '',
+  latitude: item.latitude || '',
+  longitude: item.longitude || '',
+  status: normalizeStatus(item.status),
+  totalJobs: toNumber(item.totalJobs ?? item.total_jobs),
+  rating: toRating(item.rating ?? item.avg_rating, 3),
+  reviews: toNumber(item.reviews ?? item.total_reviews),
+  joiningDate: item.joiningDate
+    || (item.created_at || item.createdAt
+      ? new Date(item.created_at || item.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+      : '-'),
+});
 
 const CleanersPage = () => {
   const [notificationApi, contextHolder] = notification.useNotification();
-  const [cleaners, setCleaners] = useState(starterCleaners);
+  const [cleaners, setCleaners] = useState([]);
+  const [cleanersLoading, setCleanersLoading] = useState(false);
+  const [serviceTypeOptions, setServiceTypeOptions] = useState(defaultServiceTypeOptions);
+  const [serviceOptionsLoading, setServiceOptionsLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [ratingFilter, setRatingFilter] = useState('All');
@@ -38,15 +115,12 @@ const CleanersPage = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
   const [editingCleaner, setEditingCleaner] = useState(null);
   const [viewingCleaner, setViewingCleaner] = useState(null);
-  const [formSection, setFormSection] = useState('account');
-  const [viewSection, setViewSection] = useState('account');
+  const [selectedProfileFile, setSelectedProfileFile] = useState(null);
+  const [profilePreview, setProfilePreview] = useState('');
   const [form] = Form.useForm();
-  const profileImageValue = Form.useWatch('profileImage', form);
-  const nameValue = Form.useWatch('name', form);
+  const nameValue = Form.useWatch('companyName', form);
   const profileFileInputRef = useRef(null);
   const deleteTimeoutsRef = useRef(new Map());
   const deleteIntervalsRef = useRef(new Map());
@@ -64,9 +138,68 @@ const CleanersPage = () => {
     };
   }, []);
 
+  const fetchCleaners = useCallback(async ({ silent = false, clearOnError = true } = {}) => {
+    setCleanersLoading(true);
+    try {
+      const response = await cleanerService.getCleaners({ page: 1, limit: 200 });
+      const rows = extractCleanerRows(response);
+      setCleaners(rows.map(mapCleanerFromApi));
+      return true;
+    } catch (error) {
+      if (clearOnError) {
+        setCleaners([]);
+      }
+      if (!silent) {
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Failed to load cleaners',
+          description: error?.response?.data?.message || 'Could not fetch cleaner data from backend database.',
+          duration: 3,
+        });
+      }
+      return false;
+    } finally {
+      setCleanersLoading(false);
+    }
+  }, [notificationApi]);
+
+  useEffect(() => {
+    fetchCleaners();
+  }, [fetchCleaners]);
+
+  useEffect(() => {
+    const loadServiceTypes = async () => {
+      setServiceOptionsLoading(true);
+      try {
+        const response = await serviceService.getServices({ page: 1, limit: 200 });
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        const apiOptions = rows
+          .map((item) => String(item?.name || '').trim())
+          .filter(Boolean)
+          .map((name) => ({ label: name, value: name }));
+
+        const uniqueOptions = apiOptions.filter(
+          (option, index, list) => list.findIndex((item) => item.value === option.value) === index
+        );
+
+        if (uniqueOptions.length > 0) {
+          setServiceTypeOptions(uniqueOptions);
+          return;
+        }
+        setServiceTypeOptions(defaultServiceTypeOptions);
+      } catch {
+        setServiceTypeOptions(defaultServiceTypeOptions);
+      } finally {
+        setServiceOptionsLoading(false);
+      }
+    };
+
+    loadServiceTypes();
+  }, []);
+
   const filteredCleaners = useMemo(() => {
     return cleaners.filter((cleaner) => {
-      const target = `${cleaner.id} ${cleaner.name} ${cleaner.email}`.toLowerCase();
+      const target = `${cleaner.cleanerCode || ''} ${cleaner.name} ${cleaner.companyName || ''} ${cleaner.email} ${cleaner.phone || ''}`.toLowerCase();
       const bySearch = target.includes(searchText.toLowerCase());
       const byStatus = statusFilter === 'All' || cleaner.status === statusFilter;
       const byRating = ratingFilter === 'All'
@@ -88,77 +221,141 @@ const CleanersPage = () => {
 
   const openAddModal = () => {
     setEditingCleaner(null);
-    setFormSection('account');
+    setSelectedProfileFile(null);
+    setProfilePreview('');
     form.resetFields();
     form.setFieldsValue({
       status: 'Pending',
       profileImage: '',
-      gender: 'Male',
-      experienceYears: 0,
+      serviceType: undefined,
     });
     setIsFormOpen(true);
   };
 
   const openEditModal = (cleaner) => {
-    setFormSection('account');
     setEditingCleaner(cleaner);
-    form.setFieldsValue(cleaner);
+    setSelectedProfileFile(null);
+    setProfilePreview(cleaner.profileImage || '');
+    form.setFieldsValue({
+      ...cleaner,
+      companyName: cleaner.companyName || cleaner.name,
+      companyEmail: cleaner.companyEmail || cleaner.email,
+      teamMember: cleaner.teamMember || '',
+      serviceType: cleaner.serviceType || undefined,
+      status: cleaner.status || 'Active',
+      latitude: cleaner.latitude ?? '',
+      longitude: cleaner.longitude ?? '',
+      password: '',
+      confirmPassword: '',
+    });
     setIsFormOpen(true);
   };
 
   const handleSaveCleaner = async () => {
-    const values = await form.validateFields();
+    try {
+      const values = await form.validateFields();
+      if (!editingCleaner && !selectedProfileFile) {
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Profile image required',
+          description: 'Please upload a profile image before creating cleaner.',
+        });
+        return;
+      }
 
-    if (editingCleaner) {
-      setCleaners((prev) => prev.map((cleaner) => (
-        cleaner.id === editingCleaner.id ? { ...cleaner, ...values } : cleaner
-      )));
-      notificationApi.success({
-        placement: 'bottomRight',
-        message: 'Cleaner updated successfully',
-        duration: 2,
-      });
-    } else {
-      const newCleaner = {
-        ...values,
-        id: `CLN-${Math.floor(Math.random() * 9000 + 1000)}`,
-        totalJobs: 0,
-        rating: 0,
-        reviews: 0,
-        joiningDate: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      };
-      setCleaners((prev) => [...prev, newCleaner]);
-      notificationApi.success({
-        placement: 'bottomRight',
-        message: 'Successfully added new cleaner',
-        description: `${newCleaner.name} has been added to the cleaner list.`,
-        btn: (
-          <Button
-            type="link"
-            size="small"
-            style={{ paddingInline: 0 }}
-            onClick={() => {
-              notificationApi.destroy();
-              setEditingCleaner(null);
-              setFormSection('account');
-              form.resetFields();
-              form.setFieldsValue({
-                status: 'Pending',
-                profileImage: '',
-                gender: 'Male',
-                experienceYears: 0,
-              });
-              setIsFormOpen(true);
-            }}
-          >
-            Add more
-          </Button>
-        ),
-      });
+      if (editingCleaner) {
+        const updatePayload = {
+          companyName: values.companyName,
+          companyEmail: values.companyEmail,
+          phoneNumber: values.phone,
+          teamMember: values.teamMember,
+          serviceType: values.serviceType,
+          address: values.address,
+          latitude: values.latitude,
+          longitude: values.longitude,
+          status: values.status,
+          profileFile: selectedProfileFile,
+        };
+        if (values.password) {
+          updatePayload.password = values.password;
+        }
+
+        const response = await cleanerService.updateCleaner(editingCleaner.id, updatePayload);
+        const updatedCleaner = response?.data ? mapCleanerFromApi(response.data) : null;
+        if (updatedCleaner) {
+          setCleaners((prev) => prev.map((cleaner) => (
+            cleaner.id === editingCleaner.id ? updatedCleaner : cleaner
+          )));
+        }
+        await fetchCleaners({ silent: true, clearOnError: false });
+        notificationApi.success({
+          placement: 'bottomRight',
+          message: 'Cleaner updated successfully',
+          duration: 2,
+        });
+      } else {
+        const createPayload = {
+          companyName: values.companyName,
+          companyEmail: values.companyEmail,
+          phoneNumber: values.phone,
+          teamMember: values.teamMember,
+          serviceType: values.serviceType,
+          address: values.address,
+          latitude: values.latitude,
+          longitude: values.longitude,
+          profileFile: selectedProfileFile,
+          password: values.password,
+        };
+
+        const response = await cleanerService.createCleaner(createPayload);
+        const createdCleaner = response?.data ? mapCleanerFromApi(response.data) : null;
+        if (createdCleaner) {
+          setCleaners((prev) => [createdCleaner, ...prev]);
+        }
+        await fetchCleaners({ silent: true, clearOnError: false });
+
+        notificationApi.success({
+          placement: 'bottomRight',
+          message: 'Successfully added new cleaner',
+          description: `${values.companyName} has been added to the cleaner list.`,
+          btn: (
+            <Button
+              type="link"
+              size="small"
+              style={{ paddingInline: 0 }}
+              onClick={() => {
+                notificationApi.destroy();
+                setEditingCleaner(null);
+                setSelectedProfileFile(null);
+                setProfilePreview('');
+                form.resetFields();
+                form.setFieldsValue({
+                  profileImage: '',
+                  serviceType: undefined,
+                });
+                setIsFormOpen(true);
+              }}
+            >
+              Add more
+            </Button>
+          ),
+        });
+      }
+
+      setIsFormOpen(false);
+      setSelectedProfileFile(null);
+      setProfilePreview('');
+      form.resetFields();
+    } catch (error) {
+      const serverMessage = error?.response?.data?.message;
+      if (serverMessage) {
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Failed to save cleaner',
+          description: serverMessage,
+        });
+      }
     }
-
-    setIsFormOpen(false);
-    form.resetFields();
   };
 
   const handleDeleteCleaner = (cleaner) => {
@@ -287,8 +484,32 @@ const CleanersPage = () => {
     });
   };
 
+  const handleBlockToggle = async (cleaner) => {
+    const nextStatus = cleaner.status === 'Inactive' ? 'Active' : 'Inactive';
+    try {
+      const response = await cleanerService.updateCleaner(cleaner.id, { status: nextStatus });
+      const updatedCleaner = response?.data ? mapCleanerFromApi(response.data) : null;
+
+      if (updatedCleaner) {
+        setCleaners((prev) => prev.map((item) => (
+          item.id === cleaner.id ? updatedCleaner : item
+        )));
+      } else {
+        setCleaners((prev) => prev.map((item) => (
+          item.id === cleaner.id ? { ...item, status: nextStatus } : item
+        )));
+      }
+    } catch (error) {
+      notificationApi.error({
+        placement: 'bottomRight',
+        message: 'Failed to update cleaner status',
+        description: error?.response?.data?.message || 'Could not save status change to database.',
+        duration: 3,
+      });
+    }
+  };
+
   const openViewModal = (cleaner) => {
-    setViewSection('account');
     setViewingCleaner(cleaner);
     setIsViewOpen(true);
   };
@@ -308,7 +529,8 @@ const CleanersPage = () => {
     const reader = new FileReader();
     reader.onload = () => {
       form.setFieldsValue({ profileImage: reader.result });
-      setPreviewImage(reader.result);
+      setSelectedProfileFile(file);
+      setProfilePreview(String(reader.result || ''));
     };
     reader.readAsDataURL(file);
 
@@ -333,53 +555,55 @@ const CleanersPage = () => {
           <div className="kpi-icon tone-blue"><TeamOutlined /></div>
           <span className="kpi-label">Total Cleaners</span>
           <h3>{totalCleaners}</h3>
-          <span className="kpi-note positive">+4 new this week</span>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-green"><ThunderboltOutlined /></div>
           <span className="kpi-label">Active Now</span>
           <h3>{activeCount}</h3>
-          <span className="kpi-note neutral">Currently on duty</span>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-amber"><StarFilled /></div>
           <span className="kpi-label">Average Rating</span>
           <h3>{averageRating ? averageRating.toFixed(1) : 'N/A'}</h3>
-          <span className="kpi-note positive">Top tier performance</span>
         </article>
       </section>
 
-      <section className="cleaners-filter-row">
-        <div className="search-box">
-          <SearchOutlined />
-          <input
-            type="text"
-            placeholder="Search by name, ID or email..."
-            value={searchText}
-            onChange={(event) => {
-              setSearchText(event.target.value);
+      <section className="cleaners-list-header">
+        <div className="section-copy">
+          <h2 className="cleaners-section-title roboto roboto-700">Cleaner List</h2>
+        </div>
+        <div className="cleaners-header-actions">
+          <div className="cleaners-search-box">
+            <SearchOutlined />
+            <input
+              type="text"
+              placeholder="Search by name, ID or email..."
+              value={searchText}
+              onChange={(event) => {
+                setSearchText(event.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onChange={(value) => {
+              setStatusFilter(value);
               setCurrentPage(1);
             }}
+            options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
+            className="cleaners-filter-select"
+          />
+          <Select
+            value={ratingFilter}
+            onChange={(value) => {
+              setRatingFilter(value);
+              setCurrentPage(1);
+            }}
+            options={ratingFilters.map((rating) => ({ label: rating === 'All' ? 'Rating' : rating, value: rating }))}
+            className="cleaners-filter-select rating-filter-select"
           />
         </div>
-        <Select
-          value={statusFilter}
-          onChange={(value) => {
-            setStatusFilter(value);
-            setCurrentPage(1);
-          }}
-          options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
-          className="filter-select"
-        />
-        <Select
-          value={ratingFilter}
-          onChange={(value) => {
-            setRatingFilter(value);
-            setCurrentPage(1);
-          }}
-          options={ratingFilters.map((rating) => ({ label: rating === 'All' ? 'Rating' : rating, value: rating }))}
-          className="filter-select"
-        />
       </section>
 
       <section className="cleaners-table-panel">
@@ -388,10 +612,11 @@ const CleanersPage = () => {
             <thead>
               <tr>
                 <th>CLEANER</th>
-                <th>STATUS</th>
-                <th>TOTAL JOBS</th>
-                <th>AVERAGE RATING</th>
-                <th>JOINING DATE</th>
+                <th>COMPANY NAME</th>
+                <th>PHONE NUMBER</th>
+                <th className="jobs-center">TOTAL JOBS</th>
+                <th className="rating-center">AVERAGE RATING</th>
+                <th className="status-center">ACCOUNT STATUS</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
@@ -408,28 +633,29 @@ const CleanersPage = () => {
                             getInitials(cleaner.name)
                           )}
                         </span>
-                        <div>
+                        <div className="cleaner-cell-meta">
                           <strong>{cleaner.name}</strong>
-                          <span>ID: {cleaner.id}</span>
+                          <span className="cleaner-code-line">Cleaner Code: {cleaner.cleanerCode || '-'}</span>
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <span className={`status-tag ${getStatusClass(cleaner.status)}`}>{cleaner.status}</span>
-                    </td>
-                    <td className="number-cell">{cleaner.totalJobs}</td>
-                    <td className="rating-cell">
+                    <td>{cleaner.companyName || cleaner.name || '-'}</td>
+                    <td>{cleaner.phone || '-'}</td>
+                    <td className="number-cell jobs-center">{cleaner.totalJobs}</td>
+                    <td className="rating-center">
                       {cleaner.rating > 0 ? (
-                        <>
+                        <span className="rating-cell">
                           <StarFilled />
                           <span>{cleaner.rating.toFixed(1)}</span>
-                          <small>({cleaner.reviews})</small>
-                        </>
+                          <small>({cleaner.reviews ?? 0})</small>
+                        </span>
                       ) : (
                         <span className="no-rating">N/A</span>
                       )}
                     </td>
-                    <td>{cleaner.joiningDate}</td>
+                    <td className="status-center">
+                      <span className={`status-tag ${getStatusClass(cleaner.status)}`}>{cleaner.status}</span>
+                    </td>
                     <td>
                       <div className="action-group">
                         <button
@@ -462,7 +688,9 @@ const CleanersPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td className="empty" colSpan={6}>No cleaners found for current filters.</td>
+                  <td className="empty" colSpan={7}>
+                    {cleanersLoading ? 'Loading cleaners...' : 'No cleaners found for current filters.'}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -494,7 +722,11 @@ const CleanersPage = () => {
       <Modal
         title={editingCleaner ? 'Edit Cleaner' : 'Add New Cleaner'}
         open={isFormOpen}
-        onCancel={() => setIsFormOpen(false)}
+        onCancel={() => {
+          setIsFormOpen(false);
+          setSelectedProfileFile(null);
+          setProfilePreview('');
+        }}
         onOk={handleSaveCleaner}
         okText={editingCleaner ? 'Update Cleaner' : 'Create Cleaner'}
         width={760}
@@ -503,8 +735,8 @@ const CleanersPage = () => {
           <aside className="cleaner-profile-sidebar">
             <div className="profile-photo-card">
               <span className="avatar preview">
-                {profileImageValue ? (
-                  <img src={profileImageValue} alt={nameValue || 'Cleaner profile'} className="avatar-img" />
+                {profilePreview ? (
+                  <img src={profilePreview} alt={nameValue || 'Cleaner profile'} className="avatar-img" />
                 ) : (
                   getInitials(nameValue || 'Cleaner Profile')
                 )}
@@ -513,18 +745,6 @@ const CleanersPage = () => {
             <label htmlFor="cleaner-profile-file" className="change-photo-btn choose-label">
               Choose Profile
             </label>
-            <button
-              type="button"
-              className="change-photo-btn preview-link"
-              onClick={() => {
-                if (!profileImageValue) return;
-                setPreviewImage(profileImageValue);
-                setIsProfilePreviewOpen(true);
-              }}
-              disabled={!profileImageValue}
-            >
-              Check Profile
-            </button>
             <input
               id="cleaner-profile-file"
               ref={profileFileInputRef}
@@ -533,107 +753,73 @@ const CleanersPage = () => {
               onChange={handleProfileUpload}
               style={{ display: 'none' }}
             />
-            <div className="profile-menu">
-              <button
-                type="button"
-                className={formSection === 'account' ? 'active' : ''}
-                onClick={() => setFormSection('account')}
-              >
-                <UserOutlined />
-                Account Details
-              </button>
-              <button
-                type="button"
-                className={formSection === 'contact' ? 'active' : ''}
-                onClick={() => setFormSection('contact')}
-              >
-                <EnvironmentOutlined />
-                Contact Address
-              </button>
-              <button
-                type="button"
-                className={formSection === 'work' ? 'active' : ''}
-                onClick={() => setFormSection('work')}
-              >
-                <CreditCardOutlined />
-                Work Details
-              </button>
-            </div>
           </aside>
 
           <div className="cleaner-profile-content">
-            <h3>
-              {formSection === 'account' && 'Account Details'}
-              {formSection === 'contact' && 'Contact Address'}
-              {formSection === 'work' && 'Work Details'}
-            </h3>
+            <h3>Create New Team Cleaners</h3>
             <Form form={form} layout="vertical" className="cleaner-form-grid">
-              {formSection === 'account' && (
-                <>
-                  <Form.Item name="name" label="Full Name" rules={[{ required: true, message: 'Please enter cleaner name' }]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Please enter valid email' }]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="dateOfBirth" label="Date of Birth">
-                    <Input type="date" />
-                  </Form.Item>
-                  <Form.Item name="gender" label="Gender">
-                    <Select
-                      options={[
-                        { label: 'Male', value: 'Male' },
-                        { label: 'Female', value: 'Female' },
-                        { label: 'Other', value: 'Other' },
-                      ]}
-                    />
-                  </Form.Item>
-                  <Form.Item name="profileImage" label="Profile Photo URL" className="form-item-full">
-                    <Input placeholder="https://example.com/photo.jpg" />
-                  </Form.Item>
-                  <Form.Item name="bio" label="Bio" className="form-item-full">
-                    <Input.TextArea rows={3} placeholder="Brief cleaner profile..." />
-                  </Form.Item>
-                </>
+              <Form.Item name="companyName" label="Company Name" rules={[{ required: true, message: 'Please enter company name' }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="companyEmail" label="Company Email" rules={[{ required: true, type: 'email', message: 'Please enter valid company email' }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="phone" label="Phone Number" rules={[{ required: true, message: 'Please enter phone number' }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="teamMember" label="Team Member" rules={[{ required: true, message: 'Please enter team member information' }]}>
+                <Input placeholder="e.g. 5 members" />
+              </Form.Item>
+              <Form.Item name="serviceType" label="Service Type" rules={[{ required: true, message: 'Please select service type' }]}>
+                <Select
+                  options={serviceTypeOptions}
+                  loading={serviceOptionsLoading}
+                  placeholder="--select service--"
+                />
+              </Form.Item>
+              {editingCleaner && (
+                <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please select status' }]}>
+                  <Select
+                    options={statusFilters
+                      .filter((status) => status !== 'All')
+                      .map((status) => ({ label: status, value: status }))}
+                  />
+                </Form.Item>
               )}
-
-              {formSection === 'contact' && (
-                <>
-                  <Form.Item name="phone" label="Phone Number" rules={[{ required: true, message: 'Please enter phone number' }]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="city" label="City">
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="address" label="Address" className="form-item-full">
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="emergencyContactName" label="Emergency Contact Name">
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="emergencyContactPhone" label="Emergency Contact Phone">
-                    <Input />
-                  </Form.Item>
-                </>
-              )}
-
-              {formSection === 'work' && (
-                <>
-                  <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please select status' }]}>
-                    <Select
-                      options={[
-                        { label: 'Active', value: 'Active' },
-                        { label: 'Pending', value: 'Pending' },
-                        { label: 'Suspended', value: 'Suspended' },
-                        { label: 'Inactive', value: 'Inactive' },
-                      ]}
-                    />
-                  </Form.Item>
-                  <Form.Item name="experienceYears" label="Experience (Years)">
-                    <Input type="number" min={0} />
-                  </Form.Item>
-                </>
-              )}
+              <Form.Item
+                name="password"
+                label="Password"
+                rules={editingCleaner ? [] : [{ required: true, message: 'Please enter password' }]}
+              >
+                <Input.Password placeholder="Enter password" />
+              </Form.Item>
+              <Form.Item
+                name="confirmPassword"
+                label="Confirm Password"
+                dependencies={['password']}
+                rules={[
+                  ...(editingCleaner ? [] : [{ required: true, message: 'Please confirm password' }]),
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const password = getFieldValue('password');
+                      if (!password && !value) return Promise.resolve();
+                      if (value === password) return Promise.resolve();
+                      return Promise.reject(new Error('Passwords do not match'));
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="Re-enter password" />
+              </Form.Item>
+              <Form.Item name="address" label="Address" className="form-item-full" rules={[{ required: true, message: 'Please enter address' }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="latitude" label="Latitude" rules={[{ required: true, message: 'Please enter latitude' }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="longitude" label="Longitude" rules={[{ required: true, message: 'Please enter longitude' }]}>
+                <Input />
+              </Form.Item>
             </Form>
           </div>
         </div>
@@ -658,93 +844,28 @@ const CleanersPage = () => {
                   )}
                 </span>
               </div>
-              <div className="profile-menu">
-                <button
-                  type="button"
-                  className={viewSection === 'account' ? 'active' : ''}
-                  onClick={() => setViewSection('account')}
-                >
-                  <UserOutlined />
-                  Account Details
-                </button>
-                <button
-                  type="button"
-                  className={viewSection === 'contact' ? 'active' : ''}
-                  onClick={() => setViewSection('contact')}
-                >
-                  <EnvironmentOutlined />
-                  Contact Address
-                </button>
-                <button
-                  type="button"
-                  className={viewSection === 'work' ? 'active' : ''}
-                  onClick={() => setViewSection('work')}
-                >
-                  <CreditCardOutlined />
-                  Work Details
-                </button>
-              </div>
             </aside>
 
             <div className="cleaner-profile-content">
-              <h3>
-                {viewSection === 'account' && 'Account Details'}
-                {viewSection === 'contact' && 'Contact Address'}
-                {viewSection === 'work' && 'Work Details'}
-              </h3>
-
-              {viewSection === 'account' && (
-                <div className="cleaner-view-grid">
-                  <p><strong>Full Name:</strong> {viewingCleaner.name || '-'}</p>
-                  <p><strong>Email:</strong> {viewingCleaner.email || '-'}</p>
-                  <p><strong>Gender:</strong> {viewingCleaner.gender || '-'}</p>
-                  <p><strong>Date of Birth:</strong> {viewingCleaner.dateOfBirth || '-'}</p>
-                  <p><strong>ID:</strong> {viewingCleaner.id || '-'}</p>
-                  <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCleaner.status)}`}>{viewingCleaner.status}</span></p>
-                  <p className="cleaner-bio form-item-full"><strong>Bio:</strong> {viewingCleaner.bio || '-'}</p>
-                </div>
-              )}
-
-              {viewSection === 'contact' && (
-                <div className="cleaner-view-grid">
-                  <p><strong>Phone:</strong> {viewingCleaner.phone || '-'}</p>
-                  <p><strong>City:</strong> {viewingCleaner.city || '-'}</p>
-                  <p><strong>Address:</strong> {viewingCleaner.address || '-'}</p>
-                  <p><strong>Emergency Contact:</strong> {viewingCleaner.emergencyContactName || '-'} ({viewingCleaner.emergencyContactPhone || '-'})</p>
-                </div>
-              )}
-
-              {viewSection === 'work' && (
-                <div className="cleaner-view-grid">
-                  <p><strong>Experience:</strong> {viewingCleaner.experienceYears ?? 0} years</p>
-                  <p><strong>Joining Date:</strong> {viewingCleaner.joiningDate || '-'}</p>
-                  <p><strong>Total Jobs:</strong> {viewingCleaner.totalJobs ?? 0}</p>
-                  <p><strong>Rating:</strong> {viewingCleaner.rating > 0 ? `${viewingCleaner.rating.toFixed(1)} (${viewingCleaner.reviews} reviews)` : 'N/A'}</p>
-                </div>
-              )}
+              <h3>Cleaner Details</h3>
+              <div className="cleaner-view-grid">
+                <p><strong>Company Name:</strong> {viewingCleaner.companyName || viewingCleaner.name || '-'}</p>
+                <p><strong>Company Email:</strong> {viewingCleaner.companyEmail || viewingCleaner.email || '-'}</p>
+                <p><strong>Phone Number:</strong> {viewingCleaner.phone || '-'}</p>
+                <p><strong>Team Member:</strong> {viewingCleaner.teamMember || '-'}</p>
+                <p><strong>Service Type:</strong> {viewingCleaner.serviceType || '-'}</p>
+                <p><strong>Cleaner Code:</strong> {viewingCleaner.cleanerCode || '-'}</p>
+                <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCleaner.status)}`}>{viewingCleaner.status}</span></p>
+                <p><strong>Joining Date:</strong> {viewingCleaner.joiningDate || '-'}</p>
+                <p><strong>Address:</strong> {viewingCleaner.address || '-'}</p>
+                <p><strong>Latitude:</strong> {viewingCleaner.latitude || '-'}</p>
+                <p><strong>Longitude:</strong> {viewingCleaner.longitude || '-'}</p>
+                <p><strong>Total Jobs:</strong> {viewingCleaner.totalJobs ?? 0}</p>
+                <p><strong>Rating:</strong> {viewingCleaner.rating > 0 ? `${viewingCleaner.rating.toFixed(1)} (${viewingCleaner.reviews ?? 0} reviews)` : 'N/A'}</p>
+              </div>
             </div>
           </div>
         )}
-      </Modal>
-
-      <Modal
-        title="Profile Preview"
-        open={isProfilePreviewOpen}
-        onCancel={() => setIsProfilePreviewOpen(false)}
-        footer={null}
-        width={420}
-      >
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          {previewImage ? (
-            <img
-              src={previewImage}
-              alt="Cleaner profile preview"
-              style={{ width: 280, height: 280, objectFit: 'cover', borderRadius: 12 }}
-            />
-          ) : (
-            <span>No profile selected.</span>
-          )}
-        </div>
       </Modal>
     </section>
   );
