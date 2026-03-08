@@ -226,7 +226,7 @@ export default function PublicHomePage() {
     {/* Primary Button */}
     <Link
       to="/auth/register"
-      className="relative inline-block rounded-3xl bg-[#32c753] px-10 py-4 text-base md:text-lg font-extrabold text-[#114a1b] shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
+      className="relative inline-block rounded-3xl bg-[#008000] px-10 py-4 text-base md:text-lg font-extrabold text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
     >
       Book Now - 20% Off First Clean
     </Link>

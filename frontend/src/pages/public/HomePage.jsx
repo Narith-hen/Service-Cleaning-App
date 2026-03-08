@@ -221,7 +221,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/auth/register"
-                className="rounded-xl bg-[#32c753] px-6 py-3 text-sm font-black text-white shadow-[0_0_25px_rgba(50,199,83,0.45)] transition hover:brightness-95"
+                className="rounded-xl bg-[#008000] px-6 py-3 text-sm font-black text-white shadow-[0_0_25px_rgba(0,128,0,0.45)] transition hover:brightness-95"
               >
                 Book Now - 20% Off First Clean
               </Link>
