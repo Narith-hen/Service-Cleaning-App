@@ -8,7 +8,7 @@ import shopImage from "../../assets/shop.png";
 import moveImage from "../../assets/move.png";
 import proImage from "../../assets/pro.png";
 
-export default function ServicesPage({ embedded = false }) {
+export default function ServicesPage({ embedded = false, darkMode = false }) {
   const services = [
     {
       title: "Home Cleaning",
@@ -49,14 +49,14 @@ export default function ServicesPage({ embedded = false }) {
   ];
 
   return (
-    <div>
+    <div className={darkMode ? "bg-[#0b1220] text-slate-100" : "bg-[#f2f4f3] text-slate-800"}>
       {!embedded && <Navbar />}
 
       <div className="max-w-6xl mx-auto py-20 px-6">
-        <h2 className="text-4xl font-black text-center mb-12">
+        <h2 className={`text-4xl font-black text-center mb-12 ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
           OUR SERVICES
         </h2>
-        <p className="mx-auto mb-12 max-w-2xl text-center text-gray-500">
+        <p className={`mx-auto mb-12 max-w-2xl text-center ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
           Professional cleaning packages with modern service quality. Hover cards to preview
           the interactive layout.
         </p>
@@ -65,7 +65,9 @@ export default function ServicesPage({ embedded = false }) {
           {services.map((service, index) => (
             <div
               key={service.title}
-              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#32c753]/20"
+              className={`group overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#32c753]/20 ${
+                darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
+              }`}
             >
               <div className="relative overflow-hidden">
                 <img
@@ -80,13 +82,15 @@ export default function ServicesPage({ embedded = false }) {
               </div>
 
               <div className="p-7">
-                <h3 className="mb-3 text-xl font-extrabold text-slate-900 transition-colors duration-300 group-hover:text-[#32c753]">
+                <h3 className={`mb-3 text-xl font-extrabold transition-colors duration-300 group-hover:text-[#32c753] ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
                   {service.title}
                 </h3>
-                <p className="text-gray-500">{service.description}</p>
+                <p className={darkMode ? "text-slate-300" : "text-gray-500"}>{service.description}</p>
                 <Link
                   to="/auth/register"
-                  className="mt-6 inline-flex rounded-lg border border-[#32c753] px-4 py-2 text-sm font-bold text-[#32c753] transition-all duration-300 hover:bg-[#32c753] hover:text-white"
+                  className={`mt-6 inline-flex rounded-lg border border-[#32c753] px-4 py-2 text-sm font-bold transition-all duration-300 hover:bg-[#32c753] hover:text-white ${
+                    darkMode ? "text-[#7ce892]" : "text-[#32c753]"
+                  }`}
                 >
                   Book Service
                 </Link>
