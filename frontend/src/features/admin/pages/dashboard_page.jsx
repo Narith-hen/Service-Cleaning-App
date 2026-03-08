@@ -40,28 +40,28 @@ const DashboardPage = () => {
 
   const kpiCards = [
     {
-      title: 'Total Bookings',
+      title: 'TOTAL BOOKINGS',
       value: String(totalBookings),
       icon: <CalendarOutlined />,
       tone: 'blue',
       subtitle: 'Current booking queue',
     },
     {
-      title: 'Active Cleaners',
+      title: 'ACTIVE CLEANERS',
       value: String(activeCleanersCount),
       icon: <TeamOutlined />,
       tone: 'green',
       subtitle: '2 currently on-site',
     },
     {
-      title: 'Monthly Revenue',
+      title: 'MONTHLY REVENUE',
       value: `$${monthlyRevenue.toFixed(2)}`,
       icon: <DollarOutlined />,
       tone: 'amber',
       subtitle: `Revenue from ${totalBookings} jobs`,
     },
     {
-      title: 'Customer Complaints',
+      title: 'CUSTOMER COMPLAINTS',
       value: '5',
       icon: <ClockCircleOutlined />,
       tone: 'red',

@@ -369,24 +369,24 @@ const ServicesPage = () => {
 
       <section className="services-kpi-grid">
         <article className="services-kpi-card">
-          <div className="services-kpi-icon tone-blue">
+          <div className="kpi-icon tone-blue">
             <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
           </div>
-          <span className="services-kpi-label">TOTAL SERVICES</span>
+          <span className="kpi-label">TOTAL SERVICES</span>
           <h3>{totalServices}</h3>
         </article>
         <article className="services-kpi-card">
-          <div className="services-kpi-icon tone-green">
+          <div className="kpi-icon tone-green">
             <i className="bi bi-check-circle" aria-hidden="true" />
           </div>
-          <span className="services-kpi-label">ACTIVE SERVICES</span>
+          <span className="kpi-label">ACTIVE SERVICES</span>
           <h3>{activeServices}</h3>
         </article>
         <article className="services-kpi-card">
-          <div className="services-kpi-icon tone-rose">
+          <div className="kpi-icon tone-rose">
             <i className="bi bi-x-circle" aria-hidden="true" />
           </div>
-          <span className="services-kpi-label">INACTIVE SERVICES</span>
+          <span className="kpi-label">INACTIVE SERVICES</span>
           <h3>{inactiveServices}</h3>
         </article>
       </section>
@@ -423,9 +423,6 @@ const ServicesPage = () => {
           className="services-filter-select"
           popupClassName="service-filter-dropdown"
         />
-        <button type="button" className="services-compact-filter-btn" aria-label="more filters">
-          <FilterOutlined />
-        </button>
       </section>
 
       <div className="services-table-wrap">

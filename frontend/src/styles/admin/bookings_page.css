@@ -468,34 +468,19 @@
   color: #ffffff;
 }
 
-.plain-icon-btn.action-view {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.plain-icon-btn.action-view:hover {
-  background: #0ea5e9;
-  color: #ffffff;
-}
-
-.plain-icon-btn.action-edit {
-  background: #ede9fe;
-  color: #6d28d9;
-}
-
-.plain-icon-btn.action-edit:hover {
-  background: #8b5cf6;
-  color: #ffffff;
-}
-
-.plain-icon-btn.action-delete {
+.plain-icon-btn.action-cancel {
   background: #fee2e2;
   color: #b91c1c;
 }
 
-.plain-icon-btn.action-delete:hover {
+.plain-icon-btn.action-cancel:hover {
   background: #ef4444;
   color: #ffffff;
+}
+
+.no-action {
+  color: var(--bookings-faint);
+  font-size: 14px;
 }
 
 .empty-row {

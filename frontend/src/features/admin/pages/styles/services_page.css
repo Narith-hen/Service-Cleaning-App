@@ -42,15 +42,55 @@
 .services-kpi-card {
   background: var(--panel-bg);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 18px;
+  border-radius: 8px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
+  gap: 6px;
 }
 
+.admin-services-page .kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-services-page .kpi-icon .bi {
+  font-size: 15px;
+}
+
+.admin-services-page .kpi-icon.tone-blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.admin-services-page .kpi-icon.tone-green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.admin-services-page .kpi-icon.tone-amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.admin-services-page .kpi-icon.tone-rose {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.admin-services-page .kpi-label {
+  margin-top: 8px;
+  color: var(--text-sub);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+/* legacy class kept for compatibility */
 .services-kpi-icon {
   width: 44px;
   height: 44px;
@@ -79,13 +119,6 @@
 .services-kpi-icon.tone-rose {
   background: #ffe4e6;
   color: #e11d48;
-}
-
-.services-kpi-label {
-  color: var(--text-sub);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  font-weight: 700;
 }
 
 .services-kpi-card h3 {

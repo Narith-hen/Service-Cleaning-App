@@ -3,14 +3,14 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
-  MoreOutlined,
+  FilterOutlined,
   PlusOutlined,
   SearchOutlined,
   StarFilled,
   TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Form, Input, Modal, Select, notification } from 'antd';
+import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import { cleanerService } from '../services/cleanerService';
 import { serviceService } from '../services/serviceService';
 import '../../../styles/admin/cleaners_page.css';
@@ -553,57 +553,52 @@ const CleanersPage = () => {
       <section className="cleaners-kpi-grid">
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-blue"><TeamOutlined /></div>
-          <span className="kpi-label">Total Cleaners</span>
+          <span className="kpi-label">TOTAL CLEANERS</span>
           <h3>{totalCleaners}</h3>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-green"><ThunderboltOutlined /></div>
-          <span className="kpi-label">Active Now</span>
+          <span className="kpi-label">ACTIVE NOW</span>
           <h3>{activeCount}</h3>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-amber"><StarFilled /></div>
-          <span className="kpi-label">Average Rating</span>
+          <span className="kpi-label">AVERAGE RATING</span>
           <h3>{averageRating ? averageRating.toFixed(1) : 'N/A'}</h3>
         </article>
       </section>
 
-      <section className="cleaners-list-header">
-        <div className="section-copy">
-          <h2 className="cleaners-section-title roboto roboto-700">Cleaner List</h2>
-        </div>
-        <div className="cleaners-header-actions">
-          <div className="cleaners-search-box">
-            <SearchOutlined />
-            <input
-              type="text"
-              placeholder="Search by name, ID or email..."
-              value={searchText}
-              onChange={(event) => {
-                setSearchText(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-          <Select
-            value={statusFilter}
-            onChange={(value) => {
-              setStatusFilter(value);
+      <section className="cleaners-filter-row">
+        <div className="cleaners-search-box">
+          <SearchOutlined />
+          <input
+            type="text"
+            placeholder="Search by name, ID or email..."
+            value={searchText}
+            onChange={(event) => {
+              setSearchText(event.target.value);
               setCurrentPage(1);
             }}
-            options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
-            className="cleaners-filter-select"
-          />
-          <Select
-            value={ratingFilter}
-            onChange={(value) => {
-              setRatingFilter(value);
-              setCurrentPage(1);
-            }}
-            options={ratingFilters.map((rating) => ({ label: rating === 'All' ? 'Rating' : rating, value: rating }))}
-            className="cleaners-filter-select rating-filter-select"
           />
         </div>
+        <Select
+          value={statusFilter}
+          onChange={(value) => {
+            setStatusFilter(value);
+            setCurrentPage(1);
+          }}
+          options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
+          className="cleaners-filter-select"
+        />
+        <Select
+          value={ratingFilter}
+          onChange={(value) => {
+            setRatingFilter(value);
+            setCurrentPage(1);
+          }}
+          options={ratingFilters.map((rating) => ({ label: rating === 'All' ? 'Rating' : rating, value: rating }))}
+          className="cleaners-filter-select"
+        />
       </section>
 
       <section className="cleaners-table-panel">
