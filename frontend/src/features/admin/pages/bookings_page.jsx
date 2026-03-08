@@ -1,79 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CalendarOutlined,
-  CheckOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  EllipsisOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
   FileTextOutlined,
-  FilterOutlined,
   FrownOutlined,
   SearchOutlined,
   SmileOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import '../../../styles/admin/bookings_page.css';
-
-const bookingRows = [
-  {
-    bookingId: '#BK-82910',
-    customerName: 'Sarah Jenkins',
-    customerEmail: 'sarah.j@example.com',
-    serviceType: 'Deep Cleaning',
-    cleanerName: 'Marc Wilson',
-    date: 'Oct 24, 2023',
-    time: '10:00 AM',
-    amount: 120,
-    status: 'Confirmed',
-  },
-  {
-    bookingId: '#BK-82911',
-    customerName: 'David Miller',
-    customerEmail: 'd.miller@example.com',
-    serviceType: 'Office Setup',
-    cleanerName: 'Unassigned',
-    date: 'Oct 25, 2023',
-    time: '09:00 AM',
-    amount: 350,
-    status: 'Pending',
-    pendingStartedAt: Date.now() - 8 * 60 * 1000,
-  },
-  {
-    bookingId: '#BK-82912',
-    customerName: 'Emma Thompson',
-    customerEmail: 'emma.t@example.com',
-    serviceType: 'Standard',
-    cleanerName: 'Linda Key',
-    date: 'Oct 24, 2023',
-    time: '02:00 PM',
-    amount: 85,
-    status: 'In Progress',
-    inProgressStartedAt: Date.now() - 22 * 60 * 1000,
-  },
-  {
-    bookingId: '#BK-82913',
-    customerName: 'Michael Brown',
-    customerEmail: 'm.brown@example.com',
-    serviceType: 'Standard',
-    cleanerName: 'Marc Wilson',
-    date: 'Oct 23, 2023',
-    time: '11:30 AM',
-    amount: 85,
-    status: 'Completed',
-  },
-  {
-    bookingId: '#BK-82914',
-    customerName: 'Robert King',
-    customerEmail: 'r.king@example.com',
-    serviceType: 'Window Washing',
-    cleanerName: 'Linda Key',
-    date: 'Oct 23, 2023',
-    time: '01:00 PM',
-    amount: 150,
-    status: 'Cancelled',
-  },
-];
+import { bookingRows } from '../data/bookings_data';
 
 const statusOptions = ['All', 'Confirmed', 'Pending', 'In Progress', 'Completed', 'Cancelled'];
 const serviceOptions = ['All', 'Deep Cleaning', 'Office Setup', 'Standard', 'Window Washing'];
@@ -218,21 +159,21 @@ const BookingsPage = () => {
       <section className="admin-bookings-kpi-grid">
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-blue"><FileTextOutlined /></div>
-          <span className="kpi-label">TOTAL BOOKINGS</span>
-          <h3>1,240</h3>
-          <span className="kpi-note positive">+12% from last month</span>
+          <span className="kpi-label">Total Bookings</span>
+          <h3>5</h3>
+          <span className="kpi-note positive">+3 this month</span>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-green"><SyncOutlined /></div>
-          <span className="kpi-label">ONGOING NOW</span>
-          <h3>24</h3>
+          <span className="kpi-label">Ongoing Now</span>
+          <h3>3</h3>
           <span className="kpi-note neutral">Active service sessions</span>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-rose"><CloseCircleOutlined /></div>
-          <span className="kpi-label">CANCELLATION RATE</span>
-          <h3>1.8%</h3>
-          <span className="kpi-note negative">-0.5% improvement</span>
+          <span className="kpi-label">Cancellation Rate</span>
+          <h3>1</h3>
+          <span className="kpi-note negative">0% improvement</span>
         </article>
       </section>
 
@@ -277,15 +218,6 @@ const BookingsPage = () => {
             </option>
           ))}
         </select>
-
-        <button type="button" className="date-range-btn">
-          <CalendarOutlined />
-          Date Range
-        </button>
-
-        <button type="button" className="compact-filter-btn" aria-label="More filters">
-          <FilterOutlined />
-        </button>
       </section>
 
       <section className="admin-bookings-table-panel">
@@ -355,9 +287,32 @@ const BookingsPage = () => {
                       )}
                     </td>
                     <td>
-                      <button type="button" className="row-action-btn" aria-label={`Actions for ${row.bookingId}`}>
-                        <EllipsisOutlined />
-                      </button>
+                      <div className="action-group">
+                        <button
+                          className="plain-icon-btn action-view"
+                          title="View booking"
+                          type="button"
+                          aria-label={`View ${row.bookingId}`}
+                        >
+                          <EyeOutlined />
+                        </button>
+                        <button
+                          className="plain-icon-btn action-edit"
+                          title="Edit booking"
+                          type="button"
+                          aria-label={`Edit ${row.bookingId}`}
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          className="plain-icon-btn action-delete"
+                          title="Delete booking"
+                          type="button"
+                          aria-label={`Delete ${row.bookingId}`}
+                        >
+                          <DeleteOutlined />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -374,7 +329,7 @@ const BookingsPage = () => {
 
         <footer className="bookings-pagination">
           <span>Showing {visibleRows.length} of {filteredRows.length} results</span>
-          <div className="pager-actions">
+          {/* <div className="pager-actions">
             <button
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
@@ -391,7 +346,7 @@ const BookingsPage = () => {
               Next
               <CheckOutlined />
             </button>
-          </div>
+          </div> */}
         </footer>
       </section>
     </section>

@@ -6,100 +6,16 @@ import {
   EnvironmentOutlined,
   EyeOutlined,
   FilterOutlined,
-  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
   StarFilled,
-  StopOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Form, Input, Modal, Select, notification } from 'antd';
+import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import '../../../styles/admin/cleaners_page.css';
-
-const starterCleaners = [
-  {
-    id: 'CLN-9281',
-    name: 'Marc Wilson',
-    email: 'marc.wilson@example.com',
-    phone: '+1 555-320-8181',
-    profileImage: '',
-    gender: 'Male',
-    dateOfBirth: '1993-04-12',
-    address: '23 King Street',
-    city: 'Seattle',
-    bio: 'Specialized in deep cleaning and post-renovation jobs.',
-    emergencyContactName: 'Anna Wilson',
-    emergencyContactPhone: '+1 555-908-1144',
-    experienceYears: 5,
-    status: 'Active',
-    totalJobs: 142,
-    rating: 4.9,
-    reviews: 120,
-    joiningDate: 'May 12, 2023',
-  },
-  {
-    id: 'CLN-8842',
-    name: 'Linda Key',
-    email: 'linda.key@example.com',
-    phone: '+1 555-920-1023',
-    profileImage: '',
-    gender: 'Female',
-    dateOfBirth: '1991-11-03',
-    address: '88 Pine Avenue',
-    city: 'Portland',
-    bio: 'Office and window cleaning expert with high customer ratings.',
-    emergencyContactName: 'Daniel Key',
-    emergencyContactPhone: '+1 555-303-1122',
-    experienceYears: 4,
-    status: 'Active',
-    totalJobs: 86,
-    rating: 4.7,
-    reviews: 64,
-    joiningDate: 'Aug 05, 2023',
-  },
-  {
-    id: 'CLN-4421',
-    name: 'James Cooper',
-    email: 'j.cooper@example.com',
-    phone: '+1 555-903-6441',
-    profileImage: '',
-    gender: 'Male',
-    dateOfBirth: '1998-09-25',
-    address: '104 River Road',
-    city: 'Tacoma',
-    bio: 'New cleaner currently completing onboarding and training.',
-    emergencyContactName: 'Lora Cooper',
-    emergencyContactPhone: '+1 555-991-0202',
-    experienceYears: 1,
-    status: 'Pending',
-    totalJobs: 0,
-    rating: 0,
-    reviews: 0,
-    joiningDate: 'Oct 20, 2023',
-  },
-  {
-    id: 'CLN-3310',
-    name: 'Robert King',
-    email: 'r.king@example.com',
-    phone: '+1 555-710-3310',
-    profileImage: '',
-    gender: 'Male',
-    dateOfBirth: '1989-02-17',
-    address: '16 Market Lane',
-    city: 'Bellevue',
-    bio: 'Senior cleaner with experience in premium residential services.',
-    emergencyContactName: 'Rita King',
-    emergencyContactPhone: '+1 555-811-4430',
-    experienceYears: 7,
-    status: 'Suspended',
-    totalJobs: 214,
-    rating: 4.2,
-    reviews: 182,
-    joiningDate: 'Jan 15, 2023',
-  },
-];
+import { starterCleaners } from '../data/cleaners_data';
 
 const statusFilters = ['All', 'Active', 'Pending', 'Suspended', 'Inactive'];
 const ratingFilters = ['All', '4.5+', '4.0+', '3.5+'];
@@ -371,13 +287,6 @@ const CleanersPage = () => {
     });
   };
 
-  const handleBlockToggle = (cleaner) => {
-    const nextStatus = cleaner.status === 'Inactive' ? 'Active' : 'Inactive';
-    setCleaners((prev) => prev.map((item) => (
-      item.id === cleaner.id ? { ...item, status: nextStatus } : item
-    )));
-  };
-
   const openViewModal = (cleaner) => {
     setViewSection('account');
     setViewingCleaner(cleaner);
@@ -422,19 +331,19 @@ const CleanersPage = () => {
       <section className="cleaners-kpi-grid">
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-blue"><TeamOutlined /></div>
-          <span className="kpi-label">TOTAL CLEANERS</span>
+          <span className="kpi-label">Total Cleaners</span>
           <h3>{totalCleaners}</h3>
-          <span className="kpi-note positive">+5 new this week</span>
+          <span className="kpi-note positive">+4 new this week</span>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-green"><ThunderboltOutlined /></div>
-          <span className="kpi-label">ACTIVE NOW</span>
+          <span className="kpi-label">Active Now</span>
           <h3>{activeCount}</h3>
           <span className="kpi-note neutral">Currently on duty</span>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-amber"><StarFilled /></div>
-          <span className="kpi-label">AVERAGE RATING</span>
+          <span className="kpi-label">Average Rating</span>
           <h3>{averageRating ? averageRating.toFixed(1) : 'N/A'}</h3>
           <span className="kpi-note positive">Top tier performance</span>
         </article>
@@ -471,9 +380,6 @@ const CleanersPage = () => {
           options={ratingFilters.map((rating) => ({ label: rating === 'All' ? 'Rating' : rating, value: rating }))}
           className="filter-select"
         />
-        <button type="button" className="compact-filter-btn" aria-label="more filters">
-          <FilterOutlined />
-        </button>
       </section>
 
       <section className="cleaners-table-panel">
@@ -525,45 +431,32 @@ const CleanersPage = () => {
                     </td>
                     <td>{cleaner.joiningDate}</td>
                     <td>
-                      <Dropdown
-                        menu={{
-                          items: [
-                            {
-                              key: 'view',
-                              icon: <EyeOutlined />,
-                              label: 'View',
-                              onClick: () => openViewModal(cleaner),
-                            },
-                            {
-                              key: 'edit',
-                              icon: <EditOutlined />,
-                              label: 'Edit',
-                              onClick: () => openEditModal(cleaner),
-                            },
-                            {
-                              key: 'block',
-                              icon: <StopOutlined />,
-                              label: cleaner.status === 'Inactive' ? 'Unblock (Active)' : 'Block (Inactive)',
-                              onClick: () => handleBlockToggle(cleaner),
-                            },
-                            {
-                              type: 'divider',
-                            },
-                            {
-                              key: 'delete',
-                              icon: <DeleteOutlined />,
-                              label: 'Delete',
-                              danger: true,
-                              onClick: () => handleDeleteCleaner(cleaner),
-                            },
-                          ],
-                        }}
-                        trigger={['click']}
-                      >
-                        <button type="button" className="action-btn" aria-label={`actions for ${cleaner.name}`}>
-                          <MoreOutlined />
+                      <div className="action-group">
+                        <button
+                          className="plain-icon-btn action-view"
+                          title="View cleaner"
+                          type="button"
+                          onClick={() => openViewModal(cleaner)}
+                        >
+                          <EyeOutlined />
                         </button>
-                      </Dropdown>
+                        <button
+                          className="plain-icon-btn action-edit"
+                          title="Edit cleaner"
+                          type="button"
+                          onClick={() => openEditModal(cleaner)}
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          className="plain-icon-btn action-delete"
+                          title="Delete cleaner"
+                          type="button"
+                          onClick={() => handleDeleteCleaner(cleaner)}
+                        >
+                          <DeleteOutlined />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -578,7 +471,7 @@ const CleanersPage = () => {
 
         <footer className="table-footer">
           <span>Showing {pagedCleaners.length} of {filteredCleaners.length} cleaners</span>
-          <div className="pager">
+          {/* <div className="pager">
             <button
               type="button"
               disabled={page === 1}
@@ -594,7 +487,7 @@ const CleanersPage = () => {
             >
               Next
             </button>
-          </div>
+          </div> */}
         </footer>
       </section>
 

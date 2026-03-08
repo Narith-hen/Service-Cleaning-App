@@ -308,18 +308,60 @@
   font-weight: 600 !important;
 }
 
-.action-btn {
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  color: var(--cleaners-faint);
-  cursor: pointer;
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
 }
 
-.action-btn:hover {
-  background: var(--cleaners-soft-bg);
+.plain-icon-btn {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: #e8edf4;
+  color: var(--cleaners-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plain-icon-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-view {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.plain-icon-btn.action-view:hover {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-edit {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.plain-icon-btn.action-edit:hover {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-delete {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.plain-icon-btn.action-delete:hover {
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .empty {

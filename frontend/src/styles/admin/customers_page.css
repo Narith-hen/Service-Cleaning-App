@@ -117,38 +117,26 @@
   color: var(--customers-faint);
 }
 
-.customers-list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.customers-header-actions {
-  display: flex;
-  align-items: center;
+.customers-filter-row {
+  background: var(--customers-bg);
+  border: 1px solid var(--customers-border);
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 170px 170px 42px;
   gap: 10px;
-  width: min(650px, 64vw);
-}
-
-.customers-section-title {
-  margin: 0;
-  font-size: 36px;
-  line-height: 1.2;
-  color: var(--customers-text);
+  align-items: center;
 }
 
 .customers-search-box {
   border: 1px solid var(--customers-border);
-  border-radius: 10px;
+  border-radius: 6px;
   height: 42px;
   padding: 0 12px;
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--customers-faint);
-  flex: 1;
-  min-width: 0;
   background: var(--customers-bg);
 }
 
@@ -162,19 +150,30 @@
 }
 
 .customers-filter-select {
-  width: 280px;
-  min-width: 280px;
-  flex: 0 0 280px;
+  width: 100%;
+  min-width: 0;
 }
 
 .customers-filter-select .ant-select-selector {
   height: 42px !important;
-  border-radius: 10px !important;
-  border-color: var(--customers-border) !important;
-  background: var(--customers-bg) !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--customers-border);
+  background: var(--customers-soft-bg) !important;
   color: var(--customers-text) !important;
   display: flex;
   align-items: center;
+}
+
+.customers-compact-filter-btn {
+  border: 1px solid var(--customers-border);
+  background: var(--customers-soft-bg);
+  border-radius: 6px;
+  height: 42px;
+  width: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--customers-muted);
 }
 
 .customers-table-panel {
@@ -621,25 +620,18 @@
 }
 
 @media (max-width: 920px) {
-  .customers-list-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .customers-header-actions {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
+  .customers-filter-row {
+    grid-template-columns: 1fr 1fr;
   }
 
   .customers-search-box {
+    grid-column: 1 / -1;
     width: 100%;
   }
 
   .customers-filter-select {
     width: 100%;
     min-width: 0;
-    flex: 1;
   }
 }
 
@@ -651,6 +643,10 @@
 
   .customers-header h1 {
     font-size: 30px;
+  }
+
+  .customers-filter-row {
+    grid-template-columns: 1fr;
   }
 
   .table-footer {

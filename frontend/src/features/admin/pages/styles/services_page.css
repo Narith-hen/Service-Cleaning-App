@@ -100,7 +100,6 @@
   font-size: 12px;
 }
 
-.services-header,
 .inventory-header {
   display: flex;
   align-items: center;
@@ -108,16 +107,20 @@
   gap: 16px;
 }
 
-.services-header-actions {
-  display: flex;
-  align-items: center;
+.services-filter-row {
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 170px 170px 42px;
   gap: 10px;
+  align-items: center;
 }
 
 .services-search-box {
-  width: min(420px, 42vw);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 6px;
   height: 42px;
   padding: 0 12px;
   display: flex;
@@ -136,22 +139,35 @@
   background: transparent;
 }
 
-.service-filter-select {
-  min-width: 220px;
+.services-filter-select {
+  width: 100%;
+  min-width: 0;
 }
 
-.service-filter-select .ant-select-selector {
+.services-filter-select .ant-select-selector {
   height: 42px !important;
-  border-radius: 10px !important;
+  border-radius: 6px !important;
   border-color: var(--line) !important;
   background: var(--panel-bg) !important;
   display: flex;
   align-items: center;
 }
 
-.service-filter-select .ant-select-selection-item,
-.service-filter-select .ant-select-selection-placeholder {
+.services-filter-select .ant-select-selection-item,
+.services-filter-select .ant-select-selection-placeholder {
   color: var(--text-main);
+}
+
+.services-compact-filter-btn {
+  border: 1px solid var(--line);
+  background: var(--track);
+  border-radius: 6px;
+  height: 42px;
+  width: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
 }
 
 .section-copy {
@@ -831,16 +847,13 @@ body.dark-mode .service-form-modal .ant-btn-default:hover {
     align-items: flex-start;
   }
 
-  .services-header,
   .inventory-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .services-header-actions {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
+  .services-filter-row {
+    grid-template-columns: 1fr 1fr;
   }
 
   .services-kpi-grid {
@@ -848,6 +861,11 @@ body.dark-mode .service-form-modal .ant-btn-default:hover {
   }
 
   .services-search-box {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .services-filter-select {
     width: 100%;
   }
 
@@ -877,5 +895,11 @@ body.dark-mode .service-form-modal .ant-btn-default:hover {
   .pagination-actions {
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .services-filter-row {
+    grid-template-columns: 1fr;
   }
 }

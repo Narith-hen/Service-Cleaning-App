@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './styles/services_page.css';
 import { Form, Input, Modal, Select, Upload, message } from 'antd';
-import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
 import homeImage from '../../../assets/home.png';
 import officeImage from '../../../assets/office.png';
 import windowImage from '../../../assets/window.png';
@@ -54,6 +54,7 @@ const ServicesPage = () => {
   const [services, setServices] = useState([]);
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceStatusFilter, setServiceStatusFilter] = useState('All');
+  const [serviceSortFilter, setServiceSortFilter] = useState('default');
   const [loadingServices, setLoadingServices] = useState(true);
   const [inventory, setInventory] = useState(sampleInventory);
   const [inventoryPage, setInventoryPage] = useState(1);
@@ -86,14 +87,24 @@ const ServicesPage = () => {
   const isEditInventoryMode = inventoryFormMode === 'edit';
   const filteredServices = useMemo(() => {
     const keyword = serviceSearch.trim().toLowerCase();
-    return services.filter((service) => {
+    const matched = services.filter((service) => {
       const title = String(service.title || '').toLowerCase();
       const status = service.status || 'Active';
       const searchMatched = !keyword || title.includes(keyword);
       const statusMatched = serviceStatusFilter === 'All' || status === serviceStatusFilter;
       return searchMatched && statusMatched;
     });
-  }, [services, serviceSearch, serviceStatusFilter]);
+
+    if (serviceSortFilter === 'name-asc') {
+      return [...matched].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    }
+
+    if (serviceSortFilter === 'name-desc') {
+      return [...matched].sort((a, b) => String(b.title || '').localeCompare(String(a.title || '')));
+    }
+
+    return matched;
+  }, [services, serviceSearch, serviceStatusFilter, serviceSortFilter]);
   const totalServices = services.length;
   const activeServices = services.filter((item) => (item.status || 'Active') === 'Active').length;
   const inactiveServices = services.filter((item) => (item.status || 'Active') === 'Inactive').length;
@@ -383,32 +394,41 @@ const ServicesPage = () => {
         </article>
       </section>
 
-      <section className="services-header">
-        <div className="section-copy">
-          <h2 className="svc-section-title roboto roboto-700">Services List</h2>
-        </div>
-        <div className="services-header-actions">
-          <div className="services-search-box">
-            <i className="bi bi-search" aria-hidden="true" />
-            <input
-              type="text"
-              placeholder="Search service name..."
-              value={serviceSearch}
-              onChange={(event) => setServiceSearch(event.target.value)}
-            />
-          </div>
-          <Select
-            value={serviceStatusFilter}
-            onChange={setServiceStatusFilter}
-            options={[
-              { value: 'All', label: 'Status: All' },
-              { value: 'Active', label: 'Active' },
-              { value: 'Inactive', label: 'Inactive' }
-            ]}
-            className="service-filter-select"
-            popupClassName="service-filter-dropdown"
+      <section className="services-filter-row">
+        <div className="services-search-box">
+          <SearchOutlined />
+          <input
+            type="text"
+            placeholder="Search service name..."
+            value={serviceSearch}
+            onChange={(event) => setServiceSearch(event.target.value)}
           />
         </div>
+        <Select
+          value={serviceStatusFilter}
+          onChange={setServiceStatusFilter}
+          options={[
+            { value: 'All', label: 'Status: All' },
+            { value: 'Active', label: 'Active' },
+            { value: 'Inactive', label: 'Inactive' }
+          ]}
+          className="services-filter-select"
+          popupClassName="service-filter-dropdown"
+        />
+        <Select
+          value={serviceSortFilter}
+          onChange={setServiceSortFilter}
+          options={[
+            { value: 'default', label: 'Sort: Default' },
+            { value: 'name-asc', label: 'Name A-Z' },
+            { value: 'name-desc', label: 'Name Z-A' }
+          ]}
+          className="services-filter-select"
+          popupClassName="service-filter-dropdown"
+        />
+        <button type="button" className="services-compact-filter-btn" aria-label="more filters">
+          <FilterOutlined />
+        </button>
       </section>
 
       <div className="services-table-wrap">

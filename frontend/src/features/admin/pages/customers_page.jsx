@@ -4,6 +4,7 @@ import {
   DeleteOutlined,
   EnvironmentOutlined,
   EyeOutlined,
+  FilterOutlined,
   MailOutlined,
   PhoneOutlined,
   SearchOutlined,
@@ -109,6 +110,7 @@ const starterCustomers = [
 ];
 
 const statusFilters = ['All', 'Active', 'Inactive'];
+const tierFilters = ['All', 'VIP', 'Regular', 'New Customer', 'One-Time / Monthly'];
 
 const getInitials = (fullName) => {
   const [first = '', last = ''] = fullName.split(' ');
@@ -169,6 +171,7 @@ const CustomersPage = () => {
   const [customers, setCustomers] = useState(starterCustomers.slice(0, 0));
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [tierFilter, setTierFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
 
@@ -232,9 +235,10 @@ const CustomersPage = () => {
       const target = `${customer.id} ${customer.name} ${customer.email} ${customer.phone}`.toLowerCase();
       const bySearch = target.includes(searchText.toLowerCase());
       const byStatus = statusFilter === 'All' || customer.status === statusFilter;
-      return bySearch && byStatus;
+      const byTier = tierFilter === 'All' || customer.customerTier === tierFilter;
+      return bySearch && byStatus && byTier;
     });
-  }, [customers, searchText, statusFilter]);
+  }, [customers, searchText, statusFilter, tierFilter]);
 
   const pages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
   const page = Math.min(currentPage, pages);
@@ -510,33 +514,28 @@ const CustomersPage = () => {
         </article>
       </section>
 
-      <section className="customers-list-header">
-        <div className="section-copy">
-          <h2 className="customers-section-title roboto roboto-700">Customers List</h2>
-        </div>
-        <div className="customers-header-actions">
-          <div className="customers-search-box">
-            <SearchOutlined />
-            <input
-              type="text"
-              placeholder="Search by name, email or phone..."
-              value={searchText}
-              onChange={(event) => {
-                setSearchText(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-          <Select
-            value={statusFilter}
-            onChange={(value) => {
-              setStatusFilter(value);
+      <section className="customers-filter-row">
+        <div className="customers-search-box">
+          <SearchOutlined />
+          <input
+            type="text"
+            placeholder="Search by name, email or phone..."
+            value={searchText}
+            onChange={(event) => {
+              setSearchText(event.target.value);
               setCurrentPage(1);
             }}
-            options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
-            className="customers-filter-select"
           />
         </div>
+        <Select
+          value={statusFilter}
+          onChange={(value) => {
+            setStatusFilter(value);
+            setCurrentPage(1);
+          }}
+          options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
+          className="customers-filter-select"
+        />
       </section>
 
       <section className="customers-table-panel">
@@ -627,7 +626,7 @@ const CustomersPage = () => {
 
         <footer className="table-footer">
           <span>Showing {pagedCustomers.length} of {filteredCustomers.length} customers</span>
-          <div className="pager">
+          {/* <div className="pager">
             <button
               type="button"
               disabled={page === 1}
@@ -643,7 +642,7 @@ const CustomersPage = () => {
             >
               Next
             </button>
-          </div>
+          </div> */}
         </footer>
       </section>
 
