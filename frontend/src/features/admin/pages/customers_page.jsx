@@ -2,10 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarOutlined,
   DeleteOutlined,
+  EditOutlined,
   EnvironmentOutlined,
   EyeOutlined,
-  MailOutlined,
-  PhoneOutlined,
   SearchOutlined,
   StopOutlined,
   TeamOutlined,
@@ -142,10 +141,13 @@ const formatDate = (value) => {
 
 const mapCustomerFromApi = (user) => {
   const fullName = user.username || user.email || `Customer ${user.user_id}`;
-  const isActive = typeof user.is_active === 'boolean' ? user.is_active : true;
+  const statusText = String(user.status || '').trim().toLowerCase();
+  const isActiveFromStatus = statusText ? statusText !== 'inactive' : true;
+  const isActive = typeof user.is_active === 'boolean' ? user.is_active : isActiveFromStatus;
 
   return {
     id: String(user.user_id),
+    userCode: user.user_code || '-',
     name: fullName,
     email: user.email || '-',
     phone: user.phone_number || '-',
@@ -177,7 +179,6 @@ const CustomersPage = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [formSection, setFormSection] = useState('account');
-  const [viewSection, setViewSection] = useState('account');
   const [form] = Form.useForm();
   const profileImageValue = Form.useWatch('profileImage', form);
   const nameValue = Form.useWatch('name', form);
@@ -269,14 +270,42 @@ const CustomersPage = () => {
     const values = await form.validateFields();
 
     if (editingCustomer) {
-      setCustomers((prev) => prev.map((customer) => (
-        customer.id === editingCustomer.id ? { ...customer, ...values } : customer
-      )));
-      notificationApi.success({
-        placement: 'bottomRight',
-        message: 'Customer updated successfully',
-        duration: 2,
-      });
+      try {
+        const payload = {
+          username: values.name,
+          email: values.email,
+          phone_number: values.phone,
+          is_active: values.status === 'Active',
+          status: values.status?.toLowerCase(),
+        };
+
+        const response = await userService.updateUser(editingCustomer.id, payload);
+        const updatedCustomer = response?.data ? mapCustomerFromApi(response.data) : null;
+
+        if (updatedCustomer) {
+          setCustomers((prev) => prev.map((customer) => (
+            customer.id === editingCustomer.id ? { ...customer, ...updatedCustomer } : customer
+          )));
+        } else {
+          setCustomers((prev) => prev.map((customer) => (
+            customer.id === editingCustomer.id ? { ...customer, ...values } : customer
+          )));
+        }
+
+        notificationApi.success({
+          placement: 'bottomRight',
+          message: 'Customer updated successfully',
+          duration: 2,
+        });
+      } catch (error) {
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Failed to update customer',
+          description: error?.response?.data?.message || 'Could not save customer changes to database.',
+          duration: 3,
+        });
+        return;
+      }
     } else {
       const nowFormatted = new Date().toLocaleDateString('en-US', {
         month: 'short',
@@ -446,15 +475,35 @@ const CustomersPage = () => {
     });
   };
 
-  const handleBlockToggle = (customer) => {
+  const handleBlockToggle = async (customer) => {
     const nextStatus = customer.status === 'Inactive' ? 'Active' : 'Inactive';
-    setCustomers((prev) => prev.map((item) => (
-      item.id === customer.id ? { ...item, status: nextStatus } : item
-    )));
+
+    try {
+      await userService.updateUser(customer.id, {
+        is_active: nextStatus === 'Active',
+        status: nextStatus.toLowerCase(),
+      });
+
+      setCustomers((prev) => prev.map((item) => (
+        item.id === customer.id ? { ...item, status: nextStatus } : item
+      )));
+
+      notificationApi.success({
+        placement: 'bottomRight',
+        message: `Customer set to ${nextStatus}`,
+        duration: 2,
+      });
+    } catch (error) {
+      notificationApi.error({
+        placement: 'bottomRight',
+        message: 'Failed to update customer status',
+        description: error?.response?.data?.message || 'Could not save status change to database.',
+        duration: 3,
+      });
+    }
   };
 
   const openViewModal = (customer) => {
-    setViewSection('account');
     setViewingCustomer(customer);
     setIsViewOpen(true);
   };
@@ -494,19 +543,16 @@ const CustomersPage = () => {
           <div className="kpi-icon tone-blue"><TeamOutlined /></div>
           <span className="kpi-label">TOTAL CUSTOMERS</span>
           <h3>{totalCustomers.toLocaleString()}</h3>
-          <span className="kpi-note neutral">Registered customer accounts</span>
         </article>
         <article className="customers-kpi-card">
           <div className="kpi-icon tone-green"><UserOutlined /></div>
           <span className="kpi-label">ACTIVE CUSTOMERS</span>
           <h3>{activeCustomers.toLocaleString()}</h3>
-          <span className="kpi-note positive">Can place bookings now</span>
         </article>
         <article className="customers-kpi-card">
           <div className="kpi-icon tone-amber"><StopOutlined /></div>
           <span className="kpi-label">INACTIVE CUSTOMERS</span>
           <h3>{inactiveCustomers.toLocaleString()}</h3>
-          <span className="kpi-note neutral">Temporarily blocked accounts</span>
         </article>
       </section>
 
@@ -598,20 +644,28 @@ const CustomersPage = () => {
                         </button>
                         <button
                           className="plain-icon-btn action-edit"
+                          title="Edit customer"
+                          type="button"
+                          onClick={() => openEditModal(customer)}
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          className="plain-icon-btn action-edit"
                           title={customer.status === 'Inactive' ? 'Unblock (Active)' : 'Block (Inactive)'}
                           type="button"
                           onClick={() => handleBlockToggle(customer)}
                         >
                           <StopOutlined />
                         </button>
-                        <button
+                        {/* <button
                           className="plain-icon-btn action-delete"
                           title="Delete customer"
                           type="button"
                           onClick={() => handleDeleteCustomer(customer)}
                         >
                           <DeleteOutlined />
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>
@@ -625,26 +679,6 @@ const CustomersPage = () => {
           </table>
         </div>
 
-        <footer className="table-footer">
-          <span>Showing {pagedCustomers.length} of {filteredCustomers.length} customers</span>
-          <div className="pager">
-            <button
-              type="button"
-              disabled={page === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="next"
-              disabled={page === pages}
-              onClick={() => setCurrentPage((prev) => Math.min(pages, prev + 1))}
-            >
-              Next
-            </button>
-          </div>
-        </footer>
       </section>
 
       <Modal
@@ -820,71 +854,18 @@ const CustomersPage = () => {
                   )}
                 </span>
               </div>
-              <div className="profile-menu">
-                <button
-                  type="button"
-                  className={viewSection === 'account' ? 'active' : ''}
-                  onClick={() => setViewSection('account')}
-                >
-                  <UserOutlined />
-                  Account Details
-                </button>
-                <button
-                  type="button"
-                  className={viewSection === 'contact' ? 'active' : ''}
-                  onClick={() => setViewSection('contact')}
-                >
-                  <EnvironmentOutlined />
-                  Contact Address
-                </button>
-                <button
-                  type="button"
-                  className={viewSection === 'usage' ? 'active' : ''}
-                  onClick={() => setViewSection('usage')}
-                >
-                  <CalendarOutlined />
-                  Booking Profile
-                </button>
-              </div>
             </aside>
 
             <div className="customer-profile-content">
-              <h3>
-                {viewSection === 'account' && 'Account Details'}
-                {viewSection === 'contact' && 'Contact Address'}
-                {viewSection === 'usage' && 'Booking Profile'}
-              </h3>
-
-              {viewSection === 'account' && (
-                <div className="customer-view-grid">
-                  <p><strong>Full Name:</strong> {viewingCustomer.name || '-'}</p>
-                  <p><strong>Email:</strong> {viewingCustomer.email || '-'}</p>
-                  <p><strong>ID:</strong> {viewingCustomer.id || '-'}</p>
-                  <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCustomer.status)}`}>{viewingCustomer.status}</span></p>
-                  <p><strong>Gender:</strong> {viewingCustomer.gender || '-'}</p>
-                  <p><strong>Date of Birth:</strong> {viewingCustomer.dateOfBirth || '-'}</p>
-                </div>
-              )}
-
-              {viewSection === 'contact' && (
-                <div className="customer-view-grid">
-                  <p><strong><PhoneOutlined /> Phone:</strong> {viewingCustomer.phone || '-'}</p>
-                  <p><strong><EnvironmentOutlined /> City:</strong> {viewingCustomer.city || '-'}</p>
-                  <p><strong>Address:</strong> {viewingCustomer.address || '-'}</p>
-                  <p><strong><MailOutlined /> Email:</strong> {viewingCustomer.email || '-'}</p>
-                  <p className="form-item-full"><strong>Special Notes:</strong> {viewingCustomer.specialNotes || '-'}</p>
-                </div>
-              )}
-
-              {viewSection === 'usage' && (
-                <div className="customer-view-grid">
-                  <p><strong>Customer Tier:</strong> {viewingCustomer.customerTier || '-'}</p>
-                  <p><strong>Joining Date:</strong> {viewingCustomer.joiningDate || '-'}</p>
-                  <p><strong>Total Bookings:</strong> {viewingCustomer.totalBookings ?? 0}</p>
-                  <p><strong>Last Booking Date:</strong> {viewingCustomer.lastBookingDate || '-'}</p>
-                  <p className="form-item-full"><strong>Preferred Service:</strong> {viewingCustomer.preferredService || '-'}</p>
-                </div>
-              )}
+              <h3>Account Details</h3>
+              <div className="customer-view-grid">
+                <p><strong>Full Name:</strong> {viewingCustomer.name || '-'}</p>
+                <p><strong>Email:</strong> {viewingCustomer.email || '-'}</p>
+                <p><strong>ID:</strong> {viewingCustomer.id || '-'}</p>
+                <p><strong>User Code:</strong> {viewingCustomer.userCode || '-'}</p>
+                <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCustomer.status)}`}>{viewingCustomer.status}</span></p>
+                <p><strong>Joining Date:</strong> {viewingCustomer.joiningDate || '-'}</p>
+              </div>
             </div>
           </div>
         )}

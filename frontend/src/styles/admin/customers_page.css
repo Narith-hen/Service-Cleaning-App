@@ -162,9 +162,10 @@
 }
 
 .customers-filter-select {
-  width: 280px;
-  min-width: 280px;
-  flex: 0 0 280px;
+  height: 36px;
+  width: 120px;
+  min-width: 120px;
+  flex: 0 0 120px;
 }
 
 .customers-filter-select .ant-select-selector {
@@ -200,6 +201,23 @@
   text-align: left;
   border-bottom: 1px solid var(--customers-row);
   vertical-align: middle;
+}
+
+.customers-table thead th:nth-child(4),
+.customers-table tbody td:nth-child(4) {
+  text-align: center;
+}
+
+.customers-table thead th:nth-child(5),
+.customers-table tbody td:nth-child(5) {
+  text-align: center;
+}
+
+.customers-table tbody td:nth-child(5) .action-group {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin: 0 auto;
 }
 
 .customers-table th {
@@ -637,9 +655,10 @@
   }
 
   .customers-filter-select {
-    width: 100%;
-    min-width: 0;
-    flex: 1;
+    align-self: flex-start;
+    width: 150px;
+    min-width: 150px;
+    flex: 0 0 auto;
   }
 }
 

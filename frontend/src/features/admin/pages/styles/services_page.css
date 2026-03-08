@@ -137,7 +137,10 @@
 }
 
 .service-filter-select {
-  min-width: 220px;
+  height: 36px;
+  width: 120px;
+  min-width: 120px;
+  flex: 0 0 120px;
 }
 
 .service-filter-select .ant-select-selector {
@@ -332,7 +335,7 @@
 .services-table th:nth-child(4),
 .services-table td:nth-child(4) {
   width: 14%;
-  text-align: left;
+  text-align: center;
 }
 
 .services-table thead th {
@@ -350,6 +353,18 @@
   font-size: 13px;
   color: var(--text-main);
   vertical-align: middle;
+}
+
+.services-table thead th:nth-child(4),
+.services-table tbody td:nth-child(4) {
+  text-align: center;
+}
+
+.services-table tbody td:nth-child(4) .action-group {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin: 0 auto;
 }
 
 .services-table tbody tr:last-child td {
@@ -849,6 +864,13 @@ body.dark-mode .service-form-modal .ant-btn-default:hover {
 
   .services-search-box {
     width: 100%;
+  }
+
+  .service-filter-select {
+    align-self: flex-start;
+    width: 150px;
+    min-width: 150px;
+    flex: 0 0 auto;
   }
 
   .services-table-wrap,

@@ -220,19 +220,16 @@ const BookingsPage = () => {
           <div className="kpi-icon tone-blue"><FileTextOutlined /></div>
           <span className="kpi-label">TOTAL BOOKINGS</span>
           <h3>1,240</h3>
-          <span className="kpi-note positive">+12% from last month</span>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-green"><SyncOutlined /></div>
           <span className="kpi-label">ONGOING NOW</span>
           <h3>24</h3>
-          <span className="kpi-note neutral">Active service sessions</span>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-rose"><CloseCircleOutlined /></div>
           <span className="kpi-label">CANCELLATION RATE</span>
           <h3>1.8%</h3>
-          <span className="kpi-note negative">-0.5% improvement</span>
         </article>
       </section>
 

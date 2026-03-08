@@ -363,7 +363,6 @@ const ServicesPage = () => {
           </div>
           <span className="services-kpi-label">TOTAL SERVICES</span>
           <h3>{totalServices}</h3>
-          <span className="services-kpi-note">Cleaning Services</span>
         </article>
         <article className="services-kpi-card">
           <div className="services-kpi-icon tone-green">
@@ -371,7 +370,6 @@ const ServicesPage = () => {
           </div>
           <span className="services-kpi-label">ACTIVE SERVICES</span>
           <h3>{activeServices}</h3>
-          <span className="services-kpi-note">Currently available for booking</span>
         </article>
         <article className="services-kpi-card">
           <div className="services-kpi-icon tone-rose">
@@ -379,7 +377,6 @@ const ServicesPage = () => {
           </div>
           <span className="services-kpi-label">INACTIVE SERVICES</span>
           <h3>{inactiveServices}</h3>
-          <span className="services-kpi-note">Temporarily hidden from booking</span>
         </article>
       </section>
 
@@ -523,10 +520,9 @@ const ServicesPage = () => {
             <img src={selectedService.image} alt={selectedService.title} className="service-view-image" />
             <div className="service-view-info">
               <h4 className="service-view-title">{selectedService.title}</h4>
-              <p className="service-view-price">
-                ${selectedService.price}
-                <span>{selectedService.unit}</span>
-              </p>
+              <span className={`service-status ${(selectedService.status || 'Active').toLowerCase()}`}>
+                {selectedService.status || 'Active'}
+              </span>
               <p className="service-view-description">{selectedService.description}</p>
             </div>
           </div>
