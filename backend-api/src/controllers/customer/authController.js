@@ -1,6 +1,73 @@
 const db = require('../../config/db');
 const bcrypt = require("bcryptjs");
 const { generateToken } = require('../../utils/jwt.util');
+const fs = require("fs");
+const path = require("path");
+
+const toNullableString = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const text = String(value).trim();
+  return text === '' ? null : text;
+};
+
+const getUserTableColumns = async () => {
+  const [columns] = await db.promise().query("SHOW COLUMNS FROM users");
+  return new Set((columns || []).map((column) => column.Field));
+};
+
+const ensureAvatarColumnExists = async () => {
+  const columns = await getUserTableColumns();
+  if (columns.has("avatar")) {
+    return true;
+  }
+
+  await db.promise().query("ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL");
+  return true;
+};
+
+const buildProfileResponse = async (userId) => {
+  const promiseDb = db.promise();
+  const [userRows] = await promiseDb.query("SELECT * FROM users WHERE user_id = ? LIMIT 1", [userId]);
+  const user = userRows?.[0];
+
+  if (!user) return null;
+
+  const [bookingRows] = await promiseDb.query(
+    `
+      SELECT
+        COUNT(*) AS totalBookings,
+        COALESCE(SUM(total_price), 0) AS totalSpent
+      FROM bookings
+      WHERE user_id = ?
+    `,
+    [userId]
+  );
+
+  const totalBookings = Number(bookingRows?.[0]?.totalBookings || 0);
+  const totalSpent = Number(bookingRows?.[0]?.totalSpent || 0);
+
+  const createdAt = user.created_at ? new Date(user.created_at) : null;
+  const joinDate = createdAt
+    ? createdAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : null;
+
+  return {
+    user_id: user.user_id,
+    user_code: user.user_code || null,
+    first_name: user.first_name || null,
+    last_name: user.last_name || null,
+    email: user.email || null,
+    phone_number: user.phone_number || null,
+    city: user.city || null,
+    state: user.state || null,
+    country: user.country || null,
+    avatar: user.avatar || null,
+    joinDate,
+    totalBookings,
+    totalSpent,
+  };
+};
 
 exports.register = async (req, res) => {
   const first_name = req.body.first_name || req.body.firstName;
@@ -185,6 +252,164 @@ exports.login = async (req, res) => {
       message: isAuthConfigError
         ? "Server authentication configuration error (missing JWT_SECRET)"
         : "Login failed",
+    });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const profile = await buildProfileResponse(userId);
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: profile,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch profile",
+    });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (req.body.avatar !== undefined) {
+      await ensureAvatarColumnExists();
+    }
+    const availableColumns = await getUserTableColumns();
+
+    const incomingFirstName = req.body.first_name || req.body.firstName;
+    const incomingLastName = req.body.last_name || req.body.lastName;
+    const incomingName = toNullableString(req.body.name);
+
+    let firstName = toNullableString(incomingFirstName);
+    let lastName = toNullableString(incomingLastName);
+
+    if ((!firstName || !lastName) && incomingName) {
+      const parts = incomingName.split(/\s+/).filter(Boolean);
+      firstName = firstName ?? (parts[0] || null);
+      lastName = lastName ?? (parts.slice(1).join(' ') || null);
+    }
+
+    const candidateUpdates = {
+      first_name: firstName,
+      last_name: lastName,
+      email: toNullableString(req.body.email),
+      phone_number: toNullableString(req.body.phone_number ?? req.body.phone),
+      city: toNullableString(req.body.city),
+      state: toNullableString(req.body.state),
+      country: toNullableString(req.body.country),
+      avatar: req.body.avatar === undefined ? undefined : req.body.avatar,
+    };
+
+    const updateKeys = Object.entries(candidateUpdates)
+      .filter(([column, value]) => availableColumns.has(column) && value !== undefined)
+      .map(([column]) => column);
+
+    if (updateKeys.length > 0) {
+      const setClause = updateKeys.map((column) => `${column} = ?`).join(', ');
+      const values = updateKeys.map((column) => candidateUpdates[column]);
+      values.push(userId);
+
+      await db.promise().query(`UPDATE users SET ${setClause} WHERE user_id = ?`, values);
+    }
+
+    const profile = await buildProfileResponse(userId);
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: profile,
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
+    });
+  }
+};
+
+exports.uploadAvatar = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Avatar file is required",
+      });
+    }
+
+    await ensureAvatarColumnExists();
+
+    const [existingRows] = await db.promise().query(
+      "SELECT avatar FROM users WHERE user_id = ? LIMIT 1",
+      [userId]
+    );
+    const previousAvatar = existingRows?.[0]?.avatar || null;
+
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    await db.promise().query("UPDATE users SET avatar = ? WHERE user_id = ?", [avatarPath, userId]);
+
+    if (
+      previousAvatar &&
+      typeof previousAvatar === "string" &&
+      previousAvatar.startsWith("/uploads/avatars/")
+    ) {
+      const oldFileName = previousAvatar.split("/").pop();
+      const oldFilePath = path.join(__dirname, "../../../uploads/avatars", oldFileName);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlink(oldFilePath, () => {});
+      }
+    }
+
+    const profile = await buildProfileResponse(userId);
+    return res.status(200).json({
+      success: true,
+      message: "Avatar uploaded successfully",
+      data: profile,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload avatar",
     });
   }
 };

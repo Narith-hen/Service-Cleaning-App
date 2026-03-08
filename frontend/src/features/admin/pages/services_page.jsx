@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './styles/services_page.css';
 import { Form, Input, Modal, Select, Upload, message } from 'antd';
+import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import homeImage from '../../../assets/home.png';
 import officeImage from '../../../assets/office.png';
 import windowImage from '../../../assets/window.png';
@@ -52,6 +53,7 @@ const sampleInventory = [
 const ServicesPage = () => {
   const [services, setServices] = useState([]);
   const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceStatusFilter, setServiceStatusFilter] = useState('All');
   const [loadingServices, setLoadingServices] = useState(true);
   const [inventory, setInventory] = useState(sampleInventory);
   const [inventoryPage, setInventoryPage] = useState(1);
@@ -84,9 +86,14 @@ const ServicesPage = () => {
   const isEditInventoryMode = inventoryFormMode === 'edit';
   const filteredServices = useMemo(() => {
     const keyword = serviceSearch.trim().toLowerCase();
-    if (!keyword) return services;
-    return services.filter((service) => String(service.title || '').toLowerCase().includes(keyword));
-  }, [services, serviceSearch]);
+    return services.filter((service) => {
+      const title = String(service.title || '').toLowerCase();
+      const status = service.status || 'Active';
+      const searchMatched = !keyword || title.includes(keyword);
+      const statusMatched = serviceStatusFilter === 'All' || status === serviceStatusFilter;
+      return searchMatched && statusMatched;
+    });
+  }, [services, serviceSearch, serviceStatusFilter]);
   const totalServices = services.length;
   const activeServices = services.filter((item) => (item.status || 'Active') === 'Active').length;
   const inactiveServices = services.filter((item) => (item.status || 'Active') === 'Inactive').length;
@@ -390,6 +397,17 @@ const ServicesPage = () => {
               onChange={(event) => setServiceSearch(event.target.value)}
             />
           </div>
+          <Select
+            value={serviceStatusFilter}
+            onChange={setServiceStatusFilter}
+            options={[
+              { value: 'All', label: 'Status: All' },
+              { value: 'Active', label: 'Active' },
+              { value: 'Inactive', label: 'Inactive' }
+            ]}
+            className="service-filter-select"
+            popupClassName="service-filter-dropdown"
+          />
         </div>
       </section>
 
@@ -399,7 +417,7 @@ const ServicesPage = () => {
             <tr>
               <th>SERVICE</th>
               <th>DESCRIPTION</th>
-              <th>STATUS</th>
+              <th>SERVICE STATUS</th>
               <th>ACTIONS</th>
             </tr>
           </thead>
@@ -410,7 +428,7 @@ const ServicesPage = () => {
               </tr>
             ) : filteredServices.length === 0 ? (
               <tr>
-                <td className="services-empty" colSpan={4}>No services match your search.</td>
+                <td className="services-empty" colSpan={4}>No services match your filters.</td>
               </tr>
             ) : (
               filteredServices.map((service) => (
@@ -432,13 +450,13 @@ const ServicesPage = () => {
                   <td>
                     <div className="action-group">
                       <button className="plain-icon-btn action-view" title="View service" type="button" onClick={() => openViewService(service)}>
-                        <i className="bi bi-eye" aria-hidden="true" />
+                        <EyeOutlined />
                       </button>
                       <button className="plain-icon-btn action-edit" title="Edit service" type="button" onClick={() => openEditServiceForm(service)}>
                         <i className="bi bi-pencil" aria-hidden="true" />
                       </button>
                       <button className="plain-icon-btn action-delete" title="Delete service" type="button" onClick={() => handleDeleteService(service)}>
-                        <i className="bi bi-trash3" aria-hidden="true" />
+                        <DeleteOutlined />
                       </button>
                     </div>
                   </td>

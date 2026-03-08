@@ -1,5 +1,64 @@
 import { useState, useEffect } from 'react';
 
+<<<<<<< HEAD
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const AUTH_USER_UPDATED_EVENT = 'auth-user-updated';
+
+const normalizeAvatarUrl = (avatar) => {
+  if (!avatar) return null;
+  if (/^https?:\/\//i.test(avatar)) return avatar;
+  if (avatar.startsWith('/')) return `${API_BASE_URL}${avatar}`;
+  return avatar;
+};
+
+const normalizeUserData = (payload = {}, previous = null) => {
+  const firstName = payload.first_name ?? previous?.first_name ?? '';
+  const lastName = payload.last_name ?? previous?.last_name ?? '';
+  const mergedName = payload.name || [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  return {
+    id: payload.user_id ?? previous?.id ?? previous?.user_id ?? payload.id,
+    user_id: payload.user_id ?? previous?.user_id ?? payload.id,
+    user_code: payload.user_code ?? previous?.user_code ?? null,
+    name: mergedName || previous?.name || 'Customer',
+    first_name: firstName,
+    last_name: lastName,
+    email: payload.email ?? previous?.email ?? '',
+    phone: payload.phone ?? payload.phone_number ?? previous?.phone ?? '',
+    phone_number: payload.phone_number ?? payload.phone ?? previous?.phone_number ?? '',
+    city: payload.city ?? previous?.city ?? '',
+    state: payload.state ?? previous?.state ?? '',
+    country: payload.country ?? previous?.country ?? '',
+    avatar: normalizeAvatarUrl(payload.avatar ?? previous?.avatar ?? null),
+    joinDate: payload.joinDate ?? previous?.joinDate ?? null,
+    totalBookings: payload.totalBookings ?? previous?.totalBookings ?? 0,
+    totalSpent: payload.totalSpent ?? previous?.totalSpent ?? 0,
+    role_id: payload.role_id ?? previous?.role_id ?? 2,
+    token: payload.token ?? previous?.token ?? null,
+    role: (
+      payload.role ||
+      payload.role_name ||
+      previous?.role ||
+      (payload.role_id === 1 ? 'admin' : payload.role_id === 3 ? 'cleaner' : 'customer')
+    ).toLowerCase(),
+  };
+};
+
+const fetchProfileFromApi = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.message || 'Failed to load profile');
+  }
+
+  return result.data || {};
+=======
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const AUTH_USER_UPDATED_EVENT = 'auth:user-updated';
 
@@ -24,6 +83,7 @@ const persistUser = (nextUser) => {
   }
 
   window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+>>>>>>> develop
 };
 
 // Mock users for testing
@@ -64,6 +124,61 @@ export const useAuth = () => {
 
   // Check for saved user in localStorage on mount
   useEffect(() => {
+<<<<<<< HEAD
+    let isMounted = true;
+
+    const hydrateUser = async () => {
+      const savedUser = localStorage.getItem('user');
+      if (!savedUser) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        if (isMounted) setUser(parsedUser);
+
+        if (parsedUser?.token) {
+          try {
+            const profile = await fetchProfileFromApi(parsedUser.token);
+            const normalized = normalizeUserData(profile, parsedUser);
+            if (isMounted) setUser(normalized);
+            localStorage.setItem('user', JSON.stringify(normalized));
+          } catch (profileError) {
+            console.warn('Failed to refresh profile from API:', profileError.message);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+        localStorage.removeItem('user');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    hydrateUser();
+
+    const syncFromStorage = () => {
+      try {
+        const savedUser = localStorage.getItem('user');
+        if (!savedUser) return;
+        const parsedUser = JSON.parse(savedUser);
+        if (isMounted) {
+          setUser(parsedUser);
+        }
+      } catch {
+        // Ignore malformed localStorage payload
+      }
+    };
+
+    window.addEventListener('storage', syncFromStorage);
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, syncFromStorage);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('storage', syncFromStorage);
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncFromStorage);
+=======
     setUser(readStoredUser());
     const handleUserUpdated = () => setUser(readStoredUser());
     window.addEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
@@ -71,6 +186,7 @@ export const useAuth = () => {
 
     return () => {
       window.removeEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
+>>>>>>> develop
     };
   }, []);
 
@@ -93,22 +209,24 @@ export const useAuth = () => {
       }
 
       const userData = result.data || {};
-      const normalizedUser = {
-        id: userData.user_id,
-        user_id: userData.user_id,
-        user_code: userData.user_code,
-        name: [userData.first_name, userData.last_name].filter(Boolean).join(' ').trim(),
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email,
-        phone: userData.phone_number,
-        role_id: userData.role_id,
-        token: userData.token,
-        role: (userData.role || userData.role_name || (userData.role_id === 1 ? 'admin' : userData.role_id === 3 ? 'cleaner' : 'customer')).toLowerCase()
-      };
+      let normalizedUser = normalizeUserData(userData);
+
+      if (normalizedUser?.token) {
+        try {
+          const profileData = await fetchProfileFromApi(normalizedUser.token);
+          normalizedUser = normalizeUserData(profileData, normalizedUser);
+        } catch (profileError) {
+          console.warn('Failed to fetch profile after login:', profileError.message);
+        }
+      }
 
       setUser(normalizedUser);
+<<<<<<< HEAD
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
       persistUser(normalizedUser);
+>>>>>>> develop
 
       return { success: true, user: normalizedUser };
     } catch (err) {
@@ -124,7 +242,12 @@ export const useAuth = () => {
 
       if (userToLogin && password === 'password123') {
         setUser(userToLogin);
+<<<<<<< HEAD
+        localStorage.setItem('user', JSON.stringify(userToLogin));
+        window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
         persistUser(userToLogin);
+>>>>>>> develop
         return { success: true, user: userToLogin };
       }
 
@@ -146,7 +269,12 @@ export const useAuth = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 300));
       setUser(null);
+<<<<<<< HEAD
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
       persistUser(null);
+>>>>>>> develop
       return { success: true };
     } catch (err) {
       setError(err.message);
@@ -196,13 +324,65 @@ export const useAuth = () => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(userData),
+      });
 
-      const updatedUser = { ...user, ...userData };
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Failed to update profile');
+      }
+
+      const updatedUser = normalizeUserData(result.data || {}, user);
       setUser(updatedUser);
+<<<<<<< HEAD
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+=======
       persistUser(updatedUser);
+>>>>>>> develop
       
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadAvatar = async (file) => {
+    if (!user) return { success: false, error: 'Not authenticated' };
+    if (!file) return { success: false, error: 'No file selected' };
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile/avatar`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Failed to upload avatar');
+      }
+
+      const updatedUser = normalizeUserData(result.data || {}, user);
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+
       return { success: true, user: updatedUser };
     } catch (err) {
       setError(err.message);
@@ -231,6 +411,7 @@ export const useAuth = () => {
     logout,
     register,
     updateUser,
+    uploadAvatar,
     
     // Mock users data (for testing)
     MOCK_USERS
