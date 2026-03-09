@@ -43,19 +43,6 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
           </div>
 
           <div>
-<<<<<<< HEAD
-            <h2 className="text-4xl font-black mb-6">About</h2>
-
-            <p className="text-gray-600 text-lg mb-4">
-              Somaet has been delivering professional cleaning services for over 10 years.
-              We specialize in residential and commercial cleaning solutions that create
-              healthier and happier environments.
-            </p>
-
-            <p className="text-gray-600 mb-6">
-              Our trained team uses eco-friendly products and modern equipment to ensure
-              every space is spotless, sanitized, and fresh.
-=======
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
               About Company
             </p>
@@ -72,7 +59,6 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
             <p className={`mb-7 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
               Our trained team uses eco-friendly products and modern equipment to
               ensure every space is spotless, sanitized, and fresh.
->>>>>>> d0fcf642e9ceeaa008fb101992a574179dd4937c
             </p>
 
             <ul className="space-y-3">

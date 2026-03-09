@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-
-
-=======
->>>>>>> d0fcf642e9ceeaa008fb101992a574179dd4937c
 
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
@@ -12,59 +7,6 @@ import homeImage from "../../assets/home.png";
 import officeImage from "../../assets/office.png";
 import windowImage from "../../assets/window.png";
 import shopImage from "../../assets/shop.png";
-<<<<<<< HEAD
-import constructionImage from "../../assets/Construction Cleaning.png";
-import moveImage from "../../assets/move.png";
-import evenImage from "../../assets/even.png";
-
-
-
-export default function ServicesPage({ embedded = false }) {
-  const services = [
-    {
-      title: "Home Cleaning",
-      description:
-        "Keep your home fresh and healthy with routine dust, stain, and floor care.",
-      image: homeImage
-    },
-    {
-      title: "Construction Cleaning",
-      description:
-        "A full top-to-bottom clean for kitchens, bathrooms, corners, and hard-to-reach areas.",
-      image: constructionImage
-    },
-    {
-      title: "Office Cleaning",
-      description:
-        "Create a cleaner workspace that helps your team stay focused and productive.",
-      image: officeImage
-    },
-    {
-      title: "Window Cleaning",
-      description:
-        "Crystal-clear windows that brighten every room with more natural light.",
-      image: windowImage
-    },
-    {
-      title: "Move In/Out Cleaning",
-      description:
-        "Detailed move-in and move-out service to leave every room spotless and ready.",
-      image: moveImage
-    },
-    {
-      title: "Shop Cleaning",
-      description:
-        "Maintain a neat and welcoming store that leaves a strong first impression.",
-      image: shopImage
-    },
-    {
-      title: "Event or Post-Event Cleaning",
-      description:
-        "Remove dust, debris, and residue after renovation or construction work.",
-      image: evenImage
-    }
-  ];
-=======
 import moveImage from "../../assets/move.png";
 import proImage from "../../assets/pro.png";
 
@@ -187,7 +129,6 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
 
     return [...activeServices, ...inactiveServices];
   }, [services]);
->>>>>>> d0fcf642e9ceeaa008fb101992a574179dd4937c
 
   return (
     <div className={darkMode ? "bg-[#0b1220] text-slate-100" : "bg-[#f2f4f3] text-slate-800"}>

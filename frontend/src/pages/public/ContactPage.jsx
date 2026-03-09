@@ -1,15 +1,6 @@
 import Navbar from "../components/Navbar";
 
 const contactItems = [
-<<<<<<< HEAD
-  {
-    label: "Phone",
-    value: "+1 (555) 123-4567",
-    detail: "Everytime",
-  },
-=======
-
->>>>>>> d0fcf642e9ceeaa008fb101992a574179dd4937c
   {
     label: "Email",
     value: "support@somaet.com",

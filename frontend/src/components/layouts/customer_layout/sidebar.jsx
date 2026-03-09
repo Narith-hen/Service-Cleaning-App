@@ -7,8 +7,6 @@ import {
   CalendarOutlined,
   PhoneOutlined,
   CloseOutlined,
-<<<<<<< HEAD
-=======
   FacebookOutlined,
   MessageOutlined,
   InstagramOutlined,
@@ -16,7 +14,6 @@ import {
   WhatsAppOutlined,
   UserAddOutlined,
   LogoutOutlined
->>>>>>> d0fcf642e9ceeaa008fb101992a574179dd4937c
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import { useAuth } from '../../../hooks/useAuth';
@@ -92,8 +89,6 @@ const Sidebar = ({
     onClose();
   };
 
-<<<<<<< HEAD
-=======
   const handleSocialClick = (url) => {
     window.open(url, '_blank');
   };
@@ -137,7 +132,6 @@ const Sidebar = ({
       iconBg: 'green'
     };
 
->>>>>>> d0fcf642e9ceeaa008fb101992a574179dd4937c
   return (
     <div style={{ 
       height: '100%',
