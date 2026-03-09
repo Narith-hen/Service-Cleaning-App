@@ -1,372 +1,395 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  ClockCircleOutlined,
   EnvironmentOutlined,
+  UserOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  CompassOutlined,
+  MessageOutlined,
+  PlayCircleOutlined,
+  InfoCircleOutlined,
   CalendarOutlined,
-  CheckCircleOutlined,
-  PauseCircleOutlined,
+  FileTextOutlined,
+  PlusCircleOutlined,
   SendOutlined,
-  CaretRightOutlined,
-  LockOutlined,
-  SearchOutlined,
-  CloseOutlined
+  CheckCircleOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons';
-import homeImage from '../../../assets/home.png';
 import officeImage from '../../../assets/office.png';
-import windowImage from '../../../assets/window.png';
 import '../../../styles/cleaner/my_jobs.scss';
 
-const jobs = [
+const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+
+const pickJobImage = (job) => {
+  // Apply office preview image for booking cards by default.
+  const imageHint = String(job?.image || '').toLowerCase();
+  if (imageHint.includes('office')) return officeImage;
+  return officeImage;
+};
+
+const fallbackJobs = [
   {
-    id: 1,
-    jobType: 'Deep Clean',
-    status: 'Ongoing',
-    scheduledDate: '2026-03-04',
-    tag: 'ONGOING',
-    tagType: 'green',
-    title: 'Full Apartment Deep Clean',
-    client: 'Sarah Jenkins - Premium Member',
-    price: '$180.00',
-    image: homeImage,
-    details: [
-      { label: 'LOCATION', value: '742 Evergreen Terrace, Suite 402', icon: <EnvironmentOutlined /> },
-      { label: 'TIME ELAPSED', value: '01:45:22', icon: <ClockCircleOutlined /> }
-    ],
-    actions: [
-      { label: 'Pause Job', type: 'dark', icon: <PauseCircleOutlined /> },
-      { label: 'Complete Cleaning', type: 'green', icon: <CheckCircleOutlined /> }
-    ]
-  },
-  {
-    id: 2,
-    jobType: 'Home',
-    status: 'Starting Soon',
-    scheduledDate: '2026-03-04',
-    tag: 'STARTS IN 45M',
-    tagType: 'amber',
-    title: 'Standard Recurring Clean',
-    client: 'Michael Chen - Regular',
-    price: '$95.00',
-    image: windowImage,
-    details: [
-      { label: 'SCHEDULED', value: 'Today, 4:00 PM', icon: <ClockCircleOutlined /> },
-      { label: 'DISTANCE', value: '1.2 miles away', icon: <EnvironmentOutlined /> }
-    ],
-    actions: [
-      { label: 'Navigate', type: 'light', icon: <SendOutlined /> },
-      { label: 'Start Cleaning', type: 'soft-green', icon: <CaretRightOutlined /> }
-    ]
-  },
-  {
-    id: 3,
-    jobType: 'Office',
-    status: 'Scheduled',
-    scheduledDate: '2026-03-05',
-    tag: 'SCHEDULED',
-    tagType: 'gray',
-    title: 'Move-out Sanitation',
-    client: 'David Miller',
-    price: '$240.00',
-    image: officeImage,
-    details: [
-      { label: 'DATE', value: 'Tomorrow, 9:00 AM', icon: <CalendarOutlined /> },
-      { label: 'JOB SIZE', value: '3 BR - 2.5 BA', icon: <EnvironmentOutlined /> }
-    ],
-    actions: [
-      { label: 'Details', type: 'light', icon: <SearchOutlined /> },
-      { label: 'Early Start Locked', type: 'locked', icon: <LockOutlined /> }
-    ]
+    id: 'default-1',
+    sourceRequestId: 'default-1',
+    status: 'upcoming',
+    title: 'Deep House Cleaning',
+    jobId: '#SOMA-48291',
+    price: '$85.00',
+    day: '24',
+    monthYear: 'June 2026',
+    timeRange: '09:00 AM - 12:00 PM',
+    location: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
+    customer: 'Sovan Reach',
+    bedrooms: '3 Bedrooms',
+    floors: '2 Floors',
+    image: officeImage
   }
 ];
 
+const tabs = [
+  { key: 'all', label: 'All Jobs' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'in-progress', label: 'In-Progress' },
+  { key: 'completed', label: 'Completed' }
+];
+
 const MyJobsPage = () => {
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id ?? null);
-  const [activeJob, setActiveJob] = useState(null);
-  const fromDateRef = useRef(null);
-  const toDateRef = useRef(null);
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('all');
+  const [jobs, setJobs] = useState(fallbackJobs);
+  const [activeMessageJobId, setActiveMessageJobId] = useState(null);
+  const [jobActionStateById, setJobActionStateById] = useState({});
 
-  const jobTypeOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.jobType))], []);
-  const statusOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.status))], []);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      if (!raw) return;
 
-  const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
-      if (selectedType !== 'all' && job.jobType !== selectedType) return false;
-      if (selectedStatus !== 'all' && job.status !== selectedStatus) return false;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
 
-      if (dateFrom && job.scheduledDate < dateFrom) return false;
-      if (dateTo && job.scheduledDate > dateTo) return false;
+      const normalized = parsed
+        .filter(Boolean)
+        .map((job) => ({
+          id: job.id || `confirmed-${job.sourceRequestId || Date.now()}`,
+          sourceRequestId: job.sourceRequestId || job.id,
+          status: job.status || 'in-progress',
+          title: job.title || 'Cleaning Job',
+          jobId: job.jobId || '#SOMA-00000',
+          price: job.price || '$0.00',
+          day: job.day || '01',
+          monthYear: job.monthYear || 'June 2026',
+          timeRange: job.timeRange || '09:00 AM - 12:00 PM',
+          location: job.location || 'Phnom Penh, Cambodia',
+          customer: job.customer || 'Customer',
+          bedrooms: job.bedrooms || '3 Bedrooms',
+          floors: job.floors || '2 Floors',
+          image: pickJobImage(job)
+        }));
 
-      return true;
+      setJobs([normalized[0]]);
+    } catch {
+      setJobs(fallbackJobs);
+    }
+  }, []);
+
+  const visibleJobs = useMemo(() => {
+    if (activeTab === 'all') return jobs;
+    return jobs.filter((job) => job.status === activeTab);
+  }, [jobs, activeTab]);
+
+  const activeMessageJob = useMemo(
+    () => jobs.find((job) => job.id === activeMessageJobId) || null,
+    [jobs, activeMessageJobId]
+  );
+
+  const handlePrimaryJobAction = (jobId) => {
+    setJobActionStateById((prev) => {
+      const current = prev[jobId] || 'idle';
+      const next = current === 'idle' ? 'in-progress' : current;
+
+      setJobs((jobsPrev) =>
+        jobsPrev.map((job) =>
+          job.id === jobId
+            ? { ...job, status: 'in-progress' }
+            : job
+        )
+      );
+
+      return { ...prev, [jobId]: next };
     });
-  }, [selectedType, selectedStatus, dateFrom, dateTo]);
+  };
 
-  useEffect(() => {
-    if (filteredJobs.length === 0) {
-      setSelectedJobId(null);
-      return;
+  const handleStartJob = (jobId) => {
+    handlePrimaryJobAction(jobId);
+    const selectedJob = jobs.find((job) => job.id === jobId) || null;
+
+    if (selectedJob) {
+      try {
+        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const updated = parsed.map((job) =>
+              (job.id === selectedJob.id || job.sourceRequestId === selectedJob.sourceRequestId)
+                ? { ...job, status: 'in-progress' }
+                : job
+            );
+            localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+          }
+        }
+      } catch {
+        // Non-blocking for navigation flow.
+      }
     }
 
-    const stillExists = filteredJobs.some((job) => job.id === selectedJobId);
-    if (!stillExists) {
-      setSelectedJobId(filteredJobs[0].id);
-    }
-  }, [filteredJobs, selectedJobId]);
-
-  useEffect(() => {
-    if (!activeJob) return undefined;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [activeJob]);
-
-  const formatDisplayDate = (value) => {
-    if (!value) return '';
-    const [year, month, day] = value.split('-');
-    if (!year || !month || !day) return '';
-    return `${month}/${day}/${year}`;
+    navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
-  const openDatePicker = (ref) => {
-    if (!ref.current) return;
-    if (typeof ref.current.showPicker === 'function') {
-      ref.current.showPicker();
-      return;
-    }
-    ref.current.click();
+  const handleCheckMyJob = (jobId) => {
+    navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
-  const handleOpenJobDetails = (job) => {
-    setSelectedJobId(job.id);
-    setActiveJob(job);
-  };
-
-  const handleCloseJobDetails = () => {
-    setActiveJob(null);
-  };
-
-  return (
-    <div className="cleaner-my-jobs-page">
-      <div className="my-jobs-headline">
-        <h1>Personal Job Management</h1>
-        <p>Manage your active assignments and track your work history.</p>
-      </div>
-
-      <div className="summary-grid">
-        <div className="summary-card wide">
-          <span className="summary-label">WEEKLY COMMITMENT</span>
-          <div className="summary-main">
-            <strong>32 / 40 hrs</strong>
-            <em>80% Reached</em>
-          </div>
-          <div className="progress-line">
-            <span />
-          </div>
+  if (activeMessageJob) {
+    return (
+      <div className="cleaner-my-jobs-v2">
+        <div className="my-jobs-message-breadcrumb">
+          <button type="button" onClick={() => setActiveMessageJobId(null)}>My Jobs</button>
+          <span>&gt;</span>
+          <strong>Message</strong>
         </div>
 
-        <div className="summary-card">
-          <span className="summary-label">TOTAL TRAVEL</span>
-          <div className="summary-main">
-            <strong>14.5 miles</strong>
-            <em>Estimated for today</em>
-          </div>
-        </div>
-
-        <div className="summary-card">
-          <span className="summary-label">INSURANCE STATUS</span>
-          <div className="summary-main">
-            <strong>Active</strong>
-            <em>Expires in 12 days</em>
-          </div>
-        </div>
-      </div>
-
-      <div className="filter-bar">
-        <div className="filter-item">
-          <label>JOB TYPE</label>
-          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-            {jobTypeOptions.map((type) => (
-              <option key={type} value={type}>
-                {type === 'all' ? 'All Types' : type}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-item">
-          <label>STATUS</label>
-          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status === 'all' ? 'All Statuses' : status}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-item date-range">
-          <label>DATE RANGE</label>
-          <div className="date-inputs">
-            <div className="date-picker-field">
-              <input
-                type="text"
-                className="date-display-input"
-                value={formatDisplayDate(dateFrom)}
-                onClick={() => openDatePicker(fromDateRef)}
-                placeholder="mm/dd/yyyy"
-                readOnly
-              />
-              <button type="button" className="calendar-trigger" onClick={() => openDatePicker(fromDateRef)}>
-                <CalendarOutlined />
-              </button>
-              <input
-                ref={fromDateRef}
-                type="date"
-                className="hidden-native-date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                aria-label="From date"
-              />
-            </div>
-            <span>to</span>
-            <div className="date-picker-field">
-              <input
-                type="text"
-                className="date-display-input"
-                value={formatDisplayDate(dateTo)}
-                onClick={() => openDatePicker(toDateRef)}
-                placeholder="mm/dd/yyyy"
-                readOnly
-              />
-              <button type="button" className="calendar-trigger" onClick={() => openDatePicker(toDateRef)}>
-                <CalendarOutlined />
-              </button>
-              <input
-                ref={toDateRef}
-                type="date"
-                className="hidden-native-date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                aria-label="To date"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="jobs-list">
-        {filteredJobs.map((job) => (
-          <article
-            className={`job-item ${job.id === selectedJobId ? 'highlight' : ''}`}
-            key={job.id}
-            onClick={() => handleOpenJobDetails(job)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenJobDetails(job);
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="job-image-wrap">
-              <span className={`job-tag ${job.tagType}`}>{job.tag}</span>
-              <img src={job.image} alt={job.title} />
-            </div>
-
-            <div className="job-body">
-              <div className="job-top">
-                <div>
-                  <span className="job-type">{job.jobType.toUpperCase()}</span>
-                  <h3>{job.title}</h3>
-                  <p className="job-client">Client: {job.client}</p>
+        <div className="my-jobs-message-view">
+          <section className="my-jobs-chat-panel">
+            <div className="my-jobs-chat-header">
+              <div className="my-jobs-chat-customer">
+                <div className="my-jobs-chat-avatar-wrap">
+                  <div className="my-jobs-chat-avatar">{activeMessageJob.customer.charAt(0)}</div>
+                  <span className="my-jobs-chat-online-dot" />
                 </div>
-                <div className="job-price">{job.price}</div>
+                <div>
+                  <h3>{activeMessageJob.customer}</h3>
+                  <p>{activeMessageJob.title} Job - {activeMessageJob.jobId}</p>
+                </div>
               </div>
 
-              <div className="job-details-grid">
-                {job.details.map((detail, index) => (
-                  <div className="job-detail" key={`${job.id}-${index}`}>
-                    <span className="label">{detail.label}</span>
-                    <p>
-                      {detail.icon} {detail.value}
-                    </p>
+              <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
+                <InfoCircleOutlined />
+              </button>
+            </div>
+
+            <div className="my-jobs-chat-body">
+              <div className="my-jobs-chat-day-pill">TODAY</div>
+
+              <div className="my-jobs-chat-row left">
+                <div className="my-jobs-chat-mini-avatar">{activeMessageJob.customer.charAt(0)}</div>
+                <div className="my-jobs-chat-content">
+                  <div className="my-jobs-chat-bubble">
+                    Hi! I&apos;m really looking forward to the cleaning session tomorrow. I noticed the
+                    kitchen cabinets might need some extra attention.
                   </div>
-                ))}
+                  <span className="my-jobs-chat-time">10:42 AM</span>
+                </div>
               </div>
 
-              <div className="job-actions">
-                {job.actions.map((action, idx) => (
-                  <button key={`${job.id}-action-${idx}`} type="button" className={`action-btn ${action.type}`}>
-                    {action.icon} {action.label}
-                  </button>
-                ))}
+              <div className="my-jobs-chat-row left">
+                <div className="my-jobs-chat-mini-avatar">{activeMessageJob.customer.charAt(0)}</div>
+                <div className="my-jobs-chat-content">
+                  <div className="my-jobs-chat-bubble">
+                    Can you also clean the windows? I&apos;m happy to pay extra for that.
+                  </div>
+                  <span className="my-jobs-chat-time">10:45 AM</span>
+                </div>
+              </div>
+
+              <div className="my-jobs-chat-row right">
+                <div className="my-jobs-chat-content">
+                  <div className="my-jobs-chat-bubble">
+                    Of course! I can definitely add window cleaning to the list. For a house of your size,
+                    it usually takes about an extra hour.
+                  </div>
+                  <span className="my-jobs-chat-time">10:48 AM</span>
+                </div>
               </div>
             </div>
-          </article>
-        ))}
-        {filteredJobs.length === 0 && <div className="summary-card">No jobs found for the selected filters.</div>}
-      </div>
-      {activeJob && (
-        <div className="job-modal-overlay" onClick={handleCloseJobDetails}>
-          <div className="job-modal" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="job-modal-close" aria-label="Close details" onClick={handleCloseJobDetails}>
-              <CloseOutlined />
+
+            <div className="my-jobs-chat-input-row">
+              <button type="button" className="my-jobs-input-add-btn" aria-label="Attach">
+                <PlusCircleOutlined />
+              </button>
+              <input type="text" placeholder="Type a message..." />
+              <button type="button" className="my-jobs-input-send-btn" aria-label="Send">
+                <SendOutlined />
+              </button>
+            </div>
+          </section>
+
+          <aside className="my-jobs-details-panel">
+            <h5>JOB DETAILS</h5>
+
+            <div className="my-jobs-details-card">
+              <div className="my-jobs-detail-row">
+                <span className="my-jobs-detail-icon"><CalendarOutlined /></span>
+                <div>
+                  <small>Date &amp; Time</small>
+                  <strong>Tomorrow, 9:00 AM</strong>
+                </div>
+              </div>
+
+              <div className="my-jobs-detail-row">
+                <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
+                <div>
+                  <small>Location</small>
+                  <strong>{activeMessageJob.location}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="my-jobs-checklist-card">
+              <h6>Checklist Preview</h6>
+              <ul>
+                <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
+                <li><CheckCircleOutlined /> Bathroom Sanitization</li>
+                <li><ClockCircleOutlined /> Window Cleaning (Pending)</li>
+              </ul>
+            </div>
+
+            <button type="button" className="my-jobs-contract-btn">
+              <FileTextOutlined /> View Full Job Contract
             </button>
 
-            <div className="job-modal-image-wrap">
-              <span className={`job-tag ${activeJob.tagType}`}>{activeJob.tag}</span>
-              <img src={activeJob.image} alt={activeJob.title} />
-            </div>
-
-            <div className="job-modal-body">
-              <div className="job-top">
-                <div>
-                  <span className="job-type">{activeJob.jobType.toUpperCase()}</span>
-                  <h3>{activeJob.title}</h3>
-                  <p className="job-client">Client: {activeJob.client}</p>
-                </div>
-                <div className="job-price">{activeJob.price}</div>
-              </div>
-
-              <div className="job-details-grid">
-                {activeJob.details.map((detail, index) => (
-                  <div className="job-detail" key={`${activeJob.id}-modal-${index}`}>
-                    <span className="label">{detail.label}</span>
-                    <p>
-                      {detail.icon} {detail.value}
-                    </p>
-                  </div>
-                ))}
-                <div className="job-detail">
-                  <span className="label">STATUS</span>
-                  <p>{activeJob.status}</p>
-                </div>
-                <div className="job-detail">
-                  <span className="label">SCHEDULED DATE</span>
-                  <p>{formatDisplayDate(activeJob.scheduledDate)}</p>
-                </div>
-              </div>
-
-              <div className="job-actions">
-                {activeJob.actions.map((action, idx) => (
-                  <button key={`${activeJob.id}-modal-action-${idx}`} type="button" className={`action-btn ${action.type}`}>
-                    {action.icon} {action.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+            <div className="my-jobs-map-preview" />
+          </aside>
         </div>
-      )}
+      </div>
+    );
+  }
 
+  return (
+    <div className="cleaner-my-jobs-v2">
+      <div className="my-jobs-tabs-v2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={activeTab === tab.key ? 'active' : ''}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="my-jobs-list-v2">
+        {visibleJobs.slice(0, 1).map((job) => {
+          const actionState = jobActionStateById[job.id]
+            || (job.status === 'completed'
+              ? 'completed'
+              : job.status === 'in-progress'
+                ? 'in-progress'
+                : 'idle');
+
+          return (
+            <article key={job.id} className="my-job-card-v2">
+            <aside
+              className="my-job-date-v2"
+              style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
+            >
+              <span className="status-pill">ACTIVE NOW</span>
+              <div className="day-value">{job.day}</div>
+              <div className="month-value">{job.monthYear}</div>
+
+              <div className="schedule-label">Scheduled Time</div>
+              <div className="schedule-value">{job.timeRange}</div>
+            </aside>
+
+            <section className="my-job-main-v2">
+              <div className="job-main-header-v2">
+                <div>
+                  <h3>{job.title}</h3>
+                  <p>Job ID: {job.jobId}</p>
+                </div>
+
+                <div className="job-price-v2">
+                  <strong>{job.price}</strong>
+                  <small>Fixed Rate</small>
+                </div>
+              </div>
+
+              <p className="job-line-v2">
+                <EnvironmentOutlined /> {job.location}
+              </p>
+
+              <p className="job-line-v2">
+                <UserOutlined /> Customer: {job.customer}
+              </p>
+
+              <p className="job-line-v2">
+                <HomeOutlined /> {job.bedrooms}
+                <span className="dot">•</span>
+                <AppstoreOutlined /> {job.floors}
+              </p>
+
+              <div className="job-actions-v2">
+                {actionState === 'idle' && (
+                  <button
+                    type="button"
+                    className="start-btn"
+                    onClick={() => handleStartJob(job.id)}
+                  >
+                    <PlayCircleOutlined /> Start Job
+                  </button>
+                )}
+
+                {actionState === 'in-progress' && (
+                  <button
+                    type="button"
+                    className="progress-btn"
+                    disabled
+                  >
+                    <ClockCircleOutlined /> In progress
+                  </button>
+                )}
+
+                {actionState === 'completed' && (
+                  <button type="button" className="completed-btn" disabled>
+                    <CheckCircleOutlined /> Completed
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => handleCheckMyJob(job.id)}
+                >
+                  <CheckCircleOutlined /> Check My Job
+                </button>
+
+                <button type="button" className="ghost-btn">
+                  <CompassOutlined /> Navigate to Location
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => setActiveMessageJobId(job.id)}
+                >
+                  <MessageOutlined /> Messages
+                </button>
+              </div>
+            </section>
+            </article>
+          );
+        })}
+
+        {visibleJobs.length === 0 && (
+          <div className="my-jobs-empty-v2">No jobs in this tab yet.</div>
+        )}
+      </div>
     </div>
   );
 };
 
 export default MyJobsPage;
+
+
