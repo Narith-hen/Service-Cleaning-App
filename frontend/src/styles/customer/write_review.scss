@@ -1,5 +1,5 @@
 .quotes-page {
-  --brand: #32c753;
+  --brand: #008000;
   --blue: #2386f6;
   --line: #d9e2ef;
   --panel: #f3f5f8;
@@ -19,7 +19,7 @@
   margin-bottom: 24px;
 }
 
-.step-dot {
+.quotes-page .step-dot {
   position: relative;
   width: 44px;
   height: 44px;
@@ -31,12 +31,12 @@
   font-size: 18px;
 }
 
-.step-dot.active {
+.quotes-page .step-dot.active {
   background: var(--brand);
   color: #fff;
 }
 
-.step-dot::after {
+.quotes-page .step-dot::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -47,7 +47,7 @@
   transform: translateY(-50%);
 }
 
-.step-dot:last-child::after {
+.quotes-page .step-dot:last-child::after {
   display: none;
 }
 

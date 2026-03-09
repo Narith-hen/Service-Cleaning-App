@@ -19,7 +19,7 @@
   margin-bottom: 24px;
 }
 
-.step-circle {
+.booking-match-page .step-circle {
   position: relative;
   width: 44px;
   height: 44px;
@@ -32,12 +32,13 @@
   font-size: 18px;
 }
 
-.step-circle.active {
-  background: #2ff300;
-  border-color: #2ff300;
+.booking-match-page .step-circle.active {
+  background: #008000;
+  border-color: #008000;
+  color: #fff;
 }
 
-.step-circle::after {
+.booking-match-page .step-circle::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -48,7 +49,7 @@
   transform: translateY(-50%);
 }
 
-.step-circle:last-child::after {
+.booking-match-page .step-circle:last-child::after {
   display: none;
 }
 

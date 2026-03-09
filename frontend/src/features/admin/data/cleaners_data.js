@@ -53,7 +53,7 @@ export const starterCleaners = [
     emergencyContactName: 'Lora Cooper',
     emergencyContactPhone: '+1 555-991-0202',
     experienceYears: 1,
-    status: 'Pending',
+    status: 'Inactive',
     totalJobs: 0,
     rating: 0,
     reviews: 0,

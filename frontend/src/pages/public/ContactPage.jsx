@@ -1,17 +1,16 @@
 import Navbar from "../components/Navbar";
 
 const contactItems = [
-
   {
     label: "Email",
     value: "support@somaet.com",
     detail: "Fast response within 24 hours",
   },
-  {
-    label: "Office",
-    value: "123 Cleaning Street",
-    detail: "San Francisco, CA 94105",
-  },
+  // {
+  //   label: "Office",
+  //   value: "123 Cleaning Street",
+  //   detail: "San Francisco, CA 94105",
+  // },
 ];
 
 export default function ContactPage({ embedded = false, darkMode = false }) {
