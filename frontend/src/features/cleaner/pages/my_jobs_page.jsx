@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ClockCircleOutlined,
   EnvironmentOutlined,
@@ -82,12 +82,8 @@ const jobs = [
 const MyJobsPage = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id ?? null);
   const [activeJob, setActiveJob] = useState(null);
-  const fromDateRef = useRef(null);
-  const toDateRef = useRef(null);
 
   const jobTypeOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.jobType))], []);
   const statusOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.status))], []);
@@ -97,12 +93,9 @@ const MyJobsPage = () => {
       if (selectedType !== 'all' && job.jobType !== selectedType) return false;
       if (selectedStatus !== 'all' && job.status !== selectedStatus) return false;
 
-      if (dateFrom && job.scheduledDate < dateFrom) return false;
-      if (dateTo && job.scheduledDate > dateTo) return false;
-
       return true;
     });
-  }, [selectedType, selectedStatus, dateFrom, dateTo]);
+  }, [selectedType, selectedStatus]);
 
   useEffect(() => {
     if (filteredJobs.length === 0) {
@@ -132,15 +125,6 @@ const MyJobsPage = () => {
     const [year, month, day] = value.split('-');
     if (!year || !month || !day) return '';
     return `${month}/${day}/${year}`;
-  };
-
-  const openDatePicker = (ref) => {
-    if (!ref.current) return;
-    if (typeof ref.current.showPicker === 'function') {
-      ref.current.showPicker();
-      return;
-    }
-    ref.current.click();
   };
 
   const handleOpenJobDetails = (job) => {
@@ -208,54 +192,6 @@ const MyJobsPage = () => {
               </option>
             ))}
           </select>
-        </div>
-        <div className="filter-item date-range">
-          <label>DATE RANGE</label>
-          <div className="date-inputs">
-            <div className="date-picker-field">
-              <input
-                type="text"
-                className="date-display-input"
-                value={formatDisplayDate(dateFrom)}
-                onClick={() => openDatePicker(fromDateRef)}
-                placeholder="mm/dd/yyyy"
-                readOnly
-              />
-              <button type="button" className="calendar-trigger" onClick={() => openDatePicker(fromDateRef)}>
-                <CalendarOutlined />
-              </button>
-              <input
-                ref={fromDateRef}
-                type="date"
-                className="hidden-native-date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                aria-label="From date"
-              />
-            </div>
-            <span>to</span>
-            <div className="date-picker-field">
-              <input
-                type="text"
-                className="date-display-input"
-                value={formatDisplayDate(dateTo)}
-                onClick={() => openDatePicker(toDateRef)}
-                placeholder="mm/dd/yyyy"
-                readOnly
-              />
-              <button type="button" className="calendar-trigger" onClick={() => openDatePicker(toDateRef)}>
-                <CalendarOutlined />
-              </button>
-              <input
-                ref={toDateRef}
-                type="date"
-                className="hidden-native-date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                aria-label="To date"
-              />
-            </div>
-          </div>
         </div>
       </div>
 

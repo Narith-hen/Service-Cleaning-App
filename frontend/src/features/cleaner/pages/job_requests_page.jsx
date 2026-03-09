@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   EnvironmentOutlined,
   ClockCircleOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
   CloseOutlined,
-  CustomerServiceOutlined
+  PictureOutlined
 } from '@ant-design/icons';
 import '../../../styles/cleaner/job_requests.scss';
 import homeImage from '../../../assets/home.png';
@@ -95,6 +95,113 @@ const jobRequests = [
 
 const JobRequestsPage = () => {
   const [selectedJob, setSelectedJob] = useState(null);
+  const [chatJob, setChatJob] = useState(null);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState({});
+  const imageInputRef = useRef(null);
+
+  const getCustomerName = (job) => {
+    if (!job?.extraDetails?.length) return 'Customer';
+    const customerLine = job.extraDetails.find((line) => line.startsWith('Customer:'));
+    if (!customerLine) return 'Customer';
+    return customerLine.replace('Customer:', '').trim() || 'Customer';
+  };
+
+  const getCustomerInitials = (name) => {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return 'C';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+  };
+
+  const openChat = (job) => {
+    if (!job) return;
+
+    setChatJob(job);
+    setSelectedJob(null);
+    setChatInput('');
+
+    setChatMessages((prev) => {
+      if (prev[job.id]) return prev;
+
+      const customerName = getCustomerName(job);
+      return {
+        ...prev,
+        [job.id]: [
+          {
+            id: `${job.id}-seed-1`,
+            from: 'customer',
+            text: `Hi, this is ${customerName}. Thanks for accepting my request.`,
+            time: 'Now'
+          },
+          {
+            id: `${job.id}-seed-2`,
+            from: 'customer',
+            text: 'Please message me when you are on your way.',
+            time: 'Now'
+          }
+        ]
+      };
+    });
+  };
+
+  const handleSendMessage = () => {
+    if (!chatJob) return;
+
+    const text = chatInput.trim();
+    if (!text) return;
+
+    const outgoingMessage = {
+      id: `${chatJob.id}-${Date.now()}`,
+      from: 'cleaner',
+      text,
+      time: 'Now'
+    };
+
+    setChatMessages((prev) => {
+      const existing = prev[chatJob.id] || [];
+      return {
+        ...prev,
+        [chatJob.id]: [...existing, outgoingMessage]
+      };
+    });
+
+    setChatInput('');
+  };
+
+  const handlePickImage = () => {
+    imageInputRef.current?.click();
+  };
+
+  const handleImageSelected = (event) => {
+    if (!chatJob) return;
+
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const outgoingImageMessage = {
+        id: `${chatJob.id}-img-${Date.now()}`,
+        from: 'cleaner',
+        image: String(reader.result),
+        time: 'Now'
+      };
+
+      setChatMessages((prev) => {
+        const existing = prev[chatJob.id] || [];
+        return {
+          ...prev,
+          [chatJob.id]: [...existing, outgoingImageMessage]
+        };
+      });
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
 
   return (
     <div className="cleaner-job-requests-page">
@@ -145,7 +252,14 @@ const JobRequestsPage = () => {
               </ul>
 
               <div className="job-actions">
-                <button type="button" className="accept-btn" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="accept-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openChat(job);
+                  }}
+                >
                   <CheckCircleOutlined /> Accept
                 </button>
                 <button
@@ -160,21 +274,6 @@ const JobRequestsPage = () => {
             </div>
           </article>
         ))}
-      </div>
-
-      <div className="job-support-strip">
-        <div className="support-left">
-          <div className="support-icon">
-            <CustomerServiceOutlined />
-          </div>
-          <div>
-            <h3>Need help with a job?</h3>
-            <p>Our support team is available 24/7 for urgent issues.</p>
-          </div>
-        </div>
-        <button type="button" className="support-btn">
-          Contact Support
-        </button>
       </div>
 
       {selectedJob ? (
@@ -228,7 +327,7 @@ const JobRequestsPage = () => {
                 </ul>
 
                 <div className="job-actions">
-                  <button type="button" className="accept-btn">
+                  <button type="button" className="accept-btn" onClick={() => openChat(selectedJob)}>
                     <CheckCircleOutlined /> Accept
                   </button>
                   <button type="button" className="decline-btn" aria-label="decline request">
@@ -236,6 +335,74 @@ const JobRequestsPage = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {chatJob ? (
+        <div className="job-request-modal-backdrop chat-backdrop" onClick={() => setChatJob(null)}>
+          <div
+            className="job-chat-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={getCustomerName(chatJob)}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="job-chat-head">
+              <div className="job-chat-customer">
+                <div className="job-chat-avatar">{getCustomerInitials(getCustomerName(chatJob))}</div>
+                <div>
+                  <h3>{getCustomerName(chatJob)}</h3>
+                  <p>{chatJob.title}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="job-request-modal-close"
+                aria-label="Close chat"
+                onClick={() => setChatJob(null)}
+              >
+                <CloseOutlined />
+              </button>
+            </div>
+
+            <div className="job-chat-body">
+              {(chatMessages[chatJob.id] || []).map((message) => (
+                <div
+                  key={message.id}
+                  className={`job-chat-bubble ${message.from === 'cleaner' ? 'mine' : 'theirs'}`}
+                >
+                  {message.image ? <img src={message.image} alt="Shared in chat" className="job-chat-image" /> : null}
+                  {message.text ? <p>{message.text}</p> : null}
+                  <span>{message.time}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="job-chat-compose">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelected}
+                style={{ display: 'none' }}
+              />
+              <button type="button" className="chat-attach-btn" aria-label="Attach image" onClick={handlePickImage}>
+                <PictureOutlined />
+              </button>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSendMessage();
+                }}
+                placeholder="Type a message..."
+              />
+              <button type="button" className="accept-btn" onClick={handleSendMessage}>
+                Send
+              </button>
             </div>
           </div>
         </div>

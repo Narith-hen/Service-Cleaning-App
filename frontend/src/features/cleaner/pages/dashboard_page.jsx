@@ -9,6 +9,22 @@ import {
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/cleaner/dashboard.scss';
 
+const polarToCartesian = (cx, cy, radius, angleDeg) => {
+  const radians = (angleDeg * Math.PI) / 180;
+  return {
+    x: cx + radius * Math.sin(radians),
+    y: cy - radius * Math.cos(radians)
+  };
+};
+
+const describeSector = (cx, cy, radius, startAngle, endAngle) => {
+  const start = polarToCartesian(cx, cy, radius, startAngle);
+  const end = polarToCartesian(cx, cy, radius, endAngle);
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+
+  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y} Z`;
+};
+
 const CleanerDashboardPage = () => {
   const navigate = useNavigate();
   const [selectedStatKey, setSelectedStatKey] = useState('rating');
@@ -20,8 +36,61 @@ const CleanerDashboardPage = () => {
     ratingTier: 'Top 5%',
     totalService: 124,
     oneMonthService: 18,
-    cancelCount: 2
+    cancelCount: 2,
+    pageChart: [
+      {
+        key: 'jobRequests',
+        page: 'Job Requests',
+        color: '#22c55e',
+        items: ['Deep House Cleaning', 'Move-Out Sanitation', 'Office Recurring Clean', 'Condo Routine Clean']
+      },
+      {
+        key: 'myJobs',
+        page: 'My Jobs',
+        color: '#3b82f6',
+        items: ['Full Apartment Deep Clean', 'Standard Recurring Clean', 'Move-out Sanitation']
+      },
+      {
+        key: 'reviews',
+        page: 'Reviews',
+        color: '#f59e0b',
+        items: ['5-star reviews', '4-star reviews', 'Recent comments', 'Verified customers', 'Cleaner replies']
+      },
+      {
+        key: 'earnings',
+        page: 'Earnings',
+        color: '#ef4444',
+        items: ['Today earnings', 'Weekly payout', 'Monthly summary', 'Pending transfers']
+      }
+    ]
   };
+
+  const totalChartItems = cleanerData.pageChart.reduce((sum, segment) => sum + segment.items.length, 0);
+
+  const pieSize = 360;
+  const pieCenter = pieSize / 2;
+  const pieRadius = 170;
+  const labelRadius = 95;
+  const chartStartAngle = 270;
+  let runningAngle = chartStartAngle;
+
+  const chartSegments = cleanerData.pageChart.map((segment) => {
+    const count = segment.items.length;
+    const value = totalChartItems > 0 ? (count / totalChartItems) * 100 : 0;
+    const sweep = (value / 100) * 360;
+    const startAngle = runningAngle;
+    const endAngle = runningAngle + sweep;
+    const midAngle = startAngle + sweep / 2;
+    runningAngle = endAngle;
+
+    return {
+      ...segment,
+      count,
+      value,
+      path: describeSector(pieCenter, pieCenter, pieRadius, startAngle, endAngle),
+      labelPosition: polarToCartesian(pieCenter, pieCenter, labelRadius, midAngle)
+    };
+  });
 
   const handleLogout = () => {
     navigate('/login');
@@ -143,52 +212,47 @@ const CleanerDashboardPage = () => {
         </div>
       </div>
 
-      {selectedStatKey === 'rating' && (
-        <section className="review-chart">
-          <div className="chart-header">
-            <h3>Review Chart</h3>
-            <p>Customer rating distribution</p>
-          </div>
+      <section className="review-chart">
+        <div className="chart-header">
+          <h3>Page Activity Chart</h3>
+          <p>Page distribution by total items.</p>
+          <p className="chart-total">Total items in chart: {totalChartItems}</p>
+        </div>
 
-          <div className="chart-bars">
-            <div className="chart-row">
-              <span className="chart-label">5 Stars</span>
-              <div className="chart-track">
-                <span className="chart-fill level-5" />
-              </div>
-              <strong>72%</strong>
-            </div>
-            <div className="chart-row">
-              <span className="chart-label">4 Stars</span>
-              <div className="chart-track">
-                <span className="chart-fill level-4" />
-              </div>
-              <strong>19%</strong>
-            </div>
-            <div className="chart-row">
-              <span className="chart-label">3 Stars</span>
-              <div className="chart-track">
-                <span className="chart-fill level-3" />
-              </div>
-              <strong>6%</strong>
-            </div>
-            <div className="chart-row">
-              <span className="chart-label">2 Stars</span>
-              <div className="chart-track">
-                <span className="chart-fill level-2" />
-              </div>
-              <strong>2%</strong>
-            </div>
-            <div className="chart-row">
-              <span className="chart-label">1 Star</span>
-              <div className="chart-track">
-                <span className="chart-fill level-1" />
-              </div>
-              <strong>1%</strong>
-            </div>
-          </div>
-        </section>
-      )}
+        <div className="chart-donut-wrap">
+          <svg
+            className="chart-pie"
+            viewBox={`0 0 ${pieSize} ${pieSize}`}
+            role="img"
+            aria-label="Page activity chart"
+          >
+            {chartSegments.map((segment) => (
+              <path
+                key={segment.key}
+                d={segment.path}
+                className="chart-pie-segment"
+                style={{ fill: segment.color }}
+                aria-label={`${segment.page}: ${segment.count} items`}
+              />
+            ))}
+            {chartSegments.map((segment) => (
+              <text
+                key={`${segment.key}-label`}
+                x={segment.labelPosition.x}
+                y={segment.labelPosition.y}
+                className="chart-pie-label"
+              >
+                <tspan x={segment.labelPosition.x} className="chart-pie-count">
+                  {segment.count}
+                </tspan>
+                <tspan x={segment.labelPosition.x} dy="1.1em" className="chart-pie-percent">
+                  {segment.value.toFixed(1)}%
+                </tspan>
+              </text>
+            ))}
+          </svg>
+        </div>
+      </section>
 
       <div className="mobile-logout">
         <button className="logout-btn" type="button" onClick={handleLogout}>

@@ -147,17 +147,26 @@
     text-transform: uppercase;
   }
 
-  p {
+  input {
     margin: 0;
     min-height: 40px;
+    width: 100%;
     border: 1px solid #bdd4c6;
     border-radius: 10px;
     background: #ffffff;
     padding: 9px 12px;
     color: #1a3654;
     font-size: 17px;
-    display: flex;
-    align-items: center;
+    outline: none;
+  }
+
+  input::placeholder {
+    color: #7a8ea4;
+  }
+
+  input:focus {
+    border-color: #6f9f88;
+    box-shadow: 0 0 0 2px rgba(111, 159, 136, 0.12);
   }
 }
 
@@ -327,6 +336,11 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.save-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .green-action {
@@ -532,7 +546,7 @@
     font-size: 23px;
   }
 
-  .settings-profile-field p {
+  .settings-profile-field input {
     font-size: 15px;
   }
 

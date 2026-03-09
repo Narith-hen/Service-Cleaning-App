@@ -235,11 +235,6 @@ const ReviewPage = () => {
               <span className="verified">
                 <CheckCircleFilled /> Verified Customer
               </span>
-              <div className="review-actions">
-                <button type="button" className="text-btn">
-                  Report
-                </button>
-              </div>
             </div>
           </article>
         ))}

@@ -10,6 +10,7 @@ const SettingsPage = () => {
   const { user, updateUser } = useAuth();
   const fileInputRef = useRef(null);
   const [profileMessage, setProfileMessage] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const profileData = useMemo(() => {
     const fullName =
@@ -32,9 +33,9 @@ const SettingsPage = () => {
 
     return {
       name: fullName,
-      email: user?.email || '-',
-      phone: user?.phone || user?.phone_number || '-',
-      address: user?.address || '-',
+      email: user?.email || '',
+      phone: user?.phone || user?.phone_number || '',
+      address: user?.address || '',
       avatar: user?.avatar || null,
       completedJobs: completedJobsValue,
       rating: Number(ratingValue).toFixed(1).replace('.0', '')
@@ -46,6 +47,15 @@ const SettingsPage = () => {
   useEffect(() => {
     setProfile(profileData);
   }, [profileData]);
+
+  const profileHasChanges = useMemo(() => {
+    return (
+      profile.name !== profileData.name ||
+      profile.email !== profileData.email ||
+      profile.phone !== profileData.phone ||
+      profile.address !== profileData.address
+    );
+  }, [profile, profileData]);
 
   const isOnline = useMemo(() => {
     const rawStatus =
@@ -95,10 +105,10 @@ const SettingsPage = () => {
         name: profile.name,
         first_name: firstName,
         last_name: lastName,
-        email: profile.email === '-' ? '' : profile.email,
-        phone: profile.phone === '-' ? '' : profile.phone,
-        phone_number: profile.phone === '-' ? '' : profile.phone,
-        address: profile.address === '-' ? '' : profile.address,
+        email: profile.email,
+        phone: profile.phone,
+        phone_number: profile.phone,
+        address: profile.address,
         avatar: avatarData
       };
 
@@ -110,6 +120,44 @@ const SettingsPage = () => {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleProfileFieldChange = (field) => (event) => {
+    const value = event.target.value;
+    setProfile((prev) => ({ ...prev, [field]: value }));
+    if (profileMessage) setProfileMessage('');
+  };
+
+  const handleSaveProfile = async () => {
+    const cleanedName = String(profile.name || '').trim();
+    if (!cleanedName) {
+      setProfileMessage('Full name is required.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileMessage('');
+
+    const firstName = cleanedName.split(' ')[0] || '';
+    const lastName = cleanedName.split(' ').slice(1).join(' ');
+    const payload = {
+      name: cleanedName,
+      first_name: firstName,
+      last_name: lastName,
+      email: String(profile.email || '').trim(),
+      phone: String(profile.phone || '').trim(),
+      phone_number: String(profile.phone || '').trim(),
+      address: String(profile.address || '').trim(),
+      avatar: profile.avatar || null
+    };
+
+    const result = await updateUser(payload);
+    if (!result?.success) {
+      setProfileMessage(result?.error || 'Unable to save profile.');
+    } else {
+      setProfileMessage('Profile updated successfully.');
+    }
+    setIsSavingProfile(false);
   };
 
   return (
@@ -151,21 +199,29 @@ const SettingsPage = () => {
       <section className="settings-profile-grid">
         <article className="settings-profile-field">
           <label>Full Name</label>
-          <p>{profile.name || '-'}</p>
+          <input type="text" value={profile.name} onChange={handleProfileFieldChange('name')} placeholder="Full Name" />
         </article>
         <article className="settings-profile-field">
           <label>Email</label>
-          <p>{profile.email || '-'}</p>
+          <input type="email" value={profile.email} onChange={handleProfileFieldChange('email')} placeholder="Email" />
         </article>
         <article className="settings-profile-field">
           <label>Phone</label>
-          <p>{profile.phone || '-'}</p>
+          <input type="text" value={profile.phone} onChange={handleProfileFieldChange('phone')} placeholder="Phone" />
         </article>
         <article className="settings-profile-field">
           <label>Address</label>
-          <p>{profile.address || '-'}</p>
+          <input type="text" value={profile.address} onChange={handleProfileFieldChange('address')} placeholder="Address" />
         </article>
       </section>
+      <button
+        type="button"
+        className="save-btn green-action"
+        onClick={handleSaveProfile}
+        disabled={!profileHasChanges || isSavingProfile}
+      >
+        {isSavingProfile ? 'Saving...' : 'Save Changes'}
+      </button>
 
       <section className="settings-profile-stats">
         <article>

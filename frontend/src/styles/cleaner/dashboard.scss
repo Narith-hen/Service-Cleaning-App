@@ -51,8 +51,8 @@
   }
 
   &.active {
-    border-color: #22c55e;
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.16);
+    border-color: #e5e7eb;
+    box-shadow: none;
   }
 
   .stat-header {
@@ -129,6 +129,7 @@
     letter-spacing: -0.02em;
   }
 
+
   .rating-wrap {
     display: flex;
     align-items: baseline;
@@ -157,6 +158,7 @@
 
 .chart-header {
   margin-bottom: 12px;
+  text-align: center;
 
   h3 {
     margin: 0;
@@ -170,66 +172,48 @@
     color: #6b7b92;
     font-size: 13px;
   }
-}
 
-.chart-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.chart-row {
-  display: grid;
-  grid-template-columns: 72px 1fr 44px;
-  align-items: center;
-  gap: 10px;
-
-  .chart-label {
-    font-size: 12px;
+  .chart-total {
     color: #334155;
     font-weight: 700;
   }
-
-  strong {
-    text-align: right;
-    font-size: 12px;
-    color: #0f172a;
-  }
 }
 
-.chart-track {
-  height: 10px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  overflow: hidden;
+.chart-donut-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 6px;
 }
 
-.chart-fill {
+.chart-pie {
+  width: 360px;
+  aspect-ratio: 1 / 1;
   display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
-
-  &.level-5 {
-    width: 72%;
-  }
-
-  &.level-4 {
-    width: 19%;
-  }
-
-  &.level-3 {
-    width: 6%;
-  }
-
-  &.level-2 {
-    width: 2%;
-  }
-
-  &.level-1 {
-    width: 1%;
-  }
 }
+
+.chart-pie-segment {
+  transition: opacity 0.2s ease;
+}
+
+.chart-pie-label {
+  fill: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.chart-pie-count {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.chart-pie-percent {
+  font-size: 12px;
+  font-weight: 700;
+}
+
 
 @media (max-width: 1080px) {
   .stats-grid {
@@ -258,6 +242,15 @@
 
   .stat-card .stat-value {
     font-size: 18px;
+  }
+
+
+  .chart-pie {
+    width: 290px;
+  }
+
+  .chart-pie-label {
+    font-size: 16px;
   }
 
   .mobile-logout {
