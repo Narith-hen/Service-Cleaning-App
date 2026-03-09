@@ -588,7 +588,7 @@ const CleanersPage = () => {
             setCurrentPage(1);
           }}
           options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
-          className="cleaners-filter-select"
+          className="cleaners-filter-select cleaners-filter-select-status"
         />
         <Select
           value={ratingFilter}
@@ -597,7 +597,7 @@ const CleanersPage = () => {
             setCurrentPage(1);
           }}
           options={ratingFilters.map((rating) => ({ label: rating === 'All' ? 'Rating' : rating, value: rating }))}
-          className="cleaners-filter-select"
+          className="cleaners-filter-select cleaners-filter-select-rating"
         />
       </section>
 
