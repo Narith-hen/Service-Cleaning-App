@@ -6,6 +6,7 @@
   --cleaners-faint: #94a3b8;
   --cleaners-border: #e2e8f0;
   --cleaners-row: #edf2f7;
+  --cleaners-filter-height: 42px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -123,23 +124,24 @@
   border-radius: 8px;
   padding: 10px;
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 170px 140px 42px;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
   gap: 10px;
   align-items: center;
 }
 
-.search-box {
+.cleaners-search-box {
   border: 1px solid var(--cleaners-border);
   border-radius: 6px;
-  height: 42px;
+  height: var(--cleaners-filter-height);
   padding: 0 12px;
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--cleaners-faint);
+  background: var(--cleaners-bg);
 }
 
-.search-box input {
+.cleaners-search-box input {
   border: none;
   outline: none;
   width: 100%;
@@ -148,12 +150,21 @@
   background: transparent;
 }
 
-.filter-select {
-  width: 100%;
+.cleaners-filter-select {
+  min-width: 0;
 }
 
-.filter-select .ant-select-selector {
-  height: 42px !important;
+.cleaners-filter-select.cleaners-filter-select-status {
+  width: 110px;
+}
+
+.cleaners-filter-select.cleaners-filter-select-rating {
+  width: 150px;
+}
+
+.cleaners-filter-select .ant-select-selector {
+  height: var(--cleaners-filter-height) !important;
+  min-height: var(--cleaners-filter-height) !important;
   border-radius: 6px !important;
   border-color: var(--cleaners-border) !important;
   background: var(--cleaners-soft-bg) !important;
@@ -162,12 +173,17 @@
   align-items: center;
 }
 
-.compact-filter-btn {
+.cleaners-filter-select .ant-select-selection-item,
+.cleaners-filter-select .ant-select-selection-placeholder {
+  line-height: calc(var(--cleaners-filter-height) - 2px) !important;
+}
+
+.cleaners-compact-filter-btn {
   border: 1px solid var(--cleaners-border);
   background: var(--cleaners-soft-bg);
   border-radius: 6px;
-  height: 42px;
-  width: 42px;
+  height: var(--cleaners-filter-height);
+  width: var(--cleaners-filter-height);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -188,7 +204,7 @@
 .cleaners-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 980px;
 }
 
 .cleaners-table th,
@@ -209,6 +225,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.cleaner-cell-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .avatar {
@@ -249,6 +272,12 @@
   font-size: 13px;
 }
 
+.cleaner-code-line {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
 .status-tag {
   border-radius: 6px;
   padding: 4px 10px;
@@ -282,6 +311,21 @@
   font-weight: 600;
 }
 
+.cleaners-table th.jobs-center,
+.cleaners-table td.jobs-center {
+  text-align: center;
+}
+
+.cleaners-table th.rating-center,
+.cleaners-table td.rating-center {
+  text-align: center;
+}
+
+.cleaners-table th.status-center,
+.cleaners-table td.status-center {
+  text-align: center;
+}
+
 .rating-cell {
   display: inline-flex;
   align-items: center;
@@ -308,18 +352,60 @@
   font-weight: 600 !important;
 }
 
-.action-btn {
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  color: var(--cleaners-faint);
-  cursor: pointer;
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
 }
 
-.action-btn:hover {
-  background: var(--cleaners-soft-bg);
+.plain-icon-btn {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: #e8edf4;
+  color: var(--cleaners-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plain-icon-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-view {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.plain-icon-btn.action-view:hover {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-edit {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.plain-icon-btn.action-edit:hover {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-delete {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.plain-icon-btn.action-delete:hover {
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .empty {
@@ -401,21 +487,16 @@
 .cleaner-view-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px 16px;
+  gap: 12px 24px;
 }
 
 .cleaner-view-grid p {
   margin: 0;
+  line-height: 1.4;
 }
 
 .cleaner-view-grid .form-item-full {
   grid-column: 1 / -1;
-}
-
-.cleaner-bio {
-  margin: 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--cleaners-row);
 }
 
 .cleaner-profile-layout {
@@ -424,9 +505,19 @@
   gap: 18px;
 }
 
+.cleaner-profile-layout.view-mode {
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
 .cleaner-profile-sidebar {
   border-right: 1px solid var(--cleaners-row);
   padding-right: 14px;
+}
+
+.cleaner-profile-layout.view-mode .cleaner-profile-sidebar {
+  padding-top: 8px;
 }
 
 .profile-photo-card {
@@ -437,6 +528,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.cleaner-profile-layout.view-mode .profile-photo-card {
+  height: 190px;
 }
 
 .avatar.preview {
@@ -456,20 +551,32 @@
 }
 
 .change-photo-btn.choose-label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   background: #ffffff;
-  color: #2563eb;
+  color: #008000;
   border: 2px solid #3b82f6;
-  border-radius: 10px;
-  height: 34px;
-  padding: 0 12px;
-  font-size: 12px;
+  border-radius: 8px;
+  height: 30px;
+  width: max-content;
+  padding: 0 4px;
+  font-size: 11px;
   font-weight: 600;
   margin-top: 10px;
+  margin-inline: auto;
   transition: all 0.2s ease;
+}
+
+.cleaner-profile-layout:not(.view-mode) .cleaner-profile-sidebar {
+  text-align: center;
+}
+
+.cleaner-profile-layout:not(.view-mode) .change-photo-btn.choose-label {
+  display: inline-flex;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .change-photo-btn.choose-label:hover {
@@ -553,8 +660,13 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .search-box {
+  .cleaners-search-box {
     grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .cleaners-filter-select {
+    width: 100%;
   }
 }
 

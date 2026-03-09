@@ -349,7 +349,7 @@
 
 .dark-mode .profile-btn {
   background: #2d2d2d;
-  border-color: #404040;
+  border: none;
 }
 
 .profile-btn:hover {

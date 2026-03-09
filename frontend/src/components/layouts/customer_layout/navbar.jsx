@@ -206,10 +206,10 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         color: '#1f2937',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10,
-                        height: 50,
+                        gap: 7,
+                        height: 40,
                         borderRadius: 999,
-                        paddingInline: 12,
+                        paddingInline: isCompactNav ? 8 : 13,
                         boxShadow: 'none',
                         // backgroundColor: '#fff9c3',
                       }}
@@ -219,8 +219,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                           src={avatarSrc}
                           alt={displayName}
                           style={{
-                            width: 30,
-                            height: 30,
+                            width: 36,
+                            height: 36,
                             borderRadius: '50%',
                             objectFit: 'cover',
                             border: darkMode ? 'none' : '1px solid #cbd5e1'
@@ -229,16 +229,16 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       ) : (
                         <div
                           style={{
-                            width: 40,
-                            height: 40,
+                            width: 36,
+                            height: 36,
                             borderRadius: '50%',
-                            border: darkMode ? 'none' : '2px solid #008000',
+                            border: darkMode ? 'none' : '1.5px solid #008000',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             background: '#e2e8f0',
                             color: '#111827',
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: 700,
                             lineHeight: 1
                           }}
@@ -247,11 +247,11 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         </div>
                       )}
                       {!isCompactNav && (
-                        <span style={{ fontWeight: 700, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, maxWidth: 128, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {displayName}
                         </span>
                       )}
-                      <DownOutlined />
+                      <DownOutlined style={{ fontSize: 14 }} />
                     </Button>
                   </Dropdown>
                 ) : (

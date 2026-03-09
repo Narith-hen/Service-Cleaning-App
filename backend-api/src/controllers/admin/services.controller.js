@@ -180,10 +180,16 @@ const updateService = async (req, res, next) => {
 
     if (updates.length > 0) {
       params.push(serviceId);
-      await promiseDb.query(
+      const [updateResult] = await promiseDb.query(
         `UPDATE services SET ${updates.join(', ')} WHERE service_id = ?`,
         params
       );
+      if (!updateResult?.affectedRows) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service not found'
+        });
+      }
     }
 
     const uploadedImageUrl = req.file
@@ -239,7 +245,14 @@ const deleteService = async (req, res, next) => {
     const promiseDb = db.promise();
 
     await promiseDb.query('DELETE FROM service_images WHERE service_id = ?', [serviceId]);
-    await promiseDb.query('DELETE FROM services WHERE service_id = ?', [serviceId]);
+    const [deleteResult] = await promiseDb.query('DELETE FROM services WHERE service_id = ?', [serviceId]);
+
+    if (!deleteResult?.affectedRows) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found'
+      });
+    }
 
     res.status(200).json({
       success: true,

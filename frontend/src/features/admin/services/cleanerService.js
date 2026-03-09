@@ -6,6 +6,46 @@ export const cleanerService = {
     return response.data;
   },
 
+  createCleaner: async (payload) => {
+    const formData = new FormData();
+    Object.entries(payload || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      if (key === 'profileFile') {
+        formData.append('avatar', value);
+        return;
+      }
+      if (key === 'profileImage') {
+        return;
+      }
+      formData.append(key, value);
+    });
+
+    const response = await api.post('/admin/cleaners', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
+  updateCleaner: async (cleanerId, payload) => {
+    const formData = new FormData();
+    Object.entries(payload || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      if (key === 'profileFile') {
+        formData.append('avatar', value);
+        return;
+      }
+      if (key === 'profileImage') {
+        return;
+      }
+      formData.append(key, value);
+    });
+
+    const response = await api.put(`/admin/cleaners/${cleanerId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
   getCleanerById: async (cleanerId) => {
     const response = await api.get(`/admin/cleaners/${cleanerId}`);
     return response.data;

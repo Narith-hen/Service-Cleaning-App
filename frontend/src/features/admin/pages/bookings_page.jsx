@@ -1,81 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  CalendarOutlined,
-  CheckOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  EllipsisOutlined,
   FileTextOutlined,
-  FilterOutlined,
   FrownOutlined,
   SearchOutlined,
   SmileOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
+import { Modal } from 'antd';
 import '../../../styles/admin/bookings_page.css';
+import { bookingRows } from '../data/bookings_data';
 
-const bookingRows = [
-  {
-    bookingId: '#BK-82910',
-    customerName: 'Sarah Jenkins',
-    customerEmail: 'sarah.j@example.com',
-    serviceType: 'Deep Cleaning',
-    cleanerName: 'Marc Wilson',
-    date: 'Oct 24, 2023',
-    time: '10:00 AM',
-    amount: 120,
-    status: 'Confirmed',
-  },
-  {
-    bookingId: '#BK-82911',
-    customerName: 'David Miller',
-    customerEmail: 'd.miller@example.com',
-    serviceType: 'Office Setup',
-    cleanerName: 'Unassigned',
-    date: 'Oct 25, 2023',
-    time: '09:00 AM',
-    amount: 350,
-    status: 'Pending',
-    pendingStartedAt: Date.now() - 8 * 60 * 1000,
-  },
-  {
-    bookingId: '#BK-82912',
-    customerName: 'Emma Thompson',
-    customerEmail: 'emma.t@example.com',
-    serviceType: 'Standard',
-    cleanerName: 'Linda Key',
-    date: 'Oct 24, 2023',
-    time: '02:00 PM',
-    amount: 85,
-    status: 'In Progress',
-    inProgressStartedAt: Date.now() - 22 * 60 * 1000,
-  },
-  {
-    bookingId: '#BK-82913',
-    customerName: 'Michael Brown',
-    customerEmail: 'm.brown@example.com',
-    serviceType: 'Standard',
-    cleanerName: 'Marc Wilson',
-    date: 'Oct 23, 2023',
-    time: '11:30 AM',
-    amount: 85,
-    status: 'Completed',
-  },
-  {
-    bookingId: '#BK-82914',
-    customerName: 'Robert King',
-    customerEmail: 'r.king@example.com',
-    serviceType: 'Window Washing',
-    cleanerName: 'Linda Key',
-    date: 'Oct 23, 2023',
-    time: '01:00 PM',
-    amount: 150,
-    status: 'Cancelled',
-  },
-];
-
-const statusOptions = ['All', 'Confirmed', 'Pending', 'In Progress', 'Completed', 'Cancelled'];
+const statusOptions = ['All', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'];
 const serviceOptions = ['All', 'Deep Cleaning', 'Office Setup', 'Standard', 'Window Washing'];
 
 const getInitials = (name) => {
@@ -137,29 +75,6 @@ const InProgressStatus = ({ startedAt }) => {
   );
 };
 
-const PendingStatus = ({ startedAt }) => {
-  const [elapsedSeconds, setElapsedSeconds] = useState(
-    Math.floor((Date.now() - startedAt) / 1000),
-  );
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [startedAt]);
-
-  return (
-    <span className="status-pill status-pending animated" aria-label="Pending booking">
-      <span className="pending-dot" />
-      <span>Pending</span>
-      <ClockCircleOutlined />
-      <span className="status-timer">{formatDuration(elapsedSeconds)}</span>
-    </span>
-  );
-};
-
 const ConfirmedStatus = () => {
   return (
     <span className="status-pill status-confirmed animated" aria-label="Confirmed booking">
@@ -188,21 +103,63 @@ const CancelledStatus = () => {
 };
 
 const BookingsPage = () => {
+  const [rows, setRows] = useState(() => bookingRows.map((row) => (
+    row.status === 'Pending'
+      ? { ...row, status: 'Confirmed' }
+      : row
+  )));
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [serviceFilter, setServiceFilter] = useState('All');
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
+  const handleCancel = (row) => {
+    if (row.status === 'Cancelled' || row.status === 'Completed') return;
+
+    setRows((prevRows) => prevRows.map((item) => (
+      item.bookingId === row.bookingId
+        ? { ...item, status: 'Cancelled' }
+        : item
+    )));
+  };
+
+  const openCancelConfirm = (row) => {
+    if (row.status === 'Cancelled' || row.status === 'Completed') return;
+
+    Modal.confirm({
+      title: `Cancel ${row.bookingId}?`,
+      content: 'This action cannot be undone.',
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      onOk: () => handleCancel(row),
+    });
+  };
+
   const filteredRows = useMemo(() => {
-    return bookingRows.filter((row) => {
+    return rows.filter((row) => {
       const target = `${row.bookingId} ${row.customerName} ${row.customerEmail}`.toLowerCase();
       const matchesSearch = target.includes(searchText.toLowerCase());
       const matchesStatus = statusFilter === 'All' || row.status === statusFilter;
       const matchesService = serviceFilter === 'All' || row.serviceType === serviceFilter;
       return matchesSearch && matchesStatus && matchesService;
     });
-  }, [searchText, statusFilter, serviceFilter]);
+  }, [rows, searchText, statusFilter, serviceFilter]);
+
+  const bookingStats = useMemo(() => {
+    const total = rows.length;
+    const ongoing = rows.filter((row) => (
+      row.status === 'Confirmed' || row.status === 'In Progress'
+    )).length;
+    const cancelled = rows.filter((row) => row.status === 'Cancelled').length;
+    const cancellationRate = total > 0 ? ((cancelled / total) * 100).toFixed(1) : '0.0';
+
+    return {
+      total,
+      ongoing,
+      cancellationRate,
+    };
+  }, [rows]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -219,20 +176,17 @@ const BookingsPage = () => {
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-blue"><FileTextOutlined /></div>
           <span className="kpi-label">TOTAL BOOKINGS</span>
-          <h3>1,240</h3>
-          <span className="kpi-note positive">+12% from last month</span>
+          <h3>{bookingStats.total.toLocaleString()}</h3>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-green"><SyncOutlined /></div>
           <span className="kpi-label">ONGOING NOW</span>
-          <h3>24</h3>
-          <span className="kpi-note neutral">Active service sessions</span>
+          <h3>{bookingStats.ongoing.toLocaleString()}</h3>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-rose"><CloseCircleOutlined /></div>
           <span className="kpi-label">CANCELLATION RATE</span>
-          <h3>1.8%</h3>
-          <span className="kpi-note negative">-0.5% improvement</span>
+          <h3>{bookingStats.cancellationRate}%</h3>
         </article>
       </section>
 
@@ -277,15 +231,6 @@ const BookingsPage = () => {
             </option>
           ))}
         </select>
-
-        <button type="button" className="date-range-btn">
-          <CalendarOutlined />
-          Date Range
-        </button>
-
-        <button type="button" className="compact-filter-btn" aria-label="More filters">
-          <FilterOutlined />
-        </button>
       </section>
 
       <section className="admin-bookings-table-panel">
@@ -340,8 +285,6 @@ const BookingsPage = () => {
                     <td>
                       {row.status === 'Confirmed' ? (
                         <ConfirmedStatus />
-                      ) : row.status === 'Pending' ? (
-                        <PendingStatus startedAt={row.pendingStartedAt || Date.now()} />
                       ) : row.status === 'In Progress' ? (
                         <InProgressStatus startedAt={row.inProgressStartedAt || Date.now()} />
                       ) : row.status === 'Completed' ? (
@@ -355,9 +298,21 @@ const BookingsPage = () => {
                       )}
                     </td>
                     <td>
-                      <button type="button" className="row-action-btn" aria-label={`Actions for ${row.bookingId}`}>
-                        <EllipsisOutlined />
-                      </button>
+                      {row.status === 'Cancelled' || row.status === 'Completed' ? (
+                        <span className="no-action">-</span>
+                      ) : (
+                        <div className="action-group">
+                          <button
+                            className="plain-icon-btn action-cancel"
+                            title="Cancel booking"
+                            type="button"
+                            aria-label={`Cancel ${row.bookingId}`}
+                            onClick={() => openCancelConfirm(row)}
+                          >
+                            <CloseCircleOutlined />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -374,7 +329,7 @@ const BookingsPage = () => {
 
         <footer className="bookings-pagination">
           <span>Showing {visibleRows.length} of {filteredRows.length} results</span>
-          <div className="pager-actions">
+          {/* <div className="pager-actions">
             <button
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
@@ -391,7 +346,7 @@ const BookingsPage = () => {
               Next
               <CheckOutlined />
             </button>
-          </div>
+          </div> */}
         </footer>
       </section>
     </section>

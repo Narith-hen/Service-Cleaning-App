@@ -3,9 +3,9 @@ import {
   ApartmentOutlined,
   AppstoreOutlined,
   CalendarOutlined,
-  CheckCircleOutlined,
   ClockCircleOutlined,
   DollarOutlined,
+  RiseOutlined,
   StarFilled,
   TeamOutlined,
   ToolOutlined,
@@ -13,57 +13,75 @@ import {
 } from '@ant-design/icons';
 import '../../../styles/admin/dashboard_page.css';
 import { useTheme } from '../../../contexts/theme_context';
+import { bookingRows } from '../data/bookings_data';
+import { starterCleaners } from '../data/cleaners_data';
 
 const DashboardPage = () => {
   const { darkMode } = useTheme();
+  const totalBookings = bookingRows.length;
+  const monthlyRevenue = bookingRows
+    .filter((booking) => booking.status !== 'Cancelled')
+    .reduce((sum, booking) => sum + booking.amount, 0);
+  const activeCleanersCount = starterCleaners.filter((cleaner) => cleaner.status === 'Active').length;
+  const topCleaners = starterCleaners
+    .filter((cleaner) => cleaner.rating > 0)
+    .sort((a, b) => b.totalJobs - a.totalJobs)
+    .slice(0, 3);
+  const recentBookings = [...bookingRows]
+    .sort((a, b) => new Date(`${b.date} ${b.time}`) - new Date(`${a.date} ${a.time}`))
+    .slice(0, 4)
+    .map((booking) => ({
+      id: booking.bookingId,
+      customer: booking.customerName,
+      cleaner: booking.cleanerName,
+      status: booking.status,
+      amount: `$${booking.amount.toFixed(2)}`,
+    }));
+
   const kpiCards = [
     {
-      title: 'Today Bookings',
-      value: '42',
+      title: 'TOTAL BOOKINGS',
+      value: String(totalBookings),
       icon: <CalendarOutlined />,
       tone: 'blue',
+      subtitle: 'Current booking queue',
     },
     {
-      title: 'Active Cleaners',
-      value: '18',
+      title: 'ACTIVE CLEANERS',
+      value: String(activeCleanersCount),
       icon: <TeamOutlined />,
       tone: 'green',
+      subtitle: '2 currently on-site',
     },
     {
-      title: 'Monthly Revenue',
-      value: '$12,840',
+      title: 'MONTHLY REVENUE',
+      value: `$${monthlyRevenue.toFixed(2)}`,
       icon: <DollarOutlined />,
       tone: 'amber',
+      subtitle: `Revenue from ${totalBookings} jobs`,
     },
     {
-      title: 'Open Complaints',
+      title: 'CUSTOMER COMPLAINTS',
       value: '5',
       icon: <ClockCircleOutlined />,
       tone: 'red',
+      subtitle: '2 require urgent response',
     },
   ];
 
-  const recentBookings = [
-    { id: 'BK-1204', customer: 'Sophia Kim', cleaner: 'Dara V.', status: 'Completed', amount: '$45' },
-    { id: 'BK-1205', customer: 'Michael Lee', cleaner: 'Nita P.', status: 'In Progress', amount: '$80' },
-    { id: 'BK-1206', customer: 'Emma Carter', cleaner: 'Bopha S.', status: 'Pending', amount: '$60' },
-    { id: 'BK-1207', customer: 'David Chen', cleaner: 'Sokha M.', status: 'Completed', amount: '$120' },
-  ];
-
-  const topCleaners = [
-    { name: 'Dara V.', jobs: 64, rating: '4.9', completion: '98%' },
-    { name: 'Bopha S.', jobs: 59, rating: '4.8', completion: '97%' },
-    { name: 'Nita P.', jobs: 53, rating: '4.8', completion: '96%' },
-  ];
-
   const bookingVolume = [
-    { day: 'M', value: 28, base: 46 },
-    { day: 'T', value: 62, base: 74 },
-    { day: 'W', value: 30, base: 60 },
-    { day: 'T', value: 76, base: 92 },
-    { day: 'F', value: 66, base: 69 },
-    { day: 'S', value: 14, base: 46 },
-    { day: 'S', value: 36, base: 64 },
+    { day: 'Jan', value: 44, capacity: 62 },
+    { day: 'Feb', value: 52, capacity: 68 },
+    { day: 'Mar', value: 61, capacity: 76 },
+    { day: 'Apr', value: 58, capacity: 74 },
+    { day: 'May', value: 66, capacity: 82 },
+    { day: 'Jun', value: 54, capacity: 72 },
+    { day: 'Jul', value: 63, capacity: 80 },
+    { day: 'Aug', value: 69, capacity: 86 },
+    { day: 'Sep', value: 57, capacity: 73 },
+    { day: 'Oct', value: 62, capacity: 79 },
+    { day: 'Nov', value: 71, capacity: 88 },
+    { day: 'Dec', value: 74, capacity: 92 },
   ];
 
   const servicePerformance = [
@@ -91,11 +109,9 @@ const DashboardPage = () => {
 
   return (
     <section className={`admin-dashboard-page ${darkMode ? 'dark-mode' : ''}`}>
-      <div className="dashboard-header-row">
-        <div>
-          <h1 className="admin-page-title">Admin Dashboard</h1>
-          <p className="admin-page-subtitle">View platform activity, bookings, and performance insights.</p>
-        </div>
+      <div>
+        <h1 className="admin-page-title">Admin Dashboard</h1>
+        <p className="admin-page-subtitle">View platform activity, bookings, and performance insights.</p>
       </div>
 
       <div className="dashboard-kpi-grid">
@@ -104,7 +120,13 @@ const DashboardPage = () => {
             <div className="kpi-card-icon">{card.icon}</div>
             <p className="kpi-card-title">{card.title}</p>
             <h2 className="kpi-card-value">{card.value}</h2>
-            {card.delta ? <span className="kpi-card-delta">{card.delta}</span> : null}
+            <p className="kpi-card-subtitle">{card.subtitle}</p>
+            {card.delta ? (
+              <span className={`kpi-card-delta ${card.delta.startsWith('+') ? 'positive' : 'negative'}`}>
+                <RiseOutlined />
+                {card.delta}
+              </span>
+            ) : null}
           </article>
         ))}
       </div>
@@ -148,67 +170,76 @@ const DashboardPage = () => {
         <section className="dashboard-panel">
           <div className="panel-head">
             <h3>Top Cleaners</h3>
-            <a href="/admin/cleaners">Manage</a>
+            <a href="/admin/cleaners">View all</a>
           </div>
           <div className="top-cleaners-list">
             {topCleaners.map((cleaner) => (
-              <div key={cleaner.name} className="cleaner-row">
+              <div key={cleaner.id} className="cleaner-row">
                 <div className="cleaner-identity">
                   <div className="cleaner-avatar">
                     <UserOutlined />
                   </div>
                   <div>
                     <p className="cleaner-name">{cleaner.name}</p>
-                    <span>{cleaner.jobs} jobs this month</span>
+                    <span>{cleaner.totalJobs} jobs completed</span>
                   </div>
                 </div>
                 <div className="cleaner-stats">
-                  <span>{cleaner.rating} rating</span>
-                  <span>{cleaner.completion} completion</span>
+                  <span>{cleaner.rating.toFixed(1)} rating</span>
+                  <span>{cleaner.reviews} reviews</span>
                 </div>
               </div>
             ))}
           </div>
         </section>
       </div>
-
-      <div className="dashboard-quick-actions">
-        <button type="button" className="quick-card">
-          <CheckCircleOutlined />
-          <span>Approve New Cleaner</span>
-        </button>
-        <button type="button" className="quick-card">
-          <CalendarOutlined />
-          <span>Review Today Schedule</span>
-        </button>
-        <button type="button" className="quick-card">
-          <ClockCircleOutlined />
-          <span>Handle Pending Issues</span>
-        </button>
-      </div>
-
+      
       <section className="dashboard-panel booking-volume-panel">
-        <div className="panel-head">
-          <h3>Booking Volume</h3>
-          <button type="button" className="panel-filter-btn">Daily</button>
+        <div className="panel-head booking-head">
+          <div>
+            <h3>Booking Volume</h3>
+            <p>Last 12 months performance against monthly capacity</p>
+          </div>
+          <button type="button" className="panel-filter-btn">Monthly</button>
         </div>
-        <div className="booking-volume-chart">
+        <div className="booking-volume-shell">
+          <div className="booking-grid-lines" aria-hidden="true">
+            <span>100</span>
+            <span>75</span>
+            <span>50</span>
+            <span>25</span>
+          </div>
+          <div className="booking-volume-chart" style={{ '--booking-points': bookingVolume.length }}>
           {bookingVolume.map((item) => (
-            <div className="volume-col" key={item.day + item.base}>
-              <div className="volume-track" style={{ height: `${item.base}%` }}>
-                <div className="volume-fill" style={{ height: `${Math.max(10, item.value)}%` }} />
+            <div
+              className="volume-col"
+              key={item.day}
+              style={{
+                '--volume-capacity': `${Math.max(18, item.capacity)}%`,
+                '--volume-fill': `${Math.max(15, Math.round((item.value / item.capacity) * 100))}%`,
+              }}
+            >
+              <strong className="volume-value">{item.value}</strong>
+              <div className="volume-track">
+                <div className="volume-fill" />
               </div>
               <span>{item.day}</span>
+              <small>{Math.round((item.value / item.capacity) * 100)}%</small>
             </div>
           ))}
+          </div>
+          <div className="booking-volume-legend">
+            <span><i className="legend-capacity" /> Capacity</span>
+            <span><i className="legend-booked" /> Booked</span>
+          </div>
         </div>
       </section>
 
       <div className="dashboard-insights-grid">
         <section className="dashboard-panel">
           <div className="panel-head">
-            <h3>Service Performance</h3>
-            <a href="/admin/services">See all services</a>
+            <h3>Top Services</h3>
+            <a href="/admin/services">View all</a>
           </div>
           <div className="service-performance-list">
             {servicePerformance.map((item) => (
@@ -231,7 +262,7 @@ const DashboardPage = () => {
         <section className="dashboard-panel">
           <div className="panel-head">
             <h3>Latest Reviews</h3>
-            <a href="/admin/reviews">View all reviews</a>
+            <a href="/admin/reviews">View all</a>
           </div>
           <div className="latest-review-list">
             {latestReviews.map((review) => (

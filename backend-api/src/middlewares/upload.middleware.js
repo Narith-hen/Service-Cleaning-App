@@ -2,12 +2,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const uploadRoot = path.join(__dirname, '../../uploads');
+
 // Ensure upload directories exist
 const createUploadDirs = () => {
   const dirs = [
-    'uploads/avatars',
-    'uploads/services',
-    'uploads/misc'
+    path.join(uploadRoot, 'avatars'),
+    path.join(uploadRoot, 'services'),
+    path.join(uploadRoot, 'misc')
   ];
   
   dirs.forEach(dir => {
@@ -22,14 +24,14 @@ createUploadDirs();
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let uploadPath = 'uploads/';
+    let uploadPath = uploadRoot;
     
     if (file.fieldname === 'avatar') {
-      uploadPath += 'avatars/';
+      uploadPath = path.join(uploadPath, 'avatars');
     } else if (file.fieldname === 'images') {
-      uploadPath += 'services/';
+      uploadPath = path.join(uploadPath, 'services');
     } else {
-      uploadPath += 'misc/';
+      uploadPath = path.join(uploadPath, 'misc');
     }
     
     cb(null, uploadPath);
@@ -43,7 +45,7 @@ const storage = multer.diskStorage({
 
 // File filter
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const allowedTypes = /jpeg|jpg|png|gif|webp|heic|heif/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
 

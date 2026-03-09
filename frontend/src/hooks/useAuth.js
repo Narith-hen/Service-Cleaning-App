@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const AUTH_USER_UPDATED_EVENT = 'auth:user-updated';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const AUTH_USER_UPDATED_EVENT = 'auth-user-updated';
 
 const readStoredUser = () => {
   const savedUser = localStorage.getItem('user');
@@ -9,8 +10,8 @@ const readStoredUser = () => {
 
   try {
     return JSON.parse(savedUser);
-  } catch (e) {
-    console.error('Failed to parse saved user:', e);
+  } catch (error) {
+    console.error('Failed to parse saved user:', error);
     localStorage.removeItem('user');
     return null;
   }
@@ -26,6 +27,62 @@ const persistUser = (nextUser) => {
   window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
 };
 
+const normalizeAvatarUrl = (avatar) => {
+  if (!avatar) return null;
+  if (/^https?:\/\//i.test(avatar)) return avatar;
+  if (avatar.startsWith('/')) return `${API_BASE_URL}${avatar}`;
+  return avatar;
+};
+
+const normalizeUserData = (payload = {}, previous = null) => {
+  const firstName = payload.first_name ?? previous?.first_name ?? '';
+  const lastName = payload.last_name ?? previous?.last_name ?? '';
+  const roleId = payload.role_id ?? previous?.role_id ?? 2;
+  const mergedName = payload.name || [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  return {
+    id: payload.user_id ?? previous?.id ?? previous?.user_id ?? payload.id,
+    user_id: payload.user_id ?? previous?.user_id ?? payload.id,
+    user_code: payload.user_code ?? previous?.user_code ?? null,
+    name: mergedName || previous?.name || 'Customer',
+    first_name: firstName,
+    last_name: lastName,
+    email: payload.email ?? previous?.email ?? '',
+    phone: payload.phone ?? payload.phone_number ?? previous?.phone ?? '',
+    phone_number: payload.phone_number ?? payload.phone ?? previous?.phone_number ?? '',
+    city: payload.city ?? previous?.city ?? '',
+    state: payload.state ?? previous?.state ?? '',
+    country: payload.country ?? previous?.country ?? '',
+    avatar: normalizeAvatarUrl(payload.avatar ?? previous?.avatar ?? null),
+    joinDate: payload.joinDate ?? previous?.joinDate ?? null,
+    totalBookings: payload.totalBookings ?? previous?.totalBookings ?? 0,
+    totalSpent: payload.totalSpent ?? previous?.totalSpent ?? 0,
+    role_id: roleId,
+    token: payload.token ?? previous?.token ?? null,
+    role: (
+      payload.role ||
+      payload.role_name ||
+      previous?.role ||
+      (payload.role_id === 1 ? 'admin' : payload.role_id === 2 ? 'cleaner' : 'customer')
+    ).toLowerCase(),
+  };
+};
+
+const fetchProfileFromApi = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const result = await response.json();
+  if (!response.ok || !result?.success) {
+    throw new Error(result?.message || 'Failed to load profile');
+  }
+
+  return result.data || {};
+};
+
 // Mock users for testing
 const MOCK_USERS = {
   admin: {
@@ -34,7 +91,7 @@ const MOCK_USERS = {
     email: 'admin@example.com',
     role: 'admin',
     avatar: null,
-    permissions: ['all']
+    permissions: ['all'],
   },
   customer: {
     id: 2,
@@ -43,7 +100,7 @@ const MOCK_USERS = {
     role: 'customer',
     avatar: null,
     phone: '+1 234-567-8901',
-    address: '123 Main St, New York, NY'
+    address: '123 Main St, New York, NY',
   },
   cleaner: {
     id: 3,
@@ -53,8 +110,8 @@ const MOCK_USERS = {
     avatar: null,
     rating: 4.9,
     completedJobs: 156,
-    specialties: ['Deep Cleaning', 'Move Out/In']
-  }
+    specialties: ['Deep Cleaning', 'Move Out/In'],
+  },
 };
 
 export const useAuth = () => {
@@ -62,15 +119,50 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check for saved user in localStorage on mount
+  // Check for saved user in localStorage on mount, then refresh profile when token exists.
   useEffect(() => {
-    setUser(readStoredUser());
-    const handleUserUpdated = () => setUser(readStoredUser());
-    window.addEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
-    setLoading(false);
+    let isMounted = true;
+
+    const hydrateUser = async () => {
+      const savedUser = readStoredUser();
+      if (!savedUser) {
+        if (isMounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) setUser(savedUser);
+
+      if (savedUser?.token) {
+        try {
+          const profile = await fetchProfileFromApi(savedUser.token);
+          const normalized = normalizeUserData(profile, savedUser);
+          if (isMounted) setUser(normalized);
+          persistUser(normalized);
+        } catch (profileError) {
+          console.warn('Failed to refresh profile from API:', profileError.message);
+        }
+      }
+
+      if (isMounted) setLoading(false);
+    };
+
+    const syncFromStorage = () => {
+      if (!isMounted) return;
+      setUser(readStoredUser());
+    };
+
+    hydrateUser();
+
+    window.addEventListener('storage', syncFromStorage);
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, syncFromStorage);
 
     return () => {
-      window.removeEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated);
+      isMounted = false;
+      window.removeEventListener('storage', syncFromStorage);
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncFromStorage);
     };
   }, []);
 
@@ -80,11 +172,10 @@ export const useAuth = () => {
     setError(null);
 
     try {
-      // Real API login
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       const result = await response.json();
@@ -93,43 +184,43 @@ export const useAuth = () => {
       }
 
       const userData = result.data || {};
-      const normalizedUser = {
-        id: userData.user_id,
-        user_id: userData.user_id,
-        user_code: userData.user_code,
-        name: [userData.first_name, userData.last_name].filter(Boolean).join(' ').trim(),
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email,
-        phone: userData.phone_number,
-        role_id: userData.role_id,
-        token: userData.token,
-        role: (userData.role || userData.role_name || (userData.role_id === 1 ? 'admin' : userData.role_id === 3 ? 'cleaner' : 'customer')).toLowerCase()
-      };
+      let normalizedUser = normalizeUserData(userData);
+
+      if (normalizedUser?.token) {
+        try {
+          const profileData = await fetchProfileFromApi(normalizedUser.token);
+          normalizedUser = normalizeUserData(profileData, normalizedUser);
+        } catch (profileError) {
+          console.warn('Failed to fetch profile after login:', profileError.message);
+        }
+      }
 
       setUser(normalizedUser);
-      persistUser(normalizedUser);
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
 
       return { success: true, user: normalizedUser };
-    } catch (err) {
+    } catch (error) {
       // Mock fallback for local testing without API
       let userToLogin = null;
       if (email) {
-        userToLogin = Object.values(MOCK_USERS).find(
-          u => u.email.toLowerCase() === email.toLowerCase()
-        );
+        userToLogin = Object.values(MOCK_USERS).find((mockUser) => (
+          mockUser.email.toLowerCase() === email.toLowerCase()
+        ));
       } else {
         userToLogin = MOCK_USERS[role];
       }
 
       if (userToLogin && password === 'password123') {
         setUser(userToLogin);
-        persistUser(userToLogin);
+        localStorage.setItem('user', JSON.stringify(userToLogin));
+        window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
         return { success: true, user: userToLogin };
       }
 
-      setError(err.message || 'Invalid email or password');
-      return { success: false, error: err.message || 'Invalid email or password' };
+      const message = error.message || 'Invalid email or password';
+      setError(message);
+      return { success: false, error: message };
     } finally {
       setLoading(false);
     }
@@ -143,14 +234,14 @@ export const useAuth = () => {
   const logout = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       setUser(null);
-      persistUser(null);
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
       return { success: true };
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+    } catch (logoutError) {
+      setError(logoutError.message);
+      return { success: false, error: logoutError.message };
     } finally {
       setLoading(false);
     }
@@ -161,31 +252,27 @@ export const useAuth = () => {
     setError(null);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Check if email already exists
-      const existingUser = Object.values(MOCK_USERS).find(
-        u => u.email.toLowerCase() === userData.email.toLowerCase()
-      );
+      const existingUser = Object.values(MOCK_USERS).find((mockUser) => (
+        mockUser.email.toLowerCase() === userData.email.toLowerCase()
+      ));
 
       if (existingUser) {
         throw new Error('Email already exists');
       }
 
-      // Create new user (in real app, this would be done on backend)
       const newUser = {
         id: Date.now(),
         ...userData,
         role_id: userData.role_id || 2,
-        role: userData.role || 'customer'
+        role: userData.role || 'customer',
       };
 
-      // In mock mode, we just return success without actually storing
       return { success: true, user: newUser };
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+    } catch (registerError) {
+      setError(registerError.message);
+      return { success: false, error: registerError.message };
     } finally {
       setLoading(false);
     }
@@ -196,17 +283,71 @@ export const useAuth = () => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!user.token) {
+        const updatedMockUser = normalizeUserData(userData, user);
+        setUser(updatedMockUser);
+        persistUser(updatedMockUser);
+        return { success: true, user: updatedMockUser };
+      }
 
-      const updatedUser = { ...user, ...userData };
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Failed to update profile');
+      }
+
+      const updatedUser = normalizeUserData(result.data || {}, user);
       setUser(updatedUser);
-      persistUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
       
       return { success: true, user: updatedUser };
-    } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+    } catch (updateError) {
+      setError(updateError.message);
+      return { success: false, error: updateError.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadAvatar = async (file) => {
+    if (!user) return { success: false, error: 'Not authenticated' };
+    if (!file) return { success: false, error: 'No file selected' };
+    if (!user.token) return { success: false, error: 'Mock users cannot upload avatars' };
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile/avatar`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Failed to upload avatar');
+      }
+
+      const updatedUser = normalizeUserData(result.data || {}, user);
+      setUser(updatedUser);
+      persistUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (uploadError) {
+      setError(uploadError.message);
+      return { success: false, error: uploadError.message };
     } finally {
       setLoading(false);
     }
@@ -214,26 +355,22 @@ export const useAuth = () => {
 
   return {
     user,
+    role: user?.role || null,
     loading,
     error,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
     isCustomer: user?.role === 'customer',
     isCleaner: user?.role === 'cleaner',
-    
-    // Login methods
     login,
     loginAsAdmin,
     loginAsCustomer,
     loginAsCleaner,
-    
-    // Other methods
     logout,
     register,
     updateUser,
-    
-    // Mock users data (for testing)
-    MOCK_USERS
+    uploadAvatar,
+    MOCK_USERS,
   };
 };
 
