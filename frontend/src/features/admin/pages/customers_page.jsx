@@ -5,17 +5,13 @@ import {
   EditOutlined,
   EnvironmentOutlined,
   EyeOutlined,
-  FilterOutlined,
-  MailOutlined,
-  MoreOutlined,
-  PhoneOutlined,
-  PlusOutlined,
   SearchOutlined,
   StopOutlined,
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Form, Input, Modal, Select, notification } from 'antd';
+import { Button, Form, Input, Modal, Select, notification } from 'antd';
+import { userService } from '../services/userService';
 import '../../../styles/admin/customers_page.css';
 
 const starterCustomers = [
@@ -120,10 +116,60 @@ const getInitials = (fullName) => {
 };
 
 const getStatusClass = (status) => status.toLowerCase().replace(/\s+/g, '-');
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const normalizeProfileImage = (avatar) => {
+  if (!avatar) return '';
+  const value = String(avatar).trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:')) return value;
+  if (value.startsWith('/')) return `${API_BASE_URL}${value}`;
+  if (value.startsWith('uploads/')) return `${API_BASE_URL}/${value}`;
+  return value;
+};
+
+const formatDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
+};
+
+const mapCustomerFromApi = (user) => {
+  const fullName = user.username || user.email || `Customer ${user.user_id}`;
+  const statusText = String(user.status || '').trim().toLowerCase();
+  const isActiveFromStatus = statusText ? statusText !== 'inactive' : true;
+  const isActive = typeof user.is_active === 'boolean' ? user.is_active : isActiveFromStatus;
+
+  return {
+    id: String(user.user_id),
+    userCode: user.user_code || '-',
+    name: fullName,
+    email: user.email || '-',
+    phone: user.phone_number || '-',
+    profileImage: normalizeProfileImage(user.avatar),
+    dateOfBirth: user.date_of_birth || '',
+    gender: user.gender || '',
+    address: user.address || '',
+    city: user.city || '',
+    preferredService: user.preferred_service || '',
+    specialNotes: user.notes || '',
+    status: isActive ? 'Active' : 'Inactive',
+    totalBookings: Number(user?._count?.bookings || 0),
+    customerTier: 'Regular',
+    joiningDate: formatDate(user.created_at),
+    lastBookingDate: '-',
+  };
+};
 
 const CustomersPage = () => {
   const [notificationApi, contextHolder] = notification.useNotification();
-  const [customers, setCustomers] = useState(starterCustomers);
+  const [customers, setCustomers] = useState(starterCustomers.slice(0, 0));
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [tierFilter, setTierFilter] = useState('All');
@@ -135,7 +181,6 @@ const CustomersPage = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [formSection, setFormSection] = useState('account');
-  const [viewSection, setViewSection] = useState('account');
   const [form] = Form.useForm();
   const profileImageValue = Form.useWatch('profileImage', form);
   const nameValue = Form.useWatch('name', form);
@@ -153,6 +198,37 @@ const CustomersPage = () => {
     deletedCustomersRef.current.clear();
     dismissedUndoRef.current.clear();
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCustomers = async () => {
+      try {
+        const response = await userService.getUsers({ role: 'customer', page: 1, limit: 1000 });
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        const mapped = rows.map(mapCustomerFromApi);
+
+        if (isMounted) {
+          setCustomers(mapped);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setCustomers([]);
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Failed to load customers',
+          description: error?.response?.data?.message || 'Could not fetch customer data from backend database.',
+          duration: 3,
+        });
+      }
+    };
+
+    loadCustomers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [notificationApi]);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter((customer) => {
@@ -197,14 +273,42 @@ const CustomersPage = () => {
     const values = await form.validateFields();
 
     if (editingCustomer) {
-      setCustomers((prev) => prev.map((customer) => (
-        customer.id === editingCustomer.id ? { ...customer, ...values } : customer
-      )));
-      notificationApi.success({
-        placement: 'bottomRight',
-        message: 'Customer updated successfully',
-        duration: 2,
-      });
+      try {
+        const payload = {
+          username: values.name,
+          email: values.email,
+          phone_number: values.phone,
+          is_active: values.status === 'Active',
+          status: values.status?.toLowerCase(),
+        };
+
+        const response = await userService.updateUser(editingCustomer.id, payload);
+        const updatedCustomer = response?.data ? mapCustomerFromApi(response.data) : null;
+
+        if (updatedCustomer) {
+          setCustomers((prev) => prev.map((customer) => (
+            customer.id === editingCustomer.id ? { ...customer, ...updatedCustomer } : customer
+          )));
+        } else {
+          setCustomers((prev) => prev.map((customer) => (
+            customer.id === editingCustomer.id ? { ...customer, ...values } : customer
+          )));
+        }
+
+        notificationApi.success({
+          placement: 'bottomRight',
+          message: 'Customer updated successfully',
+          duration: 2,
+        });
+      } catch (error) {
+        notificationApi.error({
+          placement: 'bottomRight',
+          message: 'Failed to update customer',
+          description: error?.response?.data?.message || 'Could not save customer changes to database.',
+          duration: 3,
+        });
+        return;
+      }
     } else {
       const nowFormatted = new Date().toLocaleDateString('en-US', {
         month: 'short',
@@ -374,15 +478,35 @@ const CustomersPage = () => {
     });
   };
 
-  const handleBlockToggle = (customer) => {
+  const handleBlockToggle = async (customer) => {
     const nextStatus = customer.status === 'Inactive' ? 'Active' : 'Inactive';
-    setCustomers((prev) => prev.map((item) => (
-      item.id === customer.id ? { ...item, status: nextStatus } : item
-    )));
+
+    try {
+      await userService.updateUser(customer.id, {
+        is_active: nextStatus === 'Active',
+        status: nextStatus.toLowerCase(),
+      });
+
+      setCustomers((prev) => prev.map((item) => (
+        item.id === customer.id ? { ...item, status: nextStatus } : item
+      )));
+
+      notificationApi.success({
+        placement: 'bottomRight',
+        message: `Customer set to ${nextStatus}`,
+        duration: 2,
+      });
+    } catch (error) {
+      notificationApi.error({
+        placement: 'bottomRight',
+        message: 'Failed to update customer status',
+        description: error?.response?.data?.message || 'Could not save status change to database.',
+        duration: 3,
+      });
+    }
   };
 
   const openViewModal = (customer) => {
-    setViewSection('account');
     setViewingCustomer(customer);
     setIsViewOpen(true);
   };
@@ -415,9 +539,6 @@ const CustomersPage = () => {
           <h1 className="admin-page-title">Manage Customers</h1>
           <p className="admin-page-subtitle">View and manage your registered customer database.</p>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} className="add-customer-btn" onClick={openAddModal}>
-          Add Customer
-        </Button>
       </header>
 
       <section className="customers-kpi-grid">
@@ -425,24 +546,21 @@ const CustomersPage = () => {
           <div className="kpi-icon tone-blue"><TeamOutlined /></div>
           <span className="kpi-label">TOTAL CUSTOMERS</span>
           <h3>{totalCustomers.toLocaleString()}</h3>
-          <span className="kpi-note neutral">Registered customer accounts</span>
         </article>
         <article className="customers-kpi-card">
           <div className="kpi-icon tone-green"><UserOutlined /></div>
           <span className="kpi-label">ACTIVE CUSTOMERS</span>
           <h3>{activeCustomers.toLocaleString()}</h3>
-          <span className="kpi-note positive">Can place bookings now</span>
         </article>
         <article className="customers-kpi-card">
           <div className="kpi-icon tone-amber"><StopOutlined /></div>
           <span className="kpi-label">INACTIVE CUSTOMERS</span>
           <h3>{inactiveCustomers.toLocaleString()}</h3>
-          <span className="kpi-note neutral">Temporarily blocked accounts</span>
         </article>
       </section>
 
       <section className="customers-filter-row">
-        <div className="search-box">
+        <div className="customers-search-box">
           <SearchOutlined />
           <input
             type="text"
@@ -461,20 +579,8 @@ const CustomersPage = () => {
             setCurrentPage(1);
           }}
           options={statusFilters.map((status) => ({ label: status === 'All' ? 'Status: All' : status, value: status }))}
-          className="filter-select"
+          className="customers-filter-select"
         />
-        <Select
-          value={tierFilter}
-          onChange={(value) => {
-            setTierFilter(value);
-            setCurrentPage(1);
-          }}
-          options={tierFilters.map((tier) => ({ label: tier === 'All' ? 'Tier: All' : tier, value: tier }))}
-          className="filter-select"
-        />
-        <button type="button" className="compact-filter-btn" aria-label="more filters">
-          <FilterOutlined />
-        </button>
       </section>
 
       <section className="customers-table-panel">
@@ -483,8 +589,8 @@ const CustomersPage = () => {
             <thead>
               <tr>
                 <th>CUSTOMER</th>
+                <th>PHONE NUMBER</th>
                 <th>TOTAL BOOKINGS</th>
-                <th>LAST SERVICE</th>
                 <th>ACCOUNT STATUS</th>
                 <th>ACTIONS</th>
               </tr>
@@ -497,7 +603,12 @@ const CustomersPage = () => {
                       <div className="customer-cell">
                         <span className="avatar">
                           {customer.profileImage ? (
-                            <img src={customer.profileImage} alt={customer.name} className="avatar-img" />
+                            <img
+                              src={customer.profileImage}
+                              alt={customer.name}
+                              className="avatar-img"
+                              onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                            />
                           ) : (
                             getInitials(customer.name)
                           )}
@@ -509,92 +620,63 @@ const CustomersPage = () => {
                       </div>
                     </td>
                     <td>
-                      <div className="bookings-cell">
-                        <strong>{customer.totalBookings} Bookings</strong>
-                        <span>{customer.customerTier}</span>
-                      </div>
+                      <span className="phone-cell">{customer.phone}</span>
                     </td>
                     <td>
-                      <div className="service-cell">
-                        <strong>{customer.lastBookingDate || '-'}</strong>
-                        <span>{customer.preferredService || '-'}</span>
+                      <div className="bookings-cell">
+                        <strong>{customer.totalBookings} Bookings</strong>
                       </div>
                     </td>
                     <td>
                       <span className={`status-tag ${getStatusClass(customer.status)}`}>{customer.status}</span>
                     </td>
                     <td>
-                      <Dropdown
-                        menu={{
-                          items: [
-                            {
-                              key: 'view',
-                              icon: <EyeOutlined />,
-                              label: 'View',
-                              onClick: () => openViewModal(customer),
-                            },
-                            {
-                              key: 'edit',
-                              icon: <EditOutlined />,
-                              label: 'Edit',
-                              onClick: () => openEditModal(customer),
-                            },
-                            {
-                              key: 'block',
-                              icon: <StopOutlined />,
-                              label: customer.status === 'Inactive' ? 'Unblock (Active)' : 'Block (Inactive)',
-                              onClick: () => handleBlockToggle(customer),
-                            },
-                            {
-                              type: 'divider',
-                            },
-                            {
-                              key: 'delete',
-                              icon: <DeleteOutlined />,
-                              label: 'Delete',
-                              danger: true,
-                              onClick: () => handleDeleteCustomer(customer),
-                            },
-                          ],
-                        }}
-                        trigger={['click']}
-                      >
-                        <button type="button" className="action-btn" aria-label={`actions for ${customer.name}`}>
-                          <MoreOutlined />
+                      <div className="action-group">
+                        <button
+                          className="plain-icon-btn action-view"
+                          title="View customer"
+                          type="button"
+                          onClick={() => openViewModal(customer)}
+                        >
+                          <EyeOutlined />
                         </button>
-                      </Dropdown>
+                        <button
+                          className="plain-icon-btn action-edit"
+                          title="Edit customer"
+                          type="button"
+                          onClick={() => openEditModal(customer)}
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          className="plain-icon-btn action-edit"
+                          title={customer.status === 'Inactive' ? 'Unblock (Active)' : 'Block (Inactive)'}
+                          type="button"
+                          onClick={() => handleBlockToggle(customer)}
+                        >
+                          <StopOutlined />
+                        </button>
+                        {/* <button
+                          className="plain-icon-btn action-delete"
+                          title="Delete customer"
+                          type="button"
+                          onClick={() => handleDeleteCustomer(customer)}
+                        >
+                          <DeleteOutlined />
+                        </button> */}
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="empty" colSpan={5}>No customers found for current filters.</td>
+                  <td className="empty" colSpan={6}>No customers found for current filters.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
 
-        <footer className="table-footer">
-          <span>Showing {pagedCustomers.length} of {filteredCustomers.length} customers</span>
-          <div className="pager">
-            <button
-              type="button"
-              disabled={page === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="next"
-              disabled={page === pages}
-              onClick={() => setCurrentPage((prev) => Math.min(pages, prev + 1))}
-            >
-              Next
-            </button>
-          </div>
-        </footer>
       </section>
 
       <Modal
@@ -610,7 +692,12 @@ const CustomersPage = () => {
             <div className="profile-photo-card">
               <span className="avatar preview">
                 {profileImageValue ? (
-                  <img src={profileImageValue} alt={nameValue || 'Customer profile'} className="avatar-img" />
+                  <img
+                    src={normalizeProfileImage(profileImageValue)}
+                    alt={nameValue || 'Customer profile'}
+                    className="avatar-img"
+                    onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                  />
                 ) : (
                   getInitials(nameValue || 'Customer Profile')
                 )}
@@ -754,77 +841,29 @@ const CustomersPage = () => {
               <div className="profile-photo-card">
                 <span className="avatar preview">
                   {viewingCustomer.profileImage ? (
-                    <img src={viewingCustomer.profileImage} alt={viewingCustomer.name} className="avatar-img" />
+                    <img
+                      src={normalizeProfileImage(viewingCustomer.profileImage)}
+                      alt={viewingCustomer.name}
+                      className="avatar-img"
+                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                    />
                   ) : (
                     getInitials(viewingCustomer.name)
                   )}
                 </span>
               </div>
-              <div className="profile-menu">
-                <button
-                  type="button"
-                  className={viewSection === 'account' ? 'active' : ''}
-                  onClick={() => setViewSection('account')}
-                >
-                  <UserOutlined />
-                  Account Details
-                </button>
-                <button
-                  type="button"
-                  className={viewSection === 'contact' ? 'active' : ''}
-                  onClick={() => setViewSection('contact')}
-                >
-                  <EnvironmentOutlined />
-                  Contact Address
-                </button>
-                <button
-                  type="button"
-                  className={viewSection === 'usage' ? 'active' : ''}
-                  onClick={() => setViewSection('usage')}
-                >
-                  <CalendarOutlined />
-                  Booking Profile
-                </button>
-              </div>
             </aside>
 
             <div className="customer-profile-content">
-              <h3>
-                {viewSection === 'account' && 'Account Details'}
-                {viewSection === 'contact' && 'Contact Address'}
-                {viewSection === 'usage' && 'Booking Profile'}
-              </h3>
-
-              {viewSection === 'account' && (
-                <div className="customer-view-grid">
-                  <p><strong>Full Name:</strong> {viewingCustomer.name || '-'}</p>
-                  <p><strong>Email:</strong> {viewingCustomer.email || '-'}</p>
-                  <p><strong>ID:</strong> {viewingCustomer.id || '-'}</p>
-                  <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCustomer.status)}`}>{viewingCustomer.status}</span></p>
-                  <p><strong>Gender:</strong> {viewingCustomer.gender || '-'}</p>
-                  <p><strong>Date of Birth:</strong> {viewingCustomer.dateOfBirth || '-'}</p>
-                </div>
-              )}
-
-              {viewSection === 'contact' && (
-                <div className="customer-view-grid">
-                  <p><strong><PhoneOutlined /> Phone:</strong> {viewingCustomer.phone || '-'}</p>
-                  <p><strong><EnvironmentOutlined /> City:</strong> {viewingCustomer.city || '-'}</p>
-                  <p><strong>Address:</strong> {viewingCustomer.address || '-'}</p>
-                  <p><strong><MailOutlined /> Email:</strong> {viewingCustomer.email || '-'}</p>
-                  <p className="form-item-full"><strong>Special Notes:</strong> {viewingCustomer.specialNotes || '-'}</p>
-                </div>
-              )}
-
-              {viewSection === 'usage' && (
-                <div className="customer-view-grid">
-                  <p><strong>Customer Tier:</strong> {viewingCustomer.customerTier || '-'}</p>
-                  <p><strong>Joining Date:</strong> {viewingCustomer.joiningDate || '-'}</p>
-                  <p><strong>Total Bookings:</strong> {viewingCustomer.totalBookings ?? 0}</p>
-                  <p><strong>Last Booking Date:</strong> {viewingCustomer.lastBookingDate || '-'}</p>
-                  <p className="form-item-full"><strong>Preferred Service:</strong> {viewingCustomer.preferredService || '-'}</p>
-                </div>
-              )}
+              <h3>Account Details</h3>
+              <div className="customer-view-grid">
+                <p><strong>Full Name:</strong> {viewingCustomer.name || '-'}</p>
+                <p><strong>Email:</strong> {viewingCustomer.email || '-'}</p>
+                <p><strong>ID:</strong> {viewingCustomer.id || '-'}</p>
+                <p><strong>User Code:</strong> {viewingCustomer.userCode || '-'}</p>
+                <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCustomer.status)}`}>{viewingCustomer.status}</span></p>
+                <p><strong>Joining Date:</strong> {viewingCustomer.joiningDate || '-'}</p>
+              </div>
             </div>
           </div>
         )}

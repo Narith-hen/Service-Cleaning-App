@@ -51,6 +51,13 @@
   padding: 24px;
   background: #f8fafc;
   font-family: Arial, sans-serif;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .dark .admin-content {

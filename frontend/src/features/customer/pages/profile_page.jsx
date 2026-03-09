@@ -9,23 +9,27 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 
 const ProfilePage = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, uploadAvatar } = useAuth();
   const location = useLocation();
   const fileInputRef = useRef(null);
 
-  const baseProfile = useMemo(() => ({
-    name:
-      user?.name ||
-      [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-      'Customer',
-    email: user?.email || '',
-    phone: user?.phone || user?.phone_number || '',
-    address: user?.address || '',
-    avatar: user?.avatar || null,
-    joinDate: user?.joinDate || 'January 2024',
-    totalBookings: user?.totalBookings ?? 12,
-    totalSpent: user?.totalSpent ?? 540,
-  }), [user]);
+  const baseProfile = useMemo(
+    () => ({
+      first_name: user?.first_name || '',
+      last_name: user?.last_name || '',
+      name:
+        user?.name ||
+        [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim() ||
+        'Customer',
+      email: user?.email || '',
+      phone: user?.phone || user?.phone_number || '',
+      avatar: user?.avatar || null,
+      joinDate: user?.joinDate || 'January 2024',
+      totalBookings: user?.totalBookings ?? 12,
+      totalSpent: user?.totalSpent ?? 540,
+    }),
+    [user]
+  );
 
   const [profile, setProfile] = useState(baseProfile);
   const [draft, setDraft] = useState(baseProfile);
@@ -33,6 +37,7 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
 
   useEffect(() => {
     setProfile(baseProfile);
@@ -43,8 +48,19 @@ const ProfilePage = () => {
     setIsEditing(location.pathname.endsWith('/edit'));
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!message) return undefined;
+    const timer = setTimeout(() => setMessage(''), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
   const getInitials = () => {
-    const nameStr = (draft.name || profile.name || '').trim();
+    const nameStr = (
+      `${draft.first_name || profile.first_name || ''} ${draft.last_name || profile.last_name || ''}` ||
+      draft.name ||
+      profile.name ||
+      ''
+    ).trim();
     if (!nameStr) return 'C';
     const parts = nameStr.split(/\s+/).filter(Boolean);
     return (parts[0]?.[0] + (parts[1]?.[0] || '')).toUpperCase();
@@ -55,39 +71,37 @@ const ProfilePage = () => {
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file?.type.startsWith('image/')) {
+      setMessageType('error');
       setMessage('Please select an image.');
       return;
     }
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const avatarUrl = reader.result;
+    setUploading(true);
+    const res = await uploadAvatar(file);
+    if (res.success) {
+      const avatarUrl = res.user?.avatar || null;
       setDraft((prev) => ({ ...prev, avatar: avatarUrl }));
-
-      if (!isEditing) {
-        setUploading(true);
-        const res = await updateUser({ avatar: avatarUrl });
-        if (res.success) {
-          setProfile((prev) => ({ ...prev, avatar: avatarUrl }));
-          setMessage('Profile photo updated.');
-        } else {
-          setMessage(res.error || 'Failed to update photo.');
-        }
-        setUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+      setProfile((prev) => ({ ...prev, avatar: avatarUrl }));
+      setMessageType('success');
+      setMessage('Profile photo updated.');
+    } else {
+      setMessageType('error');
+      setMessage(res.error || 'Failed to update photo.');
+    }
+    setUploading(false);
+    e.target.value = '';
   };
 
   const startEditing = () => {
     setDraft(profile);
     setMessage('');
+    setMessageType('success');
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
     setDraft(profile);
     setMessage('');
+    setMessageType('success');
     setIsEditing(false);
   };
 
@@ -95,16 +109,16 @@ const ProfilePage = () => {
     setSaving(true);
     setMessage('');
 
-    const nameTrimmed = draft.name.trim();
-    const nameParts = nameTrimmed.split(/\s+/);
+    const firstName = String(draft.first_name || '').trim();
+    const lastName = String(draft.last_name || '').trim();
+    const nameTrimmed = [firstName, lastName].filter(Boolean).join(' ').trim();
     const payload = {
       name: nameTrimmed,
-      first_name: nameParts[0] || '',
-      last_name: nameParts.slice(1).join(' ') || '',
+      first_name: firstName,
+      last_name: lastName,
       email: draft.email.trim(),
       phone: draft.phone.trim(),
       phone_number: draft.phone.trim(),
-      address: draft.address.trim(),
       avatar: draft.avatar,
     };
 
@@ -113,173 +127,147 @@ const ProfilePage = () => {
     if (result.success) {
       setProfile({
         ...draft,
+        first_name: firstName,
+        last_name: lastName,
+        name: nameTrimmed || 'Customer',
         totalBookings: profile.totalBookings,
         totalSpent: profile.totalSpent,
         joinDate: profile.joinDate,
       });
       setIsEditing(false);
+      setMessageType('success');
       setMessage('Profile updated successfully.');
     } else {
+      setMessageType('error');
       setMessage(result.error || 'Failed to save profile.');
     }
 
     setSaving(false);
   };
 
+  const detailRows = [
+    { label: 'First Name', key: 'first_name', editable: true, type: 'text' },
+    { label: 'Last Name', key: 'last_name', editable: true, type: 'text' },
+    { label: 'Email', key: 'email', editable: true, type: 'email' },
+    { label: 'Phone Number', key: 'phone', editable: true, type: 'tel' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Hero / Header */}
-        <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden mb-8">
-          <div className="px-6 py-8 sm:p-10 text-center sm:text-left relative">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8">
-              {/* Avatar + upload button */}
-              <div className="relative mx-auto sm:mx-0 shrink-0">
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100">
-                  {draft.avatar ? (
-                    <img
-                      src={draft.avatar}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-gray-400">
-                      {getInitials()}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={openFilePicker}
-                  disabled={uploading || saving}
-                  className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-2.5 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-60"
-                >
-                  <CameraOutlined className="text-base" />
-                </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  hidden
-                />
-              </div>
-
-              {/* Name, join date, actions */}
-              <div className="flex-1">
-                {isEditing ? (
-                  <input
-                    className="text-3xl sm:text-4xl font-bold text-gray-900 bg-transparent border-b-2 border-blue-500 focus:border-blue-600 focus:outline-none pb-1 w-full max-w-md"
-                    value={draft.name}
-                    onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Your full name"
-                  />
+    <div className="min-h-screen bg-[#edf2f2] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-md">
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
+          <aside className="border-b border-slate-200 p-6 lg:border-b-0 lg:border-r">
+            <div className="mx-auto relative w-fit">
+              <div className="h-40 w-40 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
+                {draft.avatar ? (
+                  <img src={draft.avatar} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
-                  <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
-                    {profile.name || 'Customer'}
-                  </h1>
+                  <div className="flex h-full w-full items-center justify-center text-6xl font-bold text-slate-500">
+                    {getInitials()}
+                  </div>
                 )}
+              </div>
+              <button
+                type="button"
+                onClick={openFilePicker}
+                disabled={uploading || saving}
+                className="absolute bottom-1 right-1 rounded bg-slate-800 px-3 py-2 text-white transition hover:bg-slate-700 disabled:opacity-60"
+                title="Update"
+              >
+                <CameraOutlined />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                hidden
+              />
+            </div>
 
-                <p className="text-gray-600 mb-6">
-                  Member since {profile.joinDate}
-                </p>
-
-                <div className="flex flex-wrap justify-center sm:justify-start gap-4">
-                  {!isEditing ? (
-                    <button
-                      onClick={startEditing}
-                      className="inline-flex items-center px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm"
-                    >
-                      <EditOutlined className="mr-2" /> Edit Profile
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={cancelEdit}
-                        className="inline-flex items-center px-6 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
-                      >
-                        <CloseOutlined className="mr-2" /> Cancel
-                      </button>
-                      <button
-                        onClick={saveChanges}
-                        disabled={saving}
-                        className="inline-flex items-center px-7 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 transition shadow-sm"
-                      >
-                        <SaveOutlined className="mr-2" />
-                        {saving ? 'Saving…' : 'Save Changes'}
-                      </button>
-                    </>
-                  )}
-                </div>
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                <span className="text-xs uppercase tracking-wide text-slate-500">Total Booking</span>
+                <strong className="text-lg text-slate-900">{profile.totalBookings}</strong>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                <span className="text-xs uppercase tracking-wide text-slate-500">Total Spend</span>
+                <strong className="text-lg text-slate-900">${profile.totalSpent}</strong>
               </div>
             </div>
-          </div>
+          </aside>
+
+          <main>
+            <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-4xl font-semibold text-slate-900">
+                  {[
+                    isEditing ? draft.first_name : profile.first_name,
+                    isEditing ? draft.last_name : profile.last_name,
+                  ].filter(Boolean).join(' ') || profile.name || 'Customer'}
+                </h1>
+                <p className="mt-1 text-lg text-slate-500">Member since {profile.joinDate}</p>
+              </div>
+
+              {!isEditing ? (
+                <button
+                  onClick={startEditing}
+                  className="inline-flex items-center gap-2 rounded bg-[#008000] px-5 py-2.5 font-semibold text-white hover:bg-[#006d00]"
+                >
+                  <EditOutlined /> EDIT
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelEdit}
+                    className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <CloseOutlined /> Cancel
+                  </button>
+                  <button
+                    onClick={saveChanges}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded bg-[#008000] px-4 py-2 font-medium text-white hover:bg-[#006d00] disabled:opacity-60"
+                  >
+                    <SaveOutlined /> {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6 p-6">
+              {detailRows.map((row) => (
+                <div key={row.key} className="grid grid-cols-[210px_1fr] items-center gap-6 text-lg">
+                  <span className="justify-self-start text-left text-slate-500">{row.label}</span>
+                  {isEditing && row.editable ? (
+                    <input
+                      type={row.type || 'text'}
+                      value={draft[row.key] || ''}
+                      onChange={(e) => setDraft((p) => ({ ...p, [row.key]: e.target.value }))}
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-cyan-500"
+                    />
+                  ) : (
+                    <strong className="justify-self-start text-left font-semibold text-slate-900">
+                      {profile[row.key] || '-'}
+                    </strong>
+                  )}
+                </div>
+              ))}
+            </div>
+          </main>
         </div>
 
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg text-center border ${
-              message.toLowerCase().includes('success')
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800'
+            className={`mx-6 mb-6 rounded border px-4 py-3 text-sm font-medium ${
+              messageType === 'success'
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-rose-200 bg-rose-50 text-rose-800'
             }`}
           >
             {message}
           </div>
         )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Personal Info */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow border border-gray-200 p-7">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Personal Information</h2>
-
-            <div className="space-y-5">
-              {[
-                { label: 'Full Name', key: 'name', type: 'text' },
-                { label: 'Email Address', key: 'email', type: 'email' },
-                { label: 'Phone Number', key: 'phone', type: 'tel' },
-                { label: 'Address', key: 'address', type: 'text' },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                    {field.label}
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type={field.type}
-                      value={draft[field.key]}
-                      onChange={(e) => setDraft((p) => ({ ...p, [field.key]: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
-                      placeholder={`Enter your ${field.label.toLowerCase()}`}
-                    />
-                  ) : (
-                    <p className="text-gray-900 font-medium">
-                      {profile[field.key] || <span className="text-gray-400">Not provided</span>}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="bg-white rounded-xl shadow border border-gray-200 p-7 h-fit">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Your Activity</h2>
-
-            <div className="space-y-6">
-              <div className="flex justify-between items-center py-2">
-                <span className="text-gray-600">Total Bookings</span>
-                <span className="text-2xl font-semibold text-blue-700">{profile.totalBookings}</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-gray-600">Total Spent</span>
-                <span className="text-2xl font-semibold text-blue-700">${profile.totalSpent}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

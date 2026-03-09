@@ -15,6 +15,7 @@ const earningsController = require('./cleaner/earnings.controller');
 
 // Admin controllers
 const adminUsersController = require('./admin/users.controller');
+const adminCleanersController = require('./admin/cleaners.controller');
 const adminServicesController = require('./admin/services.controller');
 const adminBookingsController = require('./admin/bookings.controller');
 const adminPromotionsController = require('./admin/promotions.controller');
@@ -225,8 +226,13 @@ module.exports = {
     createUser: adminUsersController.createUser,
     updateUser: adminUsersController.updateUser,
     deleteUser: adminUsersController.deleteUser,
+
+    getAllCleaners: adminCleanersController.getAllCleaners,
+    createCleaner: adminCleanersController.createCleaner,
+    updateCleaner: adminCleanersController.updateCleaner,
     
     getAllServices: adminServicesController.getAllServices,
+    getServiceById: adminServicesController.getServiceById,
     createService: adminServicesController.createService,
     updateService: adminServicesController.updateService,
     deleteService: adminServicesController.deleteService,

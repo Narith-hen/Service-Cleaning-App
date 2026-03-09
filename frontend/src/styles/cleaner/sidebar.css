@@ -12,6 +12,9 @@
   top: 0;
   z-index: 1000; /* Higher than header (which is 90-100) */
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05); /* Add shadow for depth */
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .cleaner-sidebar.dark {
@@ -178,30 +181,10 @@
   font-size: 18px;
 }
 
-/* Scrollbar for sidebar */
+/* Hide scrollbar while keeping sidebar scrollable */
 .cleaner-sidebar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.cleaner-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.cleaner-sidebar::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
-
-.cleaner-sidebar::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-.dark .cleaner-sidebar::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-.dark .cleaner-sidebar::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  width: 0;
+  height: 0;
 }
 
 /* Main content adjustment */
