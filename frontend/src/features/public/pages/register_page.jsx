@@ -206,6 +206,24 @@ export default function RegisterPage() {
               <Text style={{ color: "#dbe4f0" }}>Already have an account? </Text>
               <Link to="/auth/login" style={{ color: "#46BA5A", fontWeight: 500 }}>Log in</Link>
             </div>
+
+            <Button
+              type="text"
+              size="large"
+              block
+              onClick={() => navigate("/")}
+              style={{
+                borderRadius: 8,
+                height: 40,
+                border: "1px solid rgba(226, 232, 240, 0.8)",
+                fontWeight: 500,
+                fontSize: 15,
+                color: "#f8fafc",
+                marginTop: 10,
+              }}
+            >
+              {"< Back to Home"}
+            </Button>
           </Form>
         </Card>
       </div>

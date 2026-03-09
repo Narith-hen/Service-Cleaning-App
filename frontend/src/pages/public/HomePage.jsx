@@ -1,26 +1,35 @@
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 import homeImage from "../../assets/image.png";
+import narithImage from "../../assets/narith.png";
+import meyImage from "../../assets/mey.JPG";
+import molikaImage from "../../assets/molika.png";
 
 export default function HomePage() {
   const testimonials = [
     {
+     
+      name: "Hen Narith",
+      role: "Homeowner in Seattle",
+      image: narithImage,
       quote:
-        '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."',
-      name: "Sarah Jenkins",
-      role: "Homeowner in Seattle"
+        '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."'
     },
+
+
     {
       quote:
         '"The cleaners are so professional and detailed. They even got the pet hair out of my carpets."',
       name: "Michael Chen",
-      role: "Regular Customer"
+      role: "Regular Customer",
+      image: molikaImage
     },
     {
       quote:
         '"I used them for a move-out clean and got my full security deposit back without stress."',
       name: "Emma Thompson",
-      role: "New Resident"
+      role: "New Resident",
+      image: meyImage
     }
   ];
 
@@ -91,12 +100,6 @@ export default function HomePage() {
               >
                 Book Your Clean Now
               </Link>
-              <Link
-                to="/about"
-                className="inline-flex rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-              >
-                See How It Works
-              </Link>
             </div>
 
             <div className="mt-7 flex items-center gap-3 text-sm text-slate-500">
@@ -143,15 +146,15 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="relative mt-14 grid gap-10 md:grid-cols-3">
+          <div className="relative mt-14 grid gap-12 md:grid-cols-3 md:gap-20 lg:gap-24">
             <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
 
             {processSteps.map((step) => (
-              <article key={step.number} className="relative text-center">
+              <article key={step.number} className="relative px-3 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
                   {step.number}
                 </div>
-                <h3 className="mt-6 text-2xl font-extrabold text-slate-900">{step.title}</h3>
+                <h3 className="mt-100 text-2xl font-extrabold text-slate-900">{step.title}</h3>
                 <p className="mx-auto mt-3 max-w-xs text-slate-500">{step.description}</p>
               </article>
             ))}
@@ -183,15 +186,29 @@ export default function HomePage() {
           <div className="grid gap-6 md:grid-cols-3">
             {testimonials.map((item) => (
               <article key={item.name} className="rounded-2xl bg-white p-6 shadow-sm">
-                <p className="text-sm font-bold tracking-wider text-[#f4b400]">*****</p>
-                <p className="mt-4 text-slate-600">{item.quote}</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <span className="h-10 w-10 rounded-full bg-[#d39a6f]" />
-                  <div>
+                <div className="mb-4 flex items-center gap-4">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-[#32c753]/30"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = homeImage;
+                      }}
+                    />
+                  ) : (
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#d39a6f] text-xl font-bold text-white">
+                      {item.name?.charAt(0)}
+                    </span>
+                  )}
+                  <div className="text-left">
                     <p className="font-extrabold text-slate-900">{item.name}</p>
+                    <p className="text-2xl font-extrabold tracking-wider text-[#f4b400]">*****</p>
                     <p className="text-xs text-slate-500">{item.role}</p>
                   </div>
                 </div>
+                <p className="mt-4 text-slate-600">{item.quote}</p>
               </article>
             ))}
           </div>
@@ -204,7 +221,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/auth/register"
-                className="rounded-xl bg-[#32ff1a] px-6 py-3 text-sm font-black text-[#114a1b] shadow-[0_0_25px_rgba(50,255,26,0.45)] transition hover:brightness-95"
+                className="rounded-xl bg-[#008000] px-6 py-3 text-sm font-black text-white shadow-[0_0_25px_rgba(0,128,0,0.45)] transition hover:brightness-95"
               >
                 Book Now - 20% Off First Clean
               </Link>
@@ -266,3 +283,6 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+

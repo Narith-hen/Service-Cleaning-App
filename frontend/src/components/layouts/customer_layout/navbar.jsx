@@ -51,13 +51,27 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const isTablet = breakpoint === 'md';
   const isLaptopL = breakpoint === 'lg';
   const isCompactNav = isMobile || isTablet || isLaptopL;
+  const navLinkGap = isCustomerArea ? 26 : 18;
+  const leftColProps = isCompactNav
+    ? { xs: 10, sm: 8, md: 6, lg: 4, xl: 4 }
+    : { flex: 'none' };
+  const rightColProps = isCompactNav
+    ? { xs: 14, sm: 16, md: 18, lg: 8, xl: 10 }
+    : { flex: 'none' };
 
-  const navItems = [
-    { key: 'home', label: 'My Home', path: isCustomerArea ? '/customer/dashboard' : '/' },
-    { key: 'services', label: 'Services', path: '/services' },
-    { key: 'about', label: 'About Us', path: '/about' },
-    { key: 'contact', label: 'Contact Us', path: '/contact' }
-  ];
+  const navItems = isCustomerArea
+    ? [
+      { key: 'home', label: 'My Home', path: '/customer/dashboard' },
+      { key: 'services', label: 'Service', path: '/customer/services' },
+      { key: 'about', label: 'About', path: '/customer/about' },
+      { key: 'contact', label: 'Contact', path: '/customer/contact' }
+    ]
+    : [
+      { key: 'home', label: 'Home', path: '/' },
+      { key: 'services', label: 'Services', path: '/services' },
+      { key: 'about', label: 'About Us', path: '/about' },
+      { key: 'contact', label: 'Contact Us', path: '/contact' }
+    ];
 
   const handleMenuClick = () => {
     if (setMobileOpen && typeof setMobileOpen === 'function') {
@@ -123,7 +137,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
         }}
       >
         <Row align="middle" justify="space-between" wrap={false} gutter={[16, 0]}>
-          <Col xs={10} sm={8} md={6} lg={4} xl={4}>
+          <Col {...leftColProps}>
             <Space align="center" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
               <img
                 src={logoSomaet}
@@ -152,32 +166,53 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
           </Col>
 
           {!isCompactNav && (
-            <Col lg={12} xl={10}>
-              <Space size="large" style={{ justifyContent: 'center', width: '100%' }}>
-                {navItems.map((item) => (
+            <Col flex="auto" style={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+              <Space size={isCustomerArea ? 18 : 'large'} align="center" style={{ justifyContent: 'center', width: '100%' }}>
+                <Space size={navLinkGap} align="center">
+                  {navItems.map((item) => (
+                    <Button
+                      key={item.key}
+                      type="text"
+                      onClick={() => handleNavigation(item.path)}
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 500,
+                        color: darkMode ? '#e5e7eb' : '#374151',
+                        padding: '8px 12px',
+                        height: 'auto',
+                        fontFamily: "'Noto Sans', sans-serif",
+                        borderBottom: location.pathname === item.path ? '2px solid green' : 'none',
+                        borderRadius: 0
+                      }}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </Space>
+                {isCustomerArea && (
                   <Button
-                    key={item.key}
-                    type="text"
-                    onClick={() => handleNavigation(item.path)}
+                    type="primary"
+                    onClick={() => handleNavigation('/customer/bookings')}
                     style={{
-                      fontSize: 16,
-                      fontWeight: 500,
-                      color: darkMode ? '#e5e7eb' : '#374151',
-                      padding: '8px 16px',
-                      height: 'auto',
-                      fontFamily: "'Noto Sans', sans-serif",
-                      borderBottom: location.pathname === item.path ? '2px solid green' : 'none',
-                      borderRadius: 0
+                      background: '#008000',
+                      borderColor: '#008000',
+                      borderRadius: 10,
+                      height: 38,
+                      paddingInline: 18,
+                      marginLeft: 8,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      fontFamily: "'Noto Sans', sans-serif"
                     }}
                   >
-                    {item.label}
+                    Booking Now
                   </Button>
-                ))}
+                )}
               </Space>
             </Col>
           )}
 
-          <Col xs={14} sm={16} md={18} lg={8} xl={10}>
+          <Col {...rightColProps}>
             <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
               {showDarkModeToggle && (
                 <Col>
@@ -206,10 +241,10 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         color: '#1f2937',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10,
-                        height: 50,
+                        gap: 7,
+                        height: 40,
                         borderRadius: 999,
-                        paddingInline: 12,
+                        paddingInline: isCompactNav ? 8 : 13,
                         boxShadow: 'none',
                         // backgroundColor: '#fff9c3',
                       }}
@@ -219,8 +254,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                           src={avatarSrc}
                           alt={displayName}
                           style={{
-                            width: 30,
-                            height: 30,
+                            width: 36,
+                            height: 36,
                             borderRadius: '50%',
                             objectFit: 'cover',
                             border: darkMode ? 'none' : '1px solid #cbd5e1'
@@ -229,16 +264,16 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       ) : (
                         <div
                           style={{
-                            width: 40,
-                            height: 40,
+                            width: 36,
+                            height: 36,
                             borderRadius: '50%',
-                            border: darkMode ? 'none' : '2px solid #008000',
+                            border: darkMode ? 'none' : '1.5px solid #008000',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             background: '#e2e8f0',
                             color: '#111827',
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: 700,
                             lineHeight: 1
                           }}
@@ -247,15 +282,15 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         </div>
                       )}
                       {!isCompactNav && (
-                        <span style={{ fontWeight: 700, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontWeight: 700, fontSize: 14, maxWidth: 128, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {displayName}
                         </span>
                       )}
-                      <DownOutlined />
+                      <DownOutlined style={{ fontSize: 14 }} />
                     </Button>
                   </Dropdown>
                 ) : (
-                  <Space size={4}>
+                  <Space size={isCompactNav ? 6 : 4}>
                     <Button
                       type="primary"
                       onClick={() => navigate('/auth/login')}
@@ -265,28 +300,40 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         display: 'flex',
                         alignItems: 'center',
                         gap: 4,
-                        padding: '18px 16px',
+                        padding: isCompactNav ? 0 : '18px 16px',
+                        ...(isCompactNav
+                          ? {
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8
+                          }
+                          : {})
                       }}
                     >
                       <LoginOutlined />
                       {!isCompactNav && <span>Login</span>}
                     </Button>
-                    {!isCompactNav && (
-                      <Button
-                        onClick={() => navigate('/auth/register')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          borderColor: 'green',
-                          color: 'green',
-                          padding: '18px 14px',
-                        }}
-                      >
-                        <UserAddOutlined />
-                        <span>Register</span>
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => navigate('/auth/register')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        borderColor: 'green',
+                        color: 'green',
+                        padding: isCompactNav ? 0 : '18px 14px',
+                        ...(isCompactNav
+                          ? {
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8
+                          }
+                          : {})
+                      }}
+                    >
+                      <UserAddOutlined />
+                      {!isCompactNav && <span>Register</span>}
+                    </Button>
                   </Space>
                 )}
               </Col>

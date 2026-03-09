@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   BellOutlined,
-  MessageOutlined,
-  SunOutlined,
-  MoonOutlined,
   CheckOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -13,8 +10,6 @@ import {
   EditOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
-import { useTheme } from "../../../contexts/theme_context";
-import { useTranslation } from "../../../contexts/translation_context";
 import { useAuth } from "../../../hooks/useAuth";
 import { useNotificationStore } from "../../../features/admin/stores/notification.store";
 import { useNavigate } from "react-router-dom";
@@ -22,8 +17,6 @@ import { formatDistanceToNow } from 'date-fns';
 import "../../../styles/cleaner/cleaner_header.css";
 
 const CleanerHeader = () => {
-  const { darkMode, toggleTheme } = useTheme();
-  const { language, toggleLanguage } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -37,16 +30,12 @@ const CleanerHeader = () => {
     deleteNotification
   } = useNotificationStore();
 
-  const [unreadMessages] = useState(3);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const notificationRef = useRef(null);
-  const messageRef = useRef(null);
   const profileRef = useRef(null);
   const notificationButtonRef = useRef(null);
-  const messageButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
 
   const displayName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Cleaner User';
@@ -69,15 +58,6 @@ const CleanerHeader = () => {
         !notificationButtonRef.current.contains(event.target)
       ) {
         setIsNotificationOpen(false);
-      }
-
-      if (
-        messageRef.current &&
-        !messageRef.current.contains(event.target) &&
-        messageButtonRef.current &&
-        !messageButtonRef.current.contains(event.target)
-      ) {
-        setIsMessageOpen(false);
       }
 
       if (
@@ -106,23 +86,16 @@ const CleanerHeader = () => {
 
   const handleBellClick = () => {
     setIsNotificationOpen(!isNotificationOpen);
-    setIsMessageOpen(false);
     setIsProfileOpen(false);
     if (!isNotificationOpen) {
       fetchNotifications(true);
     }
   };
 
-  const handleMessageClick = () => {
-    setIsMessageOpen(!isMessageOpen);
-    setIsNotificationOpen(false);
-    setIsProfileOpen(false);
-  };
-
   const handleProfileClick = () => {
-    setIsProfileOpen(!isProfileOpen);
+    setIsProfileOpen(false);
     setIsNotificationOpen(false);
-    setIsMessageOpen(false);
+    navigate('/cleaner/settings');
   };
 
   const handleLogout = async () => {
@@ -163,79 +136,9 @@ const CleanerHeader = () => {
     }
   };
 
-  const flagImage = language === "en"
-    ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6Q2KLUgSM9mNbXrJDXuCuv7nfyekk4s0z8A&s"
-    : "https://media.istockphoto.com/id/2032575722/vector/cambodia-flag-flag-icon-standard-color-circle-icon-flag-computer-illustration-digital.jpg?s=612x612&w=0&k=20&c=2jTISkPiDs4E7JtZxC5-5N-06kU_rDMkoNvkQ234gdA=";
-
-  const messages = [
-    { id: 1, sender: 'John Smith', message: 'When will my cleaning start?', time: '5 min ago', unread: true },
-    { id: 2, sender: 'Maria Garcia', message: 'I need to reschedule', time: '1 hour ago', unread: true },
-    { id: 3, sender: 'Support Team', message: 'Your ticket has been resolved', time: '3 hours ago', unread: true },
-    { id: 4, sender: 'Admin', message: 'System update tomorrow', time: '1 day ago', unread: false }
-  ];
-
   return (
-    <header className={`admin-header ${darkMode ? 'dark-mode' : ''}`}>
+    <header className="admin-header">
       <div className="header-controls">
-        <button className="header-icon-btn" onClick={toggleTheme} title={darkMode ? 'Light mode' : 'Dark mode'}>
-          {darkMode ? <SunOutlined /> : <MoonOutlined />}
-        </button>
-
-        <button className="header-icon-btn" onClick={toggleLanguage} title="Change language">
-          <img src={flagImage} alt={language} className="language-flag" />
-        </button>
-
-        <div className="dropdown-wrapper">
-          <button
-            ref={messageButtonRef}
-            className={`header-icon-btn ${isMessageOpen ? 'active' : ''}`}
-            onClick={handleMessageClick}
-            title="Messages"
-          >
-            <MessageOutlined />
-            {unreadMessages > 0 && <span className="badge">{unreadMessages}</span>}
-          </button>
-
-          {isMessageOpen && (
-            <div className="dropdown-menu messages-dropdown" ref={messageRef}>
-              <div className="dropdown-header">
-                <h3>Messages</h3>
-                <button className="view-all-btn" onClick={() => navigate('/messages')}>
-                  View all
-                </button>
-              </div>
-
-              <div className="dropdown-list">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`dropdown-item ${msg.unread ? 'unread' : ''}`}
-                    onClick={() => {
-                      navigate('/messages');
-                      setIsMessageOpen(false);
-                    }}
-                  >
-                    <div className="item-avatar">
-                      <UserOutlined />
-                    </div>
-                    <div className="item-content">
-                      <div className="item-header">
-                        <span className="item-title">{msg.sender}</span>
-                        <span className="item-time">{msg.time}</span>
-                      </div>
-                      <p className="item-preview">{msg.message}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="dropdown-footer">
-                <button onClick={() => navigate('/messages/new')}>New Message</button>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="dropdown-wrapper">
           <button
             ref={notificationButtonRef}
@@ -333,10 +236,22 @@ const CleanerHeader = () => {
               </div>
 
               <div className="dropdown-list">
-                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/profile')}>
+                <button
+                  className="dropdown-item-btn"
+                  onClick={() => {
+                    navigate('/cleaner/settings');
+                    setIsProfileOpen(false);
+                  }}
+                >
                   <UserOutlined /> View Profile
                 </button>
-                <button className="dropdown-item-btn" onClick={() => navigate('/cleaner/profile/edit')}>
+                <button
+                  className="dropdown-item-btn"
+                  onClick={() => {
+                    navigate('/cleaner/settings');
+                    setIsProfileOpen(false);
+                  }}
+                >
                   <EditOutlined /> Edit Profile
                 </button>
               </div>

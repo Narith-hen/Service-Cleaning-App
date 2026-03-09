@@ -87,13 +87,44 @@
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+require("dotenv").config();
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+// Backward-compatible fallback:
+// Some earlier uploads were saved in /uploads/misc while DB stored /uploads/services/<file>.
+app.get("/uploads/services/:file", (req, res, next) => {
+  const servicesPath = path.join(__dirname, "../uploads/services", req.params.file);
+  const miscPath = path.join(__dirname, "../uploads/misc", req.params.file);
+
+  if (fs.existsSync(servicesPath)) {
+    return res.sendFile(servicesPath);
+  }
+  if (fs.existsSync(miscPath)) {
+    return res.sendFile(miscPath);
+  }
+  return next();
+});
 
 const authRoutes = require("./routes/authRoutes");
+const adminRoutes = require("./routes/admin.routes");
+const serviceRoutes = require("./routes/service.routes");
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/services", serviceRoutes);
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({
+    success: false,
+    message: err?.message || 'Internal server error'
+  });
+});
 
 app.listen(5000, () => {
   console.log("Server running on port 5000 🚀");
