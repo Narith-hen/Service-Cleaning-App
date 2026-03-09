@@ -4,6 +4,7 @@ import {
   HomeOutlined, 
   InfoCircleOutlined, 
   AppstoreOutlined, 
+  CalendarOutlined,
   PhoneOutlined,
   MailOutlined,
   ClockCircleOutlined,
@@ -31,38 +32,63 @@ const Sidebar = ({
   onContactClick 
 }) => {
   const { user, logout } = useAuth();
+  const isCustomerArea = currentPath?.startsWith('/customer');
   
   // Navigation menu items
-  const menuItems = [
-    {
-      key: 'home',
-      label: 'Home',
-      icon: <HomeOutlined />,
-      path: '/',
-      description: 'Welcome to SEVANOW'
-    },
-    {
-      key: 'about',
-      label: 'About Us',
-      icon: <InfoCircleOutlined />,
-      path: '/about',
-      description: 'Learn about our company'
-    },
-    {
-      key: 'services',
-      label: 'Services',
-      icon: <AppstoreOutlined />,
-      path: '/services',
-      description: 'Our comprehensive solutions'
-    },
-    {
-      key: 'contact',
-      label: 'Contact',
-      icon: <PhoneOutlined />,
-      path: '/contact',
-      description: 'Get in touch with us'
-    }
-  ];
+  const menuItems = isCustomerArea
+    ? [
+      {
+        key: 'home',
+        label: 'My Home',
+        icon: <HomeOutlined />,
+        path: '/customer/dashboard',
+        description: 'Customer dashboard'
+      },
+      {
+        key: 'services',
+        label: 'Service',
+        icon: <AppstoreOutlined />,
+        path: '/customer/services',
+        description: 'Customer services'
+      },
+      {
+        key: 'booking',
+        label: 'Booking Now',
+        icon: <CalendarOutlined />,
+        path: '/customer/bookings',
+        description: 'Book your cleaning'
+      }
+    ]
+    : [
+      {
+        key: 'home',
+        label: 'Home',
+        icon: <HomeOutlined />,
+        path: '/',
+        description: 'Welcome to SEVANOW'
+      },
+      {
+        key: 'about',
+        label: 'About Us',
+        icon: <InfoCircleOutlined />,
+        path: '/about',
+        description: 'Learn about our company'
+      },
+      {
+        key: 'services',
+        label: 'Services',
+        icon: <AppstoreOutlined />,
+        path: '/services',
+        description: 'Our comprehensive solutions'
+      },
+      {
+        key: 'contact',
+        label: 'Contact',
+        icon: <PhoneOutlined />,
+        path: '/contact',
+        description: 'Get in touch with us'
+      }
+    ];
 
   // Contact information
   const contactInfo = [
