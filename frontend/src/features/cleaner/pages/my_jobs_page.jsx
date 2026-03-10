@@ -8,15 +8,13 @@ import {
   CompassOutlined,
   MessageOutlined,
   PlayCircleOutlined,
-  InfoCircleOutlined,
   CalendarOutlined,
   FileTextOutlined,
-  PlusCircleOutlined,
-  SendOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons';
 import officeImage from '../../../assets/office.png';
+import CleanerMessagePanel from '../components/cleaner_message_panel';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
@@ -161,69 +159,11 @@ const MyJobsPage = () => {
         </div>
 
         <div className="my-jobs-message-view">
-          <section className="my-jobs-chat-panel">
-            <div className="my-jobs-chat-header">
-              <div className="my-jobs-chat-customer">
-                <div className="my-jobs-chat-avatar-wrap">
-                  <div className="my-jobs-chat-avatar">{activeMessageJob.customer.charAt(0)}</div>
-                  <span className="my-jobs-chat-online-dot" />
-                </div>
-                <div>
-                  <h3>{activeMessageJob.customer}</h3>
-                  <p>{activeMessageJob.title} Job - {activeMessageJob.jobId}</p>
-                </div>
-              </div>
-
-              <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
-                <InfoCircleOutlined />
-              </button>
-            </div>
-
-            <div className="my-jobs-chat-body">
-              <div className="my-jobs-chat-day-pill">TODAY</div>
-
-              <div className="my-jobs-chat-row left">
-                <div className="my-jobs-chat-mini-avatar">{activeMessageJob.customer.charAt(0)}</div>
-                <div className="my-jobs-chat-content">
-                  <div className="my-jobs-chat-bubble">
-                    Hi! I&apos;m really looking forward to the cleaning session tomorrow. I noticed the
-                    kitchen cabinets might need some extra attention.
-                  </div>
-                  <span className="my-jobs-chat-time">10:42 AM</span>
-                </div>
-              </div>
-
-              <div className="my-jobs-chat-row left">
-                <div className="my-jobs-chat-mini-avatar">{activeMessageJob.customer.charAt(0)}</div>
-                <div className="my-jobs-chat-content">
-                  <div className="my-jobs-chat-bubble">
-                    Can you also clean the windows? I&apos;m happy to pay extra for that.
-                  </div>
-                  <span className="my-jobs-chat-time">10:45 AM</span>
-                </div>
-              </div>
-
-              <div className="my-jobs-chat-row right">
-                <div className="my-jobs-chat-content">
-                  <div className="my-jobs-chat-bubble">
-                    Of course! I can definitely add window cleaning to the list. For a house of your size,
-                    it usually takes about an extra hour.
-                  </div>
-                  <span className="my-jobs-chat-time">10:48 AM</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="my-jobs-chat-input-row">
-              <button type="button" className="my-jobs-input-add-btn" aria-label="Attach">
-                <PlusCircleOutlined />
-              </button>
-              <input type="text" placeholder="Type a message..." />
-              <button type="button" className="my-jobs-input-send-btn" aria-label="Send">
-                <SendOutlined />
-              </button>
-            </div>
-          </section>
+          <CleanerMessagePanel
+            threadId={activeMessageJob.sourceRequestId || activeMessageJob.id}
+            customerName={activeMessageJob.customer}
+            subtitle={`${activeMessageJob.title} Job - ${activeMessageJob.jobId}`}
+          />
 
           <aside className="my-jobs-details-panel">
             <h5>JOB DETAILS</h5>
