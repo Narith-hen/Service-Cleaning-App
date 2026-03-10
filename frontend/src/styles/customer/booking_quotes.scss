@@ -4,7 +4,7 @@
   --text: #132643;
   --muted: #6f819c;
   --blue: #2386f6;
-  --green: #32f205;
+  --green: #008000;
 
   max-width: 1240px;
   margin: 0 auto;
@@ -19,7 +19,7 @@
   margin-bottom: 24px;
 }
 
-.step-circle {
+.booking-quotes-page .step-circle {
   position: relative;
   width: 44px;
   height: 44px;
@@ -32,12 +32,13 @@
   font-size: 18px;
 }
 
-.step-circle.active {
+.booking-quotes-page .step-circle.active {
   background: var(--green);
   border-color: var(--green);
+  color: #fff;
 }
 
-.step-circle::after {
+.booking-quotes-page .step-circle::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -48,7 +49,7 @@
   transform: translateY(-50%);
 }
 
-.step-circle:last-child::after {
+.booking-quotes-page .step-circle:last-child::after {
   display: none;
 }
 

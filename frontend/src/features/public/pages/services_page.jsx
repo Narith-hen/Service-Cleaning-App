@@ -1,10 +1,12 @@
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import ServicesContent from '../../../pages/public/ServicesPage';
 import homeImage from '../../../assets/image.png';
 import welcomeServiceImage from '../../../assets/WelcomeService.png';
 
 const ServicesPage = () => {
+  const location = useLocation();
   const { darkMode = false } = useOutletContext() || {};
+  const isCustomerArea = location.pathname.startsWith('/customer');
 
   return (
     <div className={darkMode ? 'bg-[#0b1220] text-slate-100' : 'bg-[#f2f4f3] text-slate-800'}>
@@ -61,7 +63,7 @@ const ServicesPage = () => {
         </div>
       </section>
 
-      <ServicesContent embedded darkMode={darkMode} />
+      <ServicesContent embedded darkMode={darkMode} useApiServices={isCustomerArea} />
     </div>
   );
 };

@@ -4,10 +4,8 @@ import {
   HomeOutlined, 
   InfoCircleOutlined, 
   AppstoreOutlined, 
+  CalendarOutlined,
   PhoneOutlined,
-  MailOutlined,
-  ClockCircleOutlined,
-  EnvironmentOutlined,
   CloseOutlined,
   FacebookOutlined,
   MessageOutlined,
@@ -23,63 +21,68 @@ import { useAuth } from '../../../hooks/useAuth';
 const { Text } = Typography;
 
 const Sidebar = ({ 
-  isOpen, 
   onClose, 
   currentPath, 
-  onNavigate,
-  darkMode,
-  onContactClick 
+  onNavigate
 }) => {
   const { user, logout } = useAuth();
+  const isCustomerArea = currentPath?.startsWith('/customer');
   
   // Navigation menu items
-  const menuItems = [
-    {
-      key: 'home',
-      label: 'Home',
-      icon: <HomeOutlined />,
-      path: '/',
-      description: 'Welcome to SEVANOW'
-    },
-    {
-      key: 'about',
-      label: 'About Us',
-      icon: <InfoCircleOutlined />,
-      path: '/about',
-      description: 'Learn about our company'
-    },
-    {
-      key: 'services',
-      label: 'Services',
-      icon: <AppstoreOutlined />,
-      path: '/services',
-      description: 'Our comprehensive solutions'
-    },
-    {
-      key: 'contact',
-      label: 'Contact',
-      icon: <PhoneOutlined />,
-      path: '/contact',
-      description: 'Get in touch with us'
-    }
-  ];
-
-  // Contact information
-  const contactInfo = [
-    { icon: <PhoneOutlined />, text: '096 881 2310', type: 'phone', color: '#0f766e' },
-    { icon: <PhoneOutlined />, text: '099 918 215', type: 'phone', color: '#0f766e' },
-    { icon: <MailOutlined />, text: 'info@sevanow.com', type: 'email', color: '#dc2626' },
-    { icon: <ClockCircleOutlined />, text: '8AM - 6PM, Mon - Sat', type: 'hours', color: '#0f766e' },
-    { icon: <EnvironmentOutlined />, text: 'Phnom Penh, Cambodia', type: 'location', color: '#dc2626' }
-  ];
-
-  // Social media links
-  const socialLinks = [
-    { icon: <FacebookOutlined />, label: 'Facebook', url: '#', color: '#0f766e' },
-    { icon: <MessageOutlined />, label: 'Messenger', url: '#', color: '#0f766e' },
-    { icon: <WhatsAppOutlined />, label: 'WhatsApp', url: '#', color: '#25D366' },
-    { icon: <YoutubeOutlined />, label: 'YouTube', url: '#', color: '#dc2626' }
-  ];
+  const menuItems = isCustomerArea
+    ? [
+      {
+        key: 'home',
+        label: 'My Home',
+        icon: <HomeOutlined />,
+        path: '/customer/dashboard',
+        description: 'Customer dashboard'
+      },
+      {
+        key: 'services',
+        label: 'Service',
+        icon: <AppstoreOutlined />,
+        path: '/customer/services',
+        description: 'Customer services'
+      },
+      {
+        key: 'booking',
+        label: 'Booking Now',
+        icon: <CalendarOutlined />,
+        path: '/customer/bookings',
+        description: 'Book your cleaning'
+      }
+    ]
+    : [
+      {
+        key: 'home',
+        label: 'Home',
+        icon: <HomeOutlined />,
+        path: '/',
+        description: 'Welcome to SEVANOW'
+      },
+      {
+        key: 'about',
+        label: 'About Us',
+        icon: <InfoCircleOutlined />,
+        path: '/about',
+        description: 'Learn about our company'
+      },
+      {
+        key: 'services',
+        label: 'Services',
+        icon: <AppstoreOutlined />,
+        path: '/services',
+        description: 'Our comprehensive solutions'
+      },
+      {
+        key: 'contact',
+        label: 'Contact',
+        icon: <PhoneOutlined />,
+        path: '/contact',
+        description: 'Get in touch with us'
+      }
+    ];
 
   const handleItemClick = (path) => {
     onNavigate(path);
