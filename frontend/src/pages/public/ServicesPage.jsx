@@ -185,6 +185,7 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                     <p className={darkMode ? "text-slate-300" : "text-gray-500"}>{service.description}</p>
                     <Link
                       to={bookServicePath}
+                      state={{ service: { title: service.title, description: service.description, image: service.image } }}
                       className={`mt-7 inline-flex rounded-lg border border-[#32c753] px-4 py-2 text-sm font-bold transition-all duration-300 hover:bg-[#32c753] hover:text-white ${
                         darkMode ? "text-[#7ce892]" : "text-[#32c753]"
                       }`}
