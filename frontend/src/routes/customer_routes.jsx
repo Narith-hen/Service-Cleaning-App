@@ -14,6 +14,7 @@ import WriteReviewPage from '../features/customer/pages/write_review_page';
 import SettingsPage from '../features/customer/pages/setting_page';
 import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
+import MessagesPage from '../features/customer/pages/messages';
 import CustomerServicesPage from '../features/public/pages/services_page';
 
 export const customerRoutes = {
@@ -91,6 +92,14 @@ export const customerRoutes = {
     {
       path: 'notifications/:notificationId',
       element: <CustomerNotifications />
+    },
+    {
+      path: 'messages',
+      element: <MessagesPage />
+    },
+    {
+      path: 'messages/:threadId',
+      element: <MessagesPage />
     },
     {
       path: 'write-review',
