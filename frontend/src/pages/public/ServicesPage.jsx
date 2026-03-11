@@ -135,10 +135,11 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
       {!embedded && <Navbar />}
 
       <div className="max-w-6xl mx-auto pt-20 pb-24 px-6">
-        <h2 className={`text-4xl font-black text-center mb-5 ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
+        <h2 className={`text-4xl font-black text-center mb-1 ${darkMode ? "text-slate-100" : "text-slate-900"}`} style={{ fontSize: '32px', color: '#008000', fontWeight: 600, letterSpacing: '0.02em'
+        }}>
           OUR SERVICES
         </h2>
-        <p className={`mx-auto mb-16 max-w-2xl text-center leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
+        <p className={`mx-auto mb-5 max-w-2xl text-center leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
           Professional cleaning packages with modern service quality. Hover cards to preview
           the interactive layout.
         </p>

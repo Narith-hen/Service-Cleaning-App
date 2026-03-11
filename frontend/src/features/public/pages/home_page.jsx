@@ -75,9 +75,9 @@ export default function PublicHomePage() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 to="/auth/register"
-                className="rounded-xl bg-[#32c753] px-4 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]"
+                className="rounded-xl bg-[#32c753] px-4 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]" style={{borderRadius: '24px'}}
               >
-                Book Your Clean Now
+                Booking Now!
               </Link>
             </div>
 

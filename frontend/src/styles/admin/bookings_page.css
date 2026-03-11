@@ -44,7 +44,7 @@
 .admin-bookings-kpi-card {
   background: var(--bookings-bg);
   border: 1px solid var(--bookings-panel-border);
-  border-radius: 8px;
+  border-radius: 24px;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -111,7 +111,7 @@
 .admin-bookings-filter-row {
   background: var(--bookings-bg);
   border: 1px solid var(--bookings-panel-border);
-  border-radius: 8px;
+  border-radius: 24px;
   padding: 10px;
   display: grid;
   grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
@@ -171,7 +171,7 @@
 .admin-bookings-table-panel {
   background: var(--bookings-bg);
   border: 1px solid var(--bookings-panel-border);
-  border-radius: 8px;
+  border-radius: 24px;
   overflow: hidden;
 }
 
