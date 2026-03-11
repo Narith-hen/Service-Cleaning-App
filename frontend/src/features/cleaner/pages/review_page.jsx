@@ -21,11 +21,7 @@ const reviews = [
     rating: 4,
     comment:
       'Very punctual and efficient. The office looks great. One minor spot missed on the breakroom window but otherwise flawless. Will continue the contract.',
-    reply: {
-      title: 'Your Reply',
-      date: 'Oct 22, 2024',
-      text: "Thank you for the feedback, Michael! Apologies for the breakroom window - I'll make sure to give it extra attention during our next visit!"
-    }
+    reply: null
   },
   {
     id: 3,
@@ -221,16 +217,6 @@ const ReviewPage = () => {
 
             <p className="comment">{review.comment}</p>
 
-            {review.reply ? (
-              <div className="reply-box">
-                <div className="reply-head">
-                  <strong>{review.reply.title}</strong>
-                  <span>{review.reply.date}</span>
-                </div>
-                <p>{review.reply.text}</p>
-              </div>
-            ) : null}
-
             <div className="review-footer">
               <span className="verified">
                 <CheckCircleFilled /> Verified Customer
@@ -285,3 +271,4 @@ const ReviewPage = () => {
 
 export default ReviewPage;
 
+ 

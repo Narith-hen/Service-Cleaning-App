@@ -23,6 +23,17 @@
   }
 }
 
+.job-cancel-notice {
+  margin-bottom: 12px;
+  border: 1px solid #fdba74;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
@@ -175,6 +186,11 @@
       background: #e2e8f0;
       color: #334155;
     }
+
+    &.red {
+      background: #fecaca;
+      color: #7f1d1d;
+    }
   }
 }
 
@@ -312,6 +328,12 @@
   &.locked {
     background: #f1f5f9;
     color: #94a3b8;
+  }
+
+  &.danger {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
   }
 }
 
@@ -506,6 +528,11 @@
       background: #e2e8f0;
       color: #334155;
     }
+
+    &.red {
+      background: #fecaca;
+      color: #7f1d1d;
+    }
   }
 }
 
@@ -623,6 +650,71 @@
   color: #94a3b8;
 }
 
+.job-modal .action-btn.danger {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.cancel-job-modal {
+  width: min(520px, 94vw);
+  border-radius: 14px;
+  border: 1px solid #dce4ee;
+  background: #ffffff;
+  padding: 18px;
+  position: relative;
+
+  p {
+    margin: 0 0 10px;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  textarea {
+    width: 100%;
+    border: 1px solid #dce4ee;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 10px 12px;
+    color: #0f172a;
+    outline: none;
+    resize: vertical;
+    min-height: 110px;
+  }
+}
+
+.cancel-job-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding-right: 32px;
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+}
+
+.cancel-job-error {
+  display: block;
+  margin-top: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cancel-job-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 @media (max-width: 1080px) {
   .summary-grid {
     grid-template-columns: 1fr;
@@ -721,6 +813,10 @@
 
   .job-detail .label {
     font-size: 8px;
+  }
+
+  .cancel-job-actions {
+    grid-template-columns: 1fr;
   }
 
   .my-jobs-footer {

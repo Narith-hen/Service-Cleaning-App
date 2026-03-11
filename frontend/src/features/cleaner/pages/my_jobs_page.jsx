@@ -16,7 +16,7 @@ import officeImage from '../../../assets/office.png';
 import windowImage from '../../../assets/window.png';
 import '../../../styles/cleaner/my_jobs.scss';
 
-const jobs = [
+const initialJobs = [
   {
     id: 1,
     jobType: 'Deep Clean',
@@ -80,22 +80,23 @@ const jobs = [
 ];
 
 const MyJobsPage = () => {
+  const [jobItems, setJobItems] = useState(initialJobs);
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedJobId, setSelectedJobId] = useState(jobs[0]?.id ?? null);
+  const [selectedJobId, setSelectedJobId] = useState(initialJobs[0]?.id ?? null);
   const [activeJob, setActiveJob] = useState(null);
 
-  const jobTypeOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.jobType))], []);
-  const statusOptions = useMemo(() => ['all', ...new Set(jobs.map((job) => job.status))], []);
+  const jobTypeOptions = useMemo(() => ['all', ...new Set(jobItems.map((job) => job.jobType))], [jobItems]);
+  const statusOptions = useMemo(() => ['all', ...new Set(jobItems.map((job) => job.status))], [jobItems]);
 
   const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
+    return jobItems.filter((job) => {
       if (selectedType !== 'all' && job.jobType !== selectedType) return false;
       if (selectedStatus !== 'all' && job.status !== selectedStatus) return false;
 
       return true;
     });
-  }, [selectedType, selectedStatus]);
+  }, [jobItems, selectedType, selectedStatus]);
 
   useEffect(() => {
     if (filteredJobs.length === 0) {
@@ -134,6 +135,54 @@ const MyJobsPage = () => {
 
   const handleCloseJobDetails = () => {
     setActiveJob(null);
+  };
+
+  const updateJob = (jobId, updater) => {
+    setJobItems((prevJobs) => prevJobs.map((job) => (job.id === jobId ? updater(job) : job)));
+    setActiveJob((prevJob) => (prevJob && prevJob.id === jobId ? updater(prevJob) : prevJob));
+  };
+
+  const handleJobAction = (job, actionLabel, event) => {
+    event.stopPropagation();
+    setSelectedJobId(job.id);
+
+    if (actionLabel === 'Pause Job') {
+      updateJob(job.id, (currentJob) => ({
+        ...currentJob,
+        status: 'Paused',
+        tag: 'PAUSED',
+        tagType: 'amber',
+        actions: [
+          { label: 'Resume Job', type: 'soft-green', icon: <CaretRightOutlined /> },
+          { label: 'Complete Cleaning', type: 'green', icon: <CheckCircleOutlined /> }
+        ]
+      }));
+      return;
+    }
+
+    if (actionLabel === 'Resume Job') {
+      updateJob(job.id, (currentJob) => ({
+        ...currentJob,
+        status: 'Ongoing',
+        tag: 'ONGOING',
+        tagType: 'green',
+        actions: [
+          { label: 'Pause Job', type: 'dark', icon: <PauseCircleOutlined /> },
+          { label: 'Complete Cleaning', type: 'green', icon: <CheckCircleOutlined /> }
+        ]
+      }));
+      return;
+    }
+
+    if (actionLabel === 'Complete Cleaning') {
+      updateJob(job.id, (currentJob) => ({
+        ...currentJob,
+        status: 'Completed',
+        tag: 'COMPLETED',
+        tagType: 'gray',
+        actions: [{ label: 'Completed', type: 'locked', icon: <CheckCircleOutlined /> }]
+      }));
+    }
   };
 
   return (
@@ -238,7 +287,12 @@ const MyJobsPage = () => {
 
               <div className="job-actions">
                 {job.actions.map((action, idx) => (
-                  <button key={`${job.id}-action-${idx}`} type="button" className={`action-btn ${action.type}`}>
+                  <button
+                    key={`${job.id}-action-${idx}`}
+                    type="button"
+                    className={`action-btn ${action.type}`}
+                    onClick={(event) => handleJobAction(job, action.label, event)}
+                  >
                     {action.icon} {action.label}
                   </button>
                 ))}
@@ -291,7 +345,12 @@ const MyJobsPage = () => {
 
               <div className="job-actions">
                 {activeJob.actions.map((action, idx) => (
-                  <button key={`${activeJob.id}-modal-action-${idx}`} type="button" className={`action-btn ${action.type}`}>
+                  <button
+                    key={`${activeJob.id}-modal-action-${idx}`}
+                    type="button"
+                    className={`action-btn ${action.type}`}
+                    onClick={(event) => handleJobAction(activeJob, action.label, event)}
+                  >
                     {action.icon} {action.label}
                   </button>
                 ))}

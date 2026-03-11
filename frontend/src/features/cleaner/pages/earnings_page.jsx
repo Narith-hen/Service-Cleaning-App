@@ -66,43 +66,22 @@ const transactions = [
 const EarningsPage = () => {
   const [sortBy, setSortBy] = useState('most_recent');
   const [paymentStatus, setPaymentStatus] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState({
-    sortBy: 'most_recent',
-    paymentStatus: 'all',
-    dateFrom: '',
-    dateTo: ''
-  });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-
-  const handleApplyFilters = () => {
-    setAppliedFilters({
-      sortBy,
-      paymentStatus,
-      dateFrom,
-      dateTo
-    });
-  };
 
   const filteredTransactions = useMemo(() => {
     const filtered = transactions.filter((item) => {
       const statusMatch =
-        appliedFilters.paymentStatus === 'all' ||
-        item.status.toLowerCase() === appliedFilters.paymentStatus;
-
-      const fromMatch = !appliedFilters.dateFrom || item.date >= appliedFilters.dateFrom;
-      const toMatch = !appliedFilters.dateTo || item.date <= appliedFilters.dateTo;
-
-      return statusMatch && fromMatch && toMatch;
+        paymentStatus === 'all' ||
+        item.status.toLowerCase() === paymentStatus;
+      return statusMatch;
     });
 
     return [...filtered].sort((a, b) => {
-      if (appliedFilters.sortBy === 'oldest') {
+      if (sortBy === 'oldest') {
         return new Date(a.date) - new Date(b.date);
       }
 
-      if (appliedFilters.sortBy === 'highest_amount') {
+      if (sortBy === 'highest_amount') {
         const amountA = Number(String(a.amount).replace(/[^0-9.-]/g, ''));
         const amountB = Number(String(b.amount).replace(/[^0-9.-]/g, ''));
         return amountB - amountA;
@@ -110,7 +89,7 @@ const EarningsPage = () => {
 
       return new Date(b.date) - new Date(a.date);
     });
-  }, [appliedFilters]);
+  }, [paymentStatus, sortBy]);
 
   return (
     <div className="cleaner-earnings-page">
@@ -158,33 +137,6 @@ const EarningsPage = () => {
           </select>
         </div>
 
-        <div className="filter-item date-range">
-          <label>DATE RANGE</label>
-          <div className="date-inputs">
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              max={dateTo || undefined}
-              aria-label="Start date"
-            />
-            <span>to</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              min={dateFrom || undefined}
-              aria-label="End date"
-            />
-          </div>
-        </div>
-
-        <button className="earnings-filter-btn" type="button" aria-label="filter" onClick={handleApplyFilters}>
-          <svg className="earnings-filter-icon" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M2 4h12M4 8h8M6 12h4" />
-          </svg>
-          <span>Filter</span>
-        </button>
       </div>
 
       <div className="transactions-list">
@@ -236,7 +188,7 @@ const EarningsPage = () => {
               <div className="transaction-top">
                 <div>
                   <h3>No transactions found</h3>
-                  <p>Try a different status or date range.</p>
+                  <p>Try a different status filter.</p>
                 </div>
               </div>
             </div>
