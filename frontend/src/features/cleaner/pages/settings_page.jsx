@@ -63,14 +63,6 @@ const SettingsPage = () => {
     setNotifications((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSaveProfile = () => {
-    console.log('Saving profile:', profile);
-  };
-
-  const handleSaveSchedule = () => {
-    console.log('Saving schedule:', schedule);
-  };
-
   const handleProfileFieldChange = (field) => (event) => {
     const value = event.target.value;
     setProfile((prev) => ({ ...prev, [field]: value }));
