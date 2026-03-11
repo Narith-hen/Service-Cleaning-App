@@ -113,8 +113,10 @@ app.get("/uploads/services/:file", (req, res, next) => {
 
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/admin.routes");
+const serviceRoutes = require("./routes/service.routes");
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/services", serviceRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

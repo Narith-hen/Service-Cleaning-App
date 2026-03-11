@@ -1,10 +1,13 @@
-.cleaner-my-jobs-page {
+.cleaner-my-jobs-v2 {
+  --main: #32c753;
+  --main-dark: #16a34a;
+  --line: #dce4ee;
   max-width: 1140px;
   margin: 0 auto;
-  color: #0f172a;
   font-family: Manrope, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+<<<<<<< HEAD
 .my-jobs-headline {
   margin-bottom: 14px;
 
@@ -202,45 +205,16 @@
 .job-top {
   display: flex;
   justify-content: space-between;
+=======
+.my-jobs-tabs-v2 {
+  display: flex;
+  flex-wrap: wrap;
+>>>>>>> develop
   gap: 12px;
-
-  .job-type {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #94a3b8;
-    display: inline-flex;
-    align-items: center;
-    height: 20px;
-    border-radius: 4px;
-    background: #f1f5f9;
-    padding: 0 8px;
-  }
-
-  h3 {
-    margin: 4px 0 2px;
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-  }
-
-  .job-client {
-    margin: 0;
-    color: #64748b;
-    font-size: 13px;
-  }
-
-  .job-price {
-    font-size: 22px;
-    line-height: 1;
-    font-weight: 800;
-    color: #0f172a;
-    letter-spacing: -0.03em;
-    white-space: nowrap;
-  }
+  margin-bottom: 16px;
 }
 
+<<<<<<< HEAD
 .job-details-grid {
   margin-top: 10px;
   display: grid;
@@ -481,16 +455,21 @@
   width: 32px;
   height: 32px;
   border: 1px solid #dce4ee;
+=======
+.my-jobs-tabs-v2 button {
+  height: 36px;
+>>>>>>> develop
   border-radius: 999px;
+  border: 1px solid #d5dde8;
   background: #fff;
-  color: #0f172a;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 20px;
   cursor: pointer;
-  z-index: 2;
 }
 
+<<<<<<< HEAD
 .job-modal-image-wrap {
   position: relative;
   min-height: 320px;
@@ -534,122 +513,152 @@
       color: #7f1d1d;
     }
   }
+=======
+.my-jobs-tabs-v2 button.active {
+  border-color: var(--main);
+  background: var(--main);
+  color: #fff;
+>>>>>>> develop
 }
 
-.job-modal-body {
-  padding: 22px 20px;
+.my-jobs-list-v2 {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.job-modal .job-top {
-  align-items: flex-start;
-  padding-right: 48px;
-
-  > div:first-child {
-    min-width: 0;
-    flex: 1;
-  }
-
-  h3 {
-    margin-top: 6px;
-    margin-bottom: 4px;
-    font-size: 24px;
-    line-height: 1.08;
-    letter-spacing: -0.03em;
-  }
-
-  .job-client {
-    font-size: 13px;
-    line-height: 1.35;
-  }
-
-  .job-price {
-    color: #16a34a;
-    font-size: 24px;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-}
-
-.job-modal .job-details-grid {
-  margin-top: 2px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.job-modal .job-detail {
-  background: #f8fafc;
-  border: 1px solid #dce4ee;
-  border-radius: 10px;
-  padding: 12px 14px;
-
-  p {
-    min-height: 28px;
-    align-items: flex-start;
-  }
-}
-
-.job-modal .job-actions {
-  margin-top: 2px;
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.job-modal .action-btn {
-  height: 44px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  background: #f8fafc;
-  border-color: #dce4ee;
-  min-width: 0;
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  white-space: nowrap;
+.my-job-card-v2 {
+  border: 1px solid var(--line);
+  border-radius: 14px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  border-radius: 8px;
-  padding: 0 10px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 27% 73%;
 }
 
-.job-modal .action-btn.dark {
-  background: #0b1736;
-  border-color: #0b1736;
-  color: #ffffff;
+.my-job-date-v2 {
+  background: #d2d9e3;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+  position: relative;
+  overflow: hidden;
 }
 
-.job-modal .action-btn.green {
-  background: #25d85a;
-  border-color: #25d85a;
-  color: #0b1736;
+.my-job-date-v2::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--job-date-bg);
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
 }
 
-.job-modal .action-btn.light {
-  background: #f8fafc;
-  border-color: #d1d9e4;
-  color: #334155;
+.my-job-date-v2::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(211, 219, 229, 0.82) 0%,
+    rgba(211, 219, 229, 0.56) 35%,
+    rgba(211, 219, 229, 0.85) 72%,
+    rgba(211, 219, 229, 0.95) 100%
+  );
+  z-index: 0;
 }
 
-.job-modal .action-btn.soft-green {
-  background: #bae6c8;
-  border-color: #bae6c8;
+.my-job-date-v2 > * {
+  position: relative;
+  z-index: 1;
+}
+
+.status-pill {
+  align-self: flex-start;
+  background: var(--main);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.day-value {
+  margin-top: 12px;
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 700;
+  color: #1e3a8a;
+  text-align: start;
+}
+
+.month-value {
+  margin-top: 2px;
+  font-size: 16px;
+  color: #2563eb;
+  text-align: start;
+}
+
+.schedule-label {
+  margin-top: auto;
+  font-size: 12px;
+  color: #64748b;
+  text-align: start;
+}
+
+.schedule-value {
+  margin-top: 2px;
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: start;
+}
+
+.my-job-main-v2 {
+  padding: 20px 22px;
+}
+
+.job-main-header-v2 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.job-main-header-v2 h3 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.1;
   color: #1f2937;
 }
 
-.job-modal .action-btn.locked {
-  background: #eef2f7;
-  border-color: #eef2f7;
-  color: #94a3b8;
+.job-main-header-v2 p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #6b7280;
+  text-align: start;
 }
 
+.job-price-v2 {
+  text-align: right;
+}
+
+.job-price-v2 strong {
+  display: block;
+  font-size: 36px;
+  line-height: 1;
+  color: var(--main-dark);
+}
+
+.job-price-v2 small {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+<<<<<<< HEAD
 .job-modal .action-btn.danger {
   background: #ef4444;
   border-color: #ef4444;
@@ -717,57 +726,787 @@
 
 @media (max-width: 1080px) {
   .summary-grid {
+=======
+.job-line-v2 {
+  margin: 13px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 16px;
+  color: #374151;
+}
+
+.job-line-v2 .dot {
+  margin: 0 8px;
+  color: #64748b;
+}
+
+.job-actions-v2 {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.start-btn,
+.ghost-btn,
+.progress-btn,
+.completed-btn {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid #cfd8e5;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.start-btn {
+  min-width: 145px;
+  color: #fff;
+  border-color: #2f61dd;
+  background: linear-gradient(180deg, #3569ea, #2e59d7);
+}
+
+.progress-btn {
+  min-width: 145px;
+  border-color: #85a6ff;
+  background: #9cb6f4;
+  color: #1f5edb;
+  // border-radius: 12px;
+  // box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.completed-btn {
+  min-width: 145px;
+  border-color: #78e8a1;
+  background: #9bf0bc;
+  color: #1bb45a;
+}
+
+.progress-btn .anticon,
+.completed-btn .anticon {
+  font-size: 18px;
+}
+
+.progress-btn:disabled,
+.completed-btn:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.ghost-btn {
+  background: #f8fbff;
+  color: #2563eb;
+}
+
+.my-jobs-empty-v2 {
+  border: 1px dashed #d5dde8;
+  border-radius: 12px;
+  background: #fff;
+  color: #64748b;
+  padding: 20px;
+  text-align: center;
+}
+
+.my-jobs-message-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.my-jobs-message-breadcrumb button {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  padding: 0;
+  cursor: pointer;
+}
+
+.my-jobs-message-breadcrumb button:hover {
+  color: var(--main-dark);
+}
+
+.my-jobs-message-breadcrumb strong {
+  color: #1f2937;
+}
+
+.my-jobs-message-view {
+  border: 1px solid #dbe3ed;
+  border-radius: 14px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 2.1fr 1fr;
+  overflow: hidden;
+  height: 720px;
+}
+
+.my-jobs-chat-panel {
+  border-right: 1px solid #e8eef5;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.my-jobs-chat-header {
+  flex-shrink: 0;
+  min-height: 74px;
+  border-bottom: 1px solid #e8eef5;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.my-jobs-chat-customer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.my-jobs-chat-avatar-wrap {
+  position: relative;
+}
+
+.my-jobs-chat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fde7d4;
+  color: #334155;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.my-jobs-chat-online-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #22c55e;
+  border: 2px solid #fff;
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+}
+
+.my-jobs-chat-customer h3 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: #1f2937;
+  text-align: start;
+}
+
+.my-jobs-chat-customer p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.my-jobs-chat-info-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.my-jobs-chat-body {
+  flex: 1;
+  padding: 18px 18px 22px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #fff;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.my-jobs-chat-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e8eef5;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.my-jobs-chat-day-pill {
+  width: fit-content;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+}
+
+.my-jobs-chat-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  max-width: 82%;
+}
+
+.my-jobs-chat-row.right {
+  margin-left: auto;
+  justify-content: flex-end;
+  max-width: 74%;
+}
+
+.my-jobs-chat-mini-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fde7d4;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.my-jobs-chat-content {
+  min-width: 0;
+}
+
+.my-jobs-chat-bubble {
+  border-radius: 14px;
+  background: #eef2f7;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.4;
+  padding: 12px 14px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.my-jobs-chat-row.right .my-jobs-chat-bubble {
+  background: var(--main);
+  color: #fff;
+}
+
+// ── Edit feature ────────────────────────────────────────────────────────────
+
+.my-jobs-chat-bubble-wrap {
+  display: inline-flex;
+  align-items: flex-end;
+}
+
+// Context menu (right-click)
+.my-jobs-chat-context-menu {
+  position: fixed;
+  z-index: 9999;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  min-width: 140px;
+
+  li button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: #1f2937;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+  }
+}
+
+.my-jobs-chat-edit-wrap {
+  width: min(360px, 74vw);
+}
+
+.my-jobs-chat-edit-input {
+  width: 100%;
+  border: 1.5px solid var(--main, #32c753);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #1f2937;
+  background: #fff;
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.my-jobs-chat-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.my-jobs-chat-edit-cancel,
+.my-jobs-chat-edit-save {
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-jobs-chat-edit-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.my-jobs-chat-edit-save {
+  background: var(--main, #32c753);
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.my-jobs-chat-edited {
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+// ── End edit feature ─────────────────────────────────────────────────────────
+
+.my-jobs-chat-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.my-jobs-chat-row.left .my-jobs-chat-meta {
+  justify-content: flex-start;
+}
+
+.my-jobs-chat-time {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.my-jobs-chat-ticks {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  color: #94a3b8;
+  flex-shrink: 0;
+
+  // Overlap the two check icons like WhatsApp double-ticks
+  .anticon + .anticon {
+    margin-left: -5px;
+  }
+
+  &.sending {
+    color: #cbd5e1;
+  }
+
+  &.sent {
+    color: #94a3b8;
+  }
+
+  &.delivered {
+    color: #64748b;
+  }
+
+  &.seen {
+    color: #2563eb; /* Blue like Messenger */
+  }
+}
+
+.my-jobs-chat-input-row {
+  min-height: 46px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+  gap: 12px;
+}
+
+.my-jobs-chat-input-row input {
+  border: none;
+  height: 36px;
+  border-radius: 999px;
+  background: #eef2f7;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #334155;
+}
+
+.my-jobs-input-add-btn,
+.my-jobs-input-send-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.my-jobs-input-send-btn {
+  color: var(--main-dark);
+}
+
+.my-jobs-chat-compose {
+  flex-shrink: 0;
+  border-top: 1px solid #e8eef5;
+  padding: 10px 16px 12px;
+  background: #fff;
+}
+
+.my-jobs-chat-file-input {
+  display: none;
+}
+
+.my-jobs-chat-image-wrap {
+  line-height: 0; // remove inline gap below img
+}
+
+.my-jobs-chat-image {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  max-height: 320px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 12px;
+  background: #dbe3ed;
+}
+
+// When bubble contains only an image (no text), remove padding/background so image fills it.
+.my-jobs-chat-bubble:has(.my-jobs-chat-image-wrap):not(:has(.my-jobs-chat-text)) {
+  background: transparent;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.my-jobs-chat-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.my-jobs-chat-attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid #dbe3ed;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.my-jobs-chat-attachment-preview img {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.my-jobs-chat-attachment-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.my-jobs-chat-attachment-copy strong,
+.my-jobs-chat-attachment-copy span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-jobs-chat-attachment-copy strong {
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.my-jobs-chat-attachment-copy span {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.my-jobs-chat-attachment-remove {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.my-jobs-chat-attachment-remove:hover {
+  background: #cbd5e1;
+}
+
+.my-jobs-chat-input-error {
+  margin: 0 0 8px;
+  color: #dc2626;
+  font-size: 12px;
+  text-align: start;
+}
+
+.my-jobs-input-add-btn:disabled,
+.my-jobs-input-send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.my-jobs-details-panel {
+  padding: 20px 18px;
+  background: #f8fafc;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.my-jobs-details-panel h5 {
+  margin: 0 0 16px;
+  color: #94a3b8;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.my-jobs-details-card {
+  border: 1px solid #dbe3ed;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+}
+
+.my-jobs-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.my-jobs-detail-row + .my-jobs-detail-row {
+  margin-top: 12px;
+}
+
+.my-jobs-detail-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #dcfce7;
+  color: var(--main-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.my-jobs-detail-row small {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.my-jobs-detail-row strong {
+  display: block;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.my-jobs-checklist-card {
+  margin-top: 16px;
+}
+
+.my-jobs-checklist-card h6 {
+  margin: 0 0 10px;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.my-jobs-checklist-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.my-jobs-checklist-card li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.my-jobs-checklist-card li .anticon {
+  color: var(--main-dark);
+}
+
+.my-jobs-contract-btn {
+  margin-top: 16px;
+  width: 100%;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid #d7dee8;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.my-jobs-contract-btn:hover {
+  border-color: var(--main);
+  color: var(--main-dark);
+}
+
+.my-jobs-map-preview {
+  margin-top: 14px;
+  height: 142px;
+  border-radius: 12px;
+  border: 1px solid #dbe3ed;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.72) 0, rgba(255, 255, 255, 0.72) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.72) 0, rgba(255, 255, 255, 0.72) 1px, transparent 1px),
+    linear-gradient(135deg, #edf2f7 0%, #d9e2ec 100%);
+  background-size: 16px 16px, 16px 16px, auto;
+  background-position: -1px -1px, -1px -1px, center;
+  filter: grayscale(100%);
+}
+
+@media (max-width: 980px) {
+  .my-job-card-v2 {
+>>>>>>> develop
     grid-template-columns: 1fr;
   }
 
-  .filter-bar {
+  .my-job-date-v2 {
+    min-height: unset;
+  }
+
+  .schedule-label {
+    margin-top: 12px;
+  }
+
+  .my-jobs-message-view {
     grid-template-columns: 1fr;
   }
 
-  .job-item {
-    grid-template-columns: 1fr;
+  .my-jobs-chat-panel {
+    border-right: none;
+    border-bottom: 1px solid #e8eef5;
+  }
+}
+
+@media (max-width: 700px) {
+  .my-jobs-tabs-v2 button {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 120px;
   }
 
-  .job-modal {
-    grid-template-columns: 1fr;
+  .job-main-header-v2 {
+    flex-direction: column;
   }
 
-  .job-modal-image-wrap {
-    height: 210px;
+  .job-price-v2 {
+    text-align: left;
   }
 
-  .job-modal .job-top h3 {
+  .job-actions-v2 {
+    flex-direction: column;
+  }
+
+  .start-btn,
+  .ghost-btn,
+  .progress-btn,
+  .completed-btn {
+    width: 100%;
+  }
+
+  .my-jobs-chat-customer h3 {
     font-size: 20px;
   }
 
-  .job-modal .job-top .job-price {
-    font-size: 22px;
+  .my-jobs-chat-bubble {
+    font-size: 16px;
+    text-align: start;
   }
 
-  .job-modal .job-details-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .my-jobs-chat-time {
+    font-size: 12px;
   }
 
-  .job-image-wrap {
-    height: 180px;
+  .my-jobs-checklist-card h6 {
+    font-size: 16px;
   }
 
-  .job-top .job-price {
-    font-size: 18px;
-  }
-
-  .job-top h3 {
-    font-size: 14px;
-  }
-
-  .job-detail p {
-    font-size: 11px;
-  }
-
-  .job-top .job-client {
+  .my-jobs-checklist-card li {
     font-size: 14px;
   }
 }
+<<<<<<< HEAD
 
 @media (max-width: 640px) {
   .my-jobs-headline h1 {
@@ -824,3 +1563,5 @@
     align-items: flex-start;
   }
 }
+=======
+>>>>>>> develop

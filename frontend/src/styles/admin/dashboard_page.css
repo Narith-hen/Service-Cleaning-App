@@ -164,6 +164,9 @@
 
 .table-scroll {
   overflow-x: auto;
+  overflow-y: auto;
+  height: 60vh;
+  max-height: 520px;
 }
 
 .dashboard-table {
@@ -185,6 +188,10 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
   font-size: 0.68rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--dash-surface);
 }
 
 .dashboard-table td {

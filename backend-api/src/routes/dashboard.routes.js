@@ -1,5 +1,5 @@
 const express = require('express');
-const { query } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { 
   customer,
   cleaner,
@@ -24,7 +24,17 @@ router.get('/cleaner', authorize('cleaner'), [
 ], validate, cleaner.getCleanerDashboard);
 
 router.get('/cleaner/jobs', authorize('cleaner'), cleaner.getCleanerJobs);
-router.patch('/cleaner/jobs/:id/status', authorize('cleaner'), cleaner.updateJobStatus);
+router.patch(
+  '/cleaner/jobs/:id/status',
+  authorize('cleaner'),
+  [
+    param('id').isInt(),
+    body('status').isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+    body('reason').optional().isString()
+  ],
+  validate,
+  cleaner.updateJobStatus
+);
 router.get('/cleaner/earnings', authorize('cleaner'), cleaner.getEarnings);
 router.get('/cleaner/earnings/summary', authorize('cleaner'), cleaner.getEarningsSummary);
 

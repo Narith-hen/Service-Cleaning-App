@@ -1,243 +1,169 @@
 import { useRef, useState } from 'react';
-import { Building2, ChevronRight, Home, KeyRound, UploadCloud } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, CloudUpload, Home, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/customer/booking.scss';
 
-const steps = ['01', '02', '03', '04', '05', '06', '07'];
+const stepItems = ['Personal Data', 'Space Category', 'Photos & Details'];
 
-const categories = [
+const categoryItems = [
   {
     key: 'residential',
     title: 'Residential',
-    description: 'Homes, apartments',
+    desc: 'Deep cleaning for apartments, penthouses, and homes.',
+    image:
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
     icon: Home
   },
   {
     key: 'office',
     title: 'Office',
-    description: 'Workspaces, studios',
+    desc: 'Sanitizing corporate suites and creative studio environments.',
+    image:
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
     icon: Building2
   },
   {
-    key: 'move',
-    title: 'Move-in/out',
-    description: 'Deep clean focused',
-    icon: KeyRound
+    key: 'move-out',
+    title: 'Move-Out',
+    desc: 'Comprehensive turnover cleaning for new residents.',
+    image:
+      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
+    icon: Truck
   }
 ];
 
 const BookingPage = () => {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState('residential');
+  const inputRef = useRef(null);
+  // start with no category chosen so progress only increases when the user makes a selection
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [details, setDetails] = useState('');
-  const [photos, setPhotos] = useState([]);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const fileInputRef = useRef(null);
+  const [files, setFiles] = useState([]);
 
-  const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-  const MAX_FILES = 6;
-
-  const toDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  const handleFiles = async (fileList) => {
-    const files = Array.from(fileList || []);
-    if (!files.length) return;
-
-    const validFiles = [];
-    const errors = [];
-
-    files.forEach((file) => {
-      if (!file.type.startsWith('image/')) {
-        errors.push(`${file.name}: not an image`);
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        errors.push(`${file.name}: larger than 20MB`);
-        return;
-      }
-      validFiles.push(file);
-    });
-
-    if (errors.length) {
-      setUploadError(errors[0]);
-    } else {
-      setUploadError('');
-    }
-
-    if (!validFiles.length) return;
-
-    const currentCount = photos.length;
-    const slots = MAX_FILES - currentCount;
-    const toAdd = validFiles.slice(0, Math.max(0, slots));
-    const photoItems = await Promise.all(
-      toAdd.map(async (file) => ({
-        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
-        name: file.name,
-        preview: await toDataUrl(file)
-      }))
-    );
-
-    setPhotos((prev) => [...prev, ...photoItems]);
+  const onFileChange = (fileList) => {
+    const nextFiles = Array.from(fileList || []).slice(0, 10);
+    setFiles(nextFiles);
   };
 
-  const removePhoto = (id) => {
-    setPhotos((prev) => prev.filter((item) => item.id !== id));
+  // compute how far the user has progressed in filling out this step
+  const computeProgress = () => {
+    let completed = 0;
+    if (selectedCategory) completed += 1;
+    if (files.length > 0) completed += 1;
+    if (details.trim() !== '') completed += 1;
+    return Math.round((completed / 3) * 100);
   };
 
-  const openFileDialog = () => {
-    fileInputRef.current?.click();
-  };
+  const progressPercent = computeProgress();
 
   return (
-    <div className="booking-request-page">
-      <div className="booking-steps">
-        {steps.map((step, index) => (
-          <div key={step} className={`step-circle ${index === 0 ? 'active' : ''}`}>
-            {step}
+    <div className="booking-page-v2">
+      <div className="booking-shell">
+        <header className="booking-header">
+          <h1>Request a Cleaning</h1>
+          <p>Professional service curated for your premium living and work spaces.</p>
+        </header>
+
+        <section className="booking-progress-card" aria-label="booking-progress">
+          <div className="progress-topline">
+            <span className="active">Step 2 of 3</span>
+            <span>{progressPercent}% Complete</span>
           </div>
-        ))}
-      </div>
-
-      <section className="request-container">
-        <p className="crumbs">
-          Dashboard <span>/</span> New Service Request
-        </p>
-        <h1>Tell us about your space</h1>
-        <p className="lead">
-          Help cleaners give you the most accurate quote by providing details and photos.
-        </p>
-
-        <div className="section-label">
-          <span>1</span>
-          <h2>Select Cleaning Category</h2>
-        </div>
-
-        <div className="category-grid">
-          {categories.map((item) => {
-            const Icon = item.icon;
-            const isSelected = selectedCategory === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                className={`category-card ${isSelected ? 'selected' : ''}`}
-                onClick={() => setSelectedCategory(item.key)}
-              >
-                <Icon size={18} />
-                <strong>{item.title}</strong>
-                <small>{item.description}</small>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="section-label">
-          <span>2</span>
-          <h2>Upload Photos</h2>
-        </div>
-
-        <div
-          className={`upload-box ${isDragActive ? 'drag-active' : ''}`}
-          onClick={openFileDialog}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setIsDragActive(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragActive(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            setIsDragActive(false);
-          }}
-          onDrop={async (e) => {
-            e.preventDefault();
-            setIsDragActive(false);
-            await handleFiles(e.dataTransfer.files);
-          }}
-        >
-          <div className="upload-icon">
-            <UploadCloud size={22} />
+          <h2>Space Category</h2>
+          <div className="progress-track" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+            <span style={{ width: `${progressPercent}%` }} />
           </div>
-          <h3>Drag and drop photos here</h3>
-          <p>
-            or click to browse from your device <span>(Max 20MB)</span>
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden-file-input"
-            onClick={(e) => e.stopPropagation()}
-            onChange={async (e) => {
-              await handleFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-          <div className="preview-row">
-            {photos.map((photo) => (
-              <div key={photo.id} className="preview-item">
-                <img src={photo.preview} alt={photo.name} />
-                <button
-                  type="button"
-                  className="remove-photo"
-                  aria-label={`Remove ${photo.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removePhoto(photo.id);
-                  }}
-                >
-                  x
-                </button>
-              </div>
+          <div className="progress-labels">
+            {stepItems.map((item) => (
+              <span key={item} className={item === 'Space Category' ? 'active' : ''}>
+                {item}
+              </span>
             ))}
-            {photos.length < MAX_FILES && (
-              <button
-                type="button"
-                aria-label="Add photo"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openFileDialog();
-                }}
-              >
-                +
+          </div>
+        </section>
+
+        <section className="category-section">
+          <h3>Select Space Category</h3>
+          <div className="category-grid">
+            {categoryItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = selectedCategory === item.key;
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`category-card ${isActive ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(item.key)}
+                >
+                  <div className="image-wrap">
+                    <img src={item.image} alt={item.title} loading="lazy" />
+                    <div className="category-icon" aria-hidden>
+                      <Icon size={16} />
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <h4>{item.title}</h4>
+                    <p>{item.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="details-grid">
+          <div>
+            <h3>Upload Photos</h3>
+            <div className="upload-card" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
+              <div className="upload-icon" aria-hidden>
+                <CloudUpload size={20} />
+              </div>
+              <p className="upload-title">Drag &amp; drop space photos</p>
+              <p className="upload-subtitle">Up to 10 images, max 5MB each</p>
+              <button type="button" className="upload-btn">
+                Browse Files
               </button>
+              <input
+                ref={inputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => onFileChange(e.target.files)}
+              />
+            </div>
+            {files.length > 0 && (
+              <p className="upload-count">
+                {files.length} file{files.length > 1 ? 's' : ''} selected
+              </p>
             )}
           </div>
-          {uploadError && <p className="upload-error">{uploadError}</p>}
-        </div>
 
-        <div className="section-label">
-          <span>3</span>
-          <h2>Size &amp; Condition</h2>
-        </div>
+          <div>
+            <h3>Additional Instructions</h3>
+            <div className="instructions-card">
+              <textarea
+                placeholder="Tell us about special requirements, fragile items, or specific areas of focus..."
+                value={details}
+                onChange={(e) => setDetails(e.target.value)}
+              />
+              <div className="tag-row" aria-hidden>
+                <span># Eco-friendly</span>
+                <span># No pet hair</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <p className="hint">Describe the space (rooms, square footage, specific stains or messy areas)</p>
-        <textarea
-          rows={4}
-          value={details}
-          onChange={(e) => setDetails(e.target.value)}
-          placeholder="e.g. 3 bedroom apartment, roughly 1200 sqft. Needs focus on kitchen cabinets and master bathroom floor tiles."
-        />
-
-        <div className="footer-actions">
+        <footer className="booking-actions">
           <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')}>
-            Back to Previous Step
+            <ArrowLeft size={16} /> Back
           </button>
-          <button type="button" className="submit-btn" onClick={() => navigate('/customer/bookings/matching')}>
-            Send to Cleaners <ChevronRight size={16} />
+          <button type="button" className="next-btn" onClick={() => navigate('/customer/bookings/matching')}>
+            Next: Review Details <ArrowRight size={16} />
           </button>
-        </div>
-      </section>
+        </footer>
+      </div>
     </div>
   );
 };

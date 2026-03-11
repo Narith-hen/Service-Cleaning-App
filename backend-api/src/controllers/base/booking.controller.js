@@ -211,14 +211,34 @@ const deleteBooking = async (req, res, next) => {
 const updateBookingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { booking_status } = req.body;
+    const { booking_status, reason } = req.body;
 
     const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) }
+      where: { booking_id: parseInt(id) },
+      include: {
+        user: {
+          select: {
+            username: true
+          }
+        },
+        cleaner: {
+          select: {
+            username: true
+          }
+        }
+      }
     });
 
     if (!booking) {
       return next(new AppError('Booking not found', 404));
+    }
+
+    const isCleaner = req.user?.role?.role_name === 'cleaner';
+    const isCancelDuringWork = isCleaner && booking.booking_status === 'in_progress' && booking_status === 'cancelled';
+    const cancellationReason = typeof reason === 'string' ? reason.trim() : '';
+
+    if (isCancelDuringWork && !cancellationReason) {
+      return next(new AppError('Cancellation reason is required when cancelling during work', 400));
     }
 
     const updatedBooking = await prisma.booking.update({
@@ -240,9 +260,53 @@ const updateBookingStatus = async (req, res, next) => {
       }
     });
 
+    if (isCancelDuringWork) {
+      const admins = await prisma.user.findMany({
+        where: {
+          role: {
+            role_name: 'admin'
+          }
+        },
+        select: {
+          user_id: true
+        }
+      });
+
+      if (admins.length > 0) {
+        const cleanerName = booking.cleaner?.username || `Cleaner #${req.user.user_id}`;
+        const adminMessage =
+          `${cleanerName} cancelled booking #${id} during work. Reason: ${cancellationReason}. ` +
+          'Please review policy for partial fee application.';
+
+        await prisma.notification.createMany({
+          data: admins.map((admin) => ({
+            title: 'Cleaner Cancelled During Work',
+            message: adminMessage,
+            type_notification: 'booking',
+            user_id: admin.user_id,
+            booking_id: parseInt(id)
+          }))
+        });
+
+        await prisma.notification.create({
+          data: {
+            title: 'Booking Cancelled During Work',
+            message:
+              `Booking #${id} was cancelled by the cleaner during service. Reason: ${cancellationReason}. ` +
+              'A partial fee may apply according to policy.',
+            type_notification: 'booking',
+            user_id: booking.user_id,
+            booking_id: parseInt(id)
+          }
+        });
+      }
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Booking status updated',
+      message: isCancelDuringWork
+        ? 'Booking cancelled during work. Admin notified and partial-fee policy review triggered'
+        : 'Booking status updated',
       data: updatedBooking
     });
   } catch (error) {

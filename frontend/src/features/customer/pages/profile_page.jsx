@@ -4,13 +4,15 @@ import {
   EditOutlined,
   SaveOutlined,
   CloseOutlined,
+  LeftOutlined,
 } from '@ant-design/icons';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 
 const ProfilePage = () => {
   const { user, updateUser, uploadAvatar } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   const baseProfile = useMemo(
@@ -145,6 +147,14 @@ const ProfilePage = () => {
     setSaving(false);
   };
 
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/customer/dashboard');
+  };
+
   const detailRows = [
     { label: 'First Name', key: 'first_name', editable: true, type: 'text' },
     { label: 'Last Name', key: 'last_name', editable: true, type: 'text' },
@@ -154,6 +164,17 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-[#edf2f2] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto mb-3 flex max-w-5xl">
+        <button
+          type="button"
+          onClick={handleGoBack}
+          className="inline-flex items-center gap-2 rounded border border-[#008000] bg-white px-4 py-2 text-sm font-semibold text-[#008000] transition hover:bg-[#f2fff2]"
+        >
+          <LeftOutlined />
+          Back
+        </button>
+      </div>
+
       <div className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-md">
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
           <aside className="border-b border-slate-200 p-6 lg:border-b-0 lg:border-r">

@@ -174,7 +174,7 @@ const CustomersPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [tierFilter, setTierFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const [pageSize, setPageSize] = useState(10);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -243,6 +243,14 @@ const CustomersPage = () => {
   const pages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
   const page = Math.min(currentPage, pages);
   const pagedCustomers = filteredCustomers.slice((page - 1) * pageSize, page * pageSize);
+  const pageStart = filteredCustomers.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, filteredCustomers.length);
+
+  useEffect(() => {
+    if (currentPage > pages) {
+      setCurrentPage(pages);
+    }
+  }, [currentPage, pages]);
 
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter((customer) => customer.status === 'Active').length;
@@ -677,6 +685,38 @@ const CustomersPage = () => {
           </table>
         </div>
 
+        <footer className="table-footer">
+          <span>
+            Showing {pageStart}-{pageEnd} of {filteredCustomers.length} customers
+          </span>
+          <div className="pager">
+            <span className="rows-label">Rows per page</span>
+            <Select
+              value={pageSize}
+              onChange={(value) => {
+                setPageSize(value);
+                setCurrentPage(1);
+              }}
+              options={[10, 20, 50].map((value) => ({ label: value, value }))}
+              className="page-size-select"
+            />
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              className="next"
+              onClick={() => setCurrentPage((prev) => Math.min(pages, prev + 1))}
+              disabled={page === pages}
+            >
+              Next
+            </button>
+          </div>
+        </footer>
       </section>
 
       <Modal
