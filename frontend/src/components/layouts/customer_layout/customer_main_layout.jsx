@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import ModernResponsiveNavbar from './navbar';
 import Footer from './footer';
-import SeoMeta from './seo_meta';
 import { Drawer } from 'antd';
-import Sidebar from './Sidebar'; 
+import Sidebar from './sidebar'; 
 import '../../../styles/customer/customer_main_layout.css'; 
 
 const TARGET_SCREEN_BREAKPOINT = 1280;

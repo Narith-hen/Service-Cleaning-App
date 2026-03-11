@@ -177,6 +177,9 @@
 
 .table-scroll-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  height: 60vh;
+  max-height: 520px;
 }
 
 .bookings-table {
@@ -199,6 +202,9 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .bookings-table td {
@@ -505,6 +511,25 @@
   gap: 8px;
 }
 
+.pager-actions .rows-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--bookings-muted);
+  font-weight: 600;
+}
+
+.pager-actions .rows-label select {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--bookings-panel-border);
+  background: var(--bookings-soft-bg);
+  color: var(--bookings-text);
+  padding: 0 8px;
+  font-size: 12px;
+}
+
 .pager-actions button {
   height: 32px;
   border-radius: 6px;
@@ -586,5 +611,10 @@
     height: auto;
     padding: 10px 14px 14px;
     align-items: flex-start;
+  }
+
+  .pager-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }

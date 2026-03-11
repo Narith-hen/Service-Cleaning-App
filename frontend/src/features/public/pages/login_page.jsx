@@ -23,9 +23,7 @@ const LoginPage = () => {
             
             if (result.success) {
                 // Redirect based on role
-                console.log(result); 
                 switch(result.user.role) {
-                    
                     case 'admin':
                         navigate('/admin/dashboard');
                         break;

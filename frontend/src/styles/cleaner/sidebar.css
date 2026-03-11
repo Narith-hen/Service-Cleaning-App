@@ -71,7 +71,8 @@
 .logo-text p {
   margin: 4px 0 0;
   font-size: 11px;
-  color: #6b7280;
+  color: #32C753;
+  font-weight: 600;
   letter-spacing: 0.5px;
 }
 
@@ -105,25 +106,26 @@
 }
 
 .nav-item:hover {
-  background: #f3f4f6;
-  color: #4361ee;
+  background: #f0fdf4;
+  color: #32C753;
   transform: translateX(2px);
 }
 
 .dark .nav-item:hover {
-  background: #2d2d2d;
-  color: #60a5fa;
+  background: #0f2d18;
+  color: #58d972;
 }
 
 .nav-item.active {
-  background: #4361ee;
+  background: #32C753;
   color: white;
-  box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+  box-shadow: 0 4px 8px rgba(50, 199, 83, 0.32);
 }
 
 .dark .nav-item.active {
-  background: #2563eb;
+  background: #008000;
   color: white;
+  box-shadow: 0 4px 8px rgba(0, 128, 0, 0.4);
 }
 
 .nav-icon {

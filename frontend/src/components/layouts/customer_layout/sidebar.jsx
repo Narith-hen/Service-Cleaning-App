@@ -6,9 +6,6 @@ import {
   AppstoreOutlined, 
   CalendarOutlined,
   PhoneOutlined,
-  MailOutlined,
-  ClockCircleOutlined,
-  EnvironmentOutlined,
   CloseOutlined,
   FacebookOutlined,
   MessageOutlined,
@@ -24,12 +21,9 @@ import { useAuth } from '../../../hooks/useAuth';
 const { Text } = Typography;
 
 const Sidebar = ({ 
-  isOpen, 
   onClose, 
   currentPath, 
-  onNavigate,
-  darkMode,
-  onContactClick 
+  onNavigate
 }) => {
   const { user, logout } = useAuth();
   const isCustomerArea = currentPath?.startsWith('/customer');
@@ -89,23 +83,6 @@ const Sidebar = ({
         description: 'Get in touch with us'
       }
     ];
-
-  // Contact information
-  const contactInfo = [
-    { icon: <PhoneOutlined />, text: '096 881 2310', type: 'phone', color: '#0f766e' },
-    { icon: <PhoneOutlined />, text: '099 918 215', type: 'phone', color: '#0f766e' },
-    { icon: <MailOutlined />, text: 'info@sevanow.com', type: 'email', color: '#dc2626' },
-    { icon: <ClockCircleOutlined />, text: '8AM - 6PM, Mon - Sat', type: 'hours', color: '#0f766e' },
-    { icon: <EnvironmentOutlined />, text: 'Phnom Penh, Cambodia', type: 'location', color: '#dc2626' }
-  ];
-
-  // Social media links
-  const socialLinks = [
-    { icon: <FacebookOutlined />, label: 'Facebook', url: '#', color: '#0f766e' },
-    { icon: <MessageOutlined />, label: 'Messenger', url: '#', color: '#0f766e' },
-    { icon: <WhatsAppOutlined />, label: 'WhatsApp', url: '#', color: '#25D366' },
-    { icon: <YoutubeOutlined />, label: 'YouTube', url: '#', color: '#dc2626' }
-  ];
 
   const handleItemClick = (path) => {
     onNavigate(path);

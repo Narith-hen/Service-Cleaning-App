@@ -5,7 +5,6 @@ import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
 import molikaImage from '../../../assets/molika.png';
 
-
 export default function PublicHomePage() {
   const { darkMode = false } = useOutletContext() || {};
   const testimonials = [
@@ -228,7 +227,7 @@ export default function PublicHomePage() {
       to="/auth/register"
       className="relative inline-block rounded-3xl bg-[#008000] px-10 py-4 text-base md:text-lg font-extrabold text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
     >
-      Book Now - 20% Off First Clean
+      Book Now
     </Link>
 
     {/* Secondary Button */}
