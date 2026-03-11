@@ -22,7 +22,7 @@
   gap: 16px;
   border: 1px solid var(--dash-border);
   background: linear-gradient(145deg, #ffffff 0%, #f7fbff 100%);
-  border-radius: 16px;
+  border-radius: 24px;
   padding: 20px 22px;
   box-shadow: var(--dash-shadow);
 }
@@ -59,7 +59,7 @@
 .dashboard-kpi-card {
   background: var(--dash-surface);
   border: 1px solid var(--dash-border);
-  border-radius: 16px;
+  border-radius: 24px;
   padding: 16px;
   box-shadow: var(--dash-shadow);
   display: grid;
@@ -133,7 +133,7 @@
 .dashboard-panel {
   background: var(--dash-surface);
   border: 1px solid var(--dash-border);
-  border-radius: 16px;
+  border-radius: 24px;
   padding: 16px;
   box-shadow: var(--dash-shadow);
 }
