@@ -111,7 +111,7 @@ const CleanersPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [ratingFilter, setRatingFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const [pageSize, setPageSize] = useState(10);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -141,7 +141,7 @@ const CleanersPage = () => {
   const fetchCleaners = useCallback(async ({ silent = false, clearOnError = true } = {}) => {
     setCleanersLoading(true);
     try {
-      const response = await cleanerService.getCleaners({ page: 1, limit: 200 });
+      const response = await cleanerService.getCleaners({ page: 1, limit: 1000 });
       const rows = extractCleanerRows(response);
       setCleaners(rows.map(mapCleanerFromApi));
       return true;
@@ -213,6 +213,14 @@ const CleanersPage = () => {
   const pages = Math.max(1, Math.ceil(filteredCleaners.length / pageSize));
   const page = Math.min(currentPage, pages);
   const pagedCleaners = filteredCleaners.slice((page - 1) * pageSize, page * pageSize);
+  const pageStart = filteredCleaners.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, filteredCleaners.length);
+
+  useEffect(() => {
+    if (currentPage > pages) {
+      setCurrentPage(pages);
+    }
+  }, [currentPage, pages]);
 
   const totalCleaners = cleaners.length;
   const activeCount = cleaners.filter((cleaner) => cleaner.status === 'Active').length;
@@ -692,8 +700,18 @@ const CleanersPage = () => {
         </div>
 
         <footer className="table-footer">
-          <span>Showing {pagedCleaners.length} of {filteredCleaners.length} cleaners</span>
-          {/* <div className="pager">
+          <span>Showing {pageStart}-{pageEnd} of {filteredCleaners.length} cleaners</span>
+          <div className="pager">
+            <span className="rows-label">Rows per page</span>
+            <Select
+              value={pageSize}
+              onChange={(value) => {
+                setPageSize(value);
+                setCurrentPage(1);
+              }}
+              options={[10, 20, 50].map((value) => ({ label: value, value }))}
+              className="page-size-select"
+            />
             <button
               type="button"
               disabled={page === 1}
@@ -709,7 +727,7 @@ const CleanersPage = () => {
             >
               Next
             </button>
-          </div> */}
+          </div>
         </footer>
       </section>
 

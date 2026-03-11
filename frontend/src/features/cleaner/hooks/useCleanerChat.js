@@ -105,6 +105,8 @@ export const useCleanerChat = ({ threadId }) => {
   const normalizedThreadId = useMemo(() => normalizeThreadId(threadId), [threadId]);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
   
   // Track the thread that the current messages belong to so the write effect
   // never writes stale messages from a previous thread into a new thread.
@@ -210,7 +212,27 @@ export const useCleanerChat = ({ threadId }) => {
   // Load messages when thread changes
   useEffect(() => {
     activeThreadRef.current = normalizedThreadId;
-    setMessages(loadMessages(normalizedThreadId));
+    setIsLoading(true);
+    
+    // Show loading indicator only if loading takes longer than 500ms
+    const showLoadingTimer = setTimeout(() => {
+      setShowLoadingIndicator(true);
+    }, 500);
+    
+    // Load messages
+    const messages = loadMessages(normalizedThreadId);
+    
+    // If fast, show immediately. If slow, wait for 2s
+    const loadTimer = setTimeout(() => {
+      setMessages(messages);
+      setIsLoading(false);
+      setShowLoadingIndicator(false);
+    }, 2000);
+    
+    return () => {
+      clearTimeout(showLoadingTimer);
+      clearTimeout(loadTimer);
+    };
   }, [normalizedThreadId]);
 
   // Save messages to localStorage
@@ -330,6 +352,8 @@ export const useCleanerChat = ({ threadId }) => {
     sendMessage,
     editMessage,
     markAsRead,
-    isConnected
+    isConnected,
+    isLoading,
+    showLoadingIndicator
   };
 };

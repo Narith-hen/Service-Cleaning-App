@@ -21,7 +21,7 @@ const toDataUrl = (file) =>
   });
 
 const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
-  const { messages, sendMessage, editMessage, markAsRead, isConnected } = useCleanerChat({ threadId });
+  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator } = useCleanerChat({ threadId });
   const [draftMessage, setDraftMessage] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [inputError, setInputError] = useState('');
@@ -159,9 +159,16 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
       </div>
 
       <div className="my-jobs-chat-body" ref={chatBodyRef}>
-        <div className="my-jobs-chat-day-pill">TODAY</div>
+        {showLoadingIndicator ? (
+          <div className="my-jobs-chat-loading">
+            <div className="loading-spinner" />
+            <span>Loading messages...</span>
+          </div>
+        ) : (
+          <>
+            <div className="my-jobs-chat-day-pill">TODAY</div>
 
-        {messages.map((message) => {
+            {messages.map((message) => {
           const isCleaner = message.sender === 'cleaner';
           const isEditing = editingId === message.id;
 
@@ -249,6 +256,8 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
           );
         })}
 
+        </>
+        )}
       </div>
 
       <div className="my-jobs-chat-compose">

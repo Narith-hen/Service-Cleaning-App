@@ -55,6 +55,8 @@ const ServicesPage = () => {
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceStatusFilter, setServiceStatusFilter] = useState('All');
   const [serviceSortFilter, setServiceSortFilter] = useState('default');
+  const [servicePage, setServicePage] = useState(1);
+  const [servicePageSize, setServicePageSize] = useState(10);
   const [loadingServices, setLoadingServices] = useState(true);
   const [inventory, setInventory] = useState(sampleInventory);
   const [inventoryPage, setInventoryPage] = useState(1);
@@ -108,11 +110,19 @@ const ServicesPage = () => {
   const totalServices = services.length;
   const activeServices = services.filter((item) => (item.status || 'Active') === 'Active').length;
   const inactiveServices = services.filter((item) => (item.status || 'Active') === 'Inactive').length;
+  const servicePages = Math.max(1, Math.ceil(filteredServices.length / servicePageSize));
+  const currentServicePage = Math.min(servicePage, servicePages);
+  const serviceStart = filteredServices.length === 0 ? 0 : (currentServicePage - 1) * servicePageSize + 1;
+  const serviceEnd = Math.min(currentServicePage * servicePageSize, filteredServices.length);
+  const pagedServices = filteredServices.slice(
+    (currentServicePage - 1) * servicePageSize,
+    currentServicePage * servicePageSize
+  );
 
   const fetchServices = async () => {
     setLoadingServices(true);
     try {
-      const response = await serviceService.getServices({ page: 1, limit: 200 });
+      const response = await serviceService.getServices({ page: 1, limit: 1000 });
       const apiRows = Array.isArray(response?.data) ? response.data : [];
       setServices(apiRows.map(mapServiceFromApi));
     } catch {
@@ -131,6 +141,12 @@ const ServicesPage = () => {
       setInventoryPage(totalInventoryPages);
     }
   }, [inventoryPage, totalInventoryPages]);
+
+  useEffect(() => {
+    if (servicePage > servicePages) {
+      setServicePage(servicePages);
+    }
+  }, [servicePage, servicePages]);
 
   const getStockPercent = (value) => Math.max(0, Math.min(100, Math.round((value / 150) * 100)));
 
@@ -398,12 +414,18 @@ const ServicesPage = () => {
             type="text"
             placeholder="Search service name..."
             value={serviceSearch}
-            onChange={(event) => setServiceSearch(event.target.value)}
+            onChange={(event) => {
+              setServiceSearch(event.target.value);
+              setServicePage(1);
+            }}
           />
         </div>
         <Select
           value={serviceStatusFilter}
-          onChange={setServiceStatusFilter}
+          onChange={(value) => {
+            setServiceStatusFilter(value);
+            setServicePage(1);
+          }}
           options={[
             { value: 'All', label: 'Status: All' },
             { value: 'Active', label: 'Active' },
@@ -414,7 +436,10 @@ const ServicesPage = () => {
         />
         <Select
           value={serviceSortFilter}
-          onChange={setServiceSortFilter}
+          onChange={(value) => {
+            setServiceSortFilter(value);
+            setServicePage(1);
+          }}
           options={[
             { value: 'default', label: 'Sort: Default' },
             { value: 'name-asc', label: 'Name A-Z' },
@@ -440,12 +465,12 @@ const ServicesPage = () => {
               <tr>
                 <td className="services-empty" colSpan={4}>Loading services...</td>
               </tr>
-            ) : filteredServices.length === 0 ? (
+            ) : pagedServices.length === 0 ? (
               <tr>
                 <td className="services-empty" colSpan={4}>No services match your filters.</td>
               </tr>
             ) : (
-              filteredServices.map((service) => (
+              pagedServices.map((service) => (
                 <tr key={service.id}>
                   <td>
                     <div className="service-list-cell">
@@ -480,6 +505,42 @@ const ServicesPage = () => {
           </tbody>
         </table>
       </div>
+
+      <footer className="services-table-footer">
+        <span>Showing {serviceStart}-{serviceEnd} of {filteredServices.length} services</span>
+        <div className="services-pager">
+          <label className="rows-label">
+            Rows per page
+            <select
+              value={servicePageSize}
+              onChange={(event) => {
+                setServicePageSize(Number(event.target.value));
+                setServicePage(1);
+              }}
+            >
+              {[10, 20, 50].map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="svc-btn svc-btn-secondary"
+            onClick={() => setServicePage((prev) => Math.max(1, prev - 1))}
+            disabled={currentServicePage === 1}
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            className="svc-btn svc-btn-primary"
+            onClick={() => setServicePage((prev) => Math.min(servicePages, prev + 1))}
+            disabled={currentServicePage === servicePages}
+          >
+            Next
+          </button>
+        </div>
+      </footer>
 
       <Modal
         title={isEditServiceMode ? 'Edit Service' : 'Add New Service'}
