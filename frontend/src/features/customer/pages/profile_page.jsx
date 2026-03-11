@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
+import { correctBorderRadius } from 'framer-motion';
 
 const ProfilePage = () => {
   const { user, updateUser, uploadAvatar } = useAuth();
@@ -233,7 +234,7 @@ const ProfilePage = () => {
               {!isEditing ? (
                 <button
                   onClick={startEditing}
-                  className="inline-flex items-center gap-2 rounded bg-[#008000] px-5 py-2.5 font-semibold text-white hover:bg-[#006d00]"
+                  className="inline-flex items-center gap-2 rounded bg-[#008000] px-5 py-2.5 font-semibold text-white hover:bg-[#006d00] " style={{borderRadius: '24px'}}
                 >
                   <EditOutlined /> EDIT
                 </button>

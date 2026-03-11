@@ -189,31 +189,40 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     </Button>
                   ))}
                 </Space>
-                {isCustomerArea && (
+              </Space>
+            </Col>
+          )}
+
+          {isCustomerArea && !isMobile && (
+                <Col>
                   <Button
                     type="primary"
                     onClick={() => handleNavigation('/customer/bookings')}
                     style={{
                       background: '#008000',
                       borderColor: '#008000',
-                      borderRadius: 10,
-                      height: 38,
-                      paddingInline: 18,
-                      marginLeft: 8,
+                      borderRadius: 24,
+                      height: 40,
+                      paddingInline: isCompactNav ? 12 : 18,
                       fontSize: 14,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       fontFamily: "'Noto Sans', sans-serif"
                     }}
                   >
                     Booking Now
                   </Button>
-                )}
-              </Space>
-            </Col>
-          )}
+                </Col>
+              )}
+
 
           <Col {...rightColProps}>
-            <Row justify="end" align="middle" wrap={false} gutter={[isMobile ? 4 : 12, 0]}>
+            <Row
+              justify="end"
+              align="middle"
+              wrap={false}
+              gutter={[isMobile ? 4 : 12, 0]}
+              style={{ direction: 'ltr' }}
+            >
               {showDarkModeToggle && (
                 <Col>
                   <Button
@@ -227,7 +236,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   />
                 </Col>
               )}
-
+              
               <Col>
                 {showCustomerProfileMenu ? (
                   <Dropdown menu={profileMenu} placement="bottomRight">
@@ -274,7 +283,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                             background: '#e2e8f0',
                             color: '#111827',
                             fontSize: 11,
-                            fontWeight: 700,
+                            fontWeight: 600,
                             lineHeight: 1
                           }}
                         >
@@ -301,11 +310,11 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         alignItems: 'center',
                         gap: 4,
                         padding: isCompactNav ? 0 : '18px 16px',
+                        borderRadius: 24,
                         ...(isCompactNav
                           ? {
                             width: 36,
-                            height: 36,
-                            borderRadius: 8
+                            height: 36
                           }
                           : {})
                       }}
@@ -322,11 +331,11 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         borderColor: 'green',
                         color: 'green',
                         padding: isCompactNav ? 0 : '18px 14px',
+                        borderRadius: 24,
                         ...(isCompactNav
                           ? {
                             width: 36,
-                            height: 36,
-                            borderRadius: 8
+                            height: 36
                           }
                           : {})
                       }}
