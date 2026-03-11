@@ -3,6 +3,10 @@ import React, { useState } from 'react';
 import useSimpleTestStore from '../stores/apiTestStore';
 
 const SimpleApiTest = () => {
+  const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const apiHost = rawBaseUrl.endsWith('/api') ? rawBaseUrl.slice(0, -4) : rawBaseUrl;
+  const testApiUrl = `${apiHost}/api/test`;
+
   const { 
     pingResponse, 
     echoResponse, 
@@ -108,7 +112,7 @@ const SimpleApiTest = () => {
       <div style={styles.header}>
         <h1>🧪 Simple API Test</h1>
         <p>Testing /ping (GET) and /echo (POST) endpoints</p>
-        <p>Backend URL: http://localhost:3000/api/test</p>
+        <p>Backend URL: {testApiUrl}</p>
       </div>
 
       {/* Status messages */}
@@ -204,7 +208,7 @@ const SimpleApiTest = () => {
       <div style={styles.card}>
         <h3>📋 Instructions</h3>
         <ol>
-          <li>Make sure your backend is running on port 3000</li>
+          <li>Make sure your backend is running (default: port 5000)</li>
           <li>Open browser console (F12) to see detailed logs</li>
           <li>Click "Test GET /ping" - should see "test succeeded"</li>
           <li>Click "Test POST /echo" - sends your message and gets it back</li>

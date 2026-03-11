@@ -138,7 +138,7 @@ const BookingQuotesPage = () => {
                   </p>
                   <p className="note">&quot;{item.note}&quot;</p>
                   <div className="actions">
-                    <button type="button" className="chat-btn" onClick={() => navigate('/customer/notifications')}>
+                    <button type="button" className="chat-btn" onClick={() => navigate(`/customer/bookings/quotes/chat/${item.id}`)}>
                       <MessageSquare size={14} />
                       Chat to Negotiate
                     </button>

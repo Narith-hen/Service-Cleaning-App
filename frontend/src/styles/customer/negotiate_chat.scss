@@ -1,0 +1,418 @@
+.negotiate-chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f8f9fa;
+
+  .chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: none;
+      color: #6c757d;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #007bff;
+      }
+    }
+
+    .cleaner-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .cleaner-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.1rem;
+      }
+
+      .cleaner-details {
+        h2 {
+          margin: 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #2c3e50;
+        }
+
+        .rating {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          margin-top: 0.25rem;
+          font-size: 0.85rem;
+          color: #6c757d;
+
+          .filled {
+            color: #ffc107;
+          }
+        }
+      }
+    }
+  }
+
+  .chat-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .service-details {
+    width: 320px;
+    background: white;
+    border-right: 1px solid #e9ecef;
+    padding: 1.5rem;
+    overflow-y: auto;
+
+    .service-package {
+      margin-bottom: 2rem;
+
+      h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .package-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+
+        .detail-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.9rem;
+          color: #6c757d;
+
+          svg {
+            color: #007bff;
+          }
+        }
+      }
+    }
+
+    .included-services {
+      h4 {
+        margin: 0 0 1rem 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 0;
+          font-size: 0.85rem;
+          color: #495057;
+
+          svg {
+            color: #28a745;
+            flex-shrink: 0;
+          }
+        }
+      }
+    }
+  }
+
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+  }
+
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  .messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .message {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+
+    &.user-message {
+      justify-content: flex-end;
+      flex-direction: row-reverse;
+
+      .message-content {
+        background: #007bff;
+        color: white;
+        border-radius: 18px 18px 4px 18px;
+        max-width: 70%;
+      }
+
+      .message-avatar {
+        .user-icon {
+          color: #6c757d;
+        }
+      }
+    }
+
+    &.cleaner-message {
+      justify-content: flex-start;
+
+      .message-content {
+        background: #f1f3f4;
+        color: #2c3e50;
+        border-radius: 18px 18px 18px 4px;
+        max-width: 70%;
+      }
+
+      .message-avatar {
+        .avatar-circle {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 0.8rem;
+        }
+      }
+    }
+
+    .message-content {
+      padding: 0.75rem 1rem;
+      word-wrap: break-word;
+
+      p {
+        margin: 0;
+        line-height: 1.4;
+        font-size: 0.9rem;
+      }
+
+      .message-time {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+    }
+
+    .message-avatar {
+      flex-shrink: 0;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .message-input-container {
+    padding: 1rem 1.5rem;
+    background: white;
+    border-top: 1px solid #e9ecef;
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #f8f9fa;
+      border-radius: 24px;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e9ecef;
+
+      &:focus-within {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+      }
+
+      button {
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 50%;
+        transition: all 0.2s;
+
+        &:hover {
+          background: rgba(0,123,255,0.1);
+          color: #007bff;
+        }
+      }
+
+      .message-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.9rem;
+        padding: 0.5rem 0;
+
+        &::placeholder {
+          color: #6c757d;
+        }
+      }
+
+      .send-btn {
+        background: #007bff;
+        color: white;
+        padding: 0.5rem;
+        border-radius: 50%;
+        transition: background 0.2s;
+
+        &:hover:not(:disabled) {
+          background: #0056b3;
+        }
+
+        &:disabled {
+          background: #6c757d;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  .service-blueprint {
+    background: white;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+
+    .blueprint-header {
+      text-align: center;
+      margin-bottom: 1rem;
+
+      h3 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    .blueprint-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+
+      .blueprint-text {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #2c3e50;
+        border: 1px solid #e9ecef;
+      }
+
+      .confirm-book-btn {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        white-space: nowrap;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .negotiate-chat-page {
+    .chat-container {
+      flex-direction: column;
+    }
+
+    .service-details {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid #e9ecef;
+      padding: 1rem;
+    }
+
+    .chat-header {
+      padding: 0.75rem 1rem;
+
+      .cleaner-info {
+        .cleaner-details {
+          h2 {
+            font-size: 1rem;
+          }
+
+          .rating {
+            font-size: 0.8rem;
+          }
+        }
+      }
+    }
+
+    .message {
+      &.user-message .message-content,
+      &.cleaner-message .message-content {
+        max-width: 85%;
+      }
+    }
+
+    .service-blueprint {
+      padding: 1rem;
+
+      .blueprint-content {
+        flex-direction: column;
+        gap: 1rem;
+
+        .confirm-book-btn {
+          width: 100%;
+        }
+      }
+    }
+  }
+}

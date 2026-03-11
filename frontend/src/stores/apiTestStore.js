@@ -1,7 +1,9 @@
 // src/store/simpleTestStore.js
 import { create } from 'zustand';
 
-const API_URL = 'http://localhost:3000/api/test';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const apiHost = rawBaseUrl.endsWith('/api') ? rawBaseUrl.slice(0, -4) : rawBaseUrl;
+const API_URL = `${apiHost}/api/test`;
 
 const useSimpleTestStore = create((set) => ({
   // State
