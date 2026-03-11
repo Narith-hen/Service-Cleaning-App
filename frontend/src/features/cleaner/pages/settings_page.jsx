@@ -1,182 +1,311 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  CameraOutlined,
-  EditOutlined
+  EditOutlined,
+  CloseOutlined,
+  PlusOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../../../hooks/useAuth';
+import { Input, Button, Switch } from 'antd';
 import '../../../styles/cleaner/settings.scss';
 
 const SettingsPage = () => {
-  const { user, updateUser } = useAuth();
-  const fileInputRef = useRef(null);
-  const [profileMessage, setProfileMessage] = useState('');
+  const [profile, setProfile] = useState({
+    companyName: 'SovaClean Services',
+    email: 'contact@sovaclean.com',
+    phone: '+855 12 345 678',
+    website: 'www.sovaclean.com',
+    description: 'Professional cleaning services offering residential and commercial cleaning solutions. We specialize in deep cleaning, move-in/out cleaning, and regular maintenance cleaning.'
+  });
 
-  const profileData = useMemo(() => {
-    const fullName =
-      user?.name ||
-      [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-      'Cleaner';
+  const [serviceAreas, setServiceAreas] = useState([
+    { id: 1, name: 'Downtown' },
+    { id: 2, name: 'Riverside' },
+    { id: 3, name: 'West End' }
+  ]);
 
-    const completedJobsValue =
-      user?.completedJobs ??
-      user?.completed_jobs ??
-      user?.jobs_completed ??
-      user?.total_completed_jobs ??
-      0;
+  const [newArea, setNewArea] = useState('');
 
-    const ratingValue =
-      user?.rating ??
-      user?.avg_rating ??
-      user?.average_rating ??
-      0;
+  const [notifications, setNotifications] = useState({
+    emailBookings: true,
+    emailPayments: true,
+    smsReminders: false
+  });
 
-    return {
-      name: fullName,
-      email: user?.email || '-',
-      phone: user?.phone || user?.phone_number || '-',
-      address: user?.address || '-',
-      avatar: user?.avatar || null,
-      completedJobs: completedJobsValue,
-      rating: Number(ratingValue).toFixed(1).replace('.0', '')
-    };
-  }, [user]);
+  const [schedule, setSchedule] = useState([
+    { id: 1, day: 'Monday', status: 'available', startTime: '09:00', endTime: '17:00' },
+    { id: 2, day: 'Tuesday', status: 'available', startTime: '09:00', endTime: '17:00' },
+    { id: 3, day: 'Wednesday', status: 'available', startTime: '09:00', endTime: '17:00' },
+    { id: 4, day: 'Thursday', status: 'available', startTime: '09:00', endTime: '17:00' },
+    { id: 5, day: 'Friday', status: 'available', startTime: '09:00', endTime: '17:00' },
+    { id: 6, day: 'Saturday', status: 'available', startTime: '09:00', endTime: '14:00' },
+    { id: 0, day: 'Sunday', status: 'closed', startTime: '', endTime: '' }
+  ]);
 
-  const [profile, setProfile] = useState(profileData);
-
-  useEffect(() => {
-    setProfile(profileData);
-  }, [profileData]);
-
-  const isOnline = useMemo(() => {
-    const rawStatus =
-      user?.is_online ??
-      user?.isOnline ??
-      user?.online ??
-      user?.availability_status ??
-      user?.status;
-
-    if (typeof rawStatus === 'boolean') return rawStatus;
-    if (typeof rawStatus === 'number') return rawStatus === 1;
-    if (typeof rawStatus === 'string') {
-      const normalized = rawStatus.trim().toLowerCase();
-      if (['online', 'active', 'available', 'true', '1'].includes(normalized)) return true;
-      if (['offline', 'inactive', 'unavailable', 'false', '0'].includes(normalized)) return false;
-    }
-    return true;
-  }, [user]);
-
-  const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
-  const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
-  const initials = (firstInitial + lastInitial) || String(profile.name || 'C').trim().charAt(0).toUpperCase() || 'C';
-
-  const handlePickAvatar = () => {
-    fileInputRef.current?.click();
+  const handleProfileChange = (field, value) => {
+    setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAvatarChange = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setProfileMessage('Please choose an image file.');
-      return;
+  const handleAddArea = () => {
+    if (newArea.trim()) {
+      setServiceAreas((prev) => [
+        ...prev,
+        { id: Date.now(), name: newArea.trim() }
+      ]);
+      setNewArea('');
     }
+  };
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const avatarData = String(reader.result);
-      const nextProfile = { ...profile, avatar: avatarData };
-      setProfile(nextProfile);
+  const handleRemoveArea = (id) => {
+    setServiceAreas((prev) => prev.filter((area) => area.id !== id));
+  };
 
-      const firstName = String(profile.name).trim().split(' ')[0] || '';
-      const lastName = String(profile.name).trim().split(' ').slice(1).join(' ');
+  const handleNotificationChange = (key, value) => {
+    setNotifications((prev) => ({ ...prev, [key]: value }));
+  };
 
-      const payload = {
-        name: profile.name,
-        first_name: firstName,
-        last_name: lastName,
-        email: profile.email === '-' ? '' : profile.email,
-        phone: profile.phone === '-' ? '' : profile.phone,
-        phone_number: profile.phone === '-' ? '' : profile.phone,
-        address: profile.address === '-' ? '' : profile.address,
-        avatar: avatarData
-      };
+  const handleSaveProfile = () => {
+    console.log('Saving profile:', profile);
+  };
 
-      const result = await updateUser(payload);
-      if (!result?.success) {
-        setProfileMessage(result?.error || 'Unable to update profile photo.');
-      } else {
-        setProfileMessage('');
-      }
-    };
-    reader.readAsDataURL(file);
+  const handleSaveSchedule = () => {
+    console.log('Saving schedule:', schedule);
   };
 
   return (
     <div className="cleaner-settings-page">
-      <section className="settings-profile-card">
-        <div className="settings-profile-banner">
-          <button type="button" className="settings-profile-edit" onClick={handlePickAvatar} aria-label="Edit profile photo">
-            <EditOutlined />
-          </button>
-          <h1>{profile.name || 'Cleaner'}</h1>
-        </div>
+      <div className="settings-container">
+        <h1 className="settings-page-title">Settings</h1>
+        <p className="settings-page-subtitle">Manage your service provider profile and preferences</p>
 
-        <div className="settings-profile-lower">
-          <div className="settings-profile-avatar-wrap">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt={profile.name || 'Profile'} className="settings-profile-avatar" />
-            ) : (
-              <div className="settings-profile-fallback">{initials}</div>
-            )}
-            <button type="button" className="settings-profile-camera" onClick={handlePickAvatar} aria-label="Change profile photo">
-              <CameraOutlined />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              style={{ display: 'none' }}
-            />
+        {/* Card 1: Profile Information */}
+        <section className="settings-card">
+          <div className="settings-card-header">
+            <h2>Profile Information</h2>
+            <p>Update your business details and contact information</p>
           </div>
-          <p className={`settings-profile-status ${isOnline ? 'is-online' : 'is-offline'}`}>
-            {isOnline ? 'online' : 'offline'}
-          </p>
-        </div>
 
-        {profileMessage && <div className="settings-profile-message">{profileMessage}</div>}
-      </section>
+          <div className="settings-card-body">
+            <div className="profile-avatar-section">
+              <div className="profile-avatar-wrapper">
+                <div className="profile-avatar">
+                  <span>SC</span>
+                </div>
+                <button type="button" className="avatar-edit-badge" aria-label="Edit avatar">
+                  <EditOutlined />
+                </button>
+              </div>
+            </div>
 
-      <section className="settings-profile-grid">
-        <article className="settings-profile-field">
-          <label>Full Name</label>
-          <p>{profile.name || '-'}</p>
-        </article>
-        <article className="settings-profile-field">
-          <label>Email</label>
-          <p>{profile.email || '-'}</p>
-        </article>
-        <article className="settings-profile-field">
-          <label>Phone</label>
-          <p>{profile.phone || '-'}</p>
-        </article>
-        <article className="settings-profile-field">
-          <label>Address</label>
-          <p>{profile.address || '-'}</p>
-        </article>
-      </section>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Company Name</label>
+                <Input
+                  value={profile.companyName}
+                  onChange={(e) => handleProfileChange('companyName', e.target.value)}
+                  placeholder="Enter company name"
+                />
+              </div>
+              <div className="form-group">
+                <label>Email Address</label>
+                <Input
+                  type="email"
+                  value={profile.email}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                  placeholder="Enter email address"
+                />
+              </div>
+            </div>
 
-      <section className="settings-profile-stats">
-        <article>
-          <span>Completed Jobs</span>
-          <strong>{profile.completedJobs}</strong>
-        </article>
-        <article>
-          <span>Rating</span>
-          <strong>{profile.rating}</strong>
-        </article>
-      </section>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Phone Number</label>
+                <Input
+                  value={profile.phone}
+                  onChange={(e) => handleProfileChange('phone', e.target.value)}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="form-group">
+                <label>Website (Optional)</label>
+                <Input
+                  value={profile.website}
+                  onChange={(e) => handleProfileChange('website', e.target.value)}
+                  placeholder="Enter website URL"
+                />
+              </div>
+            </div>
+
+            <div className="form-group full-width">
+              <label>Service Description</label>
+              <Input.TextArea
+                value={profile.description}
+                onChange={(e) => handleProfileChange('description', e.target.value)}
+                placeholder="Describe your cleaning services..."
+                rows={4}
+              />
+            </div>
+
+            <div className="form-actions">
+              <Button type="primary" onClick={handleSaveProfile}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Card 2: Service Areas & Notifications */}
+        <section className="settings-card settings-card-split">
+          {/* Left: Service Areas */}
+          <div className="settings-card-half">
+            <div className="settings-card-header">
+              <h2>
+                <EnvironmentOutlined /> Service Areas
+              </h2>
+              <p>Manage the locations you serve</p>
+            </div>
+
+            <div className="settings-card-body">
+              <div className="service-areas-chips">
+                {serviceAreas.map((area) => (
+                  <span key={area.id} className="area-chip">
+                    {area.name}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveArea(area.id)}
+                      aria-label={`Remove ${area.name}`}
+                    >
+                      <CloseOutlined />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="add-area-form">
+                <Input
+                  value={newArea}
+                  onChange={(e) => setNewArea(e.target.value)}
+                  placeholder="Add new area"
+                  onPressEnter={handleAddArea}
+                />
+                <Button type="primary" onClick={handleAddArea}>
+                  <PlusOutlined /> Add
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Notifications */}
+          <div className="settings-card-half">
+            <div className="settings-card-header">
+              <h2>Notifications</h2>
+              <p>Manage your notification preferences</p>
+            </div>
+
+            <div className="settings-card-body">
+              <div className="notification-row">
+                <div className="notification-info">
+                  <span className="notification-label">Booking Alerts</span>
+                  <span className="notification-desc">Receive notifications for new booking requests</span>
+                </div>
+                <Switch
+                  checked={notifications.emailBookings}
+                  onChange={(checked) => handleNotificationChange('emailBookings', checked)}
+                  className="notification-switch"
+                />
+              </div>
+
+              <div className="notification-row">
+                <div className="notification-info">
+                  <span className="notification-label">Payment Updates</span>
+                  <span className="notification-desc">Get notified when payments are processed</span>
+                </div>
+                <Switch
+                  checked={notifications.emailPayments}
+                  onChange={(checked) => handleNotificationChange('emailPayments', checked)}
+                  className="notification-switch"
+                />
+              </div>
+
+              <div className="notification-row">
+                <div className="notification-info">
+                  <span className="notification-label">SMS Reminders</span>
+                  <span className="notification-desc">Receive SMS reminders for upcoming jobs</span>
+                </div>
+                <Switch
+                  checked={notifications.smsReminders}
+                  onChange={(checked) => handleNotificationChange('smsReminders', checked)}
+                  className="notification-switch"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Card 3: Availability Schedule */}
+        <section className="settings-card">
+          <div className="settings-card-header">
+            <h2>Availability Schedule</h2>
+            <p>Set your working days and hours</p>
+          </div>
+
+          <div className="settings-card-body">
+            <div className="schedule-table-wrapper">
+              <table className="schedule-table">
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Status</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedule.map((day) => (
+                    <tr key={day.id}>
+                      <td className="day-cell">{day.day}</td>
+                      <td>
+                        <span className={`status-badge ${day.status}`}>
+                          {day.status === 'available' ? 'Available' : 'Closed'}
+                        </span>
+                      </td>
+                      <td>
+                        {day.status === 'available' ? (
+                          <Input
+                            type="time"
+                            value={day.startTime}
+                            className="time-input"
+                            disabled={day.status === 'closed'}
+                          />
+                        ) : (
+                          <span className="na-text">N/A</span>
+                        )}
+                      </td>
+                      <td>
+                        {day.status === 'available' ? (
+                          <Input
+                            type="time"
+                            value={day.endTime}
+                            className="time-input"
+                            disabled={day.status === 'closed'}
+                          />
+                        ) : (
+                          <span className="na-text">N/A</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="form-actions">
+              <Button type="primary" onClick={handleSaveSchedule}>
+                Save Schedule
+              </Button>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

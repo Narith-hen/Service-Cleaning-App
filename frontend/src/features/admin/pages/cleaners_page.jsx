@@ -15,7 +15,7 @@ import { cleanerService } from '../services/cleanerService';
 import { serviceService } from '../services/serviceService';
 import '../../../styles/admin/cleaners_page.css';
 
-const statusFilters = ['All', 'Active', 'Pending', 'Suspended', 'Inactive'];
+const statusFilters = ['All', 'Active', 'Suspended', 'Inactive'];
 const ratingFilters = ['All', '4.5+', '4.0+', '3.5+'];
 const defaultServiceTypeOptions = [
   { label: 'Home Cleaning', value: 'Home Cleaning' },
@@ -41,7 +41,7 @@ const getStatusClass = (status) => status.toLowerCase().replace(/\s+/g, '-');
 const normalizeStatus = (status) => {
   const value = String(status || '').trim().toLowerCase();
   if (!value) return 'Active';
-  if (value === 'pending') return 'Pending';
+  if (value === 'pending') return 'Inactive';
   if (value === 'suspended') return 'Suspended';
   if (value === 'inactive') return 'Inactive';
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -111,7 +111,7 @@ const CleanersPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [ratingFilter, setRatingFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  const [pageSize, setPageSize] = useState(10);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -141,7 +141,7 @@ const CleanersPage = () => {
   const fetchCleaners = useCallback(async ({ silent = false, clearOnError = true } = {}) => {
     setCleanersLoading(true);
     try {
-      const response = await cleanerService.getCleaners({ page: 1, limit: 200 });
+      const response = await cleanerService.getCleaners({ page: 1, limit: 1000 });
       const rows = extractCleanerRows(response);
       setCleaners(rows.map(mapCleanerFromApi));
       return true;
@@ -213,11 +213,18 @@ const CleanersPage = () => {
   const pages = Math.max(1, Math.ceil(filteredCleaners.length / pageSize));
   const page = Math.min(currentPage, pages);
   const pagedCleaners = filteredCleaners.slice((page - 1) * pageSize, page * pageSize);
+  const pageStart = filteredCleaners.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, filteredCleaners.length);
+
+  useEffect(() => {
+    if (currentPage > pages) {
+      setCurrentPage(pages);
+    }
+  }, [currentPage, pages]);
 
   const totalCleaners = cleaners.length;
   const activeCount = cleaners.filter((cleaner) => cleaner.status === 'Active').length;
-  const averageRating = cleaners.filter((cleaner) => cleaner.rating > 0)
-    .reduce((sum, cleaner, _, arr) => sum + cleaner.rating / arr.length, 0);
+  const inactiveCount = cleaners.filter((cleaner) => cleaner.status === 'Inactive').length;
 
   const openAddModal = () => {
     setEditingCleaner(null);
@@ -225,7 +232,7 @@ const CleanersPage = () => {
     setProfilePreview('');
     form.resetFields();
     form.setFieldsValue({
-      status: 'Pending',
+      status: 'Inactive',
       profileImage: '',
       serviceType: undefined,
     });
@@ -558,13 +565,13 @@ const CleanersPage = () => {
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-green"><ThunderboltOutlined /></div>
-          <span className="kpi-label">ACTIVE NOW</span>
+          <span className="kpi-label">ACTIVE CLEANERS</span>
           <h3>{activeCount}</h3>
         </article>
         <article className="cleaners-kpi-card">
           <div className="kpi-icon tone-amber"><StarFilled /></div>
-          <span className="kpi-label">AVERAGE RATING</span>
-          <h3>{averageRating ? averageRating.toFixed(1) : 'N/A'}</h3>
+          <span className="kpi-label">INACTIVE CLEANERS</span>
+          <h3>{inactiveCount}</h3>
         </article>
       </section>
 
@@ -612,7 +619,7 @@ const CleanersPage = () => {
                 <th className="jobs-center">TOTAL JOBS</th>
                 <th className="rating-center">AVERAGE RATING</th>
                 <th className="status-center">ACCOUNT STATUS</th>
-                <th>ACTIONS</th>
+                <th className="actions-center">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -651,7 +658,7 @@ const CleanersPage = () => {
                     <td className="status-center">
                       <span className={`status-tag ${getStatusClass(cleaner.status)}`}>{cleaner.status}</span>
                     </td>
-                    <td>
+                    <td className="actions-center">
                       <div className="action-group">
                         <button
                           className="plain-icon-btn action-view"
@@ -693,8 +700,18 @@ const CleanersPage = () => {
         </div>
 
         <footer className="table-footer">
-          <span>Showing {pagedCleaners.length} of {filteredCleaners.length} cleaners</span>
-          {/* <div className="pager">
+          <span>Showing {pageStart}-{pageEnd} of {filteredCleaners.length} cleaners</span>
+          <div className="pager">
+            <span className="rows-label">Rows per page</span>
+            <Select
+              value={pageSize}
+              onChange={(value) => {
+                setPageSize(value);
+                setCurrentPage(1);
+              }}
+              options={[10, 20, 50].map((value) => ({ label: value, value }))}
+              className="page-size-select"
+            />
             <button
               type="button"
               disabled={page === 1}
@@ -710,12 +727,13 @@ const CleanersPage = () => {
             >
               Next
             </button>
-          </div> */}
+          </div>
         </footer>
       </section>
 
       <Modal
         title={editingCleaner ? 'Edit Cleaner' : 'Add New Cleaner'}
+        rootClassName="cleaner-form-modal"
         open={isFormOpen}
         onCancel={() => {
           setIsFormOpen(false);
@@ -756,7 +774,7 @@ const CleanersPage = () => {
               <Form.Item name="companyName" label="Company Name" rules={[{ required: true, message: 'Please enter company name' }]}>
                 <Input />
               </Form.Item>
-              <Form.Item name="companyEmail" label="Company Email" rules={[{ required: true, type: 'email', message: 'Please enter valid company email' }]}>
+              <Form.Item name="companyEmail" label="Email" rules={[{ required: true, type: 'email', message: 'Please enter valid company email' }]}>
                 <Input />
               </Form.Item>
               <Form.Item name="phone" label="Phone Number" rules={[{ required: true, message: 'Please enter phone number' }]}>
@@ -845,7 +863,7 @@ const CleanersPage = () => {
               <h3>Cleaner Details</h3>
               <div className="cleaner-view-grid">
                 <p><strong>Company Name:</strong> {viewingCleaner.companyName || viewingCleaner.name || '-'}</p>
-                <p><strong>Company Email:</strong> {viewingCleaner.companyEmail || viewingCleaner.email || '-'}</p>
+                <p><strong>Email:</strong> {viewingCleaner.companyEmail || viewingCleaner.email || '-'}</p>
                 <p><strong>Phone Number:</strong> {viewingCleaner.phone || '-'}</p>
                 <p><strong>Team Member:</strong> {viewingCleaner.teamMember || '-'}</p>
                 <p><strong>Service Type:</strong> {viewingCleaner.serviceType || '-'}</p>

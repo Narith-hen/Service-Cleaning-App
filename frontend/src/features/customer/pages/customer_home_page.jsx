@@ -1,48 +1,98 @@
-import { CheckCircleFilled, SafetyCertificateOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import heroImage from '../../../assets/home.png';
-import deepCleanImage from '../../../assets/image.png';
-import regularImage from '../../../assets/window.png';
-import officeImage from '../../../assets/office.png';
+import narithImage from '../../../assets/narith.png';
+import meyImage from '../../../assets/mey.JPG';
+import molikaImage from '../../../assets/molika.png';
+import homeServiceImage from '../../../assets/home.png';
+import officeServiceImage from '../../../assets/office.png';
+import windowServiceImage from '../../../assets/window.png';
+import moveServiceImage from '../../../assets/move.png';
 import '../../../styles/customer/home.scss';
 
-const services = [
+const howItWorksSteps = [
   {
-    title: 'Deep Clean',
-    description: 'A thorough, top-to-bottom cleaning of every nook and cranny in your home.',
-    image: deepCleanImage
+    step: '1',
+    title: 'Book a Service',
+    description: 'Choose the cleaning service and select your preferred date and time.'
   },
   {
-    title: 'Regular Cleaning',
-    description: 'Weekly or bi-weekly maintenance to keep your living space consistently fresh.',
-    image: regularImage
+    step: '2',
+    title: 'Cleaner Arrives',
+    description: 'Our professional cleaners arrive fully equipped.'
   },
   {
-    title: 'Office Cleaning',
-    description: 'Professional sanitation and cleaning for productive workspaces and offices.',
-    image: officeImage
+    step: '3',
+    title: 'Cleaning Process',
+    description: 'They clean your home or office efficiently.'
+  },
+  {
+    step: '4',
+    title: 'Enjoy a Spotless Space',
+    description: 'Relax and enjoy a fresh and clean environment.'
   }
 ];
 
-const testimonials = [
+const serviceHighlights = [
   {
-    quote:
-      '"PureShine has changed my life. I come home to a fresh-smelling house every Friday without lifting a finger."',
-    name: 'Sarah Jenkins',
-    role: 'HOMEOWNER'
+    id: 's1',
+    title: 'Home Deep Cleaning',
+    description: 'Complete cleaning for kitchen, bathroom, bedroom, and living areas.',
+    image: homeServiceImage,
+    cta: 'Book Deep Clean'
   },
   {
-    quote:
-      '"Our office has never been cleaner. The team arrives on time, follows all protocols, and the booking system is so smooth."',
-    name: 'Michael Rivera',
-    role: 'OFFICE MANAGER'
+    id: 's2',
+    title: 'Regular Home Cleaning',
+    description: 'Weekly or daily cleaning to maintain a tidy home.',
+    image: moveServiceImage,
+    cta: 'Set a Schedule'
   },
   {
-    quote:
-      '"I booked a deep clean after renovation and they did an incredible job. They even cleaned the inside of the oven."',
-    name: 'Emily Lawson',
-    role: 'APARTMENT RESIDENT'
+    id: 's3',
+    title: 'Office Cleaning',
+    description: 'Professional cleaning service for offices and workplaces.',
+    image: officeServiceImage,
+    cta: 'Clean My Office'
+  },
+  {
+    id: 's4',
+    title: 'Window Cleaning',
+    description: 'Streak-free window cleaning for a brighter home.',
+    image: windowServiceImage,
+    cta: 'View Window Care'
   }
+];
+
+const featuredCleaners = [
+  {
+    id: 'c1',
+    photo: narithImage,
+    company: 'FreshNest Cleaning Co.',
+    rating: 5,
+    reviews: 186
+  },
+  {
+    id: 'c2',
+    photo: meyImage,
+    company: 'Sparkle Pro Services',
+    rating: 5,
+    reviews: 241
+  },
+  {
+    id: 'c3',
+    photo: molikaImage,
+    company: 'PrimeCare Cleaners',
+    rating: 5,
+    reviews: 203
+  }
+];
+
+const whyChoosePoints = [
+  'Trusted and verified cleaners',
+  'Affordable pricing',
+  'Eco-friendly cleaning products',
+  'Easy online booking',
+  'Flexible scheduling',
+  'Customer support'
 ];
 
 const CustomerHomePage = () => {
@@ -50,11 +100,11 @@ const CustomerHomePage = () => {
 
   return (
     <div className="customer-home-landing">
-      <section className="hero-section">
-        <div className="hero-text">
-          <p className="trust-badge">TRUSTED BY 5000+ HOUSEHOLDS</p>
+      <section className="editorial-hero reveal">
+        <div className="hero-copy">
           <h1>
-            Professional Cleaning for a <span>Spotless Home</span>
+            Professional Cleaning for a <br />
+            <span>Spotless Home</span>
           </h1>
           <p>
             Experience the joy of a pristine living space with our reliable residential and
@@ -63,126 +113,137 @@ const CustomerHomePage = () => {
 
           <div className="hero-actions">
             <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
-              Book Your Service Cleaning
+              Booking Now!
             </button>
-            <button type="button" className="btn-secondary" onClick={() => navigate('/services')}>
-              View Pricing
+            <button type="button" className="btn-secondary" onClick={() => navigate('/customer/services')}>
+              View Services
             </button>
           </div>
-
-          <div className="hero-rating">
-            <div className="avatars">
-              <span className="avatar one" />
-              <span className="avatar two" />
-            </div>
-            <span>4.9/5 stars from over 2,000 reviews</span>
-          </div>
-        </div>
-
-        <div className="hero-media">
-          <img src={heroImage} alt="Modern clean room" />
         </div>
       </section>
 
-      <section className="services-section">
-        <h2>Our Specialized Services</h2>
-        <p className="section-subtitle">
-          Tailored cleaning solutions for every need, from one-time deep cleans to recurring office
-          maintenance.
-        </p>
+      <section className="how-it-works reveal reveal-delay-1">
+        <header className="how-head">
+          <p className="how-kicker">HOW IT WORKS</p>
+          {/* <h2>How It Works</h2> */}
+          <p className="how-summary">
+            Explain the simple process so customers understand how to book.
+          </p>
+        </header>
 
-        <div className="services-grid">
-          {services.map((service, index) => (
-            <article key={service.title} className="service-card">
+        <div className="how-flow">
+          {howItWorksSteps.map((item) => (
+            <article key={item.step} className="how-step">
+              <div className="how-icon" aria-hidden="true">
+                <span>{item.step}</span>
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="our-services reveal reveal-delay-2">
+        <header className="services-head">
+          <p className="services-kicker">OUR CLEANING SERVICES</p>
+          <p className="services-summary">
+            Choose from a wide range of professional cleaning services designed to keep your home or
+            workplace spotless.
+          </p>
+        </header>
+
+        <div className="service-highlight-grid">
+          {serviceHighlights.map((service) => (
+            <article key={service.id} className="service-highlight-item">
               <img src={service.image} alt={service.title} />
-              <h3>
-                {service.title}
-                {index === 0 && <span className="tag">Popular</span>}
-              </h3>
-              <p>{service.description}</p>
-              <button type="button" onClick={() => navigate('/services')}>
-                Learn More
+              <div className="service-highlight-body">
+                <span className="service-index">{service.id.slice(1)}</span>
+                <h3>{service.title}</h3>
+                <p>{service.description}</p>
+                <button type="button" className="service-card-btn" onClick={() => navigate('/customer/services')}>
+                  {service.cta}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="services-actions">
+          <button type="button" className="btn-primary" onClick={() => navigate('/customer/services')}>
+            View All Services
+          </button>
+        </div>
+      </section>
+
+      <section className="top-cleaners reveal reveal-delay-2">
+        <header className="cleaners-head">
+          <p className="cleaners-kicker">TOP RATED CLEANERS</p>
+          {/* <h2>Top Rated Cleaners</h2> */}
+          <p className="cleaners-summary">
+            Show some top cleaners or companies from your platform.
+          </p>
+        </header>
+
+        <div className="cleaners-grid">
+          {featuredCleaners.map((cleaner) => (
+            <article key={cleaner.id} className="cleaner-card">
+              <div className="cleaner-photo-wrap">
+                <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
+              </div>
+              <h3>{cleaner.company}</h3>
+              <p className="cleaner-rating">{'⭐'.repeat(cleaner.rating)}</p>
+              <p className="cleaner-reviews">{cleaner.reviews} total reviews</p>
+              <button
+                type="button"
+                className="cleaner-profile-btn"
+                onClick={() => navigate('/customer/services')}
+              >
+                View Profile
               </button>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="why-section">
-        <div className="why-left">
-          <h2>Why PureShine is the Best Choice</h2>
-          <div className="feature-list">
-            <div>
-              <CheckCircleFilled style={{ fontSize: 18 }} />
-              <div>
-                <h4>Eco-Friendly Products</h4>
-                <p>We use 100% biodegradable and non-toxic cleaning agents safe for kids and pets.</p>
-              </div>
+      <section className="why-choose reveal reveal-delay-3">
+        <header className="why-head">
+          <p className="why-kicker">WHY CHOOSE US</p>
+          <p className="why-summary">
+            Customers want to know why they should trust your service.
+          </p>
+        </header>
+
+        <div className="why-list">
+          {whyChoosePoints.map((point) => (
+            <div key={point} className="why-item">
+              <span className="why-icon" aria-hidden="true">
+                {'\u2713'}
+              </span>
+              <span className="why-text">{point}</span>
             </div>
-            <div>
-              <SafetyCertificateOutlined style={{ fontSize: 18 }} />
-              <div>
-                <h4>Background Checked Staff</h4>
-                <p>Our cleaning professionals undergo rigorous identity and criminal record checks.</p>
-              </div>
-            </div>
-            <div>
-              <CalendarOutlined style={{ fontSize: 18 }} />
-              <div>
-                <h4>Flexible Scheduling</h4>
-                <p>Book, reschedule or cancel in seconds through our seamless web application.</p>
-              </div>
-            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="cta-banner reveal reveal-delay-4">
+        <div className="cta-content">
+          <h2>Ready for a Cleaning!</h2>
+          <p>
+            Book professional cleaners in minutes and enjoy a spotless space today.
+          </p>
+          <div className="cta-actions">
+            <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
+              Book Now
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/customer/services')}>
+              Browse Services
+            </button>
           </div>
-        </div>
-
-        <div className="why-stats">
-          {[
-            ['98%', 'Satisfaction Rate'],
-            ['15k+', 'Cleanings Done'],
-            ['24/7', 'Customer Support'],
-            ['100%', 'Insured Service']
-          ].map(([value, label]) => (
-            <article key={label}>
-              <strong>{value}</strong>
-              <span>{label}</span>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="testimonials-section">
-        <h2>What Our Customers Say</h2>
-        <div className="testimonials-grid">
-          {testimonials.map((item) => (
-            <article key={item.name} className="testimonial-card">
-              <p className="stars">*****</p>
-              <p className="quote">{item.quote}</p>
-              <div className="author">
-                <span className="avatar-sm" />
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.role}</span>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="cta-section">
-        <h2>Ready for a Cleaner, Healthier Space?</h2>
-        <p>Book your first cleaning in less than 60 seconds. No credit card required to start.</p>
-        <div className="cta-actions">
-          <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
-            Book Your First Cleaning
-          </button>
-          <button type="button" className="btn-secondary dark" onClick={() => navigate('/contact')}>
-            Contact Sales
-          </button>
         </div>
       </section>
     </div>
+    
   );
 };
 
