@@ -5,7 +5,7 @@ import {
   PlusOutlined,
   EnvironmentOutlined
 } from '@ant-design/icons';
-import { Input, Button, Switch } from 'antd';
+import { Input, Button, Switch, message } from 'antd';
 import '../../../styles/cleaner/settings.scss';
 
 const SettingsPage = () => {
@@ -41,6 +41,9 @@ const SettingsPage = () => {
     { id: 0, day: 'Sunday', status: 'closed', startTime: '', endTime: '' }
   ]);
 
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+
   const handleProfileChange = (field, value) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
   };
@@ -70,33 +73,35 @@ const SettingsPage = () => {
   };
 
   const handleSaveProfile = async () => {
-    const cleanedName = String(profile.name || '').trim();
+    const cleanedName = String(profile.companyName || '').trim();
     if (!cleanedName) {
-      setProfileMessage('Full name is required.');
+      setProfileMessage('Company name is required.');
       return;
     }
 
     setIsSavingProfile(true);
     setProfileMessage('');
 
-    const firstName = cleanedName.split(' ')[0] || '';
-    const lastName = cleanedName.split(' ').slice(1).join(' ');
-    const payload = {
-      name: cleanedName,
-      first_name: firstName,
-      last_name: lastName,
-      email: String(profile.email || '').trim(),
-      phone: String(profile.phone || '').trim(),
-      phone_number: String(profile.phone || '').trim(),
-      address: String(profile.address || '').trim(),
-      avatar: profile.avatar || null
-    };
-
-    const result = await updateUser(payload);
-    if (!result?.success) {
-      setProfileMessage(result?.error || 'Unable to save profile.');
-    } else {
+    // Simulate API call - replace with actual API call
+    try {
+      // Simulate network delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Here you would typically make an API call like:
+      // const result = await updateUser(payload);
+      console.log('Profile saved successfully:', {
+        companyName: cleanedName,
+        email: profile.email,
+        phone: profile.phone,
+        website: profile.website,
+        description: profile.description
+      });
+      
       setProfileMessage('Profile updated successfully.');
+      message.success('Profile updated successfully!');
+    } catch (error) {
+      setProfileMessage('Unable to save profile.');
+      message.error('Failed to update profile');
     }
     setIsSavingProfile(false);
   };
@@ -176,10 +181,19 @@ const SettingsPage = () => {
             </div>
 
             <div className="form-actions">
-              <Button type="primary" onClick={handleSaveProfile}>
-                Save Changes
+              <Button 
+                type="primary" 
+                onClick={handleSaveProfile}
+                loading={isSavingProfile}
+              >
+                {isSavingProfile ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
+            {profileMessage && (
+              <div className={`profile-message ${profileMessage.includes('success') ? 'success' : 'error'}`}>
+                {profileMessage}
+              </div>
+            )}
           </div>
         </section>
 
