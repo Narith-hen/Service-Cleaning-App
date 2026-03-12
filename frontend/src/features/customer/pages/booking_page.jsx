@@ -72,7 +72,7 @@ const BookingPage = () => {
     <div className="booking-page-v2">
       <div className="booking-request-card">
         <header className="booking-request-header">
-          <h1>Request a Cleaning</h1>
+          <p>Service Booking</p>
         </header>
 
         <section className="booking-service-summary">
@@ -88,7 +88,7 @@ const BookingPage = () => {
         <section className="booking-section">
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
-              <Check size={12} />
+              1
             </span>
             <h3>Search Cleaning Location</h3>
           </div>
@@ -120,7 +120,7 @@ const BookingPage = () => {
         <section className="booking-section">
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
-              <Check size={12} />
+              2
             </span>
             <h3>Share Photos of Your Space</h3>
           </div>
@@ -168,7 +168,7 @@ const BookingPage = () => {
         <section className="booking-section">
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
-              <Check size={12} />
+              3
             </span>
             <h3>Your Detailed Cleaning Brief</h3>
           </div>
@@ -186,7 +186,7 @@ const BookingPage = () => {
         <section className="booking-section">
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
-              <Check size={12} />
+              4
             </span>
             <h3>Select Date and Time</h3>
           </div>
