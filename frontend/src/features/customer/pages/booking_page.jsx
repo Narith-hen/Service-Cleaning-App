@@ -110,6 +110,24 @@ const BookingPage = () => {
               );
             })}
           </div>
+
+          <div className="category-select">
+            <label htmlFor="spaceCategory">Select Space Category</label>
+            <select
+              id="spaceCategory"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="" disabled>
+                Select a category
+              </option>
+              {categoryItems.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </div>
         </section>
 
         <section className="details-grid">

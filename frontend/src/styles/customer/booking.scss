@@ -116,6 +116,36 @@
   gap: 20px;
 }
 
+.category-select {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-select label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.category-select select {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #111827;
+  background: #f9fafb;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.category-select select:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
 .category-card {
   border: 1px solid #f0f1f3;
   border-radius: 28px;
