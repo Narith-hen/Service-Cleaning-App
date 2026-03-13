@@ -5,8 +5,6 @@ import {
   Check,
   Image as ImageIcon,
   MapPin,
-  Minus,
-  Plus,
   Search,
   UploadCloud
 } from 'lucide-react';
@@ -16,24 +14,90 @@ import '../../../styles/customer/booking.scss';
 
 const hourOptions = ['08 AM', '09 AM', '10 AM', '11 AM', '12 PM', '01 PM', '02 PM', '03 PM'];
 const minuteOptions = ['00', '15', '30', '45'];
-const durationOptions = ['2 Hours', '2.5 Hours', '3 Hours', '3.5 Hours', '4 Hours'];
+const timeOptions = hourOptions.flatMap((hour) => {
+  const [clock, meridiem] = hour.split(' ');
+  return minuteOptions.map((minute) => `${clock}:${minute} ${meridiem}`);
+});
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const BookingPage = () => {
   const navigate = useNavigate();
   const locationHook = useLocation();
   const inputRef = useRef(null);
+  const addressInputRef = useRef(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+  const autocompleteRef = useRef(null);
   const [address, setAddress] = useState('');
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
   const [preferredDate, setPreferredDate] = useState('');
-  const [startHour, setStartHour] = useState(hourOptions[2]);
-  const [startMinute, setStartMinute] = useState(minuteOptions[0]);
-  const [duration, setDuration] = useState(durationOptions[3]);
+  const [startTime, setStartTime] = useState(timeOptions[8]);
+  const [endTime, setEndTime] = useState(timeOptions[12]);
+  const bookingTime = `${startTime} - ${endTime}`;
+  const [isAddressVerified, setIsAddressVerified] = useState(false);
+  const [mapError, setMapError] = useState('');
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  const loadGoogleMaps = (apiKey) =>
+    new Promise((resolve, reject) => {
+      if (window.google?.maps?.places) {
+        resolve();
+        return;
+      }
+
+      const existingScript = document.getElementById('google-maps-sdk');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve());
+        existingScript.addEventListener('error', () => reject(new Error('Google Maps failed to load')));
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'google-maps-sdk';
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Google Maps failed to load'));
+      document.head.appendChild(script);
+    });
 
   const onFileChange = (fileList) => {
-    const nextFiles = Array.from(fileList || []).slice(0, 10);
-    setFiles(nextFiles);
+    const incoming = Array.from(fileList || []);
+    if (!incoming.length) return;
+
+    setFiles((prevFiles) => {
+      const nextFiles = [...prevFiles, ...incoming];
+      const unique = [];
+      const seen = new Set();
+
+      nextFiles.forEach((file) => {
+        const key = `${file.name}-${file.size}-${file.lastModified}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        unique.push(file);
+      });
+
+      return unique.slice(0, 30);
+    });
   };
+
+  useEffect(() => {
+    if (!files.length) {
+      setPreviewUrls([]);
+      return;
+    }
+
+    const nextUrls = files.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(nextUrls);
+
+    return () => {
+      nextUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [files]);
 
   const handleDropzoneKey = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -41,6 +105,92 @@ const BookingPage = () => {
       inputRef.current?.click();
     }
   };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    onFileChange(event.dataTransfer?.files);
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+  };
+
+  useEffect(() => {
+    if (!GOOGLE_MAPS_KEY) {
+      setMapError('Missing Google Maps API key.');
+      setIsMapReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    loadGoogleMaps(GOOGLE_MAPS_KEY)
+      .then(() => {
+        if (!cancelled) {
+          setMapError('');
+          setIsMapReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMapError('Unable to load Google Maps.');
+          setIsMapReady(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMapReady || !window.google?.maps || !mapRef.current || mapInstanceRef.current) return;
+
+    const defaultCenter = { lat: 11.5564, lng: 104.9282 };
+    const map = new window.google.maps.Map(mapRef.current, {
+      center: defaultCenter,
+      zoom: 13,
+      mapTypeControl: false,
+      fullscreenControl: false,
+      streetViewControl: false
+    });
+
+    mapInstanceRef.current = map;
+    markerRef.current = new window.google.maps.Marker({
+      map,
+      position: defaultCenter
+    });
+  }, [isMapReady]);
+
+  useEffect(() => {
+    if (!isMapReady || !window.google?.maps?.places || !addressInputRef.current || autocompleteRef.current) return;
+
+    const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+      fields: ['formatted_address', 'geometry']
+    });
+
+    autocompleteRef.current = autocomplete;
+
+    const listener = autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      const formattedAddress = place?.formatted_address || addressInputRef.current?.value || '';
+      setAddress(formattedAddress);
+
+      if (place?.geometry?.location && mapInstanceRef.current) {
+        mapInstanceRef.current.panTo(place.geometry.location);
+        mapInstanceRef.current.setZoom(16);
+        if (markerRef.current) {
+          markerRef.current.setPosition(place.geometry.location);
+        }
+        setIsAddressVerified(true);
+      } else {
+        setIsAddressVerified(false);
+      }
+    });
+
+    return () => {
+      if (listener) window.google.maps.event.removeListener(listener);
+    };
+  }, [isMapReady]);
 
   const stateService = locationHook.state?.service || locationHook.state || null;
   const storedService = (() => {
@@ -92,62 +242,38 @@ const BookingPage = () => {
             </span>
             <h3>Search Cleaning Location</h3>
           </div>
-<<<<<<< HEAD
-
-          <div className="category-select">
-            <label htmlFor="spaceCategory">Select Space Category</label>
-            <select
-              id="spaceCategory"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <option value="" disabled>
-                Select a category
-              </option>
-              {categoryItems.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        </section>
-
-        <section className="details-grid">
-          <div>
-            <h3>Upload Photos</h3>
-            <div className="upload-card" onClick={() => inputRef.current?.click()} role="button" tabIndex={0}>
-              <div className="upload-icon" aria-hidden>
-                <CloudUpload size={20} />
-              </div>
-              <p className="upload-title">Drag &amp; drop space photos</p>
-              <p className="upload-subtitle">Up to 10 images, max 5MB each</p>
-              <button type="button" className="upload-btn">
-                Browse Files
-=======
           <div className="input-shell">
             <Search size={16} />
             <input
               type="text"
               placeholder="123 Harmony Lane, Bright City"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              ref={addressInputRef}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setIsAddressVerified(false);
+              }}
             />
           </div>
-          <div className="map-shell" aria-label="map-preview">
-            <div className="map-actions" aria-hidden>
-              <button type="button">
-                <Plus size={14} />
-              </button>
-              <button type="button">
-                <Minus size={14} />
->>>>>>> develop
-              </button>
-            </div>
-            <div className="map-badge">
-              <MapPin size={12} />
-              Address Verified
-            </div>
+          <div className="map-shell map-shell--google" aria-label="map-preview">
+            {mapError ? (
+              <div className="map-fallback">
+                <p>{mapError}</p>
+                <p>Add `VITE_GOOGLE_MAPS_API_KEY` to your frontend .env file.</p>
+              </div>
+            ) : !isMapReady ? (
+              <div className="map-fallback">
+                <p>Loading map...</p>
+              </div>
+            ) : (
+              <div className="map-canvas" ref={mapRef} />
+            )}
+            {isAddressVerified && (
+              <div className="map-badge">
+                <MapPin size={12} />
+                Address Verified
+              </div>
+            )}
           </div>
         </section>
 
@@ -162,9 +288,11 @@ const BookingPage = () => {
             Help your cleaner understand specific needs by uploading photos of areas that require extra attention.
           </p>
           <div
-            className="upload-dropzone"
+            className={`upload-dropzone${previewUrls.length ? ' upload-dropzone--active' : ''}`}
             onClick={() => inputRef.current?.click()}
             onKeyDown={handleDropzoneKey}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
             role="button"
             tabIndex={0}
           >
@@ -172,18 +300,28 @@ const BookingPage = () => {
               <UploadCloud size={18} />
             </div>
             <h4>Upload cleaning</h4>
-            <p>Drag and drop images here, or click to browse files</p>
-            <div className="upload-previews" aria-hidden>
-              <span>
-                <ImageIcon size={14} />
-              </span>
-              <span>
-                <ImageIcon size={14} />
-              </span>
-              <span>
-                <ImageIcon size={14} />
-              </span>
-            </div>
+            <p>Drag and drop images here, or click to browse files (up to 30)</p>
+            {previewUrls.length === 0 ? (
+              <div className="upload-previews" aria-hidden>
+                <span>
+                  <ImageIcon size={14} />
+                </span>
+                <span>
+                  <ImageIcon size={14} />
+                </span>
+                <span>
+                  <ImageIcon size={14} />
+                </span>
+              </div>
+            ) : (
+              <div className="upload-previews upload-previews--filled">
+                {previewUrls.map((src, index) => (
+                  <div className="upload-thumb" key={`${files[index]?.name || 'image'}-${index}`}>
+                    <img src={src} alt={files[index]?.name || `Upload ${index + 1}`} />
+                  </div>
+                ))}
+              </div>
+            )}
             <input
               ref={inputRef}
               type="file"
@@ -235,9 +373,9 @@ const BookingPage = () => {
           </div>
           <div className="time-grid">
             <div className="form-field">
-              <label htmlFor="start-hour">Start Time (Hour)</label>
-              <select id="start-hour" value={startHour} onChange={(e) => setStartHour(e.target.value)}>
-                {hourOptions.map((option) => (
+              <label htmlFor="start-time">Start Time (Hour &amp; Minute)</label>
+              <select id="start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
+                {timeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>
@@ -245,19 +383,9 @@ const BookingPage = () => {
               </select>
             </div>
             <div className="form-field">
-              <label htmlFor="start-minute">Start Time (Minute)</label>
-              <select id="start-minute" value={startMinute} onChange={(e) => setStartMinute(e.target.value)}>
-                {minuteOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
-              <label htmlFor="cleaning-duration">Cleaning Duration</label>
-              <select id="cleaning-duration" value={duration} onChange={(e) => setDuration(e.target.value)}>
-                {durationOptions.map((option) => (
+              <label htmlFor="end-time">End Time (Hour &amp; Minute)</label>
+              <select id="end-time" value={endTime} onChange={(e) => setEndTime(e.target.value)}>
+                {timeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>
