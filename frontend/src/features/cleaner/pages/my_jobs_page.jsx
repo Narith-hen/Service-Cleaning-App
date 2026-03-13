@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import React, { useEffect, useMemo, useState } from 'react';
-=======
-﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
->>>>>>> develop
 import {
   EnvironmentOutlined,
   UserOutlined,
@@ -21,9 +17,6 @@ import officeImage from '../../../assets/office.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import '../../../styles/cleaner/my_jobs.scss';
 
-<<<<<<< HEAD
-const initialJobs = [
-=======
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 
 const pickJobImage = (job) => {
@@ -34,7 +27,6 @@ const pickJobImage = (job) => {
 };
 
 const fallbackJobs = [
->>>>>>> develop
   {
     id: 'default-1',
     sourceRequestId: 'default-1',
@@ -61,25 +53,6 @@ const tabs = [
 ];
 
 const MyJobsPage = () => {
-<<<<<<< HEAD
-  const [jobItems, setJobItems] = useState(initialJobs);
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedJobId, setSelectedJobId] = useState(initialJobs[0]?.id ?? null);
-  const [activeJob, setActiveJob] = useState(null);
-
-  const jobTypeOptions = useMemo(() => ['all', ...new Set(jobItems.map((job) => job.jobType))], [jobItems]);
-  const statusOptions = useMemo(() => ['all', ...new Set(jobItems.map((job) => job.status))], [jobItems]);
-
-  const filteredJobs = useMemo(() => {
-    return jobItems.filter((job) => {
-      if (selectedType !== 'all' && job.jobType !== selectedType) return false;
-      if (selectedStatus !== 'all' && job.status !== selectedStatus) return false;
-
-      return true;
-    });
-  }, [jobItems, selectedType, selectedStatus]);
-=======
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [jobs, setJobs] = useState(fallbackJobs);
@@ -145,7 +118,6 @@ const MyJobsPage = () => {
       return { ...prev, [jobId]: next };
     });
   };
->>>>>>> develop
 
   const handleStartJob = (jobId) => {
     handlePrimaryJobAction(jobId);
@@ -173,82 +145,6 @@ const MyJobsPage = () => {
     navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
-<<<<<<< HEAD
-  const handleOpenJobDetails = (job) => {
-    setSelectedJobId(job.id);
-    setActiveJob(job);
-  };
-
-  const handleCloseJobDetails = () => {
-    setActiveJob(null);
-  };
-
-  const updateJob = (jobId, updater) => {
-    setJobItems((prevJobs) => prevJobs.map((job) => (job.id === jobId ? updater(job) : job)));
-    setActiveJob((prevJob) => (prevJob && prevJob.id === jobId ? updater(prevJob) : prevJob));
-  };
-
-  const handleJobAction = (job, actionLabel, event) => {
-    event.stopPropagation();
-    setSelectedJobId(job.id);
-
-    if (actionLabel === 'Pause Job') {
-      updateJob(job.id, (currentJob) => ({
-        ...currentJob,
-        status: 'Paused',
-        tag: 'PAUSED',
-        tagType: 'amber',
-        actions: [
-          { label: 'Resume Job', type: 'soft-green', icon: <CaretRightOutlined /> },
-          { label: 'Complete Cleaning', type: 'green', icon: <CheckCircleOutlined /> }
-        ]
-      }));
-      return;
-    }
-
-    if (actionLabel === 'Resume Job') {
-      updateJob(job.id, (currentJob) => ({
-        ...currentJob,
-        status: 'Ongoing',
-        tag: 'ONGOING',
-        tagType: 'green',
-        actions: [
-          { label: 'Pause Job', type: 'dark', icon: <PauseCircleOutlined /> },
-          { label: 'Complete Cleaning', type: 'green', icon: <CheckCircleOutlined /> }
-        ]
-      }));
-      return;
-    }
-
-    if (actionLabel === 'Complete Cleaning') {
-      updateJob(job.id, (currentJob) => ({
-        ...currentJob,
-        status: 'Completed',
-        tag: 'COMPLETED',
-        tagType: 'gray',
-        actions: [{ label: 'Completed', type: 'locked', icon: <CheckCircleOutlined /> }]
-      }));
-    }
-  };
-
-  return (
-    <div className="cleaner-my-jobs-page">
-      <div className="my-jobs-headline">
-        <h1>Personal Job Management</h1>
-        <p>Manage your active assignments and track your work history.</p>
-      </div>
-
-      <div className="summary-grid">
-        <div className="summary-card wide">
-          <span className="summary-label">WEEKLY COMMITMENT</span>
-          <div className="summary-main">
-            <strong>32 / 40 hrs</strong>
-            <em>80% Reached</em>
-          </div>
-          <div className="progress-line">
-            <span />
-          </div>
-=======
   const handleCheckMyJob = (jobId) => {
     navigate('/cleaner/job-execution', { state: { jobId } });
   };
@@ -260,7 +156,6 @@ const MyJobsPage = () => {
           <button type="button" onClick={() => setActiveMessageJobId(null)}>My Jobs</button>
           <span>&gt;</span>
           <strong>Message</strong>
->>>>>>> develop
         </div>
 
         <div className="my-jobs-message-view">
@@ -273,94 +168,21 @@ const MyJobsPage = () => {
           <aside className="my-jobs-details-panel">
             <h5>JOB DETAILS</h5>
 
-<<<<<<< HEAD
-      <div className="filter-bar">
-        <div className="filter-item">
-          <label>JOB TYPE</label>
-          <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-            {jobTypeOptions.map((type) => (
-              <option key={type} value={type}>
-                {type === 'all' ? 'All Types' : type}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-item">
-          <label>STATUS</label>
-          <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status === 'all' ? 'All Statuses' : status}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="jobs-list">
-        {filteredJobs.map((job) => (
-          <article
-            className={`job-item ${job.id === selectedJobId ? 'highlight' : ''}`}
-            key={job.id}
-            onClick={() => handleOpenJobDetails(job)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenJobDetails(job);
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="job-image-wrap">
-              <span className={`job-tag ${job.tagType}`}>{job.tag}</span>
-              <img src={job.image} alt={job.title} />
-            </div>
-
-            <div className="job-body">
-              <div className="job-top">
-=======
             <div className="my-jobs-details-card">
               <div className="my-jobs-detail-row">
                 <span className="my-jobs-detail-icon"><CalendarOutlined /></span>
->>>>>>> develop
                 <div>
                   <small>Date &amp; Time</small>
                   <strong>Tomorrow, 9:00 AM</strong>
                 </div>
               </div>
 
-<<<<<<< HEAD
-              <div className="job-details-grid">
-                {job.details.map((detail, index) => (
-                  <div className="job-detail" key={`${job.id}-${index}`}>
-                    <span className="label">{detail.label}</span>
-                    <p>
-                      {detail.icon} {detail.value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="job-actions">
-                {job.actions.map((action, idx) => (
-                  <button
-                    key={`${job.id}-action-${idx}`}
-                    type="button"
-                    className={`action-btn ${action.type}`}
-                    onClick={(event) => handleJobAction(job, action.label, event)}
-                  >
-                    {action.icon} {action.label}
-                  </button>
-                ))}
-=======
               <div className="my-jobs-detail-row">
                 <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
                 <div>
                   <small>Location</small>
                   <strong>{activeMessageJob.location}</strong>
                 </div>
->>>>>>> develop
               </div>
             </div>
 
@@ -377,59 +199,8 @@ const MyJobsPage = () => {
               <FileTextOutlined /> View Full Job Contract
             </button>
 
-<<<<<<< HEAD
-            <div className="job-modal-image-wrap">
-              <span className={`job-tag ${activeJob.tagType}`}>{activeJob.tag}</span>
-              <img src={activeJob.image} alt={activeJob.title} />
-            </div>
-
-            <div className="job-modal-body">
-              <div className="job-top">
-                <div>
-                  <span className="job-type">{activeJob.jobType.toUpperCase()}</span>
-                  <h3>{activeJob.title}</h3>
-                  <p className="job-client">Client: {activeJob.client}</p>
-                </div>
-                <div className="job-price">{activeJob.price}</div>
-              </div>
-
-              <div className="job-details-grid">
-                {activeJob.details.map((detail, index) => (
-                  <div className="job-detail" key={`${activeJob.id}-modal-${index}`}>
-                    <span className="label">{detail.label}</span>
-                    <p>
-                      {detail.icon} {detail.value}
-                    </p>
-                  </div>
-                ))}
-                <div className="job-detail">
-                  <span className="label">STATUS</span>
-                  <p>{activeJob.status}</p>
-                </div>
-                <div className="job-detail">
-                  <span className="label">SCHEDULED DATE</span>
-                  <p>{formatDisplayDate(activeJob.scheduledDate)}</p>
-                </div>
-              </div>
-
-              <div className="job-actions">
-                {activeJob.actions.map((action, idx) => (
-                  <button
-                    key={`${activeJob.id}-modal-action-${idx}`}
-                    type="button"
-                    className={`action-btn ${action.type}`}
-                    onClick={(event) => handleJobAction(activeJob, action.label, event)}
-                  >
-                    {action.icon} {action.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-=======
             <div className="my-jobs-map-preview" />
           </aside>
->>>>>>> develop
         </div>
       </div>
     );

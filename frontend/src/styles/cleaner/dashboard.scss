@@ -21,158 +21,6 @@
 .dashboard-stat-card {
   background: #fff;
   border: 1px solid #e5e7eb;
-<<<<<<< HEAD
-  border-radius: 14px;
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-  &:focus-visible {
-    outline: 2px solid #86efac;
-    outline-offset: 2px;
-  }
-
-  &.active {
-    border-color: #e5e7eb;
-    box-shadow: none;
-  }
-
-  .stat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-
-  .stat-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-
-    &.jobs-icon {
-      color: #22c55e;
-      background: #dcfce7;
-    }
-
-    &.earnings-icon {
-      color: #3b82f6;
-      background: #dbeafe;
-    }
-
-    &.rating-icon {
-      color: #f59e0b;
-      background: #fef3c7;
-    }
-
-    &.cancel-icon {
-      color: #ef4444;
-      background: #fee2e2;
-    }
-  }
-
-  .stat-change {
-    padding: 3px 9px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-
-    &.positive {
-      color: #16a34a;
-      background: #dcfce7;
-    }
-
-    &.cancel {
-      color: #b91c1c;
-      background: #fee2e2;
-    }
-  }
-
-  .stat-content {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .stat-label {
-    font-size: 12px;
-    color: #64748b;
-    font-weight: 500;
-  }
-
-  .stat-value {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
-    color: #0f172a;
-    letter-spacing: -0.02em;
-  }
-
-
-  .rating-wrap {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-
-    .star-text {
-      margin-bottom: 0;
-      color: #f59e0b;
-      font-size: 11px;
-      letter-spacing: 1px;
-    }
-  }
-}
-
-.mobile-logout {
-  display: none;
-}
-
-.review-chart {
-  border: 1px solid #dbe4ef;
-  border-radius: 14px;
-  background: #f8fbff;
-  padding: 16px;
-  margin-bottom: 14px;
-}
-
-.chart-header {
-  margin-bottom: 12px;
-  text-align: center;
-
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 800;
-    color: #0f172a;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: #6b7b92;
-    font-size: 13px;
-  }
-
-  .chart-total {
-    color: #334155;
-    font-weight: 700;
-  }
-}
-
-.chart-donut-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 8px 0 6px;
-}
-
-.chart-pie {
-  width: 360px;
-  aspect-ratio: 1 / 1;
-  display: block;
-=======
   border-radius: 16px;
   padding: 16px 18px;
 }
@@ -239,6 +87,54 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   color: #1f2937;
+}
+
+.mobile-logout {
+  display: none;
+}
+
+.review-chart {
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.chart-header {
+  margin-bottom: 12px;
+  text-align: center;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: #6b7b92;
+    font-size: 13px;
+  }
+
+  .chart-total {
+    color: #334155;
+    font-weight: 700;
+  }
+}
+
+.chart-donut-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 6px;
+}
+
+.chart-pie {
+  width: 360px;
+  aspect-ratio: 1 / 1;
+  display: block;
 }
 
 .today-schedule-panel {
@@ -366,7 +262,6 @@
 .break-time-btn:hover {
   border-color: var(--main);
   color: var(--main-dark);
->>>>>>> develop
 }
 
 .chart-pie-segment {
@@ -417,8 +312,9 @@
     padding-left: 14px;
     padding-right: 14px;
   }
-
-<<<<<<< HEAD
+  .schedule-head h2 {
+    font-size: 19px;
+  }
 
   .chart-pie {
     width: 290px;
@@ -431,11 +327,7 @@
   .mobile-logout {
     display: block;
     margin-top: 14px;
-=======
-  .schedule-head h2 {
-    font-size: 19px;
   }
->>>>>>> develop
 
   .job-content h3 {
     font-size: 16px;

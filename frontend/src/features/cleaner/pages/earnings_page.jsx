@@ -82,10 +82,16 @@ const monthlyEarningsData = [
 const EarningsPage = () => {
   const [sortBy, setSortBy] = useState('most_recent');
   const [paymentStatus, setPaymentStatus] = useState('all');
+  const [dateFrom, setDateFrom] = useState(null);
+  const [dateTo, setDateTo] = useState(null);
+  const [, setAppliedFilters] = useState({
+    sortBy: 'most_recent',
+    paymentStatus: 'all',
+    dateFrom: '',
+    dateTo: ''
+  });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
-<<<<<<< HEAD
-=======
   const chartConfig = {
     data: monthlyEarningsData,
     xField: 'month',
@@ -147,12 +153,11 @@ const EarningsPage = () => {
     setAppliedFilters({
       sortBy,
       paymentStatus,
-      dateFrom,
-      dateTo
+      dateFrom: dateFrom ? dateFrom.format('YYYY-MM-DD') : '',
+      dateTo: dateTo ? dateTo.format('YYYY-MM-DD') : ''
     });
   };
 
->>>>>>> develop
   const filteredTransactions = useMemo(() => {
     const filtered = transactions.filter((item) => {
       const statusMatch =
@@ -211,9 +216,6 @@ const EarningsPage = () => {
         </div>
       </section>
 
-<<<<<<< HEAD
-      </div>
-=======
       <section className="earnings-filters-panel">
         <div className="filter-group">
           <FilterOutlined />
@@ -243,13 +245,13 @@ const EarningsPage = () => {
           <DatePicker
             placeholder="From Date"
             value={dateFrom}
-            onChange={(date) => setDateFrom(date ? date.format('YYYY-MM-DD') : '')}
+            onChange={(date) => setDateFrom(date || null)}
           />
           <span>to</span>
           <DatePicker
             placeholder="To Date"
             value={dateTo}
-            onChange={(date) => setDateTo(date ? date.format('YYYY-MM-DD') : '')}
+            onChange={(date) => setDateTo(date || null)}
           />
         </div>
         <Button type="primary" onClick={handleApplyFilters}>Apply Filters</Button>
@@ -271,7 +273,6 @@ const EarningsPage = () => {
                     {transaction.status}
                   </span>
                 </aside>
->>>>>>> develop
 
                 <section className="transaction-main">
                   <div className="transaction-header">
@@ -300,27 +301,9 @@ const EarningsPage = () => {
             <div className="transactions-empty">
               <p>No transactions found matching your filters.</p>
             </div>
-<<<<<<< HEAD
-          </article>
-        ))}
-        {filteredTransactions.length === 0 && (
-          <article className="transaction-card">
-            <div className="transaction-body">
-              <div className="transaction-top">
-                <div>
-                  <h3>No transactions found</h3>
-                  <p>Try a different status filter.</p>
-                </div>
-              </div>
-            </div>
-          </article>
-        )}
-      </div>
-=======
           )}
         </div>
       </section>
->>>>>>> develop
 
       {selectedTransaction && (
         <div className="transaction-modal-overlay" onClick={() => setSelectedTransaction(null)}>

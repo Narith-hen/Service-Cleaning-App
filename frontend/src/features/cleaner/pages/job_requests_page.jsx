@@ -1,21 +1,12 @@
-<<<<<<< HEAD
-import React, { useRef, useState } from 'react';
-=======
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
->>>>>>> develop
 import {
   EnvironmentOutlined,
   ClockCircleOutlined,
   DollarCircleOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
-<<<<<<< HEAD
-  CloseOutlined,
-  PictureOutlined
-=======
   FileTextOutlined
->>>>>>> develop
 } from '@ant-design/icons';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import '../../../styles/cleaner/job_requests.scss';
@@ -70,116 +61,6 @@ const getRequestChecklist = (request) => {
 };
 
 const JobRequestsPage = () => {
-<<<<<<< HEAD
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [chatJob, setChatJob] = useState(null);
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState({});
-  const imageInputRef = useRef(null);
-
-  const getCustomerName = (job) => {
-    if (!job?.extraDetails?.length) return 'Customer';
-    const customerLine = job.extraDetails.find((line) => line.startsWith('Customer:'));
-    if (!customerLine) return 'Customer';
-    return customerLine.replace('Customer:', '').trim() || 'Customer';
-  };
-
-  const getCustomerInitials = (name) => {
-    const parts = String(name || '')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    if (!parts.length) return 'C';
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-    return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
-  };
-
-  const openChat = (job) => {
-    if (!job) return;
-
-    setChatJob(job);
-    setSelectedJob(null);
-    setChatInput('');
-
-    setChatMessages((prev) => {
-      if (prev[job.id]) return prev;
-
-      const customerName = getCustomerName(job);
-      return {
-        ...prev,
-        [job.id]: [
-          {
-            id: `${job.id}-seed-1`,
-            from: 'customer',
-            text: `Hi, this is ${customerName}. Thanks for accepting my request.`,
-            time: 'Now'
-          },
-          {
-            id: `${job.id}-seed-2`,
-            from: 'customer',
-            text: 'Please message me when you are on your way.',
-            time: 'Now'
-          }
-        ]
-      };
-    });
-  };
-
-  const handleSendMessage = () => {
-    if (!chatJob) return;
-
-    const text = chatInput.trim();
-    if (!text) return;
-
-    const outgoingMessage = {
-      id: `${chatJob.id}-${Date.now()}`,
-      from: 'cleaner',
-      text,
-      time: 'Now'
-    };
-
-    setChatMessages((prev) => {
-      const existing = prev[chatJob.id] || [];
-      return {
-        ...prev,
-        [chatJob.id]: [...existing, outgoingMessage]
-      };
-    });
-
-    setChatInput('');
-  };
-
-  const handlePickImage = () => {
-    imageInputRef.current?.click();
-  };
-
-  const handleImageSelected = (event) => {
-    if (!chatJob) return;
-
-    const file = event.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const outgoingImageMessage = {
-        id: `${chatJob.id}-img-${Date.now()}`,
-        from: 'cleaner',
-        image: String(reader.result),
-        time: 'Now'
-      };
-
-      setChatMessages((prev) => {
-        const existing = prev[chatJob.id] || [];
-        return {
-          ...prev,
-          [chatJob.id]: [...existing, outgoingImageMessage]
-        };
-      });
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-  };
-=======
   const navigate = useNavigate();
   const [requests, setRequests] = useState(initialRequests);
   const [activeMessageRequestId, setActiveMessageRequestId] = useState(null);
@@ -446,7 +327,6 @@ const JobRequestsPage = () => {
       </div>
     );
   }
->>>>>>> develop
 
   return (
     <div className="cleaner-job-requests-page">
@@ -489,42 +369,6 @@ const JobRequestsPage = () => {
               </div>
             </div>
 
-<<<<<<< HEAD
-            <div className="job-content">
-              <div className="job-top-row">
-                <div className="job-price">{job.price}</div>
-              </div>
-
-              <ul className="job-meta-list">
-                {job.details.map((detail, idx) => (
-                  <li key={`${job.id}-${idx}`}>
-                    {detail.icon}
-                    <span>{detail.text}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="job-actions">
-                <button
-                  type="button"
-                  className="accept-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openChat(job);
-                  }}
-                >
-                  <CheckCircleOutlined /> Accept
-                </button>
-                <button
-                  type="button"
-                  className="decline-btn"
-                  aria-label="decline request"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <CloseOutlined />
-                </button>
-              </div>
-=======
             <div className="request-controls">
               <button
                 type="button"
@@ -552,31 +396,11 @@ const JobRequestsPage = () => {
               >
                 Decline
               </button>
->>>>>>> develop
             </div>
           </article>
         ))}
       </div>
 
-<<<<<<< HEAD
-      {selectedJob ? (
-        <div className="job-request-modal-backdrop" onClick={() => setSelectedJob(null)}>
-          <div
-            className="job-request-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${selectedJob.title} details`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="job-request-modal-head">
-              <button
-                type="button"
-                className="job-request-modal-close"
-                aria-label="Close details"
-                onClick={() => setSelectedJob(null)}
-              >
-                <CloseOutlined />
-=======
       {detailRequest && (
         <div className="request-detail-modal-backdrop" onClick={() => setDetailRequestId(null)}>
           <section className="request-detail-modal" onClick={(e) => e.stopPropagation()}>
@@ -587,7 +411,6 @@ const JobRequestsPage = () => {
               </div>
               <button type="button" onClick={() => setDetailRequestId(null)}>
                 X
->>>>>>> develop
               </button>
             </div>
 
@@ -596,35 +419,6 @@ const JobRequestsPage = () => {
                 <small>Customer</small>
                 <strong>{detailRequest.customer}</strong>
               </div>
-<<<<<<< HEAD
-
-              <div className="job-request-modal-info">
-                <div className="job-request-modal-price">{selectedJob.price}</div>
-                <ul className="job-meta-list">
-                  {selectedJob.details.map((detail, idx) => (
-                    <li key={`${selectedJob.id}-modal-${idx}`}>
-                      {detail.icon}
-                      <span>{detail.text}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <h4>More Details</h4>
-                <ul className="job-request-modal-extra-list">
-                  {selectedJob.extraDetails.map((item, idx) => (
-                    <li key={`${selectedJob.id}-extra-${idx}`}>{item}</li>
-                  ))}
-                </ul>
-
-                <div className="job-actions">
-                  <button type="button" className="accept-btn" onClick={() => openChat(selectedJob)}>
-                    <CheckCircleOutlined /> Accept
-                  </button>
-                  <button type="button" className="decline-btn" aria-label="decline request">
-                    <CloseOutlined />
-                  </button>
-                </div>
-=======
               <div className="request-detail-item">
                 <small>Status</small>
                 <strong>{detailRequest.status === 'accepted' ? 'Accepted' : 'Pending'}</strong>
@@ -636,7 +430,6 @@ const JobRequestsPage = () => {
               <div className="request-detail-item">
                 <small>Schedule</small>
                 <strong>{detailRequest.timeRange}</strong>
->>>>>>> develop
               </div>
             </div>
 
@@ -679,79 +472,7 @@ const JobRequestsPage = () => {
             <h4>Loading...</h4>
           </div>
         </div>
-<<<<<<< HEAD
-      ) : null}
-
-      {chatJob ? (
-        <div className="job-request-modal-backdrop chat-backdrop" onClick={() => setChatJob(null)}>
-          <div
-            className="job-chat-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={getCustomerName(chatJob)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="job-chat-head">
-              <div className="job-chat-customer">
-                <div className="job-chat-avatar">{getCustomerInitials(getCustomerName(chatJob))}</div>
-                <div>
-                  <h3>{getCustomerName(chatJob)}</h3>
-                  <p>{chatJob.title}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="job-request-modal-close"
-                aria-label="Close chat"
-                onClick={() => setChatJob(null)}
-              >
-                <CloseOutlined />
-              </button>
-            </div>
-
-            <div className="job-chat-body">
-              {(chatMessages[chatJob.id] || []).map((message) => (
-                <div
-                  key={message.id}
-                  className={`job-chat-bubble ${message.from === 'cleaner' ? 'mine' : 'theirs'}`}
-                >
-                  {message.image ? <img src={message.image} alt="Shared in chat" className="job-chat-image" /> : null}
-                  {message.text ? <p>{message.text}</p> : null}
-                  <span>{message.time}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="job-chat-compose">
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelected}
-                style={{ display: 'none' }}
-              />
-              <button type="button" className="chat-attach-btn" aria-label="Attach image" onClick={handlePickImage}>
-                <PictureOutlined />
-              </button>
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendMessage();
-                }}
-                placeholder="Type a message..."
-              />
-              <button type="button" className="accept-btn" onClick={handleSendMessage}>
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-=======
       )}
->>>>>>> develop
     </div>
   );
 };
