@@ -112,7 +112,7 @@ const BookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [serviceFilter, setServiceFilter] = useState('All');
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(10);
 
   const handleCancel = (row) => {
     if (row.status === 'Cancelled' || row.status === 'Completed') return;
@@ -164,6 +164,14 @@ const BookingsPage = () => {
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const visibleRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pageStart = filteredRows.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const pageEnd = Math.min(currentPage * pageSize, filteredRows.length);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   return (
     <section className="admin-bookings-page">
@@ -328,8 +336,22 @@ const BookingsPage = () => {
         </div>
 
         <footer className="bookings-pagination">
-          <span>Showing {visibleRows.length} of {filteredRows.length} results</span>
-          {/* <div className="pager-actions">
+          <span>Showing {pageStart}-{pageEnd} of {filteredRows.length} results</span>
+          <div className="pager-actions">
+            <label className="rows-label">
+              Rows per page
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+              >
+                {[10, 20, 50].map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
@@ -344,9 +366,8 @@ const BookingsPage = () => {
               disabled={currentPage === totalPages}
             >
               Next
-              <CheckOutlined />
             </button>
-          </div> */}
+          </div>
         </footer>
       </section>
     </section>

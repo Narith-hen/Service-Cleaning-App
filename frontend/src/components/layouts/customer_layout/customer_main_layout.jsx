@@ -12,6 +12,8 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
+  const isCustomerDashboard =
+    location.pathname === '/customer/dashboard' || location.pathname === '/customer/home';
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
@@ -85,7 +87,7 @@ const MainLayout = () => {
         flex: 1,
         background: darkMode ? '#0b1220' : 'white',
         minHeight: 'calc(100vh - 140px)',
-        paddingTop: 90
+        paddingTop: isCustomerDashboard ? 0 : 90
       }}>
         <Outlet context={{ darkMode }} />
       </main>

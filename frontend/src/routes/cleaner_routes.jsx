@@ -14,6 +14,7 @@ import CleanerReviews from '../features/cleaner/pages/review_page';
 import CleanerNotifications from '../features/cleaner/pages/notification_page';
 import SettingsPage from '../features/cleaner/pages/settings_page';
 import HelpPage from '../features/cleaner/pages/help_page';
+import JobExecutionPage from '../features/cleaner/pages/job_execution_page';
 
 export const cleanerRoutes = {
   path: '/cleaner',
@@ -62,6 +63,10 @@ export const cleanerRoutes = {
     {
       path: 'my-jobs',
       element: <MyJobsPage />
+    },
+    {
+      path: 'job-execution',
+      element: <JobExecutionPage />
     },
     {
       path: 'schedule/weekly',

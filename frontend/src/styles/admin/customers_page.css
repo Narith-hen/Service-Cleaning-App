@@ -185,6 +185,9 @@
 
 .table-scroll {
   overflow-x: auto;
+  overflow-y: auto;
+  height: 60vh;
+  max-height: 520px;
 }
 
 .customers-table {
@@ -222,6 +225,10 @@
   font-size: 12px;
   color: var(--customers-muted);
   font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--customers-soft-bg);
 }
 
 .customer-cell {
@@ -429,6 +436,8 @@
 .pager {
   display: inline-flex;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .pager button {
@@ -451,6 +460,26 @@
 .pager button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.table-footer .rows-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--customers-muted);
+}
+
+.table-footer .page-size-select {
+  min-width: 72px;
+}
+
+.table-footer .page-size-select .ant-select-selector {
+  height: 32px !important;
+  border-radius: 6px !important;
+  border-color: var(--customers-border) !important;
+  background: var(--customers-soft-bg) !important;
+  color: var(--customers-text) !important;
+  display: flex;
+  align-items: center;
 }
 
 .customer-form-grid {

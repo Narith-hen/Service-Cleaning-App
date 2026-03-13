@@ -5,7 +5,6 @@ import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
 import molikaImage from '../../../assets/molika.png';
 
-
 export default function PublicHomePage() {
   const { darkMode = false } = useOutletContext() || {};
   const testimonials = [
@@ -76,9 +75,9 @@ export default function PublicHomePage() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 to="/auth/register"
-                className="rounded-xl bg-[#32c753] px-4 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]"
+                className="rounded-xl bg-[#32c753] px-4 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]" style={{borderRadius: '24px'}}
               >
-                Book Your Clean Now
+                Booking Now!
               </Link>
             </div>
 
@@ -228,7 +227,7 @@ export default function PublicHomePage() {
       to="/auth/register"
       className="relative inline-block rounded-3xl bg-[#008000] px-10 py-4 text-base md:text-lg font-extrabold text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:brightness-110 hover:shadow-2xl"
     >
-      Book Now - 20% Off First Clean
+      Book Now
     </Link>
 
     {/* Secondary Button */}
