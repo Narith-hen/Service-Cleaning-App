@@ -1,29 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
+import { MessageOutlined, CalendarOutlined, EnvironmentOutlined, FileTextOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
-import '../../../styles/customer/chat.scss';
+import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
-// Demo data - in production, this would come from API
-const DEMO_BOOKINGS = [
+const fallbackBookings = [
   {
-    id: 'booking-1',
-    jobId: '#SOMA-48291',
-    title: 'Deep House Cleaning',
-    cleanerName: 'Maria Garcia',
-    date: 'March 24, 2026',
-    time: '09:00 AM - 12:00 PM',
-    status: 'confirmed'
-  },
-  {
-    id: 'booking-2',
-    jobId: '#SOMA-48285',
-    title: 'Office Cleaning',
-    cleanerName: 'John Smith',
-    date: 'March 28, 2026',
-    time: '02:00 PM - 05:00 PM',
-    status: 'pending'
+    booking_id: 'demo-1',
+    booking_date: '2026-03-14T09:00:00',
+    booking_time: '09:00 AM',
+    address: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
+    service: { name: 'Deep House Cleaning' },
+    cleaner: { username: 'Narith Hen' }
   }
 ];
 
@@ -32,11 +21,68 @@ const CustomerChatPage = () => {
   const navigate = useNavigate();
   const bookingId = searchParams.get('booking');
   
-  const [selectedBooking, setSelectedBooking] = useState(bookingId || DEMO_BOOKINGS[0]?.id || null);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
+        const bookingsData = response?.data?.data || [];
+        let normalizedBookings = bookingsData.length > 0 ? bookingsData : [...fallbackBookings];
+
+        // If a bookingId is passed via URL and doesn't exist, create a placeholder.
+        // This simulates a new booking being matched and ready for chat.
+        if (bookingId && !normalizedBookings.some(b => b.booking_id === bookingId)) {
+          const newBooking = {
+            booking_id: bookingId,
+            booking_date: new Date().toISOString(),
+            booking_time: '10:00 AM', // Placeholder time
+            address: '123 Harmony Lane, Bright City', // Placeholder address
+            service: { name: 'Custom Cleaning' }, // Placeholder service
+            cleaner: { username: 'Narith Hen' } // Assign the requested cleaner
+          };
+          normalizedBookings.unshift(newBooking);
+        }
+        setBookings(normalizedBookings);
+      } catch (error) {
+        console.error('Failed to fetch bookings:', error);
+        let currentBookings = [...fallbackBookings];
+        if (bookingId && !currentBookings.some(b => b.booking_id === bookingId)) {
+          const newBooking = {
+            booking_id: bookingId,
+            booking_date: new Date().toISOString(),
+            booking_time: '10:00 AM',
+            address: '123 Harmony Lane, Bright City',
+            service: { name: 'Custom Cleaning' },
+            cleaner: { username: 'Narith Hen' }
+          };
+          currentBookings.unshift(newBooking);
+        }
+        setBookings(currentBookings);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, [bookingId]);
 
   const activeBooking = useMemo(() => {
-    return DEMO_BOOKINGS.find(b => b.id === selectedBooking) || DEMO_BOOKINGS[0];
-  }, [selectedBooking]);
+    if (!bookings.length) return null;
+    return bookings.find(b => b.booking_id === bookingId) || bookings[0];
+  }, [bookings, bookingId]);
+
+  if (loading) {
+    return (
+      <div className="customer-chat-page">
+        <div className="customer-chat-empty">
+          <p>Loading bookings...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!activeBooking) {
     return (
@@ -57,66 +103,70 @@ const CustomerChatPage = () => {
     );
   }
 
+  // Get cleaner name from the booking
+  const cleanerName = activeBooking.cleaner?.username || 'Cleaner';
+  const serviceName = activeBooking.service?.name || 'Cleaning Service';
+  const jobId = `#SOMA-${activeBooking.booking_id}`;
+  const bookingDate = new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const bookingTime = activeBooking.booking_time || '09:00 AM';
+  const bookingLocation =
+    activeBooking.address
+    || activeBooking.location
+    || activeBooking.service_location
+    || activeBooking.service?.location
+    || 'Location not provided';
+
   return (
-    <div className="customer-chat-page">
-      <div className="customer-chat-container">
-        {/* Booking List Sidebar */}
-        <aside className="customer-chat-sidebar">
-          <div className="chat-sidebar-header">
-            <button 
-              type="button" 
-              className="back-btn-icon"
-              onClick={() => navigate('/customer/dashboard')}
-              aria-label="Back to dashboard"
-            >
-              <ArrowLeftOutlined />
-            </button>
-            <h3>My Chats</h3>
+    <div className="cleaner-my-jobs-v2">
+      <div className="my-jobs-message-breadcrumb">
+        <button type="button" onClick={() => navigate('/customer/bookings')}>My Bookings</button>
+        <span>&gt;</span>
+        <strong>Chat</strong>
+      </div>
+
+      <div className="my-jobs-message-view">
+        <CustomerMessagePanel
+          threadId={String(activeBooking.booking_id)}
+          cleanerName={cleanerName}
+          subtitle={`${serviceName} Job - ${jobId}`}
+        />
+
+        <aside className="my-jobs-details-panel">
+          <h5>JOB DETAILS</h5>
+
+          <div className="my-jobs-details-card">
+            <div className="my-jobs-detail-row">
+              <span className="my-jobs-detail-icon"><CalendarOutlined /></span>
+              <div>
+                <small>Date &amp; Time</small>
+                <strong>{bookingDate}, {bookingTime}</strong>
+              </div>
+            </div>
+
+            <div className="my-jobs-detail-row">
+              <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
+              <div>
+                <small>Location</small>
+                <strong>{bookingLocation}</strong>
+              </div>
+            </div>
           </div>
 
-          <div className="chat-booking-list">
-            {DEMO_BOOKINGS.map((booking) => (
-              <button
-                key={booking.id}
-                type="button"
-                className={`chat-booking-item ${selectedBooking === booking.id ? 'active' : ''}`}
-                onClick={() => setSelectedBooking(booking.id)}
-              >
-                <div className="booking-avatar">
-                  {booking.cleanerName.charAt(0)}
-                </div>
-                <div className="booking-info">
-                  <strong>{booking.cleanerName}</strong>
-                  <small>{booking.title}</small>
-                  <span className="booking-date">{booking.date}</span>
-                </div>
-                {booking.status === 'confirmed' && (
-                  <span className="booking-status confirmed">✓</span>
-                )}
-              </button>
-            ))}
+          <div className="my-jobs-checklist-card">
+            <h6>Checklist Preview</h6>
+            <ul>
+              <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
+              <li><CheckCircleOutlined /> Bathroom Sanitization</li>
+              <li><ClockCircleOutlined /> Window Cleaning (Pending)</li>
+            </ul>
           </div>
+
+          <button type="button" className="my-jobs-contract-btn">
+            <FileTextOutlined /> View Full Job Contract
+          </button>
+
+          <div className="my-jobs-map-preview" />
         </aside>
-
-        {/* Chat Area */}
-        <div className="customer-chat-main">
-          <div className="customer-chat-header">
-            <div className="chat-header-info">
-              <h2>{activeBooking.cleanerName}</h2>
-              <p>{activeBooking.title} - {activeBooking.jobId}</p>
-            </div>
-            <div className="chat-header-meta">
-              <span className="chat-date">{activeBooking.date}</span>
-              <span className="chat-time">{activeBooking.time}</span>
-            </div>
-          </div>
-
-          <CustomerMessagePanel
-            threadId={activeBooking.id}
-            cleanerName={activeBooking.cleanerName}
-            subtitle={`${activeBooking.title} - ${activeBooking.jobId}`}
-          />
-        </div>
       </div>
     </div>
   );

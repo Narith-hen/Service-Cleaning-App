@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
@@ -6,6 +7,9 @@ import homeServiceImage from '../../../assets/home.png';
 import officeServiceImage from '../../../assets/office.png';
 import windowServiceImage from '../../../assets/window.png';
 import moveServiceImage from '../../../assets/move.png';
+import shopServiceImage from '../../../assets/shop.png';
+import proServiceImage from '../../../assets/pro.png';
+import api from '../../../services/api';
 import '../../../styles/customer/home.scss';
 
 const howItWorksSteps = [
@@ -86,6 +90,32 @@ const featuredCleaners = [
   }
 ];
 
+const fallbackImages = [homeServiceImage, officeServiceImage, windowServiceImage, moveServiceImage, shopServiceImage, proServiceImage];
+
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${apiHost}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
+
+const mapServiceFromApi = (item, index) => ({
+  id: String(item?.service_id || item?.id || `${item?.name || 'service'}-${index}`),
+  title: String(item?.name || 'Untitled Service'),
+  description: String(item?.description || 'Professional cleaning service.'),
+  image: toAbsoluteImageUrl(item?.images?.[0]?.image_url || item?.image || '') || fallbackImages[index % fallbackImages.length],
+  status: String(item?.status || 'active').toLowerCase(),
+});
+
+const truncateWords = (text, wordLimit = 25) => {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordLimit) return text;
+  return words.slice(0, wordLimit).join(' ') + '...';
+};
+
 const whyChoosePoints = [
   'Trusted and verified cleaners',
   'Affordable pricing',
@@ -97,6 +127,30 @@ const whyChoosePoints = [
 
 const CustomerHomePage = () => {
   const navigate = useNavigate();
+  const [services, setServices] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await api.get('/services', { params: { page: 1, limit: 6 } });
+        const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const mappedServices = rows.map(mapServiceFromApi);
+        setServices(mappedServices);
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+        setServices([]);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  const handleBookService = (service) => {
+    navigate('/customer/bookings', { state: { service: { title: service.title, description: service.description, image: service.image } } });
+  };
 
   return (
     <div className="customer-home-landing">
@@ -154,19 +208,25 @@ const CustomerHomePage = () => {
         </header>
 
         <div className="service-highlight-grid">
-          {serviceHighlights.map((service) => (
-            <article key={service.id} className="service-highlight-item">
-              <img src={service.image} alt={service.title} />
-              <div className="service-highlight-body">
-                <span className="service-index">{service.id.slice(1)}</span>
-                <h3>{service.title}</h3>
-                <p>{service.description}</p>
-                <button type="button" className="service-card-btn" onClick={() => navigate('/customer/services')}>
-                  {service.cta}
-                </button>
-              </div>
-            </article>
-          ))}
+          {loadingServices ? (
+            <div className="services-loading">Loading services...</div>
+          ) : services.length > 0 ? (
+            services.slice(0, 4).map((service, index) => (
+              <article key={service.id} className="service-highlight-item">
+                <img src={service.image} alt={service.title} />
+                <div className="service-highlight-body">
+                  <span className="service-index">{index + 1}</span>
+                  <h3>{service.title}</h3>
+                  <p>{truncateWords(service.description, 25)}</p>
+                  <button type="button" className="service-card-btn" onClick={() => handleBookService(service)}>
+                    Book Now
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="services-empty">No services available</div>
+          )}
         </div>
 
         <div className="services-actions">

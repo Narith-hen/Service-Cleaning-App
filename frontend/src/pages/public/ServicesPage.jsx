@@ -65,6 +65,13 @@ const toAbsoluteImageUrl = (imageUrl) => {
   return `${apiHost}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
 };
 
+const truncateWords = (text, wordLimit = 25) => {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordLimit) return text;
+  return words.slice(0, wordLimit).join(' ') + '...';
+};
+
 const mapServiceFromApi = (item, index) => ({
   id: String(item?.service_id || item?.id || `${item?.name || "service"}-${index}`),
   title: String(item?.name || "Untitled Service"),
@@ -162,35 +169,59 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
               return (
                 <div
                   key={service.id}
-                  className={`group overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#32c753]/20 ${
+                  className={`group relative overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl ${
                     darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
                   }`}
                 >
-                  <div className="relative overflow-hidden">
+                  {/* Image Container */}
+                  <div className="relative h-56 overflow-hidden">
                     <img
                       src={service.image}
                       alt={service.title}
-                      className="h-52 w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                    <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold text-white ${statusBadgeClass}`}>
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-80" />
+                    
+                    {/* Status Badge */}
+                    <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold text-white ${statusBadgeClass} shadow-lg`}>
                       {statusText}
                     </span>
+                    
+                    {/* Service Icon Overlay */}
+                    <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                      </svg>
+                    </div>
                   </div>
 
+                  {/* Content */}
                   <div className="p-8">
                     <h3 className={`mb-3 text-xl font-extrabold transition-colors duration-300 group-hover:text-[#32c753] ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
                       {service.title}
                     </h3>
-                    <p className={darkMode ? "text-slate-300" : "text-gray-500"}>{service.description}</p>
-                    <Link
-                      to={bookServicePath}
-                      className={`mt-7 inline-flex rounded-lg border border-[#32c753] px-4 py-2 text-sm font-bold transition-all duration-300 hover:bg-[#32c753] hover:text-white ${
-                        darkMode ? "text-[#7ce892]" : "text-[#32c753]"
-                      }`}
-                    >
-                      Book Service
-                    </Link>
+                    <div className={`mb-6 h-1 w-12 rounded-full bg-[#32c753] transition-all duration-300 group-hover:w-20`} />
+                    <p className={`mb-6 line-clamp-3 leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
+                      {truncateWords(service.description, 25)}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <Link
+                        to={bookServicePath}
+                        state={{ service: { title: service.title, description: service.description, image: service.image } }}
+                        className={`inline-flex items-center gap-2 rounded-lg border border-[#32c753] px-5 py-2.5 text-sm font-bold transition-all duration-300 hover:bg-[#32c753] hover:text-white ${
+                          darkMode ? "text-[#7ce892]" : "text-[#32c753]"
+                        }`}
+                      >
+                        <span>Book Now</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </Link>
+                      <span className={`text-xs font-medium ${darkMode ? "text-slate-500" : "text-gray-400"}`}>
+                        View Details
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
