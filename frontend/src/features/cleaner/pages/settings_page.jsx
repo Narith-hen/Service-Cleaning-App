@@ -106,6 +106,10 @@ const SettingsPage = () => {
     setIsSavingProfile(false);
   };
 
+  const handleSaveSchedule = () => {
+    message.success('Schedule updated successfully!');
+  };
+
   return (
     <div className="cleaner-settings-page">
       <div className="settings-container">

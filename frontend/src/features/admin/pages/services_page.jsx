@@ -39,6 +39,13 @@ const getUploadPreviewFileList = (imageUrl) => {
   ];
 };
 
+const truncateWords = (text, wordLimit = 15) => {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordLimit) return text;
+  return words.slice(0, wordLimit).join(' ') + '...';
+};
+
 const sampleInventory = [
   { id: 1, name: 'Eco-Glass Sparkling Spray', sku: 'CP-INV-001', category: 'LIQUID SUPPLIES', stock: 142, image: shopImage },
   { id: 2, name: 'Professional Microfiber Kit', sku: 'CP-INV-042', category: 'EQUIPMENT', stock: 8, image: officeImage },
@@ -479,7 +486,7 @@ const ServicesPage = () => {
                     </div>
                   </td>
                   <td>
-                    <span className="service-list-description">{service.description}</span>
+                    <span className="service-list-description">{truncateWords(service.description, 15)}</span>
                   </td>
                   <td>
                     <span className={`service-status ${(service.status || 'Active').toLowerCase()}`}>
@@ -569,7 +576,7 @@ const ServicesPage = () => {
             name="description"
             rules={[{ required: true, message: 'Please enter description' }, { min: 20, message: 'Description should be at least 20 characters' }]}
           >
-            <Input.TextArea rows={4} maxLength={180} showCount placeholder="Describe what this service includes..." />
+            <Input.TextArea rows={8} maxLength={12000} showCount placeholder="Describe what this service includes..." />
           </Form.Item>
 
           <Form.Item label="Upload Image">
@@ -590,18 +597,34 @@ const ServicesPage = () => {
         </Form>
       </Modal>
 
-      <Modal title="Service Details" open={isViewServiceOpen} onCancel={closeViewService} footer={null} destroyOnClose>
+      <Modal title="Service Details" open={isViewServiceOpen} onCancel={closeViewService} footer={null} destroyOnClose width={600}>
         {isLoadingServiceDetail ? (
           <div className="services-empty">Loading service details...</div>
         ) : selectedService && (
-          <div className="service-view-wrap">
-            <img src={selectedService.image} alt={selectedService.title} className="service-view-image" />
-            <div className="service-view-info">
-              <h4 className="service-view-title">{selectedService.title}</h4>
-              <span className={`service-status ${(selectedService.status || 'Active').toLowerCase()}`}>
-                {selectedService.status || 'Active'}
-              </span>
-              <p className="service-view-description">{selectedService.description}</p>
+          <div className="service-view-card">
+            <div className="service-view-hero">
+              <img src={selectedService.image} alt={selectedService.title} className="service-view-hero-image" />
+              <div className="service-view-hero-overlay">
+                <span className={`service-view-status-badge ${(selectedService.status || 'Active').toLowerCase()}`}>
+                  {selectedService.status || 'Active'}
+                </span>
+              </div>
+            </div>
+            <div className="service-view-content">
+              <h3 className="service-view-card-title">{selectedService.title}</h3>
+              <div className="service-view-meta">
+                <div className="service-view-meta-item">
+                  <i className="bi bi-hash"></i>
+                  <span>Service ID: {selectedService.id}</span>
+                </div>
+              </div>
+              <div className="service-view-section">
+                <h4 className="service-view-section-title">
+                  <i className="bi bi-text-paragraph"></i>
+                  Description
+                </h4>
+                <p className="service-view-card-description">{selectedService.description}</p>
+              </div>
             </div>
           </div>
         )}
