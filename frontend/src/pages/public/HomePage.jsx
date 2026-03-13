@@ -116,7 +116,6 @@ export default function HomePage() {
               >
                 Book Your Clean Now
               </Link>
-<<<<<<< HEAD
               <Link
                 to="/about"
                 className="inline-flex rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
@@ -124,9 +123,6 @@ export default function HomePage() {
                 See How It Works
               </Link>
             </motion.div>
-=======
-            </div>
->>>>>>> develop
 
             <motion.div variants={fadeUpVariant} className="mt-7 flex items-center gap-3 text-sm text-slate-500">
               <div className="flex -space-x-2">
@@ -188,7 +184,6 @@ export default function HomePage() {
             </h2>
           </motion.div>
 
-<<<<<<< HEAD
           <motion.div 
             className="relative mt-14 grid gap-10 md:grid-cols-3"
             variants={staggerContainer}
@@ -200,13 +195,6 @@ export default function HomePage() {
 
             {processSteps.map((step) => (
               <motion.article key={step.number} variants={fadeUpVariant} className="relative text-center">
-=======
-          <div className="relative mt-14 grid gap-12 md:grid-cols-3 md:gap-20 lg:gap-24">
-            <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
-
-            {processSteps.map((step) => (
-              <article key={step.number} className="relative px-3 text-center">
->>>>>>> develop
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
                   {step.number}
                 </div>
