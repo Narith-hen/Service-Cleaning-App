@@ -1,115 +1,98 @@
-import { useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Building2, CloudUpload, Home, Truck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Image as ImageIcon,
+  MapPin,
+  Minus,
+  Plus,
+  Search,
+  UploadCloud
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import summaryImage from '../../../assets/image.png';
 import '../../../styles/customer/booking.scss';
 
-const stepItems = ['Personal Data', 'Space Category', 'Photos & Details'];
-
-const categoryItems = [
-  {
-    key: 'residential',
-    title: 'Residential',
-    desc: 'Deep cleaning for apartments, penthouses, and homes.',
-    image:
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-    icon: Home
-  },
-  {
-    key: 'office',
-    title: 'Office',
-    desc: 'Sanitizing corporate suites and creative studio environments.',
-    image:
-      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-    icon: Building2
-  },
-  {
-    key: 'move-out',
-    title: 'Move-Out',
-    desc: 'Comprehensive turnover cleaning for new residents.',
-    image:
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-    icon: Truck
-  }
-];
+const hourOptions = ['08 AM', '09 AM', '10 AM', '11 AM', '12 PM', '01 PM', '02 PM', '03 PM'];
+const minuteOptions = ['00', '15', '30', '45'];
+const durationOptions = ['2 Hours', '2.5 Hours', '3 Hours', '3.5 Hours', '4 Hours'];
 
 const BookingPage = () => {
   const navigate = useNavigate();
+  const locationHook = useLocation();
   const inputRef = useRef(null);
-  // start with no category chosen so progress only increases when the user makes a selection
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [address, setAddress] = useState('');
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState([]);
+  const [preferredDate, setPreferredDate] = useState('');
+  const [startHour, setStartHour] = useState(hourOptions[2]);
+  const [startMinute, setStartMinute] = useState(minuteOptions[0]);
+  const [duration, setDuration] = useState(durationOptions[3]);
 
   const onFileChange = (fileList) => {
     const nextFiles = Array.from(fileList || []).slice(0, 10);
     setFiles(nextFiles);
   };
 
-  // compute how far the user has progressed in filling out this step
-  const computeProgress = () => {
-    let completed = 0;
-    if (selectedCategory) completed += 1;
-    if (files.length > 0) completed += 1;
-    if (details.trim() !== '') completed += 1;
-    return Math.round((completed / 3) * 100);
+  const handleDropzoneKey = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      inputRef.current?.click();
+    }
   };
 
-  const progressPercent = computeProgress();
+  const stateService = locationHook.state?.service || locationHook.state || null;
+  const storedService = (() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return JSON.parse(localStorage.getItem('selectedService') || 'null');
+    } catch (error) {
+      return null;
+    }
+  })();
+  const selectedService = stateService || storedService;
+  const serviceTitle = selectedService?.title || 'School Cleaning';
+  const serviceDescription =
+    selectedService?.description ||
+    'A comprehensive scrub for your entire home, focusing on often-neglected areas. Ideal for refreshing your space or preparing for special occasions.';
+  const serviceImage = selectedService?.image || summaryImage;
+
+  useEffect(() => {
+    if (!stateService) return;
+    if (!(stateService?.title || stateService?.description || stateService?.image)) return;
+    try {
+      localStorage.setItem('selectedService', JSON.stringify(stateService));
+    } catch (error) {
+      // Ignore storage failures (private mode, quotas).
+    }
+  }, [stateService]);
 
   return (
     <div className="booking-page-v2">
-      <div className="booking-shell">
-        <header className="booking-header">
-          <h1>Request a Cleaning</h1>
-          <p>Professional service curated for your premium living and work spaces.</p>
+      <div className="booking-request-card">
+        <header className="booking-request-header">
+          <p>Service Booking</p>
         </header>
 
-        <section className="booking-progress-card" aria-label="booking-progress">
-          <div className="progress-topline">
-            <span className="active">Step 2 of 3</span>
-            <span>{progressPercent}% Complete</span>
+        <section className="booking-service-summary">
+          <div className="summary-thumb">
+            <img src={serviceImage} alt={serviceTitle} loading="lazy" />
           </div>
-          <h2>Space Category</h2>
-          <div className="progress-track" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
-            <span style={{ width: `${progressPercent}%` }} />
-          </div>
-          <div className="progress-labels">
-            {stepItems.map((item) => (
-              <span key={item} className={item === 'Space Category' ? 'active' : ''}>
-                {item}
-              </span>
-            ))}
+          <div className="summary-info">
+            <h2>{serviceTitle}</h2>
+            <p>{serviceDescription}</p>
           </div>
         </section>
 
-        <section className="category-section">
-          <h3>Select Space Category</h3>
-          <div className="category-grid">
-            {categoryItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = selectedCategory === item.key;
-
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={`category-card ${isActive ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(item.key)}
-                >
-                  <div className="image-wrap">
-                    <img src={item.image} alt={item.title} loading="lazy" />
-                    <div className="category-icon" aria-hidden>
-                      <Icon size={16} />
-                    </div>
-                  </div>
-                  <div className="card-body">
-                    <h4>{item.title}</h4>
-                    <p>{item.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              1
+            </span>
+            <h3>Search Cleaning Location</h3>
           </div>
+<<<<<<< HEAD
 
           <div className="category-select">
             <label htmlFor="spaceCategory">Select Space Category</label>
@@ -141,44 +124,155 @@ const BookingPage = () => {
               <p className="upload-subtitle">Up to 10 images, max 5MB each</p>
               <button type="button" className="upload-btn">
                 Browse Files
-              </button>
-              <input
-                ref={inputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => onFileChange(e.target.files)}
-              />
-            </div>
-            {files.length > 0 && (
-              <p className="upload-count">
-                {files.length} file{files.length > 1 ? 's' : ''} selected
-              </p>
-            )}
+=======
+          <div className="input-shell">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="123 Harmony Lane, Bright City"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
           </div>
+          <div className="map-shell" aria-label="map-preview">
+            <div className="map-actions" aria-hidden>
+              <button type="button">
+                <Plus size={14} />
+              </button>
+              <button type="button">
+                <Minus size={14} />
+>>>>>>> develop
+              </button>
+            </div>
+            <div className="map-badge">
+              <MapPin size={12} />
+              Address Verified
+            </div>
+          </div>
+        </section>
 
-          <div>
-            <h3>Additional Instructions</h3>
-            <div className="instructions-card">
-              <textarea
-                placeholder="Tell us about special requirements, fragile items, or specific areas of focus..."
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-              />
-              <div className="tag-row" aria-hidden>
-                <span># Eco-friendly</span>
-                <span># No pet hair</span>
-              </div>
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              2
+            </span>
+            <h3>Share Photos of Your Space</h3>
+          </div>
+          <p className="section-subtitle">
+            Help your cleaner understand specific needs by uploading photos of areas that require extra attention.
+          </p>
+          <div
+            className="upload-dropzone"
+            onClick={() => inputRef.current?.click()}
+            onKeyDown={handleDropzoneKey}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="upload-icon" aria-hidden>
+              <UploadCloud size={18} />
+            </div>
+            <h4>Upload cleaning</h4>
+            <p>Drag and drop images here, or click to browse files</p>
+            <div className="upload-previews" aria-hidden>
+              <span>
+                <ImageIcon size={14} />
+              </span>
+              <span>
+                <ImageIcon size={14} />
+              </span>
+              <span>
+                <ImageIcon size={14} />
+              </span>
+            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => onFileChange(e.target.files)}
+            />
+          </div>
+          {files.length > 0 && (
+            <p className="upload-count">
+              {files.length} file{files.length > 1 ? 's' : ''} selected
+            </p>
+          )}
+        </section>
+
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              3
+            </span>
+            <h3>Your Detailed Cleaning Brief</h3>
+          </div>
+          <label className="field-label" htmlFor="cleaning-notes">
+            Specific Instructions &amp; Notes
+          </label>
+          <textarea
+            id="cleaning-notes"
+            placeholder="Describe what you need..."
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+          />
+        </section>
+
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              4
+            </span>
+            <h3>Select Date and Time</h3>
+          </div>
+          <div className="form-field">
+            <label htmlFor="preferred-date">Preferred Date</label>
+            <input
+              id="preferred-date"
+              type="date"
+              value={preferredDate}
+              onChange={(e) => setPreferredDate(e.target.value)}
+            />
+          </div>
+          <div className="time-grid">
+            <div className="form-field">
+              <label htmlFor="start-hour">Start Time (Hour)</label>
+              <select id="start-hour" value={startHour} onChange={(e) => setStartHour(e.target.value)}>
+                {hourOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="start-minute">Start Time (Minute)</label>
+              <select id="start-minute" value={startMinute} onChange={(e) => setStartMinute(e.target.value)}>
+                {minuteOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="cleaning-duration">Cleaning Duration</label>
+              <select id="cleaning-duration" value={duration} onChange={(e) => setDuration(e.target.value)}>
+                {durationOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </section>
 
         <footer className="booking-actions">
           <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')}>
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={16} /> Back to Service
           </button>
           <button type="button" className="next-btn" onClick={() => navigate('/customer/bookings/matching')}>
-            Next: Review Details <ArrowRight size={16} />
+            Confirm Booking <ArrowRight size={16} />
           </button>
         </footer>
       </div>
