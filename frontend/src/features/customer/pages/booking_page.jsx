@@ -1,225 +1,363 @@
-import React, { useState } from 'react';
-import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined, UserOutlined } from '@ant-design/icons';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Image as ImageIcon,
+  MapPin,
+  Minus,
+  Plus,
+  Search,
+  UploadCloud,
+  X
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import summaryImage from '../../../assets/image.png';
 import '../../../styles/customer/booking.scss';
 
+const hourOptions = ['08 AM', '09 AM', '10 AM', '11 AM', '12 PM', '01 PM', '02 PM', '03 PM'];
+const minuteOptions = ['00', '15', '30', '45'];
+const durationOptions = ['2 Hours', '2.5 Hours', '3 Hours', '3.5 Hours', '4 Hours'];
+
 const BookingPage = () => {
-  const [step, setStep] = useState(1);
-  const [bookingData, setBookingData] = useState({
-    service: null,
-    date: null,
-    time: null,
-    address: '',
-    notes: ''
-  });
+  const navigate = useNavigate();
+  const locationHook = useLocation();
+  const inputRef = useRef(null);
+  const [address, setAddress] = useState('');
+  const [details, setDetails] = useState('');
+  const [files, setFiles] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [preferredDate, setPreferredDate] = useState('');
+  const [startHour, setStartHour] = useState(hourOptions[2]);
+  const [startMinute, setStartMinute] = useState(minuteOptions[0]);
+  const [duration, setDuration] = useState(durationOptions[3]);
+  const [isBooking, setIsBooking] = useState(false);
 
-  // Mock service data - replace with actual data from API
-  const service = {
-    id: 1,
-    name: 'Regular Cleaning',
-    price: 45,
-    duration: '2 hours',
-    description: 'Perfect for weekly or bi-weekly maintenance cleaning'
+  const onFileChange = (fileList) => {
+    const nextFiles = Array.from(fileList || []).slice(0, 10);
+    setFiles(nextFiles);
+    
+    // Create preview URLs for the images
+    const newPreviews = nextFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews(newPreviews);
+    
+    // Initialize all images as selected by default
+    setSelectedImages(nextFiles.map((_, index) => index));
   };
 
-  const availableDates = [
-    '2024-10-25',
-    '2024-10-26',
-    '2024-10-27',
-    '2024-10-28',
-    '2024-10-29'
-  ];
-
-  const availableTimes = [
-    '09:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '01:00 PM',
-    '02:00 PM',
-    '03:00 PM',
-    '04:00 PM'
-  ];
-
-  const handleNext = () => {
-    setStep(step + 1);
+  const handleDropzoneKey = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      inputRef.current?.click();
+    }
   };
 
-  const handleBack = () => {
-    setStep(step - 1);
+  const handleImageSelect = (index) => {
+    setSelectedImages((prev) => {
+      if (prev.includes(index)) {
+        return prev.filter((i) => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
   };
 
-  const handleBooking = () => {
-    // Submit booking
-    console.log('Booking submitted:', bookingData);
-    // Show success message and redirect
+  const handleRemoveImage = (index) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    const newSelected = selectedImages
+      .filter((i) => i !== index)
+      .map((i) => (i > index ? i - 1 : i));
+    
+    setFiles(newFiles);
+    setImagePreviews(newPreviews);
+    setSelectedImages(newSelected);
+  };
+
+  const stateService = locationHook.state?.service || locationHook.state || null;
+  const storedService = (() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return JSON.parse(localStorage.getItem('selectedService') || 'null');
+    } catch (error) {
+      return null;
+    }
+  })();
+  const selectedService = stateService || storedService;
+  const serviceTitle = selectedService?.title || 'School Cleaning';
+  const serviceDescription =
+    selectedService?.description ||
+    'A comprehensive scrub for your entire home, focusing on often-neglected areas. Ideal for refreshing your space or preparing for special occasions.';
+  const serviceImage = selectedService?.image || summaryImage;
+
+  useEffect(() => {
+    if (!stateService) return;
+    if (!(stateService?.title || stateService?.description || stateService?.image)) return;
+    try {
+      localStorage.setItem('selectedService', JSON.stringify(stateService));
+    } catch (error) {
+      // Ignore storage failures (private mode, quotas).
+    }
+  }, [stateService]);
+
+  const handleConfirmBooking = async () => {
+    setIsBooking(true);
+    // Simulate API call to create booking
+    try {
+      // In a real app, you'd call your backend here:
+      // const response = await api.post('/bookings', { ... });
+      // const bookingId = response.data.booking_id;
+
+      // For demo purposes, simulate a delay and use a mock ID
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const mockBookingId = `demo-${Date.now()}`;
+
+      navigate('/customer/bookings/matching', {
+        state: { bookingId: mockBookingId, serviceTitle, startTime: `${startHour} ${startMinute}` }
+      });
+    } catch (error) {
+      console.error('Booking failed', error);
+      setIsBooking(false);
+    }
   };
 
   return (
-    <div className="booking-page">
-      <div className="booking-container">
-        <h1>Book Your Service</h1>
-        
-        {/* Progress Steps */}
-        <div className="booking-steps">
-          <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
-            <span className="step-number">1</span>
-            <span className="step-label">Select Service</span>
-          </div>
-          <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
-            <span className="step-number">2</span>
-            <span className="step-label">Choose Date & Time</span>
-          </div>
-          <div className={`step ${step >= 3 ? 'active' : ''}`}>
-            <span className="step-number">3</span>
-            <span className="step-label">Confirm Details</span>
-          </div>
-        </div>
+    <div className="booking-page-v2">
+      <div className="booking-request-card">
+        <header className="booking-request-header">
+          <p>Service Booking</p>
+        </header>
 
-        {/* Step 1: Service Selection */}
-        {step === 1 && (
-          <div className="step-content">
-            <h2>Selected Service</h2>
-            <div className="service-card">
-              <h3>{service.name}</h3>
-              <p>{service.description}</p>
-              <div className="service-meta">
-                <span className="price">${service.price}</span>
-                <span className="duration">
-                  <ClockCircleOutlined /> {service.duration}
-                </span>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Additional Notes (Optional)</label>
-              <textarea
-                value={bookingData.notes}
-                onChange={(e) => setBookingData({...bookingData, notes: e.target.value})}
-                placeholder="Any special instructions for the cleaner?"
-                rows="4"
-              />
-            </div>
-
-            <div className="step-actions">
-              <button className="btn-primary" onClick={handleNext}>
-                Continue to Date & Time
-              </button>
-            </div>
+        <section className="booking-service-summary">
+          <div className="summary-thumb">
+            <img src={serviceImage} alt={serviceTitle} loading="lazy" />
           </div>
-        )}
-
-        {/* Step 2: Date & Time Selection */}
-        {step === 2 && (
-          <div className="step-content">
-            <h2>Select Date & Time</h2>
-            
-            <div className="date-section">
-              <h3><CalendarOutlined /> Available Dates</h3>
-              <div className="date-grid">
-                {availableDates.map(date => (
-                  <button
-                    key={date}
-                    className={`date-btn ${bookingData.date === date ? 'selected' : ''}`}
-                    onClick={() => setBookingData({...bookingData, date})}
+          <div className="summary-info">
+            <h2>{serviceTitle}</h2>
+            <p>{serviceDescription}</p>
+          </div>
+          {imagePreviews.length > 0 && (
+            <div className="uploaded-images-display">
+              <h4>Your Uploaded Photos ({selectedImages.length})</h4>
+              <div className="uploaded-images-grid">
+                {imagePreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`uploaded-image-thumb ${selectedImages.includes(index) ? 'selected' : ''}`}
                   >
-                    {new Date(date).toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      month: 'short', 
-                      day: 'numeric' 
-                    })}
-                  </button>
+                    <img src={preview} alt={`Uploaded ${index + 1}`} />
+                    {selectedImages.includes(index) && (
+                      <div className="thumb-selected-badge">
+                        <Check size={12} />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
+          )}
+        </section>
 
-            {bookingData.date && (
-              <div className="time-section">
-                <h3><ClockCircleOutlined /> Available Times</h3>
-                <div className="time-grid">
-                  {availableTimes.map(time => (
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              1
+            </span>
+            <h3>Search Cleaning Location</h3>
+          </div>
+          <div className="input-shell">
+            <Search size={16} />
+            <input
+              type="text"
+              placeholder="123 Harmony Lane, Bright City"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+          <div className="map-shell" aria-label="map-preview">
+            <div className="map-actions" aria-hidden>
+              <button type="button">
+                <Plus size={14} />
+              </button>
+              <button type="button">
+                <Minus size={14} />
+              </button>
+            </div>
+            <div className="map-badge">
+              <MapPin size={12} />
+              Address Verified
+            </div>
+          </div>
+        </section>
+
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              2
+            </span>
+            <h3>Share Photos of Your Space</h3>
+          </div>
+          <p className="section-subtitle">
+            Help your cleaner understand specific needs by uploading photos of areas that require extra attention.
+          </p>
+          <div
+            className="upload-dropzone"
+            onClick={() => inputRef.current?.click()}
+            onKeyDown={handleDropzoneKey}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="upload-icon" aria-hidden>
+              <UploadCloud size={18} />
+            </div>
+            <h4>Upload cleaning</h4>
+            <p>Drag and drop images here, or click to browse files</p>
+            <div className="upload-previews" aria-hidden>
+              <span>
+                <ImageIcon size={14} />
+              </span>
+              <span>
+                <ImageIcon size={14} />
+              </span>
+              <span>
+                <ImageIcon size={14} />
+              </span>
+            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => onFileChange(e.target.files)}
+            />
+          </div>
+          {files.length > 0 && (
+            <>
+              <p className="upload-count">
+                {files.length} file{files.length > 1 ? 's' : ''} selected
+              </p>
+              <div className="image-previews">
+                {imagePreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`image-preview-item ${selectedImages.includes(index) ? 'selected' : ''}`}
+                    onClick={() => handleImageSelect(index)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleImageSelect(index);
+                      }
+                    }}
+                  >
+                    <img src={preview} alt={`Upload ${index + 1}`} />
+                    <div className="image-overlay">
+                      {selectedImages.includes(index) ? (
+                        <Check size={20} className="check-icon" />
+                      ) : (
+                        <span className="select-hint">Click to select</span>
+                      )}
+                    </div>
                     <button
-                      key={time}
-                      className={`time-btn ${bookingData.time === time ? 'selected' : ''}`}
-                      onClick={() => setBookingData({...bookingData, time})}
+                      type="button"
+                      className="remove-image-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveImage(index);
+                      }}
                     >
-                      {time}
+                      <X size={14} />
                     </button>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+              <p className="selection-info">
+                {selectedImages.length} of {files.length} images selected
+              </p>
+            </>
+          )}
+        </section>
 
-            <div className="step-actions">
-              <button className="btn-secondary" onClick={handleBack}>
-                Back
-              </button>
-              <button 
-                className="btn-primary" 
-                onClick={handleNext}
-                disabled={!bookingData.date || !bookingData.time}
-              >
-                Continue to Confirm
-              </button>
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              3
+            </span>
+            <h3>Your Detailed Cleaning Brief</h3>
+          </div>
+          <label className="field-label" htmlFor="cleaning-notes">
+            Specific Instructions &amp; Notes
+          </label>
+          <textarea
+            id="cleaning-notes"
+            placeholder="Describe what you need..."
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+          />
+        </section>
+
+        <section className="booking-section">
+          <div className="section-heading">
+            <span className="section-dot" aria-hidden>
+              4
+            </span>
+            <h3>Select Date and Time</h3>
+          </div>
+          <div className="form-field">
+            <label htmlFor="preferred-date">Preferred Date</label>
+            <input
+              id="preferred-date"
+              type="date"
+              value={preferredDate}
+              onChange={(e) => setPreferredDate(e.target.value)}
+            />
+          </div>
+          <div className="time-grid">
+            <div className="form-field">
+              <label htmlFor="start-hour">Start Time (Hour)</label>
+              <select id="start-hour" value={startHour} onChange={(e) => setStartHour(e.target.value)}>
+                {hourOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="start-minute">Start Time (Minute)</label>
+              <select id="start-minute" value={startMinute} onChange={(e) => setStartMinute(e.target.value)}>
+                {minuteOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="cleaning-duration">Cleaning Duration</label>
+              <select id="cleaning-duration" value={duration} onChange={(e) => setDuration(e.target.value)}>
+                {durationOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        )}
+        </section>
 
-        {/* Step 3: Confirmation */}
-        {step === 3 && (
-          <div className="step-content">
-            <h2>Confirm Your Booking</h2>
-            
-            <div className="confirmation-details">
-              <div className="detail-row">
-                <span className="detail-label">Service:</span>
-                <span className="detail-value">{service.name}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Date:</span>
-                <span className="detail-value">
-                  {new Date(bookingData.date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Time:</span>
-                <span className="detail-value">{bookingData.time}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Price:</span>
-                <span className="detail-value price">${service.price}</span>
-              </div>
-              {bookingData.notes && (
-                <div className="detail-row">
-                  <span className="detail-label">Notes:</span>
-                  <span className="detail-value">{bookingData.notes}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="terms">
-              <input type="checkbox" id="terms" />
-              <label htmlFor="terms">
-                I agree to the <a href="/terms">Terms and Conditions</a> and <a href="/privacy">Privacy Policy</a>
-              </label>
-            </div>
-
-            <div className="step-actions">
-              <button className="btn-secondary" onClick={handleBack}>
-                Back
-              </button>
-              <button className="btn-primary" onClick={handleBooking}>
-                Confirm Booking
-              </button>
-            </div>
-          </div>
-        )}
+        <footer className="booking-actions">
+          <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')}>
+            <ArrowLeft size={16} /> Back to Service
+          </button>
+          <button type="button" className="next-btn" onClick={handleConfirmBooking} disabled={isBooking}>
+            {isBooking ? 'Confirming...' : 'Confirm Booking'} <ArrowRight size={16} />
+          </button>
+        </footer>
       </div>
     </div>
   );
 };
 
-export default BookingPage; // <-- THIS IS CRITICAL!
+export default BookingPage;

@@ -23,9 +23,7 @@ const LoginPage = () => {
             
             if (result.success) {
                 // Redirect based on role
-                console.log(result); 
                 switch(result.user.role) {
-                    
                     case 'admin':
                         navigate('/admin/dashboard');
                         break;
@@ -142,7 +140,7 @@ const LoginPage = () => {
                                 prefix={<MailOutlined style={{ color: '#cbd5e1', height: 22}} />}
                                 placeholder="Enter your email"
                                 disabled={loading}
-                                style={{ borderRadius: 8, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
+                                style={{ borderRadius: 24, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
                             />
                         </Form.Item>
 
@@ -155,7 +153,7 @@ const LoginPage = () => {
                                 prefix={<LockOutlined style={{ color: '#cbd5e1', height: 22}} />}
                                 placeholder="Enter your password"
                                 disabled={loading}
-                                style={{ borderRadius: 8, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
+                                style={{ borderRadius: 24, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
                             />
                         </Form.Item>
 
@@ -182,7 +180,7 @@ const LoginPage = () => {
                                 block
                                 loading={loading}
                                 style={{
-                                    borderRadius: 8,
+                                    borderRadius: 24,
                                     height: 40,
                                     background: 'linear-gradient(135deg, #49C15D 0%, #3c9c4c 100%)',
                                     border: 'none',
@@ -206,7 +204,7 @@ const LoginPage = () => {
                             onClick={handleGoogleLogin}
                             disabled={loading}
                             style={{
-                                borderRadius: 8,
+                                borderRadius: 24,
                                 height: 40,
                                 marginBottom: 10,
                                 borderColor: '#d9d9d9'
@@ -217,7 +215,7 @@ const LoginPage = () => {
 
                         <div style={{ textAlign: 'center', marginBottom: 10 }}>
                             <Text style={{ color: '#dbe4f0' }}>Don't have an account? </Text>
-                            <Link to="/auth/register" style={{ color: '#46BA5A', fontWeight: 500 }}>
+                            <Link to="/auth/register" style={{ color: '#32c753', fontWeight: 500 }}>
                                 Sign up
                             </Link>
                         </div>
@@ -228,7 +226,7 @@ const LoginPage = () => {
                             block
                             onClick={() => navigate('/')}
                             style={{
-                                borderRadius: 8,
+                                borderRadius: 24,
                                 height: 40,
                                 border: '1px solid rgba(226, 232, 240, 0.8)',
                                 fontWeight: 500,

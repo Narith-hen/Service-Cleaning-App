@@ -51,6 +51,12 @@ const initializeSocket = (server) => {
     // Subscribe to Redis channels for this user
     subscribeToUserChannels(socket);
 
+    // Handle cleaner joining the general cleaners room
+    socket.on('join:cleaners', () => {
+      socket.join('cleaners-room');
+      console.log(`User ${socket.userId} joined the general cleaners room.`);
+    });
+
     // Handle joining booking room
     socket.on('booking:join', (bookingId) => {
       socket.join(`booking:${bookingId}`);
@@ -63,12 +69,88 @@ const initializeSocket = (server) => {
       console.log(`User ${socket.userId} left booking room: ${bookingId}`);
     });
 
+    // Handle customer joining a matching room while waiting for a cleaner
+    socket.on('join:matching', (bookingId) => {
+      socket.join(`booking:${bookingId}`);
+      console.log(`User ${socket.userId} is waiting for a match for booking: ${bookingId}`);
+    });
+
+    // Handle message read event
+    socket.on('message:read', (data) => {
+      // When a user reads messages in a booking, notify others in the room.
+      // The client will determine if they are the recipient and should update the UI.
+      if (data.bookingId) {
+        socket.to(`booking:${data.bookingId}`).emit('messages:seen', {
+          readerId: socket.userId,
+          messageId: data.messageId
+        });
+      }
+    });
+
+    // Handle sending a new message
+    socket.on('message:send', (data) => {
+      const { bookingId, message } = data;
+      
+      if (!bookingId || !message) return;
+      
+      // Broadcast the new message to others in the booking room
+      socket.to(`booking:${bookingId}`).emit('message:new', message);
+      
+      // Confirm the message was sent to the sender
+      socket.emit('message:sent', { id: message.id });
+      
+      // After a delay, mark as delivered
+      setTimeout(() => {
+        socket.emit('message:delivered', { id: message.id });
+        
+        // Notify the other party about delivery
+        socket.to(`booking:${bookingId}`).emit('message:delivered', { id: message.id });
+      }, 500);
+      
+      console.log(`Message sent in booking ${bookingId}:`, message.id);
+    });
+
+    // Handle customer joining a chat (mark messages as seen)
+    socket.on('chat:join', (data) => {
+      const { bookingId, userType } = data;
+      
+      if (!bookingId) return;
+      
+      // Only customers mark messages as seen when they join
+      if (userType === 'customer') {
+        // After a short delay, notify the cleaner that messages were seen
+        setTimeout(() => {
+          socket.to(`booking:${bookingId}`).emit('messages:seen', {
+            readerId: socket.userId,
+            timestamp: Date.now()
+          });
+          console.log(`Customer ${socket.userId} seen messages in booking ${bookingId}`);
+        }, 800); // Small delay to simulate reading
+      }
+    });
+
     // Handle typing indicator
     socket.on('typing', (data) => {
       socket.to(`booking:${data.bookingId}`).emit('user:typing', {
         userId: socket.userId,
         isTyping: data.isTyping
       });
+    });
+
+    // Handle new job posting from customer
+    socket.on('job:new', (jobDetails) => {
+      // Broadcast to all cleaners in the cleaners-room
+      io.to('cleaners-room').emit('job:available', jobDetails);
+      console.log('New job available, notifying cleaners:', jobDetails.bookingId);
+    });
+
+    // Handle cleaner accepting a job
+    socket.on('job:accepted', ({ bookingId, cleaner }) => {
+      // Notify the customer on the matching page
+      io.to(`booking:${bookingId}`).emit('job:matched', { bookingId, cleaner });
+      // Notify other cleaners to remove this job from their list
+      io.to('cleaners-room').emit('job:removed', { bookingId });
+      console.log(`Job ${bookingId} was accepted by cleaner ${cleaner.id}`);
     });
 
     // Handle disconnect

@@ -15,6 +15,7 @@ const earningsController = require('./cleaner/earnings.controller');
 
 // Admin controllers
 const adminUsersController = require('./admin/users.controller');
+const adminCleanersController = require('./admin/cleaners.controller');
 const adminServicesController = require('./admin/services.controller');
 const adminBookingsController = require('./admin/bookings.controller');
 const adminPromotionsController = require('./admin/promotions.controller');
@@ -87,21 +88,11 @@ module.exports = {
   },
   
   // Service controller functions
-  getServices: (req, res, next) => {
-    res.status(200).json({ message: 'Get services endpoint - to be implemented' });
-  },
-  getServiceById: (req, res, next) => {
-    res.status(200).json({ message: 'Get service by ID endpoint - to be implemented' });
-  },
-  createService: (req, res, next) => {
-    res.status(200).json({ message: 'Create service endpoint - to be implemented' });
-  },
-  updateService: (req, res, next) => {
-    res.status(200).json({ message: 'Update service endpoint - to be implemented' });
-  },
-  deleteService: (req, res, next) => {
-    res.status(200).json({ message: 'Delete service endpoint - to be implemented' });
-  },
+  getServices: adminServicesController.getAllServices,
+  getServiceById: adminServicesController.getServiceById,
+  createService: adminServicesController.createService,
+  updateService: adminServicesController.updateService,
+  deleteService: adminServicesController.deleteService,
   uploadServiceImage: (req, res, next) => {
     res.status(200).json({ message: 'Upload service image endpoint - to be implemented' });
   },
@@ -225,8 +216,13 @@ module.exports = {
     createUser: adminUsersController.createUser,
     updateUser: adminUsersController.updateUser,
     deleteUser: adminUsersController.deleteUser,
+
+    getAllCleaners: adminCleanersController.getAllCleaners,
+    createCleaner: adminCleanersController.createCleaner,
+    updateCleaner: adminCleanersController.updateCleaner,
     
     getAllServices: adminServicesController.getAllServices,
+    getServiceById: adminServicesController.getServiceById,
     createService: adminServicesController.createService,
     updateService: adminServicesController.updateService,
     deleteService: adminServicesController.deleteService,

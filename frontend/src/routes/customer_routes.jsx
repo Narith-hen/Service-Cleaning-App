@@ -12,6 +12,10 @@ import CustomerFavorites from '../features/customer/pages/favourite_page';
 import CustomerNotifications from '../features/customer/pages/notification_page';
 import WriteReviewPage from '../features/customer/pages/write_review_page';
 import SettingsPage from '../features/customer/pages/setting_page';
+import BookingMatchPage from '../features/customer/pages/booking_match_page';
+import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
+import CustomerChatPage from '../features/customer/pages/chat_page';
+import CustomerServicesPage from '../features/public/pages/services_page';
 
 export const customerRoutes = {
   path: '/customer',
@@ -34,12 +38,32 @@ export const customerRoutes = {
       element: <CustomerDashboard />
     },
     {
+      path: 'services',
+      element: <CustomerServicesPage />
+    },
+    {
       path: 'bookings',
       element: <CustomerBookings />
     },
     {
+      path: 'bookings/matching',
+      element: <BookingMatchPage />
+    },
+    {
+      path: 'bookings/quotes',
+      element: <BookingQuotesPage />
+    },
+    {
       path: 'bookings/:bookingId',
       element: <CustomerBookings />
+    },
+    {
+      path: 'chat',
+      element: <CustomerChatPage />
+    },
+    {
+      path: 'chat/:bookingId',
+      element: <CustomerChatPage />
     },
     {
       path: 'profile',

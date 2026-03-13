@@ -1,40 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './styles/services_page.css';
-import { Form, Input, InputNumber, Modal, Select, Upload, message } from 'antd';
+import { Form, Input, Modal, Select, Upload, message } from 'antd';
+import { DeleteOutlined, EyeOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
 import homeImage from '../../../assets/home.png';
 import officeImage from '../../../assets/office.png';
 import windowImage from '../../../assets/window.png';
 import shopImage from '../../../assets/shop.png';
+import { serviceService } from '../services/serviceService';
 
 const INVENTORY_PAGE_SIZE = 5;
 const INVENTORY_CATEGORIES = ['LIQUID SUPPLIES', 'EQUIPMENT', 'CONSUMABLES', 'TOOLS', 'CHEMICALS'];
 
-const sampleServices = [
-  {
-    id: 1,
-    title: 'House Cleaning',
-    price: 80,
-    unit: '/hr',
-    description: 'Professional deep cleaning for residential properties including...',
-    image: homeImage
-  },
-  {
-    id: 2,
-    title: 'Office Maintenance',
-    price: 120,
-    unit: '/hr',
-    description: 'Tailored cleaning schedules for corporate offices, co-working spaces...',
-    image: officeImage
-  },
-  {
-    id: 3,
-    title: 'Deep Sanitization',
-    price: 150,
-    unit: '/hr',
-    description: 'Medical-grade disinfection and heavy-duty cleaning for post-...',
-    image: windowImage
-  }
-];
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return homeImage;
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${apiHost}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
+
+const mapServiceFromApi = (item) => ({
+  id: item.service_id,
+  title: item.name || 'Untitled service',
+  description: item.description || '',
+  status: String(item.status || 'active').toLowerCase() === 'inactive' ? 'Inactive' : 'Active',
+  image: toAbsoluteImageUrl(item.images?.[0]?.image_url)
+});
+
+const getUploadPreviewFileList = (imageUrl) => {
+  if (!imageUrl) return [];
+  return [
+    {
+      uid: '-1',
+      name: 'current-image',
+      status: 'done',
+      url: imageUrl
+    }
+  ];
+};
+
+const truncateWords = (text, wordLimit = 15) => {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordLimit) return text;
+  return words.slice(0, wordLimit).join(' ') + '...';
+};
 
 const sampleInventory = [
   { id: 1, name: 'Eco-Glass Sparkling Spray', sku: 'CP-INV-001', category: 'LIQUID SUPPLIES', stock: 142, image: shopImage },
@@ -48,12 +58,19 @@ const sampleInventory = [
 ];
 
 const ServicesPage = () => {
-  const [services, setServices] = useState(sampleServices);
+  const [services, setServices] = useState([]);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceStatusFilter, setServiceStatusFilter] = useState('All');
+  const [serviceSortFilter, setServiceSortFilter] = useState('default');
+  const [servicePage, setServicePage] = useState(1);
+  const [servicePageSize, setServicePageSize] = useState(10);
+  const [loadingServices, setLoadingServices] = useState(true);
   const [inventory, setInventory] = useState(sampleInventory);
   const [inventoryPage, setInventoryPage] = useState(1);
 
   const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
   const [isViewServiceOpen, setIsViewServiceOpen] = useState(false);
+  const [isLoadingServiceDetail, setIsLoadingServiceDetail] = useState(false);
   const [isSavingService, setIsSavingService] = useState(false);
   const [serviceFormMode, setServiceFormMode] = useState('create');
   const [selectedService, setSelectedService] = useState(null);
@@ -77,12 +94,66 @@ const ServicesPage = () => {
 
   const isEditServiceMode = serviceFormMode === 'edit';
   const isEditInventoryMode = inventoryFormMode === 'edit';
+  const filteredServices = useMemo(() => {
+    const keyword = serviceSearch.trim().toLowerCase();
+    const matched = services.filter((service) => {
+      const title = String(service.title || '').toLowerCase();
+      const status = service.status || 'Active';
+      const searchMatched = !keyword || title.includes(keyword);
+      const statusMatched = serviceStatusFilter === 'All' || status === serviceStatusFilter;
+      return searchMatched && statusMatched;
+    });
+
+    if (serviceSortFilter === 'name-asc') {
+      return [...matched].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
+    }
+
+    if (serviceSortFilter === 'name-desc') {
+      return [...matched].sort((a, b) => String(b.title || '').localeCompare(String(a.title || '')));
+    }
+
+    return matched;
+  }, [services, serviceSearch, serviceStatusFilter, serviceSortFilter]);
+  const totalServices = services.length;
+  const activeServices = services.filter((item) => (item.status || 'Active') === 'Active').length;
+  const inactiveServices = services.filter((item) => (item.status || 'Active') === 'Inactive').length;
+  const servicePages = Math.max(1, Math.ceil(filteredServices.length / servicePageSize));
+  const currentServicePage = Math.min(servicePage, servicePages);
+  const serviceStart = filteredServices.length === 0 ? 0 : (currentServicePage - 1) * servicePageSize + 1;
+  const serviceEnd = Math.min(currentServicePage * servicePageSize, filteredServices.length);
+  const pagedServices = filteredServices.slice(
+    (currentServicePage - 1) * servicePageSize,
+    currentServicePage * servicePageSize
+  );
+
+  const fetchServices = async () => {
+    setLoadingServices(true);
+    try {
+      const response = await serviceService.getServices({ page: 1, limit: 1000 });
+      const apiRows = Array.isArray(response?.data) ? response.data : [];
+      setServices(apiRows.map(mapServiceFromApi));
+    } catch {
+      setServices([]);
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   useEffect(() => {
     if (inventoryPage > totalInventoryPages) {
       setInventoryPage(totalInventoryPages);
     }
   }, [inventoryPage, totalInventoryPages]);
+
+  useEffect(() => {
+    if (servicePage > servicePages) {
+      setServicePage(servicePages);
+    }
+  }, [servicePage, servicePages]);
 
   const getStockPercent = (value) => Math.max(0, Math.min(100, Math.round((value / 150) * 100)));
 
@@ -104,27 +175,45 @@ const ServicesPage = () => {
     setServiceFormMode('create');
     setSelectedService(null);
     setServiceImageFileList([]);
-    serviceForm.setFieldsValue({ unit: '/hr', image: '' });
+    serviceForm.setFieldsValue({ status: 'Active' });
     setIsServiceFormOpen(true);
   };
 
-  const openEditServiceForm = (service) => {
-    setServiceFormMode('edit');
-    setSelectedService(service);
-    setServiceImageFileList([]);
-    serviceForm.setFieldsValue({
-      name: service.title,
-      price: service.price,
-      unit: service.unit,
-      description: service.description,
-      image: service.image?.startsWith('http') ? service.image : ''
-    });
-    setIsServiceFormOpen(true);
+  const openEditServiceForm = async (service) => {
+    setIsLoadingServiceDetail(true);
+    try {
+      const response = await serviceService.getServiceById(service.id);
+      const mapped = mapServiceFromApi(response?.data || {});
+      setServiceFormMode('edit');
+      setSelectedService(mapped);
+      setServiceImageFileList(getUploadPreviewFileList(mapped.image));
+      serviceForm.setFieldsValue({
+        name: mapped.title,
+        status: mapped.status || 'Active',
+        description: mapped.description
+      });
+      setIsServiceFormOpen(true);
+    } catch (error) {
+      const serverMessage = error?.response?.data?.message;
+      message.error(serverMessage || 'Failed to load service details');
+    } finally {
+      setIsLoadingServiceDetail(false);
+    }
   };
 
-  const openViewService = (service) => {
-    setSelectedService(service);
-    setIsViewServiceOpen(true);
+  const openViewService = async (service) => {
+    setIsLoadingServiceDetail(true);
+    try {
+      const response = await serviceService.getServiceById(service.id);
+      const mapped = mapServiceFromApi(response?.data || {});
+      setSelectedService(mapped);
+      setIsViewServiceOpen(true);
+    } catch (error) {
+      const serverMessage = error?.response?.data?.message;
+      message.error(serverMessage || 'Failed to load service details');
+    } finally {
+      setIsLoadingServiceDetail(false);
+    }
   };
 
   const closeViewService = () => {
@@ -134,8 +223,8 @@ const ServicesPage = () => {
 
   const closeServiceForm = () => {
     setIsServiceFormOpen(false);
-    setServiceImageFileList([]);
     setSelectedService(null);
+    setServiceImageFileList([]);
     setServiceFormMode('create');
     serviceForm.resetFields();
   };
@@ -147,9 +236,15 @@ const ServicesPage = () => {
       okText: 'Delete',
       okType: 'danger',
       cancelText: 'Cancel',
-      onOk: () => {
-        setServices((prev) => prev.filter((item) => item.id !== service.id));
-        message.success('Service deleted');
+      onOk: async () => {
+        try {
+          await serviceService.deleteService(service.id);
+          await fetchServices();
+          message.success('Service deleted');
+        } catch (error) {
+          const serverMessage = error?.response?.data?.message;
+          message.error(serverMessage || 'Failed to delete service');
+        }
       }
     });
   };
@@ -157,30 +252,39 @@ const ServicesPage = () => {
   const handleCreateOrUpdateService = async (values) => {
     setIsSavingService(true);
     try {
-      let image = values.image?.trim() || (isEditServiceMode ? selectedService?.image : homeImage);
-      if (serviceImageFileList.length > 0 && serviceImageFileList[0].originFileObj) {
-        image = await toDataUrl(serviceImageFileList[0].originFileObj);
-      }
+      const uploadedFile = serviceImageFileList[0]?.originFileObj;
 
       const payload = {
-        title: values.name.trim(),
-        price: Number(values.price),
-        unit: values.unit || '/hr',
+        name: values.name.trim(),
         description: values.description.trim(),
-        image
+        status: (values.status || 'Active').toLowerCase()
       };
 
       if (isEditServiceMode && selectedService) {
-        setServices((prev) => prev.map((item) => (item.id === selectedService.id ? { ...item, ...payload } : item)));
+        const updateRes = await serviceService.updateService(selectedService.id, payload);
+        const serviceId = updateRes?.data?.service_id || updateRes?.service_id || selectedService.id;
+        if (uploadedFile) {
+          await serviceService.uploadServiceImage(serviceId, uploadedFile);
+        }
+        await fetchServices();
         message.success('Service updated successfully');
       } else {
-        setServices((prev) => [{ id: Date.now(), ...payload }, ...prev]);
+        const createRes = await serviceService.createService(payload);
+        const serviceId = createRes?.data?.service_id || createRes?.service_id;
+        if (uploadedFile && serviceId) {
+          await serviceService.uploadServiceImage(serviceId, uploadedFile);
+        }
+        await fetchServices();
         message.success('New service added successfully');
       }
 
       closeServiceForm();
     } catch (error) {
-      message.error(isEditServiceMode ? 'Failed to update service' : 'Failed to add service');
+      const serverMessage = error?.response?.data?.message;
+      message.error({
+        key: 'service-save-error',
+        content: serverMessage || (isEditServiceMode ? 'Failed to update service' : 'Failed to add service')
+      });
     } finally {
       setIsSavingService(false);
     }
@@ -275,150 +379,180 @@ const ServicesPage = () => {
 
   return (
     <div className="admin-services-page">
-      <section className="services-header">
-        <div className="section-copy">
-          <h2 className="svc-section-title roboto roboto-700">Cleaning Services</h2>
-          <p className="svc-section-sub">Configure and manage your service offerings and pricing tiers.</p>
+      <header className="services-page-intro">
+        <div>
+          <h1 className="admin-page-title">Manage Services</h1>
+          <p className="admin-page-subtitle">Configure and manage your service offerings and pricing tiers.</p>
         </div>
         <button className="svc-btn svc-btn-primary roboto roboto-600" type="button" onClick={openServiceForm}>
           <i className="bi bi-plus-circle" aria-hidden="true" />
           Add New Service
         </button>
+      </header>
+
+      <section className="services-kpi-grid">
+        <article className="services-kpi-card">
+          <div className="kpi-icon tone-blue">
+            <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
+          </div>
+          <span className="kpi-label">TOTAL SERVICES</span>
+          <h3>{totalServices}</h3>
+        </article>
+        <article className="services-kpi-card">
+          <div className="kpi-icon tone-green">
+            <i className="bi bi-check-circle" aria-hidden="true" />
+          </div>
+          <span className="kpi-label">ACTIVE SERVICES</span>
+          <h3>{activeServices}</h3>
+        </article>
+        <article className="services-kpi-card">
+          <div className="kpi-icon tone-rose">
+            <i className="bi bi-x-circle" aria-hidden="true" />
+          </div>
+          <span className="kpi-label">INACTIVE SERVICES</span>
+          <h3>{inactiveServices}</h3>
+        </article>
       </section>
 
-      <div className="services-grid">
-        {services.map((service) => (
-          <article className="service-card" key={service.id}>
-            <div className="service-media" aria-hidden>
-              <img src={service.image} alt="" className="service-image" />
-              <div className="service-actions">
-                <button className="icon-btn" title="View service" type="button" onClick={() => openViewService(service)}>
-                  <i className="bi bi-eye" aria-hidden="true" />
-                </button>
-                <button className="icon-btn" title="Edit service" type="button" onClick={() => openEditServiceForm(service)}>
-                  <i className="bi bi-pencil" aria-hidden="true" />
-                </button>
-                <button className="icon-btn" title="Delete service" type="button" onClick={() => handleDeleteService(service)}>
-                  <i className="bi bi-trash3" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-            <div className="service-body">
-              <div className="service-row">
-                <h3 className="service-title roboto roboto-600">{service.title}</h3>
-                <div className="service-price roboto roboto-700">
-                  ${service.price}
-                  <span className="service-unit">{service.unit}</span>
-                </div>
-              </div>
-              <p className="service-desc">{service.description}</p>
-            </div>
-          </article>
-        ))}
+      <section className="services-filter-row">
+        <div className="services-search-box">
+          <SearchOutlined />
+          <input
+            type="text"
+            placeholder="Search service name..."
+            value={serviceSearch}
+            onChange={(event) => {
+              setServiceSearch(event.target.value);
+              setServicePage(1);
+            }}
+          />
+        </div>
+        <Select
+          value={serviceStatusFilter}
+          onChange={(value) => {
+            setServiceStatusFilter(value);
+            setServicePage(1);
+          }}
+          options={[
+            { value: 'All', label: 'Status: All' },
+            { value: 'Active', label: 'Active' },
+            { value: 'Inactive', label: 'Inactive' }
+          ]}
+          className="services-filter-select"
+          popupClassName="service-filter-dropdown"
+        />
+        <Select
+          value={serviceSortFilter}
+          onChange={(value) => {
+            setServiceSortFilter(value);
+            setServicePage(1);
+          }}
+          options={[
+            { value: 'default', label: 'Sort: Default' },
+            { value: 'name-asc', label: 'Name A-Z' },
+            { value: 'name-desc', label: 'Name Z-A' }
+          ]}
+          className="services-filter-select"
+          popupClassName="service-filter-dropdown"
+        />
+      </section>
+
+      <div className="services-table-wrap">
+        <table className="services-table">
+          <thead>
+            <tr>
+              <th>SERVICE</th>
+              <th>DESCRIPTION</th>
+              <th>SERVICE STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loadingServices ? (
+              <tr>
+                <td className="services-empty" colSpan={4}>Loading services...</td>
+              </tr>
+            ) : pagedServices.length === 0 ? (
+              <tr>
+                <td className="services-empty" colSpan={4}>No services match your filters.</td>
+              </tr>
+            ) : (
+              pagedServices.map((service) => (
+                <tr key={service.id}>
+                  <td>
+                    <div className="service-list-cell">
+                      <img src={service.image} alt={service.title} className="service-list-thumb" />
+                      <span className="service-list-name roboto roboto-600">{service.title}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="service-list-description">{truncateWords(service.description, 15)}</span>
+                  </td>
+                  <td>
+                    <span className={`service-status ${(service.status || 'Active').toLowerCase()}`}>
+                      {service.status || 'Active'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="action-group">
+                      <button className="plain-icon-btn action-view" title="View service" type="button" onClick={() => openViewService(service)}>
+                        <EyeOutlined />
+                      </button>
+                      <button className="plain-icon-btn action-edit" title="Edit service" type="button" onClick={() => openEditServiceForm(service)}>
+                        <i className="bi bi-pencil" aria-hidden="true" />
+                      </button>
+                      <button className="plain-icon-btn action-delete" title="Delete service" type="button" onClick={() => handleDeleteService(service)}>
+                        <DeleteOutlined />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <section className="inventory-section">
-        <div className="inventory-header">
-          <div className="section-copy">
-            <h3 className="svc-section-title roboto roboto-700">Cleaning Inventory & Shop</h3>
-            <p className="svc-section-sub">Manage stock levels for internal supplies and items available for purchase.</p>
-          </div>
-          <div className="inventory-actions">
-            <button className="svc-btn svc-btn-secondary roboto roboto-600" type="button">
-              <i className="bi bi-file-earmark-text" aria-hidden="true" />
-              Stock Report
-            </button>
-            <button className="svc-btn svc-btn-dark roboto roboto-600" type="button" onClick={openInventoryForm}>
-              <i className="bi bi-plus-square" aria-hidden="true" />
-              Add New Item
-            </button>
-          </div>
+      <footer className="services-table-footer">
+        <span>Showing {serviceStart}-{serviceEnd} of {filteredServices.length} services</span>
+        <div className="services-pager">
+          <label className="rows-label">
+            Rows per page
+            <select
+              value={servicePageSize}
+              onChange={(event) => {
+                setServicePageSize(Number(event.target.value));
+                setServicePage(1);
+              }}
+            >
+              {[10, 20, 50].map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="svc-btn svc-btn-secondary"
+            onClick={() => setServicePage((prev) => Math.max(1, prev - 1))}
+            disabled={currentServicePage === 1}
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            className="svc-btn svc-btn-primary"
+            onClick={() => setServicePage((prev) => Math.min(servicePages, prev + 1))}
+            disabled={currentServicePage === servicePages}
+          >
+            Next
+          </button>
         </div>
-
-        <div className="inventory-table-wrap">
-          <table className="inventory-table">
-            <thead>
-              <tr>
-                <th>PRODUCT ITEM</th>
-                <th>CATEGORY</th>
-                <th>STOCK LEVEL</th>
-                <th>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedInventory.length === 0 ? (
-                <tr>
-                  <td className="inventory-empty" colSpan={4}>No inventory items available.</td>
-                </tr>
-              ) : (
-                pagedInventory.map((item) => {
-                  const stockLabel = getStockLabel(item.stock);
-                  return (
-                    <tr key={item.id}>
-                      <td className="product-cell">
-                        <div className="product-info">
-                          <img src={item.image} alt="" className="product-thumb" />
-                          <div className="product-meta">
-                            <div className="product-name roboto roboto-600">{item.name}</div>
-                            <div className="product-sku">SKU: {item.sku}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`svc-badge svc-category svc-category-${stockLabel}`}>{item.category}</span>
-                      </td>
-                      <td>
-                        <div className="stock-row">
-                          <div className="svc-progress">
-                            <div className={`svc-bar svc-bar-${stockLabel}`} style={{ width: `${getStockPercent(item.stock)}%` }} />
-                          </div>
-                          <div className="stock-count">{item.stock} units</div>
-                        </div>
-                      </td>
-                      <td className="action-cell">
-                        <div className="action-group">
-                          <button className="plain-icon-btn" title="View item" type="button" onClick={() => openViewInventory(item)}>
-                            <i className="bi bi-eye" aria-hidden="true" />
-                          </button>
-                          <button className="plain-icon-btn" title="Edit item" type="button" onClick={() => openEditInventoryForm(item)}>
-                            <i className="bi bi-pencil" aria-hidden="true" />
-                          </button>
-                          <button className="plain-icon-btn" title="Delete item" type="button" onClick={() => handleDeleteInventory(item)}>
-                            <i className="bi bi-trash3" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-
-          <div className="inventory-footer">
-            <div className="pagination-info">Showing {totalInventoryItems === 0 ? 0 : startIndex + 1} to {endIndex} of {totalInventoryItems} inventory items</div>
-            <div className="pagination-actions">
-              <button className="svc-btn svc-btn-secondary svc-btn-pager" type="button" disabled={currentPage === 1} onClick={() => setInventoryPage(1)}>
-                First
-              </button>
-              <button className="svc-btn svc-btn-secondary svc-btn-pager" type="button" disabled={currentPage === 1} onClick={() => setInventoryPage((prev) => Math.max(1, prev - 1))}>
-                Previous
-              </button>
-              <span className="pagination-page-label">Page {currentPage} of {totalInventoryPages}</span>
-              <button className="svc-btn svc-btn-primary svc-btn-pager" type="button" disabled={currentPage === totalInventoryPages} onClick={() => setInventoryPage((prev) => Math.min(totalInventoryPages, prev + 1))}>
-                Next
-              </button>
-              <button className="svc-btn svc-btn-secondary svc-btn-pager" type="button" disabled={currentPage === totalInventoryPages} onClick={() => setInventoryPage(totalInventoryPages)}>
-                Last
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      </footer>
 
       <Modal
         title={isEditServiceMode ? 'Edit Service' : 'Add New Service'}
         open={isServiceFormOpen}
+        className="service-form-modal"
         onCancel={closeServiceForm}
         okText={isEditServiceMode ? 'Save Changes' : 'Create Service'}
         cancelText="Cancel"
@@ -432,11 +566,8 @@ const ServicesPage = () => {
           </Form.Item>
 
           <div className="service-form-row">
-            <Form.Item label="Price" name="price" rules={[{ required: true, message: 'Please enter price' }]} className="service-form-item">
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="0.00" />
-            </Form.Item>
-            <Form.Item label="Unit" name="unit" rules={[{ required: true, message: 'Please select unit' }]} className="service-form-item">
-              <Select options={[{ value: '/hr', label: '/hr' }, { value: '/visit', label: '/visit' }, { value: '/service', label: '/service' }]} />
+            <Form.Item label="Status" name="status" rules={[{ required: true, message: 'Please select status' }]} className="service-form-item">
+              <Select options={[{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]} />
             </Form.Item>
           </div>
 
@@ -445,15 +576,7 @@ const ServicesPage = () => {
             name="description"
             rules={[{ required: true, message: 'Please enter description' }, { min: 20, message: 'Description should be at least 20 characters' }]}
           >
-            <Input.TextArea rows={4} maxLength={180} showCount placeholder="Describe what this service includes..." />
-          </Form.Item>
-
-          <Form.Item
-            label="Image URL (Optional)"
-            name="image"
-            rules={[{ type: 'url', warningOnly: true, message: 'Use a valid URL (or leave empty to use default image)' }]}
-          >
-            <Input placeholder="https://example.com/service-image.jpg" />
+            <Input.TextArea rows={8} maxLength={12000} showCount placeholder="Describe what this service includes..." />
           </Form.Item>
 
           <Form.Item label="Upload Image">
@@ -465,94 +588,43 @@ const ServicesPage = () => {
               fileList={serviceImageFileList}
               onChange={({ fileList }) => setServiceImageFileList(fileList)}
             >
-              {serviceImageFileList.length < 1 && (
-                <div className="service-upload-trigger">
-                  <i className="bi bi-cloud-arrow-up" aria-hidden="true" />
-                  <span>Upload</span>
-                </div>
-              )}
+              <div className="service-upload-trigger">
+                <i className="bi bi-cloud-arrow-up" aria-hidden="true" />
+                <span>{serviceImageFileList.length > 0 ? 'Change' : 'Upload'}</span>
+              </div>
             </Upload>
           </Form.Item>
         </Form>
       </Modal>
 
-      <Modal title="Service Details" open={isViewServiceOpen} onCancel={closeViewService} footer={null} destroyOnClose>
-        {selectedService && (
-          <div className="service-view-wrap">
-            <img src={selectedService.image} alt={selectedService.title} className="service-view-image" />
-            <div className="service-view-info">
-              <h4 className="service-view-title">{selectedService.title}</h4>
-              <p className="service-view-price">
-                ${selectedService.price}
-                <span>{selectedService.unit}</span>
-              </p>
-              <p className="service-view-description">{selectedService.description}</p>
+      <Modal title="Service Details" open={isViewServiceOpen} onCancel={closeViewService} footer={null} destroyOnClose width={600}>
+        {isLoadingServiceDetail ? (
+          <div className="services-empty">Loading service details...</div>
+        ) : selectedService && (
+          <div className="service-view-card">
+            <div className="service-view-hero">
+              <img src={selectedService.image} alt={selectedService.title} className="service-view-hero-image" />
+              <div className="service-view-hero-overlay">
+                <span className={`service-view-status-badge ${(selectedService.status || 'Active').toLowerCase()}`}>
+                  {selectedService.status || 'Active'}
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        title={isEditInventoryMode ? 'Edit Inventory Item' : 'Add New Inventory Item'}
-        open={isInventoryFormOpen}
-        onCancel={closeInventoryForm}
-        okText={isEditInventoryMode ? 'Save Changes' : 'Create Item'}
-        cancelText="Cancel"
-        onOk={() => inventoryForm.submit()}
-        confirmLoading={isSavingInventory}
-        destroyOnClose
-      >
-        <Form form={inventoryForm} layout="vertical" onFinish={handleCreateOrUpdateInventory}>
-          <Form.Item label="Product Name" name="name" rules={[{ required: true, message: 'Please enter item name' }]}>
-            <Input placeholder="e.g. Glass Cleaner Refill" />
-          </Form.Item>
-
-          <div className="inventory-form-row">
-            <Form.Item label="SKU" name="sku" rules={[{ required: true, message: 'Please enter SKU' }]} className="inventory-form-item">
-              <Input placeholder="CP-INV-999" />
-            </Form.Item>
-            <Form.Item label="Category" name="category" rules={[{ required: true, message: 'Please select category' }]} className="inventory-form-item">
-              <Select options={INVENTORY_CATEGORIES.map((value) => ({ value, label: value }))} />
-            </Form.Item>
-          </div>
-
-          <Form.Item label="Stock Level" name="stock" rules={[{ required: true, message: 'Please enter stock' }]}>
-            <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="0" />
-          </Form.Item>
-
-          <Form.Item label="Image URL (Optional)" name="image" rules={[{ type: 'url', warningOnly: true, message: 'Use a valid URL (or leave empty to use default image)' }]}>
-            <Input placeholder="https://example.com/item-image.jpg" />
-          </Form.Item>
-
-          <Form.Item label="Upload Image">
-            <Upload
-              listType="picture-card"
-              accept="image/*"
-              beforeUpload={() => false}
-              maxCount={1}
-              fileList={inventoryImageFileList}
-              onChange={({ fileList }) => setInventoryImageFileList(fileList)}
-            >
-              {inventoryImageFileList.length < 1 && (
-                <div className="inventory-upload-trigger">
-                  <i className="bi bi-cloud-arrow-up" aria-hidden="true" />
-                  <span>Upload</span>
+            <div className="service-view-content">
+              <h3 className="service-view-card-title">{selectedService.title}</h3>
+              <div className="service-view-meta">
+                <div className="service-view-meta-item">
+                  <i className="bi bi-hash"></i>
+                  <span>Service ID: {selectedService.id}</span>
                 </div>
-              )}
-            </Upload>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal title="Inventory Item Details" open={isViewInventoryOpen} onCancel={closeViewInventory} footer={null} destroyOnClose>
-        {selectedInventory && (
-          <div className="inventory-view-wrap">
-            <img src={selectedInventory.image} alt={selectedInventory.name} className="inventory-view-image" />
-            <div className="inventory-view-info">
-              <h4 className="inventory-view-title">{selectedInventory.name}</h4>
-              <p className="inventory-view-meta">SKU: {selectedInventory.sku}</p>
-              <p className="inventory-view-meta">Category: {selectedInventory.category}</p>
-              <p className="inventory-view-meta">Stock: {selectedInventory.stock} units</p>
+              </div>
+              <div className="service-view-section">
+                <h4 className="service-view-section-title">
+                  <i className="bi bi-text-paragraph"></i>
+                  Description
+                </h4>
+                <p className="service-view-card-description">{selectedService.description}</p>
+              </div>
             </div>
           </div>
         )}

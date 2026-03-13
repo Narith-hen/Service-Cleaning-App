@@ -1,10 +1,6 @@
-import React from 'react';
-import {
-  CheckCircleFilled,
-  StarFilled,
-  MessageOutlined,
-  SafetyCertificateFilled
-} from '@ant-design/icons';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircleFilled, StarFilled, SafetyCertificateFilled } from '@ant-design/icons';
 import '../../../styles/cleaner/review.scss';
 
 const reviews = [
@@ -41,14 +37,119 @@ const reviews = [
     comment:
       'I was worried about getting my deposit back but the place looked brand new when Alex was finished. Every corner was scrubbed. Absolute professional.',
     reply: null
-  }
+  },
+  {
+    id: 4,
+    name: 'Emily Carter',
+    date: 'Oct 15, 2024',
+    service: 'Apartment Cleaning',
+    rating: 5,
+    comment:
+      'Very thorough cleaning and great communication before arrival. Kitchen and bathroom were spotless.',
+    reply: null
+  },
+  {
+    id: 5,
+    name: 'Ryan Lopez',
+    date: 'Oct 12, 2024',
+    service: 'Weekly Home Cleaning',
+    rating: 4,
+    comment:
+      'Arrived on time and finished quickly. Overall quality was very good and I am satisfied with the service.',
+    reply: null
+  },
+  {
+    id: 6,
+    name: 'Nina Patel',
+    date: 'Oct 10, 2024',
+    service: 'Deep House Cleaning',
+    rating: 5,
+    comment:
+      'Amazing work from start to finish. Floors, windows, and counters looked perfect after the service.',
+    reply: null
+  },
+  {
+    id: 7,
+    name: 'Jacob Thompson',
+    date: 'Oct 7, 2024',
+    service: 'Move-out Cleaning',
+    rating: 4,
+    comment:
+      'Strong attention to detail and professional behavior. I would definitely book again for future cleanings.',
+    reply: null
+  },
+  {
+    id: 8,
+    name: 'Lisa Nguyen',
+    date: 'Oct 4, 2024',
+    service: 'Office Recurring Clean',
+    rating: 5,
+    comment:
+      'Consistently excellent results. The workspace feels fresh and organized every time.',
+    reply: null
+  },
+  {
+    id: 9,
+    name: 'Daniel Brooks',
+    date: 'Oct 2, 2024',
+    service: 'Deep Cleaning',
+    rating: 4,
+    comment: 'Professional and careful with fragile items. Very happy with the final outcome.',
+    reply: null
+  },
+  {
+    id: 10,
+    name: 'Sophia Kim',
+    date: 'Sep 29, 2024',
+    service: 'Home Cleaning',
+    rating: 5,
+    comment: 'Best cleaning service I have booked this year. Everything looked fresh and spotless.',
+    reply: null
+  },
+  {
+    id: 11,
+    name: 'Anthony Reed',
+    date: 'Sep 26, 2024',
+    service: 'Weekly Home Cleaning',
+    rating: 4,
+    comment: 'Reliable and easy to work with. Minor touch-ups needed but overall excellent service.',
+    reply: null
+  },
+  {
+    id: 12,
+    name: 'Mia Rodriguez',
+    date: 'Sep 24, 2024',
+    service: 'Apartment Cleaning',
+    rating: 5,
+    comment: 'Great communication and very detailed cleaning. I will definitely schedule again.',
+    reply: null
+  },
+
 ];
 
 const ReviewPage = () => {
+  const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const reviewsPerPage = 4;
+  const totalPages = Math.ceil(reviews.length / reviewsPerPage);
+
+  const pagedReviews = useMemo(() => {
+    const start = (currentPage - 1) * reviewsPerPage;
+    return reviews.slice(start, start + reviewsPerPage);
+  }, [currentPage]);
+
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
   return (
     <div className="cleaner-review-page">
       <div className="review-headline">
         <h1>Customer Feedback</h1>
+        <button type="button" className="reply-btn" onClick={() => navigate('/cleaner/jobs/available')}>
+          View Available Jobs
+        </button>
         <p>Monitor your reputation and engage with your clients.</p>
       </div>
 
@@ -78,8 +179,8 @@ const ReviewPage = () => {
             <SafetyCertificateFilled /> Top 5% Cleaner
           </h3>
           <p>
-            You are among the highest-rated cleaners in your area. This status increases your
-            visibility for premium job requests.
+            You are among the highest-rated cleaners in your area. This status increases your visibility for premium
+            job requests.
           </p>
         </div>
       </div>
@@ -100,7 +201,7 @@ const ReviewPage = () => {
       </div>
 
       <div className="review-list">
-        {reviews.map((review) => (
+        {pagedReviews.map((review) => (
           <article key={review.id} className="review-card">
             <div className="review-top">
               <div className="review-author">
@@ -108,7 +209,14 @@ const ReviewPage = () => {
                 <div>
                   <h3>{review.name}</h3>
                   <div className="meta-line">
-                    <span className="stars-inline">{'★'.repeat(review.rating)}</span>
+                    <span className="stars-inline" aria-label={`${review.rating} out of 5 stars`}>
+                      {Array.from({ length: 5 }, (_, idx) => (
+                        <span key={idx} className={`star ${idx < review.rating ? 'filled' : 'empty'}`}>
+                          {'\u2605'}
+                        </span>
+                      ))}
+                    </span>
+                    <span>{`Rated us ${review.rating}/5`}</span>
                     <span>{review.date}</span>
                   </div>
                 </div>
@@ -133,9 +241,8 @@ const ReviewPage = () => {
                 <CheckCircleFilled /> Verified Customer
               </span>
               <div className="review-actions">
-                <button type="button" className="text-btn">Report</button>
-                <button type="button" className="reply-btn">
-                  <MessageOutlined /> Reply
+                <button type="button" className="text-btn">
+                  Report
                 </button>
               </div>
             </div>
@@ -144,15 +251,39 @@ const ReviewPage = () => {
       </div>
 
       <div className="pagination-row">
-        <button type="button" aria-label="previous page">
+        <button
+          type="button"
+          aria-label="previous page"
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className={currentPage === 1 ? 'disabled' : ''}
+        >
           <svg className="page-arrow left" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M10 3.5L5.5 8L10 12.5" />
           </svg>
         </button>
-        <button type="button" className="active">1</button>
-        <button type="button">2</button>
-        <button type="button">3</button>
-        <button type="button" aria-label="next page">
+
+        {Array.from({ length: totalPages }, (_, idx) => {
+          const page = idx + 1;
+          return (
+            <button
+              key={page}
+              type="button"
+              className={currentPage === page ? 'active' : ''}
+              onClick={() => goToPage(page)}
+            >
+              {page}
+            </button>
+          );
+        })}
+
+        <button
+          type="button"
+          aria-label="next page"
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className={currentPage === totalPages ? 'disabled' : ''}
+        >
           <svg className="page-arrow right" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M6 3.5L10.5 8L6 12.5" />
           </svg>

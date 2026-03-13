@@ -1,225 +1,309 @@
-import React, { useState } from 'react';
-import {
-  CalendarOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  EnvironmentOutlined,
-  HomeOutlined,
-  RightOutlined,
-  SearchOutlined,
-  ShopOutlined,
-  StarFilled,
-  StarOutlined,
-  ToolOutlined,
-  UserOutlined
-} from '@ant-design/icons';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import narithImage from '../../../assets/narith.png';
+import meyImage from '../../../assets/mey.JPG';
+import molikaImage from '../../../assets/molika.png';
+import homeServiceImage from '../../../assets/home.png';
+import officeServiceImage from '../../../assets/office.png';
+import windowServiceImage from '../../../assets/window.png';
+import moveServiceImage from '../../../assets/move.png';
+import shopServiceImage from '../../../assets/shop.png';
+import proServiceImage from '../../../assets/pro.png';
+import api from '../../../services/api';
 import '../../../styles/customer/home.scss';
 
-const services = [
+const howItWorksSteps = [
   {
-    id: 1,
-    name: 'Regular Cleaning',
-    description: 'Weekly or bi-weekly upkeep for your home.',
-    price: 45,
-    duration: '2 hours',
-    icon: <HomeOutlined />,
-    theme: 'mint'
+    step: '1',
+    title: 'Book a Service',
+    description: 'Choose the cleaning service and select your preferred date and time.'
   },
   {
-    id: 2,
-    name: 'Deep Cleaning',
-    description: 'Top-to-bottom cleaning for hard-to-reach areas.',
-    price: 120,
-    duration: '4 hours',
-    icon: <ToolOutlined />,
-    theme: 'amber'
+    step: '2',
+    title: 'Cleaner Arrives',
+    description: 'Our professional cleaners arrive fully equipped.'
   },
   {
-    id: 3,
-    name: 'Move In/Out',
-    description: 'Detailed cleaning before move-in or handover.',
-    price: 160,
-    duration: '6 hours',
-    icon: <ShopOutlined />,
-    theme: 'sky'
+    step: '3',
+    title: 'Cleaning Process',
+    description: 'They clean your home or office efficiently.'
   },
   {
-    id: 4,
-    name: 'Window Cleaning',
-    description: 'Interior and exterior window care and shine.',
-    price: 80,
-    duration: '2 hours',
-    icon: <EnvironmentOutlined />,
-    theme: 'rose'
+    step: '4',
+    title: 'Enjoy a Spotless Space',
+    description: 'Relax and enjoy a fresh and clean environment.'
   }
 ];
 
-const recentBookings = [
+const serviceHighlights = [
   {
-    id: 'BK001',
-    service: 'Regular Cleaning',
-    date: 'Oct 24, 2024',
-    time: '02:00 PM',
-    status: 'completed',
-    cleaner: 'Maria Garcia',
-    rating: 5
+    id: 's1',
+    title: 'Home Deep Cleaning',
+    description: 'Complete cleaning for kitchen, bathroom, bedroom, and living areas.',
+    image: homeServiceImage,
+    cta: 'Book Deep Clean'
   },
   {
-    id: 'BK002',
-    service: 'Deep Cleaning',
-    date: 'Oct 26, 2024',
-    time: '10:00 AM',
-    status: 'upcoming',
-    cleaner: 'David Lee',
-    rating: null
+    id: 's2',
+    title: 'Regular Home Cleaning',
+    description: 'Weekly or daily cleaning to maintain a tidy home.',
+    image: moveServiceImage,
+    cta: 'Set a Schedule'
+  },
+  {
+    id: 's3',
+    title: 'Office Cleaning',
+    description: 'Professional cleaning service for offices and workplaces.',
+    image: officeServiceImage,
+    cta: 'Clean My Office'
+  },
+  {
+    id: 's4',
+    title: 'Window Cleaning',
+    description: 'Streak-free window cleaning for a brighter home.',
+    image: windowServiceImage,
+    cta: 'View Window Care'
   }
+];
+
+const featuredCleaners = [
+  {
+    id: 'c1',
+    photo: narithImage,
+    company: 'FreshNest Cleaning Co.',
+    rating: 5,
+    reviews: 186
+  },
+  {
+    id: 'c2',
+    photo: meyImage,
+    company: 'Sparkle Pro Services',
+    rating: 5,
+    reviews: 241
+  },
+  {
+    id: 'c3',
+    photo: molikaImage,
+    company: 'PrimeCare Cleaners',
+    rating: 5,
+    reviews: 203
+  }
+];
+
+const fallbackImages = [homeServiceImage, officeServiceImage, windowServiceImage, moveServiceImage, shopServiceImage, proServiceImage];
+
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${apiHost}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
+
+const mapServiceFromApi = (item, index) => ({
+  id: String(item?.service_id || item?.id || `${item?.name || 'service'}-${index}`),
+  title: String(item?.name || 'Untitled Service'),
+  description: String(item?.description || 'Professional cleaning service.'),
+  image: toAbsoluteImageUrl(item?.images?.[0]?.image_url || item?.image || '') || fallbackImages[index % fallbackImages.length],
+  status: String(item?.status || 'active').toLowerCase(),
+});
+
+const truncateWords = (text, wordLimit = 25) => {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= wordLimit) return text;
+  return words.slice(0, wordLimit).join(' ') + '...';
+};
+
+const whyChoosePoints = [
+  'Trusted and verified cleaners',
+  'Affordable pricing',
+  'Eco-friendly cleaning products',
+  'Easy online booking',
+  'Flexible scheduling',
+  'Customer support'
 ];
 
 const CustomerHomePage = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [services, setServices] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(true);
 
-  const userData = {
-    name: 'John',
-    upcomingBookings: 2,
-    completedJobs: 14,
-    favoriteServices: 6
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await api.get('/services', { params: { page: 1, limit: 6 } });
+        const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const mappedServices = rows.map(mapServiceFromApi);
+        setServices(mappedServices);
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+        setServices([]);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  const handleBookService = (service) => {
+    navigate('/customer/bookings', { state: { service: { title: service.title, description: service.description, image: service.image } } });
   };
 
   return (
-    <div className="customer-home">
-      <section className="home-hero">
-        <div className="hero-text">
-          <p className="eyebrow">Customer Dashboard</p>
-          <h1>Hello, {userData.name}</h1>
-          <p className="subtitle">Plan your next cleaning session in less than a minute.</p>
+    <div className="customer-home-landing">
+      <section className="editorial-hero reveal">
+        <div className="hero-copy">
+          <h1>
+            Professional Cleaning for a <br />
+            <span>Spotless Home</span>
+          </h1>
+          <p>
+            Experience the joy of a pristine living space with our reliable residential and
+            commercial cleaning services. Eco-friendly, vetted, and flexible.
+          </p>
 
-          <div className="search-wrap">
-            <SearchOutlined className="search-icon" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search services, cleaners, or locations"
-            />
-            <button type="button" onClick={() => navigate('/services')}>Search</button>
+          <div className="hero-actions">
+            <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
+              Booking Now!
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/customer/services')}>
+              View Services
+            </button>
           </div>
         </div>
-
-        <div className="hero-stats">
-          <article>
-            <span>Upcoming</span>
-            <strong>{userData.upcomingBookings}</strong>
-          </article>
-          <article>
-            <span>Completed</span>
-            <strong>{userData.completedJobs}</strong>
-          </article>
-          <article>
-            <span>Favorites</span>
-            <strong>{userData.favoriteServices}</strong>
-          </article>
-        </div>
       </section>
 
-      <section className="quick-actions">
-        <button type="button" onClick={() => navigate('/customer/bookings')}>
-          <CalendarOutlined />
-          <span>My Bookings</span>
-        </button>
-        <button type="button" onClick={() => navigate('/customer/favorites')}>
-          <StarOutlined />
-          <span>Favorites</span>
-        </button>
-        <button type="button" onClick={() => navigate('/customer/profile')}>
-          <UserOutlined />
-          <span>Profile</span>
-        </button>
-      </section>
+      <section className="how-it-works reveal reveal-delay-1">
+        <header className="how-head">
+          <p className="how-kicker">HOW IT WORKS</p>
+          {/* <h2>How It Works</h2> */}
+          <p className="how-summary">
+            Explain the simple process so customers understand how to book.
+          </p>
+        </header>
 
-      <section className="services-section">
-        <div className="section-head">
-          <h2>Popular Services</h2>
-          <button type="button" onClick={() => navigate('/services')}>
-            View all <RightOutlined />
-          </button>
-        </div>
-
-        <div className="services-grid">
-          {services.map((service) => (
-            <article key={service.id} className={`service-card ${service.theme}`}>
-              <div className="service-top">
-                <span className="service-icon">{service.icon}</span>
-                <span className="service-duration">
-                  <ClockCircleOutlined /> {service.duration}
-                </span>
+        <div className="how-flow">
+          {howItWorksSteps.map((item) => (
+            <article key={item.step} className="how-step">
+              <div className="how-icon" aria-hidden="true">
+                <span>{item.step}</span>
               </div>
-              <h3>{service.name}</h3>
-              <p>{service.description}</p>
-              <div className="service-bottom">
-                <strong>${service.price}</strong>
-                <button type="button" onClick={() => navigate('/customer/bookings')}>
-                  Book now
-                </button>
-              </div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="bookings-section">
-        <div className="section-head">
-          <h2>Recent Bookings</h2>
-          <button type="button" onClick={() => navigate('/customer/bookings')}>
-            View all <RightOutlined />
-          </button>
-        </div>
+      <section className="our-services reveal reveal-delay-2">
+        <header className="services-head">
+          <p className="services-kicker">OUR CLEANING SERVICES</p>
+          <p className="services-summary">
+            Choose from a wide range of professional cleaning services designed to keep your home or
+            workplace spotless.
+          </p>
+        </header>
 
-        <div className="bookings-grid">
-          {recentBookings.map((booking) => (
-            <article key={booking.id} className="booking-card">
-              <div className="booking-main">
-                <h3>{booking.service}</h3>
-                <span className={`status ${booking.status}`}>{booking.status}</span>
-              </div>
-              <p className="booking-time">
-                <CalendarOutlined /> {booking.date} at {booking.time}
-              </p>
-              <p className="booking-cleaner">Cleaner: {booking.cleaner}</p>
-
-              <div className="booking-foot">
-                {booking.rating ? (
-                  <span className="rating">
-                    <StarFilled /> {booking.rating.toFixed(1)}
-                  </span>
-                ) : (
-                  <span className="rating pending">
-                    <CheckCircleOutlined /> Waiting for review
-                  </span>
-                )}
-
-                {booking.status === 'completed' && !booking.rating && (
-                  <button type="button" onClick={() => navigate(`/customer/write-review/${booking.id}`)}>
-                    Write review
+        <div className="service-highlight-grid">
+          {loadingServices ? (
+            <div className="services-loading">Loading services...</div>
+          ) : services.length > 0 ? (
+            services.slice(0, 4).map((service, index) => (
+              <article key={service.id} className="service-highlight-item">
+                <img src={service.image} alt={service.title} />
+                <div className="service-highlight-body">
+                  <span className="service-index">{index + 1}</span>
+                  <h3>{service.title}</h3>
+                  <p>{truncateWords(service.description, 25)}</p>
+                  <button type="button" className="service-card-btn" onClick={() => handleBookService(service)}>
+                    Book Now
                   </button>
-                )}
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="services-empty">No services available</div>
+          )}
+        </div>
+
+        <div className="services-actions">
+          <button type="button" className="btn-primary" onClick={() => navigate('/customer/services')}>
+            View All Services
+          </button>
+        </div>
+      </section>
+
+      <section className="top-cleaners reveal reveal-delay-2">
+        <header className="cleaners-head">
+          <p className="cleaners-kicker">TOP RATED CLEANERS</p>
+          {/* <h2>Top Rated Cleaners</h2> */}
+          <p className="cleaners-summary">
+            Show some top cleaners or companies from your platform.
+          </p>
+        </header>
+
+        <div className="cleaners-grid">
+          {featuredCleaners.map((cleaner) => (
+            <article key={cleaner.id} className="cleaner-card">
+              <div className="cleaner-photo-wrap">
+                <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
               </div>
+              <h3>{cleaner.company}</h3>
+              <p className="cleaner-rating">{'⭐'.repeat(cleaner.rating)}</p>
+              <p className="cleaner-reviews">{cleaner.reviews} total reviews</p>
+              <button
+                type="button"
+                className="cleaner-profile-btn"
+                onClick={() => navigate('/customer/services')}
+              >
+                View Profile
+              </button>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="support-banner">
-        <div>
-          <h3>Need help choosing a service?</h3>
-          <p>Chat with support and get a recommendation based on your home and schedule.</p>
+      <section className="why-choose reveal reveal-delay-3">
+        <header className="why-head">
+          <p className="why-kicker">WHY CHOOSE US</p>
+          <p className="why-summary">
+            Customers want to know why they should trust your service.
+          </p>
+        </header>
+
+        <div className="why-list">
+          {whyChoosePoints.map((point) => (
+            <div key={point} className="why-item">
+              <span className="why-icon" aria-hidden="true">
+                {'\u2713'}
+              </span>
+              <span className="why-text">{point}</span>
+            </div>
+          ))}
         </div>
-        <button type="button" onClick={() => navigate('/customer/help/contact')}>
-          Contact support
-        </button>
+      </section>
+
+      <section className="cta-banner reveal reveal-delay-4">
+        <div className="cta-content">
+          <h2>Ready for a Cleaning!</h2>
+          <p>
+            Book professional cleaners in minutes and enjoy a spotless space today.
+          </p>
+          <div className="cta-actions">
+            <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
+              Book Now
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => navigate('/customer/services')}>
+              Browse Services
+            </button>
+          </div>
+        </div>
       </section>
     </div>
+    
   );
 };
 

@@ -1,26 +1,46 @@
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import homeImage from "../../assets/image.png";
+import narithImage from "../../assets/narith.png";
+import meyImage from "../../assets/mey.JPG";
+import molikaImage from "../../assets/molika.png";
+
+const fadeUpVariant = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+};
 
 export default function HomePage() {
   const testimonials = [
     {
+     
+      name: "Hen Narith",
+      role: "Homeowner in Seattle",
+      image: narithImage,
       quote:
-        '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."',
-      name: "Sarah Jenkins",
-      role: "Homeowner in Seattle"
+        '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."'
     },
+
+
     {
       quote:
         '"The cleaners are so professional and detailed. They even got the pet hair out of my carpets."',
       name: "Michael Chen",
-      role: "Regular Customer"
+      role: "Regular Customer",
+      image: molikaImage
     },
     {
       quote:
         '"I used them for a move-out clean and got my full security deposit back without stress."',
       name: "Emma Thompson",
-      role: "New Resident"
+      role: "New Resident",
+      image: meyImage
     }
   ];
 
@@ -69,22 +89,27 @@ export default function HomePage() {
 
       <section id="home" className="bg-[#f2f4f3] py-14">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-8 md:grid-cols-2">
-          <div className="max-w-xl">
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-600">
+          <motion.div 
+            className="max-w-xl"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.p variants={fadeUpVariant} className="text-xs font-bold uppercase tracking-[0.25em] text-slate-600">
               Professional Cleaning
-            </p>
-            <h1 className="mt-3 text-5xl font-black leading-[0.95] text-slate-900 md:text-6xl">
+            </motion.p>
+            <motion.h1 variants={fadeUpVariant} className="mt-3 text-5xl font-black leading-[0.95] text-slate-900 md:text-6xl">
               Professional <br />
               Cleaning for a <br />
               <span className="text-[#32c753]">Spotless Home</span>
-            </h1>
+            </motion.h1>
 
-            <p className="mt-6 text-base leading-7 text-slate-500">
+            <motion.p variants={fadeUpVariant} className="mt-6 text-base leading-7 text-slate-500">
               Experience the joy of a pristine living space with our eco-friendly, expert
               cleaning services tailored to your specific needs.
-            </p>
+            </motion.p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            <motion.div variants={fadeUpVariant} className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 to="/auth/register"
                 className="inline-flex rounded-xl bg-[#32c753] px-6 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]"
@@ -97,19 +122,24 @@ export default function HomePage() {
               >
                 See How It Works
               </Link>
-            </div>
+            </motion.div>
 
-            <div className="mt-7 flex items-center gap-3 text-sm text-slate-500">
+            <motion.div variants={fadeUpVariant} className="mt-7 flex items-center gap-3 text-sm text-slate-500">
               <div className="flex -space-x-2">
                 <span className="h-5 w-5 rounded-full border border-white bg-[#ffb38b]" />
                 <span className="h-5 w-5 rounded-full border border-white bg-[#ffd1b8]" />
                 <span className="h-5 w-5 rounded-full border border-white bg-[#ffe7da]" />
               </div>
               <p>Trusted by 2,000+ local homeowners</p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          <div className="relative">
+          <motion.div 
+            className="relative"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+          >
             <div className="overflow-hidden rounded-3xl bg-[#d9dfd0] p-2 shadow-2xl">
               <img
                 src={homeImage}
@@ -117,7 +147,12 @@ export default function HomePage() {
                 className="h-[340px] w-full rounded-2xl object-cover md:h-[420px]"
               />
             </div>
-            <div className="absolute -bottom-5 left-5 rounded-2xl bg-white px-4 py-3 shadow-xl">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              className="absolute -bottom-5 left-5 rounded-2xl bg-white px-4 py-3 shadow-xl"
+            >
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#32c753]/15 text-[#32c753]">
                   OK
@@ -127,41 +162,59 @@ export default function HomePage() {
                   <p className="text-xs text-slate-500">Money-back guarantee</p>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       <section className="bg-[#f2f4f3] py-20">
         <div className="mx-auto max-w-7xl px-8">
-          <div className="text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#32c753]">
               Process
             </p>
             <h2 className="mt-3 text-4xl font-black text-slate-900 md:text-5xl">
               Clean Home in 3 Simple Steps
             </h2>
-          </div>
+          </motion.div>
 
-          <div className="relative mt-14 grid gap-10 md:grid-cols-3">
+          <motion.div 
+            className="relative mt-14 grid gap-10 md:grid-cols-3"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
             <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
 
             {processSteps.map((step) => (
-              <article key={step.number} className="relative text-center">
+              <motion.article key={step.number} variants={fadeUpVariant} className="relative text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
                   {step.number}
                 </div>
-                <h3 className="mt-6 text-2xl font-extrabold text-slate-900">{step.title}</h3>
+                <h3 className="mt-100 text-2xl font-extrabold text-slate-900">{step.title}</h3>
                 <p className="mx-auto mt-3 max-w-xs text-slate-500">{step.description}</p>
-              </article>
+              </motion.article>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       <section className="bg-[#f2f4f3] py-20">
         <div className="mx-auto max-w-7xl px-8">
-          <div className="mb-10 flex items-center justify-between gap-4">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-10 flex items-center justify-between gap-4"
+          >
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#32c753]">
                 Testimonials
@@ -178,25 +231,51 @@ export default function HomePage() {
                 {">"}
               </button>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <motion.div 
+            className="grid gap-6 md:grid-cols-3"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
             {testimonials.map((item) => (
-              <article key={item.name} className="rounded-2xl bg-white p-6 shadow-sm">
-                <p className="text-sm font-bold tracking-wider text-[#f4b400]">*****</p>
-                <p className="mt-4 text-slate-600">{item.quote}</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <span className="h-10 w-10 rounded-full bg-[#d39a6f]" />
-                  <div>
+              <motion.article key={item.name} variants={fadeUpVariant} className="rounded-2xl bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-4">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-[#32c753]/30"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = homeImage;
+                      }}
+                    />
+                  ) : (
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#d39a6f] text-xl font-bold text-white">
+                      {item.name?.charAt(0)}
+                    </span>
+                  )}
+                  <div className="text-left">
                     <p className="font-extrabold text-slate-900">{item.name}</p>
+                    <p className="text-2xl font-extrabold tracking-wider text-[#f4b400]">*****</p>
                     <p className="text-xs text-slate-500">{item.role}</p>
                   </div>
                 </div>
-              </article>
+                <p className="mt-4 text-slate-600">{item.quote}</p>
+              </motion.article>
             ))}
-          </div>
+          </motion.div>
 
-          <div className="mx-auto mt-14 max-w-5xl rounded-[28px] bg-gradient-to-r from-[#146f27] via-[#128227] to-[#0b1f3c] px-8 py-12 text-center text-white shadow-2xl">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+            whileInView={{ opacity: 1, scale: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="mx-auto mt-14 max-w-5xl rounded-[28px] bg-gradient-to-r from-[#146f27] via-[#128227] to-[#0b1f3c] px-8 py-12 text-center text-white shadow-2xl"
+          >
             <h3 className="text-4xl font-black">Ready to Come Home to Clean?</h3>
             <p className="mt-3 text-sm text-emerald-100">
               Join thousands of happy customers and book your first cleaning today.
@@ -204,7 +283,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 to="/auth/register"
-                className="rounded-xl bg-[#32ff1a] px-6 py-3 text-sm font-black text-[#114a1b] shadow-[0_0_25px_rgba(50,255,26,0.45)] transition hover:brightness-95"
+                className="rounded-xl bg-[#008000] px-6 py-3 text-sm font-black text-white shadow-[0_0_25px_rgba(0,128,0,0.45)] transition hover:brightness-95"
               >
                 Book Now - 20% Off First Clean
               </Link>
@@ -215,7 +294,7 @@ export default function HomePage() {
                 Contact Sales
               </Link>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -266,3 +345,6 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+

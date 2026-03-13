@@ -1,32 +1,98 @@
-const prisma = require('../../config/database');
-const AppError = require('../../utils/error.util');
+const db = require('../../config/db');
 
-const getAllServices = async (req, res, next) => {
+const normalizeStatus = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'inactive' ? 'inactive' : 'active';
+};
+
+const mapServiceRow = (row) => ({
+  service_id: row.service_id,
+  name: row.name,
+  description: row.description,
+  status: normalizeStatus(row.status),
+  images: row.image_url ? [{ image_url: row.image_url }] : []
+});
+
+const getServiceById = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const serviceId = parseInt(req.params.id, 10);
+    const promiseDb = db.promise();
 
-    const [services, total] = await Promise.all([
-      prisma.service.findMany({
-        include: {
-          images: true,
-          _count: {
-            select: { bookings: true }
-          }
-        },
-        skip: parseInt(skip),
-        take: parseInt(limit),
-        orderBy: { created_at: 'desc' }
-      }),
-      prisma.service.count()
-    ]);
+    const [rows] = await promiseDb.query(
+      `
+        SELECT
+          s.service_id,
+          s.name,
+          s.description,
+          s.status,
+          COALESCE((
+            SELECT si.image_url
+            FROM service_images si
+            WHERE si.service_id = s.service_id
+            ORDER BY si.id DESC
+            LIMIT 1
+          ), s.image) AS image_url
+        FROM services s
+        WHERE s.service_id = ?
+        LIMIT 1
+      `,
+      [serviceId]
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found'
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: services,
+      data: mapServiceRow(rows[0])
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAllServices = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+    const skip = (page - 1) * limit;
+    const promiseDb = db.promise();
+
+    const [services] = await promiseDb.query(
+      `
+        SELECT
+          s.service_id,
+          s.name,
+          s.description,
+          s.status,
+          (
+            SELECT si.image_url
+            FROM service_images si
+            WHERE si.service_id = s.service_id
+            ORDER BY si.id DESC
+            LIMIT 1
+          ) AS image_url
+        FROM services s
+        ORDER BY s.service_id DESC
+        LIMIT ?
+        OFFSET ?
+      `,
+      [limit, skip]
+    );
+
+    const [countRows] = await promiseDb.query('SELECT COUNT(*) AS total FROM services');
+    const total = Number(countRows?.[0]?.total || 0);
+
+    res.status(200).json({
+      success: true,
+      data: services.map(mapServiceRow),
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page,
+        limit,
         total,
         pages: Math.ceil(total / limit)
       }
@@ -38,21 +104,51 @@ const getAllServices = async (req, res, next) => {
 
 const createService = async (req, res, next) => {
   try {
-    const { name, price, description, category, duration } = req.body;
+    const { name, description, status, image_url } = req.body;
+    const promiseDb = db.promise();
+    const normalizedStatus = normalizeStatus(status);
 
-    const service = await prisma.service.create({
-      data: {
-        name,
-        price: parseFloat(price),
-        description,
-        category,
-        duration: duration ? parseInt(duration) : null
-      }
-    });
+    const [insertResult] = await promiseDb.query(
+      `
+        INSERT INTO services (name, description, status, image)
+        VALUES (?, ?, ?, ?)
+      `,
+      [name, description, normalizedStatus, image_url || null]
+    );
+
+    const serviceId = Number(insertResult.insertId);
+
+    if (image_url) {
+      await promiseDb.query(
+        'INSERT INTO service_images (image_url, service_id) VALUES (?, ?)',
+        [image_url, serviceId]
+      );
+    }
+
+    const [rows] = await promiseDb.query(
+      `
+        SELECT
+          s.service_id,
+          s.name,
+          s.description,
+          s.status,
+          COALESCE((
+            SELECT si.image_url
+            FROM service_images si
+            WHERE si.service_id = s.service_id
+            ORDER BY si.id DESC
+            LIMIT 1
+          ), s.image) AS image_url
+        FROM services s
+        WHERE s.service_id = ?
+        LIMIT 1
+      `,
+      [serviceId]
+    );
 
     res.status(201).json({
       success: true,
-      data: service
+      data: rows[0] ? mapServiceRow(rows[0]) : null
     });
   } catch (error) {
     next(error);
@@ -62,23 +158,80 @@ const createService = async (req, res, next) => {
 const updateService = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, price, description, category, duration, is_available } = req.body;
+    const { name, description, status, image_url } = req.body;
+    const serviceId = parseInt(id, 10);
+    const promiseDb = db.promise();
 
-    const service = await prisma.service.update({
-      where: { service_id: parseInt(id) },
-      data: {
-        name,
-        price: price ? parseFloat(price) : undefined,
-        description,
-        category,
-        duration: duration ? parseInt(duration) : undefined,
-        is_available
+    const updates = [];
+    const params = [];
+
+    if (name !== undefined) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(description);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(normalizeStatus(status));
+    }
+
+    if (updates.length > 0) {
+      params.push(serviceId);
+      const [updateResult] = await promiseDb.query(
+        `UPDATE services SET ${updates.join(', ')} WHERE service_id = ?`,
+        params
+      );
+      if (!updateResult?.affectedRows) {
+        return res.status(404).json({
+          success: false,
+          message: 'Service not found'
+        });
       }
-    });
+    }
+
+    const uploadedImageUrl = req.file
+      ? `/uploads/services/${req.file.filename}`
+      : undefined;
+    const nextImageUrl = uploadedImageUrl || image_url;
+
+    if (nextImageUrl) {
+      await promiseDb.query(
+        'UPDATE services SET image = ? WHERE service_id = ?',
+        [nextImageUrl, serviceId]
+      );
+      await promiseDb.query(
+        'INSERT INTO service_images (image_url, service_id) VALUES (?, ?)',
+        [nextImageUrl, serviceId]
+      );
+    }
+
+    const [rows] = await promiseDb.query(
+      `
+        SELECT
+          s.service_id,
+          s.name,
+          s.description,
+          s.status,
+          COALESCE((
+            SELECT si.image_url
+            FROM service_images si
+            WHERE si.service_id = s.service_id
+            ORDER BY si.id DESC
+            LIMIT 1
+          ), s.image) AS image_url
+        FROM services s
+        WHERE s.service_id = ?
+        LIMIT 1
+      `,
+      [serviceId]
+    );
 
     res.status(200).json({
       success: true,
-      data: service
+      data: rows[0] ? mapServiceRow(rows[0]) : null
     });
   } catch (error) {
     next(error);
@@ -88,22 +241,37 @@ const updateService = async (req, res, next) => {
 const deleteService = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const serviceId = parseInt(id, 10);
+    const promiseDb = db.promise();
 
-    await prisma.service.delete({
-      where: { service_id: parseInt(id) }
-    });
+    await promiseDb.query('DELETE FROM service_images WHERE service_id = ?', [serviceId]);
+    const [deleteResult] = await promiseDb.query('DELETE FROM services WHERE service_id = ?', [serviceId]);
+
+    if (!deleteResult?.affectedRows) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found'
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: 'Service deleted successfully'
     });
   } catch (error) {
+    if (error?.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(409).json({
+        success: false,
+        message: 'Cannot delete this service because it is used by existing bookings'
+      });
+    }
     next(error);
   }
 };
 
 module.exports = {
   getAllServices,
+  getServiceById,
   createService,
   updateService,
   deleteService

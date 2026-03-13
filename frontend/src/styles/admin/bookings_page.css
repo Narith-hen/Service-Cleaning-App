@@ -44,7 +44,7 @@
 .admin-bookings-kpi-card {
   background: var(--bookings-bg);
   border: 1px solid var(--bookings-panel-border);
-  border-radius: 8px;
+  border-radius: 24px;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -111,7 +111,7 @@
 .admin-bookings-filter-row {
   background: var(--bookings-bg);
   border: 1px solid var(--bookings-panel-border);
-  border-radius: 8px;
+  border-radius: 24px;
   padding: 10px;
   display: grid;
   grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
@@ -171,12 +171,15 @@
 .admin-bookings-table-panel {
   background: var(--bookings-bg);
   border: 1px solid var(--bookings-panel-border);
-  border-radius: 8px;
+  border-radius: 24px;
   overflow: hidden;
 }
 
 .table-scroll-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  height: 60vh;
+  max-height: 520px;
 }
 
 .bookings-table {
@@ -199,6 +202,9 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .bookings-table td {
@@ -442,18 +448,45 @@
   font-size: 10px;
 }
 
-.row-action-btn {
-  border: none;
-  background: transparent;
-  color: var(--bookings-faint);
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
 }
 
-.row-action-btn:hover {
-  background: var(--bookings-soft-bg);
+.plain-icon-btn {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: #e8edf4;
+  color: var(--bookings-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plain-icon-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.plain-icon-btn.action-cancel {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.plain-icon-btn.action-cancel:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.no-action {
+  color: var(--bookings-faint);
+  font-size: 14px;
 }
 
 .empty-row {
@@ -476,6 +509,25 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.pager-actions .rows-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--bookings-muted);
+  font-weight: 600;
+}
+
+.pager-actions .rows-label select {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--bookings-panel-border);
+  background: var(--bookings-soft-bg);
+  color: var(--bookings-text);
+  padding: 0 8px;
+  font-size: 12px;
 }
 
 .pager-actions button {
@@ -559,5 +611,10 @@
     height: auto;
     padding: 10px 14px 14px;
     align-items: flex-start;
+  }
+
+  .pager-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }

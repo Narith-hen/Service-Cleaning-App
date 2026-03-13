@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import ModernResponsiveNavbar from './navbar';
 import Footer from './footer';
-import SeoMeta from './seo_meta';
 import { Drawer } from 'antd';
-import Sidebar from './Sidebar'; 
+import Sidebar from './sidebar'; 
 import '../../../styles/customer/customer_main_layout.css'; 
 
 const TARGET_SCREEN_BREAKPOINT = 1280;
@@ -13,6 +12,8 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
+  const isCustomerDashboard =
+    location.pathname === '/customer/dashboard' || location.pathname === '/customer/home';
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
@@ -86,7 +87,7 @@ const MainLayout = () => {
         flex: 1,
         background: darkMode ? '#0b1220' : 'white',
         minHeight: 'calc(100vh - 140px)',
-        paddingTop: 90
+        paddingTop: isCustomerDashboard ? 0 : 90
       }}>
         <Outlet context={{ darkMode }} />
       </main>
