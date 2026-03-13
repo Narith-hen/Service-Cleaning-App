@@ -73,7 +73,7 @@ const ServicesPage = () => {
         </section>
       )}
 
-      <ServicesContent embedded darkMode={darkMode} useApiServices={isCustomerArea} />
+      <ServicesContent embedded darkMode={darkMode} useApiServices />
     </div>
   );
 };
