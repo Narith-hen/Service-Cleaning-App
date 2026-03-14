@@ -107,23 +107,28 @@ export const useCleanerChat = ({ threadId }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
+  const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   
   // Track the thread that the current messages belong to so the write effect
   // never writes stale messages from a previous thread into a new thread.
   const activeThreadRef = useRef(normalizedThreadId);
   const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Initialize socket connection
   useEffect(() => {
     const socket = getSocket();
     socketRef.current = socket;
 
+    const joinRoom = () => {
+      // Join the booking room for this thread
+      socket.emit('booking:join', normalizedThreadId);
+    };
+
     const onConnect = () => {
       console.log('[useCleanerChat] Socket connected');
       setIsConnected(true);
-      
-      // Join the booking room for this thread
-      socket.emit('booking:join', normalizedThreadId);
+      joinRoom();
     };
 
     const onDisconnect = () => {
@@ -175,11 +180,22 @@ export const useCleanerChat = ({ threadId }) => {
     // Listen for incoming messages from customer
     const onNewMessage = (message) => {
       console.log('[useCleanerChat] New message received:', message);
-      setMessages((prev) => [...prev, {
-        ...message,
-        sender: 'customer',
-        status: 'received'
-      }]);
+      setMessages((prev) => {
+        // Prevent duplicates if message already exists
+        if (prev.some((m) => m.id === message.id)) {
+          return prev;
+        }
+        return [...prev, {
+          ...message,
+          sender: message.sender || 'customer',
+          status: 'received'
+        }];
+      });
+    };
+
+    // Listen for typing indicator from customer
+    const onUserTyping = ({ isTyping }) => {
+      setIsCustomerTyping(isTyping);
     };
 
     socket.on('connect', onConnect);
@@ -189,10 +205,23 @@ export const useCleanerChat = ({ threadId }) => {
     socket.on('message:seen', onMessageSeen);
     socket.on('messages:seen', onMessagesSeen);
     socket.on('message:new', onNewMessage);
+    socket.on('user:typing', onUserTyping);
 
     // Connect if not already connected
     if (!socket.connected) {
+      // Attach authentication data for the handshake
+      const token = localStorage.getItem('token') || 'demo-cleaner-token';
+      let userId = 'narith-hen';
+      try {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user?.id) userId = user.id;
+      } catch (e) {}
+
+      socket.auth = { token, userId };
       socket.connect();
+    } else {
+      setIsConnected(true);
+      joinRoom();
     }
 
     return () => {
@@ -203,9 +232,15 @@ export const useCleanerChat = ({ threadId }) => {
       socket.off('message:seen', onMessageSeen);
       socket.off('messages:seen', onMessagesSeen);
       socket.off('message:new', onNewMessage);
+      socket.off('user:typing', onUserTyping);
       
       // Leave the booking room on cleanup
       socket.emit('booking:leave', normalizedThreadId);
+
+      // Clear any pending typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [normalizedThreadId]);
 
@@ -213,26 +248,11 @@ export const useCleanerChat = ({ threadId }) => {
   useEffect(() => {
     activeThreadRef.current = normalizedThreadId;
     setIsLoading(true);
-    
-    // Show loading indicator only if loading takes longer than 500ms
-    const showLoadingTimer = setTimeout(() => {
-      setShowLoadingIndicator(true);
-    }, 500);
-    
-    // Load messages
+
+    // Load messages immediately to prevent race conditions
     const messages = loadMessages(normalizedThreadId);
-    
-    // If fast, show immediately. If slow, wait for 2s
-    const loadTimer = setTimeout(() => {
-      setMessages(messages);
-      setIsLoading(false);
-      setShowLoadingIndicator(false);
-    }, 2000);
-    
-    return () => {
-      clearTimeout(showLoadingTimer);
-      clearTimeout(loadTimer);
-    };
+    setMessages(messages);
+    setIsLoading(false);
   }, [normalizedThreadId]);
 
   // Save messages to localStorage
@@ -297,6 +317,27 @@ export const useCleanerChat = ({ threadId }) => {
     }
   }, [normalizedThreadId]);
 
+  const notifyTyping = useCallback(() => {
+    const socket = socketRef.current;
+    if (socket && socket.connected) {
+      socket.emit('typing', {
+        bookingId: normalizedThreadId,
+        isTyping: true
+      });
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit('typing', {
+          bookingId: normalizedThreadId,
+          isTyping: false
+        });
+      }, 3000); // Stop typing after 3 seconds of inactivity
+    }
+  }, [normalizedThreadId]);
+
   const sendMessage = ({ text, attachment }) => {
     const trimmedText = String(text || '').trim();
     const imageUrl = attachment?.preview || '';
@@ -354,6 +395,8 @@ export const useCleanerChat = ({ threadId }) => {
     markAsRead,
     isConnected,
     isLoading,
-    showLoadingIndicator
+    showLoadingIndicator,
+    isCustomerTyping,
+    notifyTyping
   };
 };
