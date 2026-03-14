@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircleFilled, StarFilled, SafetyCertificateFilled } from '@ant-design/icons';
 import '../../../styles/cleaner/review.scss';
 
@@ -123,6 +124,7 @@ const reviews = [
 ];
 
 const ReviewPage = () => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const reviewsPerPage = 4;
   const totalPages = Math.ceil(reviews.length / reviewsPerPage);
@@ -141,6 +143,9 @@ const ReviewPage = () => {
     <div className="cleaner-review-page">
       <div className="review-headline">
         <h1>Customer Feedback</h1>
+        <button type="button" className="reply-btn" onClick={() => navigate('/cleaner/jobs/available')}>
+          View Available Jobs
+        </button>
         <p>Monitor your reputation and engage with your clients.</p>
       </div>
 

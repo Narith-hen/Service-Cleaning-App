@@ -171,7 +171,7 @@ const JobRequestsPage = () => {
       setActiveMessageRequestId(request.id);
       setAcceptLoadingRequestId(null);
       acceptDelayTimerRef.current = null;
-    }, 5000);
+    }, 1000);
   };
 
   const handleAcceptClick = (request) => {
@@ -462,15 +462,6 @@ const JobRequestsPage = () => {
               </button>
             </div>
           </section>
-        </div>
-      )}
-
-      {acceptLoadingRequestId !== null && (
-        <div className="accept-loading-overlay">
-          <div className="accept-loading-card">
-            <div className="accept-loading-spinner" />
-            <h4>Loading...</h4>
-          </div>
         </div>
       )}
     </div>

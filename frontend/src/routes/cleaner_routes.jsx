@@ -46,7 +46,7 @@ export const cleanerRoutes = {
     },
     {
       path: 'tasks/completed',
-      element: <CleanerTasks />
+      element: <Navigate to="/cleaner/my-jobs" replace />
     },
     {
       path: 'tasks/:taskId',

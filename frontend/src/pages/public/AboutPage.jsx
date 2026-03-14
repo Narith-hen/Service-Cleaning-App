@@ -4,7 +4,7 @@ import tada from "../../assets/tada.png";
 import passApp from "../../assets/passApp.png";
 import redbus from "../../assets/redbus.png";
 import easybook from "../../assets/easybook.png";
-import agoda from "../../assets/agoda.png";
+import agoda from "../../assets/agoda.webp";
 import ravel from "../../assets/ravel.png";
 import book from "../../assets/book.png";
 import vet from "../../assets/vet.png";
