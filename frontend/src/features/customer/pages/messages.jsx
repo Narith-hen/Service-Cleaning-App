@@ -1,78 +1,152 @@
-import { useNavigate } from 'react-router-dom';
+import { useOutletContext } from "react-router-dom";
+import grabLogo from "../../../assets/grab.png";
+import tada from "../../../assets/tada.png";
+import passApp from "../../../assets/passApp.png";
+import redbus from "../../../assets/redbus.png";
+import easybook from "../../../assets/easybook.png";
+import agoda from "../../../assets/agoda.webp";
+import ravel from "../../../assets/ravel.png";
+import book from "../../../assets/book.png";
+import vet from "../../../assets/vet.png";
+import larryta from "../../../assets/larryta.png";
 
-const MessagesPage = () => {
-  const navigate = useNavigate();
+export default function AboutPage({ embedded = false }) {
+  const { darkMode = false } = useOutletContext() || {};
+  const partnerLogos = [
+    { src: grabLogo, name: "Grab" },
+    { src: tada, name: "tada" },
+    { src: passApp, name: "passApp" },
+    { src: redbus, name: "redbus" },
+    { src: easybook, name: "easybook" },
+    { src: agoda, name: "agoda" },
+    { src: ravel, name: "Travel Book" },
+    { src: book, name: " Book cambodia" },
+    { src: vet, name: " VirakBuntham cambodia" },
+    { src: larryta, name: " Larryta cambodia" },
+  ];
 
   return (
-    <div className="bg-gray-100 min-h-screen flex justify-center p-6 font-sans">
-      <main className="w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden text-sm">
-        <header className="p-4 border-b border-gray-100">
-          <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-3 py-2">
-            <i className="fas fa-search text-gray-400" aria-hidden="true" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="w-full bg-transparent text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none"
+    <div className={`${darkMode ? "bg-[#0b1220] text-slate-100" : "bg-slate-50 text-slate-800"} font-sans`}>
+      <section className={`${darkMode ? "bg-[#111b2f]" : "bg-white"} py-20 md:py-24`}>
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 md:grid-cols-2 md:gap-14 md:px-8">
+          <div className="relative">
+            <div className="absolute -left-4 -top-4 h-20 w-20 rounded-2xl bg-emerald-100 blur-2xl" />
+            <img
+              src="https://images.unsplash.com/photo-1603712725038-e9334ae8f39f?auto=format&fit=crop&q=80&w=1000"
+              alt="Cleaning Team"
+              className="relative z-10 rounded-3xl border border-slate-100 shadow-2xl"
             />
-            <div className="ml-auto flex items-center gap-1">
-              <span className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-[10px] font-bold">
-                🤔
-              </span>
-              <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
-                CC
-              </span>
+            <div className="absolute bottom-4 left-4 z-20 rounded-xl bg-white/95 px-4 py-2 text-xs font-semibold text-slate-700 shadow-lg">
+              10+ Years Experience
             </div>
           </div>
-        </header>
 
-        <div className="divide-y divide-gray-100">
-          <button type="button" className="w-full text-left flex items-center gap-4 px-4 py-3 hover:bg-gray-50">
-            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-              <i className="far fa-file-alt text-lg" aria-hidden="true" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[11px] font-semibold text-gray-800">Archived chats</h3>
-                <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">1</span>
-              </div>
-              <p className="text-[10px] text-gray-500 truncate">Group members, text snippets...</p>
-            </div>
-          </button>
+          <div>
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
+              About Company
+            </p>
+            <h2 className={`mb-6 text-4xl font-black leading-tight md:text-5xl ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
+              About <span className="text-[#32c753]">Somaet</span>
+            </h2>
 
-          <button type="button" className="w-full text-left flex items-center gap-4 px-4 py-3 hover:bg-gray-50">
-            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-              <i className="fas fa-bookmark text-lg" aria-hidden="true" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[11px] font-semibold text-gray-800">Saved Messages</h3>
-                <span className="text-[10px] text-gray-400">1:04 PM</span>
-              </div>
-              <p className="text-[10px] text-blue-600 truncate">Him: The QA Tester Handout.pdf</p>
-            </div>
-          </button>
+            <p className={`mb-4 text-lg ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+              Somaet has been delivering professional cleaning services for over 10
+              years. We specialize in residential and commercial
+              cleaning solutions that create healthier and happier environments.
+            </p>
 
-          <button
-            type="button"
-            onClick={() => navigate('/customer/bookings/quotes')}
-            className="w-full text-left flex items-center gap-4 px-4 py-3 hover:bg-gray-50"
-          >
-            <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-              S
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[8px] font-semibold text-gray-800">Sarah Jenkins</h3>
-                <span className="text-[10px] text-gray-400">8:55 AM</span>
-              </div>
-              <p className="text-[10px] text-gray-500 truncate">maybe yes</p>
-            </div>
-            <span className="text-red-500 text-sm">❤️</span>
-          </button>
+            <p className={`mb-7 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+              Our trained team uses eco-friendly products and modern equipment to
+              ensure every space is spotless, sanitized, and fresh.
+            </p>
+
+            <ul className="space-y-3">
+              <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
+                  ✓
+                </span>
+                Experienced and Certified Team
+              </li>
+
+              <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
+                  ✓
+                </span>
+                Eco-Friendly Products
+              </li>
+
+              <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
+                  ✓
+                </span>
+                100% Satisfaction Guarantee
+              </li>
+            </ul>
+
+            <button className="mt-8 rounded-full bg-emerald-500 px-8 py-3 font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:bg-emerald-600">
+              Learn More
+            </button>
+          </div>
         </div>
-      </main>
+      </section>
+
+      <section
+        className={`py-20 md:py-24 ${
+          darkMode
+            ? "bg-gradient-to-br from-[#0b1220] via-[#111b2f] to-[#0f2036]"
+            : "bg-gradient-to-br from-emerald-50 via-white to-slate-100"
+        }`}
+      >
+        <div className="mx-auto max-w-6xl px-6 md:px-8">
+          <div className={`overflow-hidden rounded-3xl border shadow-2xl ${darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+            <div className="relative flex h-28 w-full items-end bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-6 pb-4 md:h-32">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">
+                Our Partnerships
+              </p>
+            </div>
+
+            <div className="p-8 text-center md:p-12">
+              <h2 className={`mb-4 text-3xl font-black tracking-tight md:text-4xl ${darkMode ? "text-slate-100" : "text-slate-800"}`}>
+                Clients We Are Proud Of
+              </h2>
+
+              <p className={`mx-auto mb-10 max-w-2xl md:text-lg ${darkMode ? "text-slate-300" : "text-slate-500"}`}>
+                Trusted by respected businesses and organizations who rely on our
+                professional cleaning services for excellence and reliability.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 md:gap-4">
+                {partnerLogos.map((partner, index) => (
+                  <div
+                    key={index}
+                    className={`group relative overflow-hidden rounded-2xl border p-4 transition duration-300 hover:-translate-y-1 ${
+                      darkMode
+                        ? "border-slate-700 bg-slate-800 shadow-[0_8px_18px_rgba(2,6,23,0.4)] hover:shadow-[0_16px_30px_rgba(2,6,23,0.6)]"
+                        : "border-slate-200 bg-gradient-to-b from-white to-slate-50 shadow-[0_8px_18px_rgba(15,23,42,0.08)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.14)]"
+                    }`}
+                  >
+                    <div className="flex h-[98px] items-center justify-center rounded-xl bg-white md:h-[110px]">
+                      <img
+                        src={partner.src}
+                        alt={partner.name}
+                        className="h-[72px] w-[170px] object-contain transition duration-300 group-hover:scale-105 md:h-[82px] md:w-[185px]"
+                      />
+                    </div>
+                    <p className={`mt-3 text-center text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-slate-300" : "text-slate-500"}`}>
+                      {partner.name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {!embedded && (
+        <footer className="bg-gray-900 text-gray-400 text-center py-8 text-sm">
+          (c) 2026 CleaningPro. All rights reserved.
+        </footer>
+      )}
     </div>
   );
-};
-
-export default MessagesPage;
+}

@@ -63,7 +63,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
     ? [
       { key: 'home', label: 'My Home', path: '/customer/dashboard' },
       { key: 'services', label: 'Service', path: '/customer/services' },
-      { key: 'messages', label: 'Messages', path: '/customer/messages' },
+      { key: 'messages', label: 'About', path: '/customer/messages' },
       { key: 'contact', label: 'Contact', path: '/customer/contact' }
     ]
     : [
