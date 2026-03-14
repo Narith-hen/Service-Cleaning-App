@@ -15,6 +15,7 @@ import SettingsPage from '../features/customer/pages/setting_page';
 import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
 import CustomerChatPage from '../features/customer/pages/chat_page';
+import CustomerMessagesPage from '../features/customer/pages/messages_page';
 import CustomerServicesPage from '../features/public/pages/services_page';
 
 export const customerRoutes = {
@@ -64,6 +65,10 @@ export const customerRoutes = {
     {
       path: 'chat/:bookingId',
       element: <CustomerChatPage />
+    },
+    {
+      path: 'messages',
+      element: <CustomerMessagesPage />
     },
     {
       path: 'profile',

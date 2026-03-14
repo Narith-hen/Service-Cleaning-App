@@ -12,6 +12,7 @@ import CleanerEarnings from '../features/cleaner/pages/earnings_page';
 import CleanerAvailability from '../features/cleaner/pages/availability_page';
 import CleanerReviews from '../features/cleaner/pages/review_page';
 import CleanerNotifications from '../features/cleaner/pages/notification_page';
+import CleanerMessages from '../features/cleaner/pages/messages_page';
 import SettingsPage from '../features/cleaner/pages/settings_page';
 import HelpPage from '../features/cleaner/pages/help_page';
 import JobExecutionPage from '../features/cleaner/pages/job_execution_page';
@@ -63,6 +64,10 @@ export const cleanerRoutes = {
     {
       path: 'my-jobs',
       element: <MyJobsPage />
+    },
+    {
+      path: 'messages',
+      element: <CleanerMessages />
     },
     {
       path: 'job-execution',

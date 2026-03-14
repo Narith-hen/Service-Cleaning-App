@@ -345,6 +345,34 @@
   bottom: -1px;
 }
 
+.my-jobs-chat-online-dot.offline {
+  background: #cbd5e1;
+}
+
+.my-jobs-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.my-jobs-chat-sound-btn {
+  border: none;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.my-jobs-chat-sound-btn:hover {
+  color: var(--main-dark);
+}
+
 .my-jobs-chat-customer h3 {
   margin: 0;
   font-size: 24px;

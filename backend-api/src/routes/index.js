@@ -9,6 +9,7 @@ const promotionRoutes = require('./promotion.routes');
 const notificationRoutes = require('./notification.routes');
 const dashboardRoutes = require('./dashboard.routes');
 const adminRoutes = require('./admin.routes');
+const messageRoutes = require('./message.routes');
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.get('/', (req, res) => {
       payments: '/api/payments',
       promotions: '/api/promotions',
       notifications: '/api/notifications',
+      messages: '/api/messages',
       dashboard: '/api/dashboard',
       admin: '/api/admin'
     }
@@ -42,6 +44,7 @@ router.use('/reviews', reviewRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/promotions', promotionRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/messages', messageRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/admin', adminRoutes);
 

@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const { redis, subscriber } = require('./redis');
+const jwt = require('jsonwebtoken');
 
 const connectedUsers = new Map(); // userId -> socketId
 const userSockets = new Map(); // socketId -> userId
@@ -23,10 +24,9 @@ const initializeSocket = (server) => {
         return next(new Error('Authentication required'));
       }
 
-      // Verify token with backend API or JWT
-      // For now, we'll trust the token from the client
-      // In production, verify with your auth service
-      socket.userId = socket.handshake.auth.userId;
+      const secret = process.env.JWT_SECRET || 'dev-local-jwt-secret-change-me';
+      const decoded = jwt.verify(token, secret);
+      socket.userId = decoded.user_id;
       next();
     } catch (error) {
       next(new Error('Authentication failed'));
@@ -92,6 +92,12 @@ const initializeSocket = (server) => {
       const { bookingId, message } = data;
       
       if (!bookingId || !message) return;
+
+      const senderId = String(message.senderId || message.sender_id || '');
+      if (!senderId || senderId !== String(socket.userId)) {
+        console.warn('Rejected message: sender mismatch', senderId, socket.userId);
+        return;
+      }
       
       // Broadcast the new message to others in the booking room
       socket.to(`booking:${bookingId}`).emit('message:new', message);

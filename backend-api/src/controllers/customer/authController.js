@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const { generateToken } = require('../../utils/jwt.util');
 const fs = require("fs");
 const path = require("path");
+const { sendWelcomeEmail } = require('../../services/email.service');
 
 const toNullableString = (value) => {
   if (value === undefined) return undefined;
@@ -177,6 +178,8 @@ exports.register = async (req, res) => {
       hashedPassword,
       role_id,
     ]);
+
+    sendWelcomeEmail({ to: email, firstName: first_name }).catch(() => {});
 
     return res.status(201).json({
       success: true,

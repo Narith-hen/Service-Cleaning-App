@@ -6,3 +6,8 @@ realtime-server/node_modules/
 dist/
 .vite/
 .env
+backend-api/.env
+frontend/.env
+realtime-server/.env
+workers/.env
+

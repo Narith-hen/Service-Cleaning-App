@@ -5,10 +5,13 @@ import {
   CloseOutlined,
   EditOutlined,
   InfoCircleOutlined,
+  SoundOutlined,
+  AudioMutedOutlined,
   PlusCircleOutlined,
   SendOutlined
 } from '@ant-design/icons';
 import { formatCleanerChatTime, useCleanerChat } from '../hooks/useCleanerChat';
+import { useChatStore } from '../../../store/chatStore';
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
@@ -21,7 +24,11 @@ const toDataUrl = (file) =>
   });
 
 const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
-  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping } = useCleanerChat({ threadId });
+  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping, otherUserId } = useCleanerChat({ threadId });
+  const soundEnabled = useChatStore((state) => state.soundEnabled);
+  const toggleSound = useChatStore((state) => state.toggleSound);
+  const onlineUsers = useChatStore((state) => state.onlineUsers);
+  const isOtherOnline = otherUserId ? Boolean(onlineUsers[String(otherUserId)]) : true;
   const [draftMessage, setDraftMessage] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [inputError, setInputError] = useState('');
@@ -37,8 +44,10 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
   useEffect(() => {
     const el = chatBodyRef.current;
     if (!el) return;
+    console.log('[cleaner_message_panel] Messages updated, scrolling to bottom. Count:', messages.length);
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, pendingAttachment]);
+    // Only scroll when message count changes (new msg) or attachment is added
+  }, [messages.length, pendingAttachment]);
 
   // Emit message:read when chat is viewed
   useEffect(() => {
@@ -73,7 +82,8 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
       const preview = await toDataUrl(file);
       setPendingAttachment({
         name: file.name,
-        preview
+        preview,
+        file
       });
       setInputError('');
     } catch {
@@ -123,20 +133,29 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
     setEditDraft('');
   };
 
-  const handleSend = () => {
-    const result = sendMessage({
-      text: draftMessage,
-      attachment: pendingAttachment
-    });
+  const handleSend = async () => {
+    console.log('[cleaner_message_panel] handleSend called');
+    
+    const textToSend = draftMessage;
+    const attachmentToSend = pendingAttachment;
 
-    if (!result.success) {
-      setInputError(result.error);
-      return;
-    }
-
+    // 1. Clear UI immediately for better UX (Optimistic clear)
     setDraftMessage('');
     setPendingAttachment(null);
     setInputError('');
+
+    // 2. Send in background
+    const result = await sendMessage({
+      text: textToSend,
+      attachment: attachmentToSend
+    });
+
+    // 3. Handle Failure: Restore draft so user doesn't lose it
+    if (!result.success) {
+      setInputError(result.error);
+      setDraftMessage(textToSend);
+      if (attachmentToSend) setPendingAttachment(attachmentToSend);
+    }
   };
 
   return (
@@ -145,7 +164,7 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
         <div className="my-jobs-chat-customer">
           <div className="my-jobs-chat-avatar-wrap">
             <div className="my-jobs-chat-avatar">{customerName.charAt(0)}</div>
-            <span className="my-jobs-chat-online-dot" />
+            <span className={`my-jobs-chat-online-dot ${isOtherOnline ? 'online' : 'offline'}`} />
           </div>
           <div>
             <h3>{customerName}</h3>
@@ -153,9 +172,19 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
           </div>
         </div>
 
-        <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
-          <InfoCircleOutlined />
-        </button>
+        <div className="my-jobs-chat-header-actions">
+          <button
+            type="button"
+            className="my-jobs-chat-sound-btn"
+            aria-label={soundEnabled ? 'Mute chat sounds' : 'Enable chat sounds'}
+            onClick={toggleSound}
+          >
+            {soundEnabled ? <SoundOutlined /> : <AudioMutedOutlined />}
+          </button>
+          <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
+            <InfoCircleOutlined />
+          </button>
+        </div>
       </div>
 
       <div className="my-jobs-chat-body" ref={chatBodyRef}>

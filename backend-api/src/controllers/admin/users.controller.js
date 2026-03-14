@@ -384,19 +384,62 @@ const updateUser = async (req, res, next) => {
 };
 
 const deleteUser = async (req, res, next) => {
+  const userId = parseInt(req.params.id, 10);
+  const pool = db.promise();
+  let connection;
   try {
-    const userId = parseInt(req.params.id, 10);
-    const [result] = await db.promise().query('DELETE FROM users WHERE user_id = ?', [userId]);
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
 
-    if (!result?.affectedRows) {
+    // Delete settings
+    await connection.query('DELETE FROM settings WHERE user_id = ?', [userId]);
+
+    // Delete notifications
+    await connection.query('DELETE FROM notifications WHERE user_id = ?', [userId]);
+
+    // Get bookings for user (customer or cleaner)
+    const [bookings] = await connection.query(
+      'SELECT booking_id FROM bookings WHERE user_id = ? OR cleaner_id = ?',
+      [userId, userId]
+    );
+    const bookingIds = bookings.map(row => row.booking_id);
+
+    if (bookingIds.length > 0) {
+      // Delete payments
+      await connection.query('DELETE FROM payments WHERE booking_id IN (?)', [bookingIds]);
+
+      // Delete reviews (by booking or user)
+      await connection.query(
+        'DELETE FROM reviews WHERE booking_id IN (?) OR user_id = ? OR cleaner_id = ?',
+        [bookingIds, userId, userId]
+      );
+
+      // Delete bookings
+      await connection.query('DELETE FROM bookings WHERE booking_id IN (?)', [bookingIds]);
+    }
+
+    // Delete user
+    const [result] = await connection.query('DELETE FROM users WHERE user_id = ?', [userId]);
+    await connection.commit();
+    connection.release();
+
+    if (result.affectedRows === 0) {
       return next(new AppError('User not found', 404));
     }
 
     res.status(200).json({
       success: true,
-      message: 'User deleted successfully',
+      message: 'User (cleaner) and all related data deleted successfully',
     });
   } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Rollback error:', rollbackError);
+      }
+      connection.release();
+    }
     next(error);
   }
 };

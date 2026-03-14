@@ -91,10 +91,12 @@ const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
 const app = express();
+const arcjetMiddleware = require("./middlewares/arcjet.middleware");
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use(arcjetMiddleware);
 
 // Backward-compatible fallback:
 // Some earlier uploads were saved in /uploads/misc while DB stored /uploads/services/<file>.
@@ -114,9 +116,11 @@ app.get("/uploads/services/:file", (req, res, next) => {
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/admin.routes");
 const serviceRoutes = require("./routes/service.routes");
+const messageRoutes = require("./routes/message.routes");
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/messages", messageRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

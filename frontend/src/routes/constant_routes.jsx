@@ -23,7 +23,8 @@ export const ROUTES = {
     PROFILE: '/customer/profile',
     PAYMENT_METHODS: '/customer/payment-methods',
     FAVORITES: '/customer/favorites',
-    NOTIFICATIONS: '/customer/notifications'
+    NOTIFICATIONS: '/customer/notifications',
+    MESSAGES: '/customer/messages'
   },
   
   // Cleaner routes
@@ -35,7 +36,8 @@ export const ROUTES = {
     AVAILABILITY: '/cleaner/availability',
     EARNINGS: '/cleaner/earnings',
     PROFILE: '/cleaner/profile',
-    REVIEWS: '/cleaner/reviews'
+    REVIEWS: '/cleaner/reviews',
+    MESSAGES: '/cleaner/messages'
   },
   
   // Admin routes

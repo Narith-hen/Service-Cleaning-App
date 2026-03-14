@@ -6,6 +6,7 @@ import {
   SunOutlined,
   MoonOutlined,
   UserOutlined,
+  MessageOutlined,
   LoginOutlined,
   UserAddOutlined,
   DownOutlined,
@@ -239,6 +240,18 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
               
               <Col>
                 {showCustomerProfileMenu ? (
+                  <Space size={8} align="center">
+                    <Button
+                      type="text"
+                      shape="circle"
+                      onClick={() => navigate('/customer/messages')}
+                      icon={<MessageOutlined />}
+                      style={{
+                        color: darkMode ? '#f8fafc' : '#0f766e',
+                        background: darkMode ? 'rgba(148, 163, 184, 0.16)' : '#f0fdf4'
+                      }}
+                      aria-label="Open messages"
+                    />
                   <Dropdown menu={profileMenu} placement="bottomRight">
                     <Button
                       type="text"
@@ -298,6 +311,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       <DownOutlined style={{ fontSize: 14 }} />
                     </Button>
                   </Dropdown>
+                  </Space>
                 ) : (
                   <Space size={isCompactNav ? 6 : 4}>
                     <Button

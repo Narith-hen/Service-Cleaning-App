@@ -5,10 +5,13 @@ import {
   CloseOutlined,
   EditOutlined,
   InfoCircleOutlined,
+  SoundOutlined,
+  AudioMutedOutlined,
   PlusCircleOutlined,
   SendOutlined
 } from '@ant-design/icons';
 import { formatCustomerChatTime, useCustomerChat } from '../hooks/useCustomerChat';
+import { useChatStore } from '../../../store/chatStore';
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
@@ -21,7 +24,11 @@ const toDataUrl = (file) =>
   });
 
 const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
-  const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping } = useCustomerChat({ threadId });
+  const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping, otherUserId } = useCustomerChat({ threadId });
+  const soundEnabled = useChatStore((state) => state.soundEnabled);
+  const toggleSound = useChatStore((state) => state.toggleSound);
+  const onlineUsers = useChatStore((state) => state.onlineUsers);
+  const isOtherOnline = otherUserId ? Boolean(onlineUsers[String(otherUserId)]) : true;
   const [draftMessage, setDraftMessage] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [inputError, setInputError] = useState('');
@@ -38,7 +45,8 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
     const el = chatBodyRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, pendingAttachment]);
+    // Only scroll when message count changes (new msg) or attachment is added, not on every status update
+  }, [messages.length, pendingAttachment]);
 
   // Emit message:read when chat is viewed
   useEffect(() => {
@@ -73,7 +81,8 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
       const preview = await toDataUrl(file);
       setPendingAttachment({
         name: file.name,
-        preview
+        preview,
+        file
       });
       setInputError('');
     } catch {
@@ -123,8 +132,8 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
     setEditDraft('');
   };
 
-  const handleSend = () => {
-    const result = sendMessage({
+  const handleSend = async () => {
+    const result = await sendMessage({
       text: draftMessage,
       attachment: pendingAttachment
     });
@@ -145,16 +154,26 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
         <div className="my-jobs-chat-customer">
           <div className="my-jobs-chat-avatar-wrap">
             <div className="my-jobs-chat-avatar">{cleanerName.charAt(0)}</div>
-            <span className="my-jobs-chat-online-dot" />
+            <span className={`my-jobs-chat-online-dot ${isOtherOnline ? 'online' : 'offline'}`} />
           </div>
           <div>
             <h3>{cleanerName}</h3>
             <p>{subtitle}</p>
           </div>
         </div>
-        <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
-          <InfoCircleOutlined />
-        </button>
+        <div className="my-jobs-chat-header-actions">
+          <button
+            type="button"
+            className="my-jobs-chat-sound-btn"
+            aria-label={soundEnabled ? 'Mute chat sounds' : 'Enable chat sounds'}
+            onClick={toggleSound}
+          >
+            {soundEnabled ? <SoundOutlined /> : <AudioMutedOutlined />}
+          </button>
+          <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
+            <InfoCircleOutlined />
+          </button>
+        </div>
       </div>
 
       <div className="my-jobs-chat-body" ref={chatBodyRef}>
