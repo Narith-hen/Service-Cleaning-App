@@ -8,7 +8,8 @@ import {
   Minus,
   Plus,
   Search,
-  UploadCloud
+  UploadCloud,
+  X
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import summaryImage from '../../../assets/image.png';
@@ -25,14 +26,24 @@ const BookingPage = () => {
   const [address, setAddress] = useState('');
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [preferredDate, setPreferredDate] = useState('');
   const [startHour, setStartHour] = useState(hourOptions[2]);
   const [startMinute, setStartMinute] = useState(minuteOptions[0]);
   const [duration, setDuration] = useState(durationOptions[3]);
+  const [isBooking, setIsBooking] = useState(false);
 
   const onFileChange = (fileList) => {
     const nextFiles = Array.from(fileList || []).slice(0, 10);
     setFiles(nextFiles);
+    
+    // Create preview URLs for the images
+    const newPreviews = nextFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews(newPreviews);
+    
+    // Initialize all images as selected by default
+    setSelectedImages(nextFiles.map((_, index) => index));
   };
 
   const handleDropzoneKey = (event) => {
@@ -40,6 +51,28 @@ const BookingPage = () => {
       event.preventDefault();
       inputRef.current?.click();
     }
+  };
+
+  const handleImageSelect = (index) => {
+    setSelectedImages((prev) => {
+      if (prev.includes(index)) {
+        return prev.filter((i) => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
+
+  const handleRemoveImage = (index) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    const newSelected = selectedImages
+      .filter((i) => i !== index)
+      .map((i) => (i > index ? i - 1 : i));
+    
+    setFiles(newFiles);
+    setImagePreviews(newPreviews);
+    setSelectedImages(newSelected);
   };
 
   const stateService = locationHook.state?.service || locationHook.state || null;
@@ -68,6 +101,27 @@ const BookingPage = () => {
     }
   }, [stateService]);
 
+  const handleConfirmBooking = async () => {
+    setIsBooking(true);
+    // Simulate API call to create booking
+    try {
+      // In a real app, you'd call your backend here:
+      // const response = await api.post('/bookings', { ... });
+      // const bookingId = response.data.booking_id;
+
+      // For demo purposes, simulate a delay and use a mock ID
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const mockBookingId = `demo-${Date.now()}`;
+
+      navigate('/customer/bookings/matching', {
+        state: { bookingId: mockBookingId, serviceTitle, startTime: `${startHour} ${startMinute}` }
+      });
+    } catch (error) {
+      console.error('Booking failed', error);
+      setIsBooking(false);
+    }
+  };
+
   return (
     <div className="booking-page-v2">
       <div className="booking-request-card">
@@ -83,6 +137,26 @@ const BookingPage = () => {
             <h2>{serviceTitle}</h2>
             <p>{serviceDescription}</p>
           </div>
+          {imagePreviews.length > 0 && (
+            <div className="uploaded-images-display">
+              <h4>Your Uploaded Photos ({selectedImages.length})</h4>
+              <div className="uploaded-images-grid">
+                {imagePreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`uploaded-image-thumb ${selectedImages.includes(index) ? 'selected' : ''}`}
+                  >
+                    <img src={preview} alt={`Uploaded ${index + 1}`} />
+                    {selectedImages.includes(index) && (
+                      <div className="thumb-selected-badge">
+                        <Check size={12} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="booking-section">
@@ -159,9 +233,49 @@ const BookingPage = () => {
             />
           </div>
           {files.length > 0 && (
-            <p className="upload-count">
-              {files.length} file{files.length > 1 ? 's' : ''} selected
-            </p>
+            <>
+              <p className="upload-count">
+                {files.length} file{files.length > 1 ? 's' : ''} selected
+              </p>
+              <div className="image-previews">
+                {imagePreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`image-preview-item ${selectedImages.includes(index) ? 'selected' : ''}`}
+                    onClick={() => handleImageSelect(index)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleImageSelect(index);
+                      }
+                    }}
+                  >
+                    <img src={preview} alt={`Upload ${index + 1}`} />
+                    <div className="image-overlay">
+                      {selectedImages.includes(index) ? (
+                        <Check size={20} className="check-icon" />
+                      ) : (
+                        <span className="select-hint">Click to select</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="remove-image-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveImage(index);
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="selection-info">
+                {selectedImages.length} of {files.length} images selected
+              </p>
+            </>
           )}
         </section>
 
@@ -237,8 +351,8 @@ const BookingPage = () => {
           <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')}>
             <ArrowLeft size={16} /> Back to Service
           </button>
-          <button type="button" className="next-btn" onClick={() => navigate('/customer/bookings/matching')}>
-            Confirm Booking <ArrowRight size={16} />
+          <button type="button" className="next-btn" onClick={handleConfirmBooking} disabled={isBooking}>
+            {isBooking ? 'Confirming...' : 'Confirm Booking'} <ArrowRight size={16} />
           </button>
         </footer>
       </div>

@@ -21,7 +21,7 @@ const toDataUrl = (file) =>
   });
 
 const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
-  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator } = useCleanerChat({ threadId });
+  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping } = useCleanerChat({ threadId });
   const [draftMessage, setDraftMessage] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [inputError, setInputError] = useState('');
@@ -256,6 +256,21 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
           );
         })}
 
+        {isCustomerTyping && (
+          <div className="my-jobs-chat-row left">
+            <div className="my-jobs-chat-mini-avatar">{customerName.charAt(0)}</div>
+            <div className="my-jobs-chat-content">
+              <div className="my-jobs-chat-bubble-wrap">
+                <div className="my-jobs-chat-bubble typing-indicator">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         </>
         )}
       </div>
@@ -298,6 +313,7 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
             onChange={(e) => {
               setDraftMessage(e.target.value);
               if (inputError) setInputError('');
+              notifyTyping();
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

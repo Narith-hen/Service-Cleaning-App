@@ -51,6 +51,12 @@ const initializeSocket = (server) => {
     // Subscribe to Redis channels for this user
     subscribeToUserChannels(socket);
 
+    // Handle cleaner joining the general cleaners room
+    socket.on('join:cleaners', () => {
+      socket.join('cleaners-room');
+      console.log(`User ${socket.userId} joined the general cleaners room.`);
+    });
+
     // Handle joining booking room
     socket.on('booking:join', (bookingId) => {
       socket.join(`booking:${bookingId}`);
@@ -61,6 +67,12 @@ const initializeSocket = (server) => {
     socket.on('booking:leave', (bookingId) => {
       socket.leave(`booking:${bookingId}`);
       console.log(`User ${socket.userId} left booking room: ${bookingId}`);
+    });
+
+    // Handle customer joining a matching room while waiting for a cleaner
+    socket.on('join:matching', (bookingId) => {
+      socket.join(`booking:${bookingId}`);
+      console.log(`User ${socket.userId} is waiting for a match for booking: ${bookingId}`);
     });
 
     // Handle message read event
@@ -123,6 +135,22 @@ const initializeSocket = (server) => {
         userId: socket.userId,
         isTyping: data.isTyping
       });
+    });
+
+    // Handle new job posting from customer
+    socket.on('job:new', (jobDetails) => {
+      // Broadcast to all cleaners in the cleaners-room
+      io.to('cleaners-room').emit('job:available', jobDetails);
+      console.log('New job available, notifying cleaners:', jobDetails.bookingId);
+    });
+
+    // Handle cleaner accepting a job
+    socket.on('job:accepted', ({ bookingId, cleaner }) => {
+      // Notify the customer on the matching page
+      io.to(`booking:${bookingId}`).emit('job:matched', { bookingId, cleaner });
+      // Notify other cleaners to remove this job from their list
+      io.to('cleaners-room').emit('job:removed', { bookingId });
+      console.log(`Job ${bookingId} was accepted by cleaner ${cleaner.id}`);
     });
 
     // Handle disconnect

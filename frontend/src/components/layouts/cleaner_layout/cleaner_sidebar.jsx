@@ -18,7 +18,7 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
 
   const menuItems = [
     { icon: <DashboardOutlined />, label: 'Dashboard', path: '/cleaner/dashboard' },
-    { icon: <CalendarOutlined />, label: 'Job Requests', path: '/cleaner/job-requests' },
+    { icon: <CalendarOutlined />, label: 'Job Requests', path: '/cleaner/tasks' },
     { icon: <CheckSquareOutlined />, label: 'My Jobs', path: '/cleaner/my-jobs' },
     { icon: <DollarOutlined />, label: 'Earnings', path: '/cleaner/earnings' },
     { icon: <StarOutlined />, label: 'Reviews', path: '/cleaner/reviews' },
