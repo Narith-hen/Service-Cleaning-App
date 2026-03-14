@@ -80,7 +80,7 @@ const mapServiceFromApi = (item, index) => ({
   status: String(item?.status || "active").toLowerCase(),
 });
 
-export default function ServicesPage({ embedded = false, darkMode = false, useApiServices = true }) {
+export default function ServicesPage({ embedded = false, darkMode = false, useApiServices = false }) {
   const [services, setServices] = useState(fallbackServices);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [servicesError, setServicesError] = useState("");
