@@ -5,16 +5,7 @@ import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
-const fallbackBookings = [
-  {
-    booking_id: 'demo-1',
-    booking_date: '2026-03-14T09:00:00',
-    booking_time: '09:00 AM',
-    address: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
-    service: { name: 'Deep House Cleaning' },
-    cleaner: { username: 'Narith Hen' }
-  }
-];
+const fallbackBookings = [];
 
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
@@ -30,7 +21,7 @@ const CustomerChatPage = () => {
       try {
         const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
         const bookingsData = response?.data?.data || [];
-        let normalizedBookings = bookingsData.length > 0 ? bookingsData : [...fallbackBookings];
+        let normalizedBookings = bookingsData.length > 0 ? bookingsData : [];
 
         // If a bookingId is passed via URL and doesn't exist, create a placeholder.
         // This simulates a new booking being matched and ready for chat.
@@ -41,14 +32,14 @@ const CustomerChatPage = () => {
             booking_time: '10:00 AM', // Placeholder time
             address: '123 Harmony Lane, Bright City', // Placeholder address
             service: { name: 'Custom Cleaning' }, // Placeholder service
-            cleaner: { username: 'Narith Hen' } // Assign the requested cleaner
+            cleaner: { id: '11', username: 'Cleaner 1' } // Assign the requested cleaner
           };
           normalizedBookings.unshift(newBooking);
         }
         setBookings(normalizedBookings);
       } catch (error) {
         console.error('Failed to fetch bookings:', error);
-        let currentBookings = [...fallbackBookings];
+        let currentBookings = [];
         if (bookingId && !currentBookings.some(b => b.booking_id === bookingId)) {
           const newBooking = {
             booking_id: bookingId,
@@ -56,7 +47,7 @@ const CustomerChatPage = () => {
             booking_time: '10:00 AM',
             address: '123 Harmony Lane, Bright City',
             service: { name: 'Custom Cleaning' },
-            cleaner: { username: 'Narith Hen' }
+            cleaner: { id: '11', username: 'Cleaner 1' }
           };
           currentBookings.unshift(newBooking);
         }
@@ -105,6 +96,7 @@ const CustomerChatPage = () => {
 
   // Get cleaner name from the booking
   const cleanerName = activeBooking.cleaner?.username || 'Cleaner';
+  const cleanerId = activeBooking.cleaner?.id || '11';
   const serviceName = activeBooking.service?.name || 'Cleaning Service';
   const jobId = `#SOMA-${activeBooking.booking_id}`;
   const bookingDate = new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -128,6 +120,7 @@ const CustomerChatPage = () => {
         <CustomerMessagePanel
           threadId={String(activeBooking.booking_id)}
           cleanerName={cleanerName}
+          cleanerId={cleanerId}
           subtitle={`${serviceName} Job - ${jobId}`}
         />
 

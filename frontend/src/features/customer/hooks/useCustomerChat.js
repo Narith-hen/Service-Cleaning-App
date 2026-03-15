@@ -10,35 +10,7 @@ const CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 // Socket.io server URL - configure based on environment
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
 
-const defaultMessages = [
-  {
-    id: 'seed-1',
-    sender: 'cleaner',
-    text: "Hi! I've accepted your cleaning request for tomorrow. I'll be arriving around 9 AM.",
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:42:00',
-    status: 'seen'
-  },
-  {
-    id: 'seed-2',
-    sender: 'customer',
-    text: 'Great! Looking forward to it. Please focus on the kitchen and bathrooms.',
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:45:00',
-    status: 'seen'
-  },
-  {
-    id: 'seed-3',
-    sender: 'cleaner',
-    text: 'No problem! I\'ll give extra attention to those areas. See you tomorrow!',
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:48:00',
-    status: 'seen'
-  }
-];
+const defaultMessages = [];
 
 const normalizeThreadId = (threadId) => String(threadId || 'default');
 
@@ -153,7 +125,7 @@ const getSocket = () => {
   return socketInstance;
 };
 
-export const useCustomerChat = ({ threadId }) => {
+export const useCustomerChat = ({ threadId, receiverId }) => {
   const normalizedThreadId = useMemo(() => normalizeThreadId(threadId), [threadId]);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -522,7 +494,8 @@ export const useCustomerChat = ({ threadId }) => {
         booking_id: normalizedThreadId,
         message: trimmedText,
         file_url: resolvedUrl || undefined,
-        file_type: resolvedName || undefined
+        file_type: resolvedName || undefined,
+        receiver_id: receiverId || otherUserId
       });
 
       console.log('[useCustomerChat] API Response:', response);
@@ -559,18 +532,13 @@ export const useCustomerChat = ({ threadId }) => {
 
       return { success: true };
     } catch (error) {
-      console.log('[useCustomerChat] Send message error:', error);
-
-      // Fallback: If API fails (likely due to demo booking ID 'demo-1' not existing on backend),
-      // we simulate success so the chat remains usable in the frontend demo.
-      console.log('[useCustomerChat] Falling back to local simulation due to API error');
-      
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? { ...optimisticMessage, status: 'sent' } : msg))
-      );
-
-      // Return success: true so the input clears and the message stays visible
-      return { success: true };
+      console.error('[useCustomerChat] Send message error:', error);
+      // Remove the optimistic message from the UI on failure
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      return {
+        success: false,
+        error: error?.response?.data?.message || 'Failed to send message. Check server connection.'
+      };
     }
   };
 

@@ -23,8 +23,8 @@ const toDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-const CleanerMessagePanel = ({ threadId, customerName, subtitle }) => {
-  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping, otherUserId } = useCleanerChat({ threadId });
+const CleanerMessagePanel = ({ threadId, customerName, subtitle, customerId }) => {
+  const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping, otherUserId } = useCleanerChat({ threadId, receiverId: customerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
   const onlineUsers = useChatStore((state) => state.onlineUsers);

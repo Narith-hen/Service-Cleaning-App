@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
@@ -225,6 +225,7 @@ const JobRequestsPage = () => {
       timeRange: normalizedRequest.timeRange || '09:00 AM - 12:00 PM',
       location: normalizedRequest.address,
       customer: normalizedRequest.customer,
+      customerId: normalizedRequest.customerId || '3',
       bedrooms: '3 Bedrooms',
       floors: '2 Floors'
     };
@@ -252,6 +253,7 @@ const JobRequestsPage = () => {
           <CleanerMessagePanel
             threadId={activeRequest.id}
             customerName={activeRequest.customer}
+            customerId={activeRequest.customerId || '3'}
             subtitle={`${activeRequest.service} Job - #JOB-${activeRequest.id}`}
           />
 

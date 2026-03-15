@@ -9,33 +9,7 @@ const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 // Socket.io server URL - configure based on environment
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
 
-const defaultMessages = [
-  {
-    id: 'seed-1',
-    sender: 'customer',
-    text: "Hi! I'm looking forward to tomorrow's cleaning. Please focus on kitchen cabinets.",
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:42:00'
-  },
-  {
-    id: 'seed-2',
-    sender: 'customer',
-    text: "Could you also clean the windows? I'm happy to pay extra for that.",
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:45:00'
-  },
-  {
-    id: 'seed-3',
-    sender: 'cleaner',
-    text: 'Of course. I can add window cleaning to this service. It should take around an extra hour.',
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:48:00',
-    status: 'seen'
-  }
-];
+const defaultMessages = [];
 
 const normalizeThreadId = (threadId) => String(threadId || 'default');
 
@@ -150,7 +124,7 @@ const getSocket = () => {
   return socketInstance;
 };
 
-export const useCleanerChat = ({ threadId }) => {
+export const useCleanerChat = ({ threadId, receiverId }) => {
   const normalizedThreadId = useMemo(() => normalizeThreadId(threadId), [threadId]);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -525,7 +499,8 @@ export const useCleanerChat = ({ threadId }) => {
         booking_id: normalizedThreadId,
         message: trimmedText,
         file_url: resolvedUrl || undefined,
-        file_type: resolvedName || undefined
+        file_type: resolvedName || undefined,
+        receiver_id: receiverId || otherUserId
       });
 
       console.log('[useCleanerChat] API Response:', response);
@@ -562,18 +537,13 @@ export const useCleanerChat = ({ threadId }) => {
 
       return { success: true };
     } catch (error) {
-      console.log('[useCleanerChat] Send message error:', error);
-
-      // Fallback: If API fails (likely due to demo booking ID not existing on backend),
-      // we simulate success so the chat remains usable in the frontend demo.
-      console.log('[useCleanerChat] Falling back to local simulation due to API error');
-      
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? { ...optimisticMessage, status: 'sent' } : msg))
-      );
-
-      // Return success: true so the input clears and the message stays visible
-      return { success: true };
+      console.error('[useCleanerChat] Send message error:', error);
+      // On failure, remove the optimistic message from the UI
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      return {
+        success: false,
+        error: error?.response?.data?.message || 'Failed to send message. Check server connection.'
+      };
     }
   };
 
