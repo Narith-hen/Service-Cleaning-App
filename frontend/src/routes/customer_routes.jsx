@@ -15,7 +15,7 @@ import SettingsPage from '../features/customer/pages/setting_page';
 import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
 import CustomerChatPage from '../features/customer/pages/chat_page';
-import MessagesPage from '../features/customer/pages/about';
+import MessagesPage from '../features/customer/pages/messages';
 import CustomerServicesPage from '../features/public/pages/services_page';
 import CustomerContactPage from '../features/customer/pages/ContactPage';
 
