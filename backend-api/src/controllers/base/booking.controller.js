@@ -1,52 +1,190 @@
+const db = require('../../config/db');
 const prisma = require('../../config/database');
 const AppError = require('../../utils/error.util');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
-// Create booking
+const getUserTableColumns = async (promiseDb) => {
+  const [columns] = await promiseDb.query('SHOW COLUMNS FROM users');
+  return new Set((columns || []).map((column) => column.Field));
+};
+
+const slugify = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
+  const cleanerId = Number.parseInt(cleanerProfileId, 10);
+  if (!Number.isInteger(cleanerId) || cleanerId <= 0) {
+    throw new AppError('Invalid cleaner id', 400);
+  }
+
+  const [existingById] = await promiseDb.query(
+    'SELECT user_id FROM users WHERE user_id = ? LIMIT 1',
+    [cleanerId]
+  );
+  if (existingById?.[0]?.user_id) {
+    return cleanerId;
+  }
+
+  const [profileRows] = await promiseDb.query(
+    `
+      SELECT cleaner_id, company_email, company_name, phone_number, role_id
+      FROM cleaner_profile
+      WHERE cleaner_id = ?
+      LIMIT 1
+    `,
+    [cleanerId]
+  );
+  const profile = profileRows?.[0];
+  if (!profile) {
+    throw new AppError('Cleaner profile not found', 404);
+  }
+
+  const email = String(profile.company_email || '').trim();
+  if (email) {
+    const [existingByEmail] = await promiseDb.query(
+      'SELECT user_id FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+    if (existingByEmail?.[0]?.user_id) {
+      return Number(existingByEmail[0].user_id);
+    }
+  }
+
+  const columns = await getUserTableColumns(promiseDb);
+  const hasUsername = columns.has('username');
+  const companyName = String(profile.company_name || '').trim();
+  const displayName = companyName || (email ? email.split('@')[0] : '') || `cleaner-${cleanerId}`;
+
+  let username = null;
+  if (hasUsername) {
+    const baseUsername = slugify(companyName) || (email ? slugify(email.split('@')[0]) : '') || `cleaner-${cleanerId}`;
+    username = baseUsername.slice(0, 60);
+
+    const [usernameRows] = await promiseDb.query(
+      'SELECT user_id FROM users WHERE username = ? LIMIT 1',
+      [username]
+    );
+    if (usernameRows?.length) {
+      username = `${username}-${cleanerId}`.slice(0, 90);
+    }
+  }
+
+  const passwordPlain = crypto.randomBytes(18).toString('hex');
+  const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
+  const passwordHash = await bcrypt.hash(passwordPlain, saltRounds);
+
+  // Prefer the cleaner role id from profile, otherwise lookup by role_name.
+  let roleId = Number(profile.role_id || 0);
+  if (!roleId) {
+    const [roleRows] = await promiseDb.query(
+      `SELECT role_id FROM roles WHERE LOWER(role_name) = 'cleaner' LIMIT 1`
+    );
+    roleId = Number(roleRows?.[0]?.role_id || 0) || 2;
+  }
+
+  const phoneNumber = String(profile.phone_number || '').trim() || 'N/A';
+  const insertColumns = [];
+  const insertValues = [];
+
+  // Set explicit PK to satisfy bookings FK when cleaner_profile ids are used.
+  insertColumns.push('user_id');
+  insertValues.push(cleanerId);
+
+  if (hasUsername) {
+    insertColumns.push('username');
+    insertValues.push(username);
+  }
+
+  if (columns.has('user_code')) {
+    insertColumns.push('user_code');
+    insertValues.push(`CLN${String(cleanerId).padStart(3, '0')}`);
+  }
+
+  if (columns.has('first_name')) {
+    insertColumns.push('first_name');
+    insertValues.push(displayName);
+  }
+  if (columns.has('last_name')) {
+    insertColumns.push('last_name');
+    insertValues.push('');
+  }
+
+  insertColumns.push('email');
+  insertValues.push(email || `cleaner-${cleanerId}@local.invalid`);
+
+  if (columns.has('phone_number')) {
+    insertColumns.push('phone_number');
+    insertValues.push(phoneNumber);
+  }
+
+  insertColumns.push('password');
+  insertValues.push(passwordHash);
+
+  insertColumns.push('role_id');
+  insertValues.push(roleId);
+
+  const placeholders = insertColumns.map(() => '?').join(', ');
+  const colSql = insertColumns.map((c) => `\`${c}\``).join(', ');
+  await promiseDb.query(`INSERT INTO users (${colSql}) VALUES (${placeholders})`, insertValues);
+  return cleanerId;
+};
+
+// Create booking (mysql2)
 const createBooking = async (req, res, next) => {
   try {
-    const { booking_date, service_id, promotion_id, address, notes, contact_phone } = req.body;
-    const user_id = req.user.user_id;
+    const { booking_date, start_time, end_time, service_id, address, notes } = req.body;
+    const user_id = req.user?.user_id;
 
-    const service = await prisma.service.findUnique({
-      where: { service_id: parseInt(service_id) }
-    });
+    if (!user_id) return next(new AppError('Unauthorized', 401));
+    if (!booking_date || !service_id) {
+      return next(new AppError('booking_date and service_id are required', 400));
+    }
 
-    if (!service) {
+    const [serviceRows] = await db
+      .promise()
+      .query('SELECT * FROM services WHERE service_id = ?', [service_id]);
+
+    if (!serviceRows || serviceRows.length === 0) {
       return next(new AppError('Service not found', 404));
     }
 
-    let total_price = service.price;
+    const svc = serviceRows[0];
+    const total_price = Number(svc.price ?? svc.service_price ?? svc.cost ?? 0) || 0;
+    const booking_reference = `BK-${Date.now()}`;
+    const booking_time = start_time && end_time ? `${start_time} - ${end_time}` : start_time || '';
 
-    if (promotion_id) {
-      const promotion = await prisma.promotion.findUnique({
-        where: { promotion_id: parseInt(promotion_id) }
-      });
+    const [result] = await db
+      .promise()
+      .query(
+        `INSERT INTO bookings 
+          (booking_reference, booking_date, booking_time, address, booking_desc, booking_status, total_price, payment_status, user_id, service_id, created_at) 
+         VALUES (?, ?, ?, ?, ?, 'pending', ?, 'pending', ?, ?, NOW())`,
+        [
+          booking_reference,
+          new Date(booking_date),
+          booking_time,
+          address || 'Address pending',
+          notes || '',
+          total_price,
+          user_id,
+          service_id
+        ]
+      );
 
-      if (promotion && promotion.end_date > new Date()) {
-        total_price -= promotion.discount_price;
-      }
-    }
-
-    const booking = await prisma.booking.create({
-      data: {
-        booking_date: new Date(booking_date),
-        booking_status: 'pending',
-        total_price,
-        payment_status: 'pending',
-        user_id,
-        service_id: parseInt(service_id),
-        promotion_id: promotion_id ? parseInt(promotion_id) : null
-      },
-      include: {
-        service: true,
-        user: true
-      }
-    });
+    const booking_id = result.insertId;
+    const [createdRows] = await db
+      .promise()
+      .query('SELECT * FROM bookings WHERE booking_id = ?', [booking_id]);
 
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
-      data: booking
+      data: createdRows[0]
     });
   } catch (error) {
     next(error);
@@ -213,37 +351,32 @@ const updateBookingStatus = async (req, res, next) => {
     const { id } = req.params;
     const { booking_status } = req.body;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) }
-    });
+    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const booking = rows?.[0];
+    if (!booking) return next(new AppError('Booking not found', 404));
 
-    if (!booking) {
-      return next(new AppError('Booking not found', 404));
-    }
+    await db
+      .promise()
+      .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', [booking_status, id]);
 
-    const updatedBooking = await prisma.booking.update({
-      where: { booking_id: parseInt(id) },
-      data: { booking_status },
-      include: {
-        service: true,
-        user: true
-      }
-    });
-
-    await prisma.notification.create({
-      data: {
-        title: 'Booking Status Updated',
-        message: `Your booking #${id} status is now ${booking_status}`,
-        type_notification: 'booking',
-        user_id: booking.user_id,
-        booking_id: parseInt(id)
-      }
-    });
+    await db
+      .promise()
+      .query(
+        'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [
+          'Booking Status Updated',
+          `Your booking #${id} status is now ${booking_status}`,
+          'booking',
+          booking.user_id,
+          id
+        ]
+      )
+      .catch(() => {});
 
     res.status(200).json({
       success: true,
       message: 'Booking status updated',
-      data: updatedBooking
+      data: { booking_id: id, booking_status }
     });
   } catch (error) {
     next(error);
@@ -291,25 +424,33 @@ const cancelBooking = async (req, res, next) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) }
-    });
+    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const booking = rows?.[0];
+    if (!booking) return next(new AppError('Booking not found', 404));
 
-    if (!booking) {
-      return next(new AppError('Booking not found', 404));
-    }
+    await db
+      .promise()
+      .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', ['cancelled', id]);
 
-    const updatedBooking = await prisma.booking.update({
-      where: { booking_id: parseInt(id) },
-      data: { 
-        booking_status: 'cancelled'
-      }
-    });
+    // Notify customer (best-effort)
+    await db
+      .promise()
+      .query(
+        'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [
+          'Booking cancelled',
+          `Your booking #${id} was cancelled${reason ? `: ${reason}` : ''}.`,
+          'booking',
+          booking.user_id,
+          id
+        ]
+      )
+      .catch(() => {});
 
     res.status(200).json({
       success: true,
       message: 'Booking cancelled successfully',
-      data: updatedBooking
+      data: { booking_id: id, booking_status: 'cancelled' }
     });
   } catch (error) {
     next(error);
@@ -427,34 +568,139 @@ const getBookingHistory = async (req, res, next) => {
   }
 };
 
-// Track booking
+// Track booking (mysql2)
 const trackBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) },
-      select: {
-        booking_id: true,
-        booking_status: true,
-        booking_date: true,
-        cleaner: {
-          select: {
-            user_id: true,
-            username: true,
-            phone_number: true
-          }
-        }
-      }
-    });
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.booking_id,
+            b.booking_status,
+            b.booking_date,
+            b.booking_time,
+            b.cleaner_id,
+            c.first_name AS cleaner_first_name,
+            c.last_name AS cleaner_last_name,
+            c.phone_number AS cleaner_phone,
+            s.name AS service_name
+         FROM bookings b
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN services s ON s.service_id = b.service_id
+         WHERE b.booking_id = ?`,
+        [id]
+      );
 
-    if (!booking) {
+    if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
     res.status(200).json({
       success: true,
-      data: booking
+      data: rows[0]
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cleaner: list available (unassigned) pending bookings (mysql2)
+const getAvailableBookings = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page || 1, 10);
+    const limit = parseInt(req.query.limit || 10, 10);
+    const offset = (page - 1) * limit;
+
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*,
+            s.name AS service_name,
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_name,
+            u.phone_number
+         FROM bookings b
+         JOIN services s ON s.service_id = b.service_id
+         JOIN users u ON u.user_id = b.user_id
+         WHERE LOWER(b.booking_status) = 'pending' AND (b.cleaner_id IS NULL OR b.cleaner_id = 0)
+         ORDER BY b.created_at DESC
+         LIMIT ? OFFSET ?`,
+        [limit, offset]
+      );
+
+    const [countRows] = await db
+      .promise()
+      .query(
+        `SELECT COUNT(*) AS total
+         FROM bookings b
+         WHERE b.booking_status = 'pending' AND (b.cleaner_id IS NULL OR b.cleaner_id = 0)`
+      );
+
+    res.status(200).json({
+      success: true,
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total: countRows[0]?.total || 0,
+        pages: Math.ceil((countRows[0]?.total || 0) / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cleaner: claim/accept a pending booking (mysql2)
+const claimBooking = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const promiseDb = db.promise();
+    const accountSource = String(req.user?.account_source || '').toLowerCase();
+    const roleName = String(req.user?.role?.role_name || '').toLowerCase();
+    if (roleName !== 'cleaner' && roleName !== 'admin') {
+      return next(new AppError('Not authorized', 403));
+    }
+    const rawCleanerId = req.user?.user_id;
+    const cleanerId = accountSource === 'cleaner_profile'
+      ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+      : rawCleanerId;
+    if (!cleanerId) return next(new AppError('Unauthorized', 401));
+
+    const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const booking = rows?.[0];
+    if (!booking) return next(new AppError('Booking not found', 404));
+    if (booking.cleaner_id && booking.cleaner_id !== cleanerId) {
+      return next(new AppError('Booking already assigned to another cleaner', 400));
+    }
+    if (String(booking.booking_status || '').toLowerCase() !== 'pending') {
+      return next(new AppError('Only pending bookings can be claimed', 400));
+    }
+
+    await promiseDb.query(
+        'UPDATE bookings SET cleaner_id = ?, booking_status = ? WHERE booking_id = ?',
+        [cleanerId, 'confirmed', id]
+      );
+
+    // Notify customer if notifications table exists
+    await promiseDb.query(
+        'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [
+          'Booking accepted',
+          `Your booking #${id} has been accepted by a cleaner.`,
+          'booking',
+          booking.user_id,
+          id
+        ]
+      )
+      .catch(() => {});
+
+    res.status(200).json({
+      success: true,
+      message: 'Booking claimed successfully',
+      data: { booking_id: id, cleaner_id: cleanerId, booking_status: 'confirmed' }
     });
   } catch (error) {
     next(error);
@@ -473,5 +719,7 @@ module.exports = {
   getBookingsByUser,
   getBookingsByCleaner,
   getBookingHistory,
-  trackBooking
+  trackBooking,
+  getAvailableBookings,
+  claimBooking
 };

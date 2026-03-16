@@ -40,9 +40,14 @@ const normalizeBooking = (booking) => ({
     || booking?.service_location
     || booking?.service?.location
     || 'Location not provided',
-  service: booking?.service || { name: 'Cleaning Service' },
-  cleaner: booking?.cleaner || { username: 'Cleaner' },
-  cleaner_id: booking?.cleaner?.id || booking?.cleaner_id || '11'
+  service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || 'Cleaning Service' },
+  cleaner: booking?.cleaner || {
+    username:
+      booking?.cleaner_name
+      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
+      || booking?.cleaner_username
+      || 'Cleaner'
+  }
 });
 
 const getAuthToken = () => {

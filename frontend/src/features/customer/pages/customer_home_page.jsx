@@ -149,7 +149,18 @@ const CustomerHomePage = () => {
   }, []);
 
   const handleBookService = (service) => {
-    navigate('/customer/bookings', { state: { service: { title: service.title, description: service.description, image: service.image } } });
+    navigate('/customer/bookings', {
+      state: {
+        service: {
+          service_id: service.service_id || service.id,
+          id: service.id,
+          title: service.title,
+          name: service.title,
+          description: service.description,
+          image: service.image
+        }
+      }
+    });
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   BellOutlined,
   CheckCircleOutlined,
@@ -11,89 +11,72 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 import '../../../styles/customer/notification.scss';
+import {
+  loadCustomerNotifications,
+  saveCustomerNotifications,
+  timeAgo
+} from '../../../utils/bookingSync';
+
+const seedNotifications = [
+  {
+    id: 1,
+    type: 'booking',
+    title: 'Booking Confirmed',
+    message: 'Your regular cleaning booking for Oct 24 at 2:00 PM has been confirmed.',
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    icon: <CheckCircleOutlined />,
+    color: '#10b981'
+  },
+  {
+    id: 2,
+    type: 'reminder',
+    title: 'Upcoming Appointment',
+    message: 'You have a deep cleaning appointment tomorrow at 10:00 AM.',
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    icon: <ClockCircleOutlined />,
+    color: '#f59e0b'
+  }
+];
 
 const NotificationPage = () => {
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'booking',
-      title: 'Booking Confirmed',
-      message: 'Your regular cleaning booking for Oct 24 at 2:00 PM has been confirmed.',
-      time: '2 hours ago',
-      read: false,
-      icon: <CheckCircleOutlined />,
-      color: '#10b981'
-    },
-    {
-      id: 2,
-      type: 'reminder',
-      title: 'Upcoming Appointment',
-      message: 'You have a deep cleaning appointment tomorrow at 10:00 AM.',
-      time: '5 hours ago',
-      read: false,
-      icon: <ClockCircleOutlined />,
-      color: '#f59e0b'
-    },
-    {
-      id: 3,
-      type: 'review',
-      title: 'Review Reminder',
-      message: 'How was your cleaning with Maria? Leave a review now.',
-      time: '1 day ago',
-      read: true,
-      icon: <StarOutlined />,
-      color: '#f59e0b'
-    },
-    {
-      id: 4,
-      type: 'payment',
-      title: 'Payment Successful',
-      message: 'Your payment of $45.00 for regular cleaning was successful.',
-      time: '2 days ago',
-      read: true,
-      icon: <DollarOutlined />,
-      color: '#10b981'
-    },
-    {
-      id: 5,
-      type: 'message',
-      title: 'New Message',
-      message: 'Maria Garcia sent you a message about your upcoming booking.',
-      time: '3 days ago',
-      read: true,
-      icon: <MessageOutlined />,
-      color: '#3b82f6'
-    },
-    {
-      id: 6,
-      type: 'booking',
-      title: 'Booking Rescheduled',
-      message: 'Your window cleaning has been rescheduled to Oct 28 at 3:00 PM.',
-      time: '4 days ago',
-      read: true,
-      icon: <CalendarOutlined />,
-      color: '#ef4444'
-    }
-  ]);
+  const [notifications, setNotifications] = useState(() =>
+    loadCustomerNotifications(seedNotifications)
+  );
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  useEffect(() => {
+    saveCustomerNotifications(notifications);
+  }, [notifications]);
+
+  useEffect(() => {
+    const sync = () => setNotifications(loadCustomerNotifications(seedNotifications));
+    window.addEventListener('storage', sync);
+    window.addEventListener('booking-storage-updated', sync);
+    return () => {
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('booking-storage-updated', sync);
+    };
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleMarkAsRead = (id) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
+    setNotifications((prev) =>
+      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
+    );
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+    setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
   };
 
   const handleDelete = (id) => {
-    setNotifications(notifications.filter(notif => notif.id !== id));
+    setNotifications((prev) => prev.filter((notif) => notif.id !== id));
   };
 
-  const filteredNotifications = notifications.filter(notif => {
+  const filteredNotifications = notifications.filter((notif) => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notif.read;
     if (filter === 'read') return notif.read;
@@ -155,38 +138,49 @@ const NotificationPage = () => {
             <p>You're all caught up! Check back later for updates.</p>
           </div>
         ) : (
-          filteredNotifications.map(notification => (
-            <div 
-              key={notification.id} 
-              className={`notification-item ${!notification.read ? 'unread' : ''}`}
-              onClick={() => handleMarkAsRead(notification.id)}
-            >
+          filteredNotifications.map((notification) => {
+            const derivedIcon = notification.icon
+              || (notification.type === 'booking' ? <CheckCircleOutlined />
+                : notification.type === 'reminder' ? <ClockCircleOutlined />
+                : notification.type === 'review' ? <StarOutlined />
+                : notification.type === 'payment' ? <DollarOutlined />
+                : <MessageOutlined />);
+            const derivedColor = notification.color || '#3b82f6';
+            return (
               <div 
-                className="notification-icon"
-                style={{ backgroundColor: `${notification.color}20`, color: notification.color }}
+                key={notification.id} 
+                className={`notification-item ${!notification.read ? 'unread' : ''}`}
+                onClick={() => handleMarkAsRead(notification.id)}
               >
-                {notification.icon}
-              </div>
-              
-              <div className="notification-content">
-                <div className="notification-header">
-                  <h3>{notification.title}</h3>
-                  <span className="notification-time">{notification.time}</span>
+                <div 
+                  className="notification-icon"
+                  style={{ backgroundColor: `${derivedColor}20`, color: derivedColor }}
+                >
+                  {derivedIcon}
                 </div>
-                <p className="notification-message">{notification.message}</p>
-              </div>
+                
+                <div className="notification-content">
+                  <div className="notification-header">
+                    <h3>{notification.title}</h3>
+                    <span className="notification-time">
+                      {notification.createdAt ? timeAgo(notification.createdAt) : ''}
+                    </span>
+                  </div>
+                  <p className="notification-message">{notification.message}</p>
+                </div>
 
-              <button 
-                className="delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(notification.id);
-                }}
-              >
-                <DeleteOutlined />
-              </button>
-            </div>
-          ))
+                <button 
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(notification.id);
+                  }}
+                >
+                  <DeleteOutlined />
+                </button>
+              </div>
+            );
+          })
         )}
       </div>
 

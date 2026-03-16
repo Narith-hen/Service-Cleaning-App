@@ -1,79 +1,77 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { MessageOutlined, CalendarOutlined, EnvironmentOutlined, FileTextOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import {
+  MessageOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined
+} from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const fallbackBookings = [];
 
+const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
+  booking_id: String(booking?.booking_id ?? booking?.id ?? bookingIdFallback ?? 'unknown'),
+  booking_date: booking?.booking_date || booking?.date || new Date().toISOString(),
+  booking_time: booking?.booking_time || booking?.time || '',
+  address:
+    booking?.address
+    || booking?.location
+    || booking?.service_location
+    || booking?.service?.location
+    || booking?.service_address
+    || 'Location not provided',
+  service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || booking?.title || 'Cleaning Service' },
+  cleaner: booking?.cleaner || {
+    username:
+      booking?.cleaner_name
+      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
+      || booking?.cleaner_username
+      || 'Cleaner'
+  }
+});
+
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
+  const { bookingId: pathBookingId } = useParams();
   const navigate = useNavigate();
-  const bookingId = searchParams.get('booking');
-  
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const bookingId = pathBookingId || searchParams.get('booking');
+
+  const [dynamicBookings, setDynamicBookings] = useState(() => fallbackBookings);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      setLoading(true);
+    const fetchBooking = async () => {
+      if (!bookingId) return;
       try {
-        const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
-        const bookingsData = response?.data?.data || [];
-        let normalizedBookings = bookingsData.length > 0 ? bookingsData : [];
-
-        // If a bookingId is passed via URL and doesn't exist, create a placeholder.
-        // This simulates a new booking being matched and ready for chat.
-        if (bookingId && !normalizedBookings.some(b => b.booking_id === bookingId)) {
-          const newBooking = {
-            booking_id: bookingId,
-            booking_date: new Date().toISOString(),
-            booking_time: '10:00 AM', // Placeholder time
-            address: '123 Harmony Lane, Bright City', // Placeholder address
-            service: { name: 'Custom Cleaning' }, // Placeholder service
-            cleaner: { id: '11', username: 'Cleaner 1' } // Assign the requested cleaner
-          };
-          normalizedBookings.unshift(newBooking);
-        }
-        setBookings(normalizedBookings);
-      } catch (error) {
-        console.error('Failed to fetch bookings:', error);
-        let currentBookings = [];
-        if (bookingId && !currentBookings.some(b => b.booking_id === bookingId)) {
-          const newBooking = {
-            booking_id: bookingId,
-            booking_date: new Date().toISOString(),
-            booking_time: '10:00 AM',
-            address: '123 Harmony Lane, Bright City',
-            service: { name: 'Custom Cleaning' },
-            cleaner: { id: '11', username: 'Cleaner 1' }
-          };
-          currentBookings.unshift(newBooking);
-        }
-        setBookings(currentBookings);
-      } finally {
-        setLoading(false);
+        const resp = await api.get(`/bookings/track/${bookingId}`);
+        const data = resp?.data?.data;
+        if (!data) return;
+        const entry = normalizeTrackedBooking(data, bookingId);
+        setDynamicBookings((prev) => {
+          const exists = prev.some((b) => String(b.booking_id) === String(entry.booking_id));
+          if (exists) {
+            return prev.map((b) => (String(b.booking_id) === String(entry.booking_id) ? entry : b));
+          }
+          return [entry, ...prev];
+        });
+      } catch {
+        // ignore; fallback to demo data
       }
     };
-
-    fetchBookings();
+    fetchBooking();
   }, [bookingId]);
 
-  const activeBooking = useMemo(() => {
-    if (!bookings.length) return null;
-    return bookings.find(b => b.booking_id === bookingId) || bookings[0];
-  }, [bookings, bookingId]);
+  const [selectedBooking, setSelectedBooking] = useState(
+    bookingId || dynamicBookings[0]?.booking_id || null
+  );
 
-  if (loading) {
-    return (
-      <div className="customer-chat-page">
-        <div className="customer-chat-empty">
-          <p>Loading bookings...</p>
-        </div>
-      </div>
-    );
-  }
+  const activeBooking = useMemo(() => {
+    return dynamicBookings.find((b) => String(b.booking_id) === String(selectedBooking)) || dynamicBookings[0];
+  }, [dynamicBookings, selectedBooking]);
 
   if (!activeBooking) {
     return (
@@ -99,7 +97,9 @@ const CustomerChatPage = () => {
   const cleanerId = activeBooking.cleaner?.id || '11';
   const serviceName = activeBooking.service?.name || 'Cleaning Service';
   const jobId = `#SOMA-${activeBooking.booking_id}`;
-  const bookingDate = new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const bookingDate = activeBooking.booking_date
+    ? new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'TBD';
   const bookingTime = activeBooking.booking_time || '09:00 AM';
   const bookingLocation =
     activeBooking.address
