@@ -5,13 +5,43 @@ const normalizeStatus = (value) => {
   return normalized === 'inactive' ? 'inactive' : 'active';
 };
 
-const mapServiceRow = (row) => ({
-  service_id: row.service_id,
-  name: row.name,
-  description: row.description,
-  status: normalizeStatus(row.status),
-  images: row.image_url ? [{ image_url: row.image_url }] : []
-});
+const mapServiceRow = (row, imagesMap) => {
+  const images = imagesMap?.get(row.service_id) || [];
+  const fallbackImages = images.length === 0 && row.image_url
+    ? [{ image_url: row.image_url }]
+    : images;
+
+  return {
+    service_id: row.service_id,
+    name: row.name,
+    description: row.description,
+    status: normalizeStatus(row.status),
+    images: fallbackImages
+  };
+};
+
+const loadImagesForServices = async (promiseDb, serviceIds) => {
+  if (!serviceIds.length) return new Map();
+  const [imageRows] = await promiseDb.query(
+    `
+      SELECT service_id, image_url
+      FROM service_images
+      WHERE service_id IN (?)
+      ORDER BY id DESC
+    `,
+    [serviceIds]
+  );
+
+  const imagesMap = new Map();
+  imageRows.forEach((row) => {
+    if (!imagesMap.has(row.service_id)) {
+      imagesMap.set(row.service_id, []);
+    }
+    imagesMap.get(row.service_id).push({ image_url: row.image_url });
+  });
+
+  return imagesMap;
+};
 
 const getServiceById = async (req, res, next) => {
   try {
@@ -46,9 +76,11 @@ const getServiceById = async (req, res, next) => {
       });
     }
 
+    const imagesMap = await loadImagesForServices(promiseDb, [serviceId]);
+
     res.status(200).json({
       success: true,
-      data: mapServiceRow(rows[0])
+      data: mapServiceRow(rows[0], imagesMap)
     });
   } catch (error) {
     next(error);
@@ -87,9 +119,12 @@ const getAllServices = async (req, res, next) => {
     const [countRows] = await promiseDb.query('SELECT COUNT(*) AS total FROM services');
     const total = Number(countRows?.[0]?.total || 0);
 
+    const serviceIds = services.map((service) => service.service_id);
+    const imagesMap = await loadImagesForServices(promiseDb, serviceIds);
+
     res.status(200).json({
       success: true,
-      data: services.map(mapServiceRow),
+      data: services.map((service) => mapServiceRow(service, imagesMap)),
       pagination: {
         page,
         limit,
@@ -146,9 +181,11 @@ const createService = async (req, res, next) => {
       [serviceId]
     );
 
+    const imagesMap = await loadImagesForServices(promiseDb, [serviceId]);
+
     res.status(201).json({
       success: true,
-      data: rows[0] ? mapServiceRow(rows[0]) : null
+      data: rows[0] ? mapServiceRow(rows[0], imagesMap) : null
     });
   } catch (error) {
     next(error);
@@ -229,9 +266,11 @@ const updateService = async (req, res, next) => {
       [serviceId]
     );
 
+    const imagesMap = await loadImagesForServices(promiseDb, [serviceId]);
+
     res.status(200).json({
       success: true,
-      data: rows[0] ? mapServiceRow(rows[0]) : null
+      data: rows[0] ? mapServiceRow(rows[0], imagesMap) : null
     });
   } catch (error) {
     next(error);

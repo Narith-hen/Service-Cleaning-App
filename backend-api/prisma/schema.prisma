@@ -144,23 +144,24 @@ model Setting {
 }
 
 model Message {
-  id                Int      @id @default(autoincrement()) @map("id")
-  booking_id        Int?
-  service_id        Int?
-  sender_id         Int
-  receiver_id       Int
-  message           String?  @db.Text
-  file_url          String?  @db.VarChar(191)
-  file_type         String?  @db.VarChar(191)
-  is_read           Boolean  @default(false)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
-  seen_at           DateTime?
+  id                 Int      @id @default(autoincrement()) @map("id")
+  booking_id         Int?
+  service_id         Int?
+  service_package_id Int?
+  sender_id          Int
+  receiver_id        Int
+  message            String?  @db.Text
+  file_url           String?  @db.VarChar(191)
+  file_type          String?  @db.VarChar(191)
+  is_read            Boolean  @default(false)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  seen_at            DateTime?
 
-  sender    User    @relation("sent_messages", fields: [sender_id], references: [user_id])
-  receiver  User    @relation("received_messages", fields: [receiver_id], references: [user_id])
-  booking   Booking? @relation(fields: [booking_id], references: [booking_id])
-  service   Service? @relation(fields: [service_id], references: [service_id])
+  sender             User     @relation("sent_messages", fields: [sender_id], references: [user_id])
+  receiver           User     @relation("received_messages", fields: [receiver_id], references: [user_id])
+  booking            Booking? @relation(fields: [booking_id], references: [booking_id])
+  service            Service? @relation(fields: [service_id], references: [service_id])
 
   @@map("messages")
 }
