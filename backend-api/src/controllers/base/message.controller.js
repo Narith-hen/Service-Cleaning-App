@@ -1,48 +1,43 @@
-const prisma = require('../../config/database');
+const db = require('../../config/db');
+const promiseDb = db.promise();
 const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');
 
-const toBigInt = (value) => {
-  if (value === null || value === undefined) return null;
-  try {
-    return BigInt(value);
-  } catch {
-    return null;
-  }
+const serializeMessage = (message) => {
+  return {
+    id: message.message_id?.toString(),
+    booking_id: message.booking_id ? message.booking_id.toString() : null,
+    service_id: message.service_id ? message.service_id.toString() : null,
+    sender_id: message.sender_user_id?.toString(),
+    receiver_id: message.receiver_user_id?.toString(),
+    message: message.message || '',
+    file_url: message.file_url || '',
+    file_type: message.file_type || '',
+    is_read: Boolean(message.is_read),
+    created_at: message.created_at,
+    updated_at: message.updated_at,
+    seen_at: message.seen_at,
+    sender: {
+      user_id: message.sender_user_id,
+      username: (message.sender_first_name || '') + ' ' + (message.sender_last_name || ''),
+      email: message.sender_email,
+      role: { role_name: message.sender_role_id === 1 ? 'customer' : 'cleaner' }
+    },
+    receiver: {
+      user_id: message.receiver_user_id,
+      username: (message.receiver_first_name || '') + ' ' + (message.receiver_last_name || ''),
+      email: message.receiver_email,
+      role: { role_name: message.receiver_role_id === 1 ? 'customer' : 'cleaner' }
+    }
+  };
 };
 
-const serializeMessage = (message) => ({
-  id: message.id?.toString(),
-  booking_id: message.booking_id ? message.booking_id.toString() : null,
-  service_id: message.service_id ? message.service_id.toString() : null,
-  sender_id: message.sender_id?.toString(),
-  receiver_id: message.receiver_id?.toString(),
-  message: message.message || '',
-  file_url: message.file_url || '',
-  file_type: message.file_type || '',
-  is_read: Boolean(message.is_read),
-  created_at: message.created_at,
-  updated_at: message.updated_at,
-  seen_at: message.seen_at,
-  sender: message.sender ? {
-    user_id: message.sender.user_id,
-    username: message.sender.username,
-    email: message.sender.email,
-    role: message.sender.role ? { role_name: message.sender.role.role_name } : null
-  } : null,
-  receiver: message.receiver ? {
-    user_id: message.receiver.user_id,
-    username: message.receiver.username,
-    email: message.receiver.email,
-    role: message.receiver.role ? { role_name: message.receiver.role.role_name } : null
-  } : null
-});
-
-const assertBookingAccess = (booking, userId) => {
-  if (!booking) {
+const assertBookingAccess = async (bookingId, userId) => {
+  const [bookings] = await promiseDb.query(`SELECT * FROM bookings WHERE booking_id = ?`, [bookingId]);
+  if (!bookings.length) {
     throw new AppError('Booking not found', 404);
   }
-
+  const booking = bookings[0];
   const normalizedUserId = Number(userId);
   const isCustomer = booking.user_id === normalizedUserId;
   const isCleaner = booking.cleaner_id === normalizedUserId;
@@ -50,8 +45,7 @@ const assertBookingAccess = (booking, userId) => {
   if (!isCustomer && !isCleaner) {
     throw new AppError('Not authorized to access this conversation', 403);
   }
-
-  return { isCustomer, isCleaner };
+  return { booking, isCustomer, isCleaner };
 };
 
 const getMessagesByBooking = async (req, res, next) => {
@@ -63,39 +57,22 @@ const getMessagesByBooking = async (req, res, next) => {
       return next(new AppError('Invalid booking id', 400));
     }
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: bookingIdValue },
-      select: {
-        booking_id: true,
-        user_id: true,
-        cleaner_id: true
-      }
-    });
+    await assertBookingAccess(bookingIdValue, req.user.user_id);
 
-    assertBookingAccess(booking, req.user.user_id);
-
-    const messages = await prisma.message.findMany({
-      where: { booking_id: toBigInt(bookingIdValue) },
-      orderBy: { created_at: 'asc' },
-      include: {
-        sender: {
-          select: {
-            user_id: true,
-            username: true,
-            email: true,
-            role: { select: { role_name: true } }
-          }
-        },
-        receiver: {
-          select: {
-            user_id: true,
-            username: true,
-            email: true,
-            role: { select: { role_name: true } }
-          }
-        }
-      }
-    });
+    const [messages] = await promiseDb.query(`
+      SELECT m.*, 
+        s_acc.user_id as sender_user_id,
+        r_acc.user_id as receiver_user_id,
+        su.first_name as sender_first_name, su.last_name as sender_last_name, su.email as sender_email, su.role_id as sender_role_id,
+        ru.first_name as receiver_first_name, ru.last_name as receiver_last_name, ru.email as receiver_email, ru.role_id as receiver_role_id
+      FROM messages m
+      LEFT JOIN acc s_acc ON m.sender_id = s_acc.acc_id
+      LEFT JOIN acc r_acc ON m.receiver_id = r_acc.acc_id
+      LEFT JOIN users su ON s_acc.user_id = su.user_id
+      LEFT JOIN users ru ON r_acc.user_id = ru.user_id
+      WHERE m.booking_id = ?
+      ORDER BY m.created_at ASC
+    `, [bookingIdValue]);
 
     res.status(200).json({
       success: true,
@@ -108,7 +85,6 @@ const getMessagesByBooking = async (req, res, next) => {
 
 const createMessage = async (req, res, next) => {
   try {
-    console.log('[Message Controller] Creating message. User:', req.user);
     const { booking_id, message, file_url, file_type } = req.body;
     const bookingIdValue = Number(booking_id);
 
@@ -120,62 +96,52 @@ const createMessage = async (req, res, next) => {
       return next(new AppError('Message text or file is required', 400));
     }
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: bookingIdValue },
-      select: {
-        booking_id: true,
-        user_id: true,
-        cleaner_id: true,
-        service_id: true
-      }
-    });
-
-    const { isCustomer } = assertBookingAccess(booking, req.user.user_id);
+    const { booking, isCustomer } = await assertBookingAccess(bookingIdValue, req.user.user_id);
 
     if (!booking.cleaner_id) {
       return next(new AppError('Cleaner has not been assigned to this booking yet', 400));
     }
 
-    const senderIdValue = Number(req.user.user_id);
-    const receiverIdValue = isCustomer ? booking.cleaner_id : booking.user_id;
+    const senderUserId = Number(req.user.user_id);
+    const receiverUserId = isCustomer ? booking.cleaner_id : booking.user_id;
 
-    console.log('[Message Controller] Sender ID:', senderIdValue, 'Receiver ID:', receiverIdValue, 'Is Customer:', isCustomer);
+    const [accs] = await promiseDb.query(`SELECT user_id, acc_id FROM acc WHERE user_id IN (?, ?)`, [senderUserId, receiverUserId]);
+    
+    let senderAccId = accs.find(a => a.user_id === senderUserId)?.acc_id;
+    let receiverAccId = accs.find(a => a.user_id === receiverUserId)?.acc_id;
 
-    const savedMessage = await prisma.message.create({
-      data: {
-        booking_id: toBigInt(bookingIdValue),
-        service_id: booking.service_id ? toBigInt(booking.service_id) : null,
-        sender_id: toBigInt(senderIdValue),
-        receiver_id: toBigInt(receiverIdValue),
-        message: message || null,
-        file_url: file_url || null,
-        file_type: file_type || null,
-        is_read: false
-      },
-      include: {
-        sender: {
-          select: {
-            user_id: true,
-            username: true,
-            email: true,
-            role: { select: { role_name: true } }
-          }
-        },
-        receiver: {
-          select: {
-            user_id: true,
-            username: true,
-            email: true,
-            role: { select: { role_name: true } }
-          }
-        }
-      }
-    });
+    if (!senderAccId) {
+      const [res1] = await promiseDb.query("INSERT INTO acc (user_id) VALUES (?)", [senderUserId]);
+      senderAccId = res1.insertId;
+    }
+    if (!receiverAccId) {
+      const [res2] = await promiseDb.query("INSERT INTO acc (user_id) VALUES (?)", [receiverUserId]);
+      receiverAccId = res2.insertId;
+    }
+
+    const [insertResult] = await promiseDb.query(`
+      INSERT INTO messages (booking_id, service_id, sender_id, receiver_id, message, file_url, file_type, is_read)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    `, [bookingIdValue, booking.service_id, senderAccId, receiverAccId, message || null, file_url || null, file_type || null]);
+    
+    const [newMessage] = await promiseDb.query(`
+      SELECT m.*, 
+        s_acc.user_id as sender_user_id,
+        r_acc.user_id as receiver_user_id,
+        su.first_name as sender_first_name, su.last_name as sender_last_name, su.email as sender_email, su.role_id as sender_role_id,
+        ru.first_name as receiver_first_name, ru.last_name as receiver_last_name, ru.email as receiver_email, ru.role_id as receiver_role_id
+      FROM messages m
+      LEFT JOIN acc s_acc ON m.sender_id = s_acc.acc_id
+      LEFT JOIN acc r_acc ON m.receiver_id = r_acc.acc_id
+      LEFT JOIN users su ON s_acc.user_id = su.user_id
+      LEFT JOIN users ru ON r_acc.user_id = ru.user_id
+      WHERE m.message_id = ?
+    `, [insertResult.insertId]);
 
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: serializeMessage(savedMessage)
+      data: serializeMessage(newMessage[0])
     });
   } catch (error) {
     next(error);
@@ -191,33 +157,24 @@ const markMessagesRead = async (req, res, next) => {
       return next(new AppError('Invalid booking id', 400));
     }
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: bookingIdValue },
-      select: {
-        booking_id: true,
-        user_id: true,
-        cleaner_id: true
-      }
-    });
+    await assertBookingAccess(bookingIdValue, req.user.user_id);
+    
+    const [accs] = await promiseDb.query(`SELECT acc_id FROM acc WHERE user_id = ?`, [req.user.user_id]);
+    if (!accs.length) {
+       return res.status(200).json({ success: true, message: 'No messages to mark', data: { updated: 0 } });
+    }
+    const receiverAccId = accs[0].acc_id;
 
-    assertBookingAccess(booking, req.user.user_id);
-
-    const updated = await prisma.message.updateMany({
-      where: {
-        booking_id: toBigInt(bookingIdValue),
-        receiver_id: toBigInt(req.user.user_id),
-        is_read: false
-      },
-      data: {
-        is_read: true,
-        seen_at: new Date()
-      }
-    });
+    const [updated] = await promiseDb.query(`
+      UPDATE messages 
+      SET is_read = 1, seen_at = NOW() 
+      WHERE booking_id = ? AND receiver_id = ? AND is_read = 0
+    `, [bookingIdValue, receiverAccId]);
 
     res.status(200).json({
       success: true,
       message: 'Messages marked as read',
-      data: { updated: updated.count }
+      data: { updated: updated.affectedRows }
     });
   } catch (error) {
     next(error);

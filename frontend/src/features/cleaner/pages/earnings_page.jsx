@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
@@ -248,14 +249,14 @@ const EarningsPage = () => {
         <div className="filter-group date-range">
           <DatePicker
             placeholder="From Date"
-            value={dateFrom}
-            onChange={(date) => setDateFrom(date ? date.format('YYYY-MM-DD') : '')}
+            value={dateFrom ? dayjs(dateFrom) : null}
+            onChange={(date, dateString) => setDateFrom(dateString)}
           />
           <span>to</span>
           <DatePicker
             placeholder="To Date"
-            value={dateTo}
-            onChange={(date) => setDateTo(date ? date.format('YYYY-MM-DD') : '')}
+            value={dateTo ? dayjs(dateTo) : null}
+            onChange={(date, dateString) => setDateTo(dateString)}
           />
         </div>
         <Button type="primary" onClick={handleApplyFilters}>Apply Filters</Button>
