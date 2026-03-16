@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { MessageOutlined, CalendarOutlined, EnvironmentOutlined, FileTextOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
+import api from '../../../services/api';
 
 const fallbackBookings = [
   {
@@ -18,71 +19,55 @@ const fallbackBookings = [
 
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
+  const { bookingId: pathBookingId } = useParams();
   const navigate = useNavigate();
-  const bookingId = searchParams.get('booking');
-  
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const bookingId = pathBookingId || searchParams.get('booking');
+
+  const [dynamicBookings, setDynamicBookings] = useState(DEMO_BOOKINGS);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      setLoading(true);
+    const fetchBooking = async () => {
+      if (!bookingId) return;
       try {
-        const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
-        const bookingsData = response?.data?.data || [];
-        let normalizedBookings = bookingsData.length > 0 ? bookingsData : [...fallbackBookings];
-
-        // If a bookingId is passed via URL and doesn't exist, create a placeholder.
-        // This simulates a new booking being matched and ready for chat.
-        if (bookingId && !normalizedBookings.some(b => b.booking_id === bookingId)) {
-          const newBooking = {
-            booking_id: bookingId,
-            booking_date: new Date().toISOString(),
-            booking_time: '10:00 AM', // Placeholder time
-            address: '123 Harmony Lane, Bright City', // Placeholder address
-            service: { name: 'Custom Cleaning' }, // Placeholder service
-            cleaner: { username: 'Narith Hen' } // Assign the requested cleaner
-          };
-          normalizedBookings.unshift(newBooking);
-        }
-        setBookings(normalizedBookings);
-      } catch (error) {
-        console.error('Failed to fetch bookings:', error);
-        let currentBookings = [...fallbackBookings];
-        if (bookingId && !currentBookings.some(b => b.booking_id === bookingId)) {
-          const newBooking = {
-            booking_id: bookingId,
-            booking_date: new Date().toISOString(),
-            booking_time: '10:00 AM',
-            address: '123 Harmony Lane, Bright City',
-            service: { name: 'Custom Cleaning' },
-            cleaner: { username: 'Narith Hen' }
-          };
-          currentBookings.unshift(newBooking);
-        }
-        setBookings(currentBookings);
-      } finally {
-        setLoading(false);
+        const resp = await api.get(`/bookings/track/${bookingId}`);
+        const data = resp?.data?.data;
+        if (!data) return;
+        const cleanerName = [data.cleaner_first_name, data.cleaner_last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Assigned Cleaner';
+        const timeRange = data.booking_time || '';
+        const dateStr = data.booking_date ? new Date(data.booking_date).toDateString() : '';
+        const entry = {
+          id: String(data.booking_id),
+          jobId: `#JOB-${data.booking_id}`,
+          title: data.service_name || 'Cleaning',
+          cleanerName,
+          date: dateStr,
+          time: timeRange,
+          status: data.booking_status || 'confirmed'
+        };
+        setDynamicBookings((prev) => {
+          const exists = prev.some((b) => String(b.id) === String(entry.id));
+          if (exists) {
+            return prev.map((b) => (String(b.id) === String(entry.id) ? entry : b));
+          }
+          return [entry, ...prev];
+        });
+      } catch {
+        // ignore; fallback to demo data
       }
     };
-
-    fetchBookings();
+    fetchBooking();
   }, [bookingId]);
 
-  const activeBooking = useMemo(() => {
-    if (!bookings.length) return null;
-    return bookings.find(b => b.booking_id === bookingId) || bookings[0];
-  }, [bookings, bookingId]);
+  const [selectedBooking, setSelectedBooking] = useState(
+    bookingId || dynamicBookings[0]?.id || null
+  );
 
-  if (loading) {
-    return (
-      <div className="customer-chat-page">
-        <div className="customer-chat-empty">
-          <p>Loading bookings...</p>
-        </div>
-      </div>
-    );
-  }
+  const activeBooking = useMemo(() => {
+    return dynamicBookings.find((b) => String(b.id) === String(selectedBooking)) || dynamicBookings[0];
+  }, [dynamicBookings, selectedBooking]);
 
   if (!activeBooking) {
     return (

@@ -12,7 +12,9 @@ const {
   getBookingsByUser,
   getBookingsByCleaner,
   getBookingHistory,
-  trackBooking
+  trackBooking,
+  getAvailableBookings,
+  claimBooking
 } = require('../controllers'); // Import from index.js
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
@@ -76,6 +78,18 @@ router.get('/user/:userId', authorize('admin', 'customer'), [
 router.get('/cleaner/:cleanerId', authorize('admin', 'cleaner'), [
   param('cleanerId').isInt()
 ], validate, getBookingsByCleaner);
+
+// Available jobs for cleaners
+// Cleaner fetch available jobs (auth required, no role gate to avoid role mismatches)
+router.get('/available', [
+  query('page').optional().isInt(),
+  query('limit').optional().isInt()
+], validate, getAvailableBookings);
+
+// Cleaner claim a job
+router.patch('/:id/claim', [
+  param('id').isInt()
+], validate, claimBooking);
 
 // Booking history
 router.get('/history/:id', [

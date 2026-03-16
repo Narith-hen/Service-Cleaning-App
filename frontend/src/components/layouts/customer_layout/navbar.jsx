@@ -10,7 +10,10 @@ import {
   LoginOutlined,
   UserAddOutlined,
   DownOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  MessageOutlined,
+  HistoryOutlined,
+  BellOutlined
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import { useAuth } from '../../../hooks/useAuth';
@@ -214,6 +217,52 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   </Button>
                 </Col>
               )}
+
+          {isCustomerArea && !isMobile && (
+            <Col>
+              <Space size={8}>
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<MessageOutlined />}
+                  title="Messages"
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 999,
+                    background: darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+                    color: darkMode ? '#e5e7eb' : '#0f172a'
+                  }}
+                />
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<HistoryOutlined />}
+                  title="History"
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 999,
+                    background: darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+                    color: darkMode ? '#e5e7eb' : '#0f172a'
+                  }}
+                />
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<BellOutlined />}
+                  title="Notifications"
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 999,
+                    background: darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+                    color: darkMode ? '#e5e7eb' : '#0f172a'
+                  }}
+                />
+              </Space>
+            </Col>
+          )}
 
 
           <Col {...rightColProps}>

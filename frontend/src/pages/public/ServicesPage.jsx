@@ -208,7 +208,16 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                     <div className="flex items-center justify-between">
                       <Link
                         to={bookServicePath}
-                        state={{ service: { title: service.title, description: service.description, image: service.image } }}
+                        state={{
+                          service: {
+                            service_id: service.id,
+                            id: service.id,
+                            title: service.title,
+                            name: service.title,
+                            description: service.description,
+                            image: service.image
+                          }
+                        }}
                         className={`inline-flex items-center gap-2 rounded-lg border border-[#32c753] px-5 py-2.5 text-sm font-bold transition-all duration-300 hover:bg-[#32c753] hover:text-white ${
                           darkMode ? "text-[#7ce892]" : "text-[#32c753]"
                         }`}

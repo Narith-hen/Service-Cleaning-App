@@ -116,11 +116,14 @@ app.get("/uploads/services/:file", (req, res, next) => {
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/admin.routes");
 const serviceRoutes = require("./routes/service.routes");
-const messageRoutes = require("./routes/message.routes");
+const bookingRoutes = require("./routes/booking.routes");
+const notificationRoutes = require("./routes/notification.routes");
+
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/services", serviceRoutes);
-app.use("/api/messages", messageRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
