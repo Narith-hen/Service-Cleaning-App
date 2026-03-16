@@ -15,6 +15,7 @@ import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/book
 import api from '../../../services/api';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
 const mapBookingToRequest = (booking) => {
   const date = booking?.booking_date ? new Date(booking.booking_date) : null;
@@ -31,6 +32,7 @@ const mapBookingToRequest = (booking) => {
       [booking.first_name, booking.last_name].filter(Boolean).join(' ').trim() ||
       booking.user?.username ||
       'Customer',
+    customerAvatar: booking.customer_avatar || booking.user?.avatar || '',
     address: booking.address || 'Address shared after accept',
     timeRange: startTime,
     amount: toMoney(booking.total_price || 0),
@@ -249,6 +251,7 @@ const JobRequestsPage = () => {
           <CleanerMessagePanel
             threadId={activeRequest.id}
             customerName={activeRequest.customer}
+            customerAvatar={activeRequest.customerAvatar}
             subtitle={`${activeRequest.service} Job - #JOB-${activeRequest.id}`}
           />
 
@@ -476,15 +479,6 @@ const JobRequestsPage = () => {
               </button>
             </div>
           </section>
-        </div>
-      )}
-
-      {acceptLoadingRequestId !== null && (
-        <div className="accept-loading-overlay">
-          <div className="accept-loading-card">
-            <div className="accept-loading-spinner" />
-            <h4>Loading...</h4>
-          </div>
         </div>
       )}
     </div>

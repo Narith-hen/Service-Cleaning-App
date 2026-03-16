@@ -6,30 +6,29 @@ import '../../../styles/customer/chat.scss';
 import '../../../styles/cleaner/my_jobs.scss';
 import api from '../../../services/api';
 
-// Fallback data when API is unavailable
-const DEMO_BOOKINGS = [
-  {
-    id: 'booking-1',
-    jobId: '#SOMA-48291',
-    title: 'Deep House Cleaning',
-    cleanerName: 'Maria Garcia',
-    date: 'March 24, 2026',
-    time: '09:00 AM - 12:00 PM',
-    status: 'confirmed'
-  }
-];
+const DEMO_BOOKINGS = [];
 
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
   const { bookingId: pathBookingId } = useParams();
   const navigate = useNavigate();
   const bookingId = pathBookingId || searchParams.get('booking');
+  const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
+  const LAST_BOOKING_KEY = 'last_booking_id';
 
   const [dynamicBookings, setDynamicBookings] = useState([]);
+  const [fallbackBookingId, setFallbackBookingId] = useState(() => {
+    try {
+      return localStorage.getItem(LAST_BOOKING_KEY);
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const normalizeEntry = (trackData = {}, base = {}) => {
       const cleanerName =
+        trackData.cleaner_display_name?.trim() ||
         trackData.cleaner_full_name?.trim() ||
         [trackData.cleaner_first_name, trackData.cleaner_last_name].filter(Boolean).join(' ').trim() ||
         'Assigned Cleaner';
@@ -45,6 +44,7 @@ const CustomerChatPage = () => {
         jobId: `#JOB-${trackData.booking_id || base.booking_id || base.id || ''}`,
         title: trackData.service_name || base.service?.name || 'Cleaning',
         cleanerName,
+        cleanerAvatar: trackData.cleaner_avatar || base.cleaner_avatar || '',
         cleanerPhone: trackData.cleaner_phone || base.cleaner_phone || '',
         cleanerEmail: trackData.cleaner_email || base.cleaner_email || '',
         customerName: trackData.customer_full_name || '',
@@ -87,30 +87,76 @@ const CustomerChatPage = () => {
           }
         }
 
-        setDynamicBookings(enriched.length ? enriched : DEMO_BOOKINGS);
-      } catch {
-        setDynamicBookings(DEMO_BOOKINGS);
+        // If still empty but we have a booking id, try direct track fetch
+        const directId = bookingId || fallbackBookingId;
+        let finalList = [...enriched].sort((a, b) => Number(b.id) - Number(a.id));
+        if (!finalList.length && directId) {
+          try {
+            const t = await api.get(`/bookings/track/${directId}`);
+            const track = t?.data?.data;
+            if (track) finalList.push(normalizeEntry(track));
+          } catch {
+            /* ignore */
+          }
+        }
+
+        setDynamicBookings(finalList);
+      } catch (err) {
+        // If list fetch fails, try at least to load the targeted booking
+        if (bookingId) {
+          try {
+            const t = await api.get(`/bookings/track/${bookingId}`);
+            const track = t?.data?.data;
+            if (track) {
+              setDynamicBookings([normalizeEntry(track)]);
+              return;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        setDynamicBookings([]);
       }
     };
 
     hydrateBookings();
-  }, [bookingId]);
+  }, [bookingId, fallbackBookingId]);
 
   const [selectedBooking, setSelectedBooking] = useState(
     bookingId || dynamicBookings[0]?.id || null
   );
 
   useEffect(() => {
-    const source = dynamicBookings.length ? dynamicBookings : DEMO_BOOKINGS;
-    if (!selectedBooking && source[0]?.id) {
-      setSelectedBooking(source[0].id);
+    if (!selectedBooking) {
+      if (bookingId) {
+        setSelectedBooking(bookingId);
+      } else if (dynamicBookings[0]?.id) {
+        setSelectedBooking(dynamicBookings[0].id);
+      }
     }
-  }, [dynamicBookings, selectedBooking]);
+  }, [dynamicBookings, selectedBooking, bookingId]);
 
   const activeBooking = useMemo(() => {
-    const source = dynamicBookings.length ? dynamicBookings : DEMO_BOOKINGS;
+    const source = dynamicBookings;
     return source.find((b) => String(b.id) === String(selectedBooking)) || source[0];
   }, [dynamicBookings, selectedBooking]);
+
+  // Alert the customer when a booking is confirmed (once per booking)
+  useEffect(() => {
+    if (!activeBooking?.id) return;
+    const key = `${ALERTED_BOOKING_PREFIX}${activeBooking.id}`;
+    try {
+      if (
+        String(activeBooking.status || '').toLowerCase() === 'confirmed' &&
+        !localStorage.getItem(key)
+      ) {
+        alert(`Your cleaner accepted booking #${activeBooking.id}.`);
+        localStorage.setItem(key, '1');
+      }
+    } catch {
+      /* ignore storage issues */
+    }
+  }, [activeBooking]);
 
   if (!activeBooking) {
     return (
@@ -149,7 +195,7 @@ const CustomerChatPage = () => {
           </div>
 
           <div className="chat-booking-list">
-            {(dynamicBookings.length ? dynamicBookings : DEMO_BOOKINGS).map((booking) => (
+            {dynamicBookings.map((booking) => (
               <button
                 key={booking.id}
                 type="button"
@@ -157,7 +203,11 @@ const CustomerChatPage = () => {
                 onClick={() => setSelectedBooking(booking.id)}
               >
                 <div className="booking-avatar">
-                  {booking.cleanerName.charAt(0)}
+                  {booking.cleanerAvatar ? (
+                    <img src={booking.cleanerAvatar} alt={booking.cleanerName} />
+                  ) : (
+                    booking.cleanerName.charAt(0)
+                  )}
                 </div>
                 <div className="booking-info">
                   <strong>{booking.cleanerName}</strong>

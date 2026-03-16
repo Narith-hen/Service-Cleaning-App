@@ -88,13 +88,21 @@ const getBookings = async (req, res, next) => {
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.email AS customer_email,
             u.phone_number AS customer_phone,
+            cp.company_name AS cleaner_company,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
+            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar,
+            u.avatar AS customer_avatar,
             c.phone_number AS cleaner_phone,
             c.email AS cleaner_email
          FROM bookings b
          JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          ${whereSql}
          ORDER BY b.created_at DESC
          LIMIT ? OFFSET ?`,
@@ -144,7 +152,14 @@ const getBookingById = async (req, res, next) => {
             u.email AS customer_email,
             u.phone_number AS customer_phone,
             c.user_id AS cleaner_id,
+            cp.company_name AS cleaner_company,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
+            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar,
+            u.avatar AS customer_avatar,
             c.phone_number AS cleaner_phone,
             c.email AS cleaner_email,
             p.payment_id,
@@ -161,6 +176,7 @@ const getBookingById = async (req, res, next) => {
          JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          LEFT JOIN payments p ON p.booking_id = b.booking_id
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          LEFT JOIN promotions promo ON promo.promotion_id = b.promotion_id
@@ -308,11 +324,18 @@ const assignCleaner = async (req, res, next) => {
         `SELECT 
             b.*, 
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username, 
+            cp.company_name AS cleaner_company,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username, 
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
+            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar,
             s.name AS service_name
          FROM bookings b
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          JOIN services s ON s.service_id = b.service_id
          WHERE b.booking_id = ?`,
         [id]
@@ -442,10 +465,19 @@ const getBookingsByCleaner = async (req, res, next) => {
             b.*,
             s.name AS service_name,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
-            u.phone_number AS customer_phone
+            u.phone_number AS customer_phone,
+            cp.company_name AS cleaner_company,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
+            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar
          FROM bookings b
          JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          WHERE b.cleaner_id = ?
          ORDER BY b.created_at DESC
          LIMIT ? OFFSET ?`,
@@ -530,14 +562,24 @@ const trackBooking = async (req, res, next) => {
             b.booking_date,
             b.booking_time,
             b.cleaner_id,
+            cp.company_name AS cleaner_company,
+            COALESCE(cp.company_name, TRIM(CONCAT_WS(' ', c.first_name, c.last_name))) AS cleaner_display_name,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_full_name,
             c.first_name AS cleaner_first_name,
             c.last_name AS cleaner_last_name,
             c.phone_number AS cleaner_phone,
             c.email AS cleaner_email,
-            s.name AS service_name
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
+            s.name AS service_name,
+            b.user_id,
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_full_name,
+            u.phone_number AS customer_phone,
+            u.email AS customer_email,
+            u.avatar AS customer_avatar
          FROM bookings b
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
+         JOIN users u ON u.user_id = b.user_id
          LEFT JOIN services s ON s.service_id = b.service_id
          WHERE b.booking_id = ?`,
         [id]
@@ -570,7 +612,8 @@ const getAvailableBookings = async (req, res, next) => {
             b.*,
             s.name AS service_name,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_name,
-            u.phone_number
+            u.phone_number,
+            u.avatar AS customer_avatar
          FROM bookings b
          JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id

@@ -28,6 +28,7 @@ const BookingMatchPage = () => {
   const [promptBookingId, setPromptBookingId] = useState(null);
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
+  const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
   const [trackedBookingId, setTrackedBookingId] = useState(() => {
     try {
       return localStorage.getItem('last_booking_id');
@@ -63,6 +64,15 @@ const BookingMatchPage = () => {
         if (stored) {
           setAcceptedId(stored);
           setPromptBookingId(stored);
+          try {
+            const key = `${ALERTED_BOOKING_PREFIX}${stored}`;
+            if (!localStorage.getItem(key)) {
+              alert(`Your booking #${stored} has been accepted by the cleaner.`);
+              localStorage.setItem(key, '1');
+            }
+          } catch {
+            /* ignore */
+          }
           localStorage.removeItem(ACCEPTED_BOOKING_KEY);
         }
         const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
@@ -89,6 +99,15 @@ const BookingMatchPage = () => {
         if (status === 'confirmed') {
           setAcceptedId(trackedBookingId);
           setPromptBookingId(trackedBookingId);
+          try {
+            const key = `${ALERTED_BOOKING_PREFIX}${trackedBookingId}`;
+            if (!localStorage.getItem(key)) {
+              alert(`Your booking #${trackedBookingId} has been accepted. Opening chat with your cleaner.`);
+              localStorage.setItem(key, '1');
+            }
+          } catch {
+            /* ignore storage errors */
+          }
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
         } else if (status === 'cancelled') {

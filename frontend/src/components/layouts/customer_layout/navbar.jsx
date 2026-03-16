@@ -225,6 +225,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   shape="circle"
                   icon={<MessageOutlined />}
                   title="Messages"
+                  onClick={() => navigate('/customer/chat')}
                   style={{
                     width: 38,
                     height: 38,

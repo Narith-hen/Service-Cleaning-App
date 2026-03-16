@@ -6,33 +6,7 @@ const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 // Socket.io server URL - configure based on environment
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
 
-const defaultMessages = [
-  {
-    id: 'seed-1',
-    sender: 'customer',
-    text: "Hi! I'm looking forward to tomorrow's cleaning. Please focus on kitchen cabinets.",
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:42:00'
-  },
-  {
-    id: 'seed-2',
-    sender: 'customer',
-    text: "Could you also clean the windows? I'm happy to pay extra for that.",
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:45:00'
-  },
-  {
-    id: 'seed-3',
-    sender: 'cleaner',
-    text: 'Of course. I can add window cleaning to this service. It should take around an extra hour.',
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:48:00',
-    status: 'seen'
-  }
-];
+const defaultMessages = [];
 
 const normalizeThreadId = (threadId) => String(threadId || 'default');
 
@@ -41,6 +15,7 @@ const sanitizeMessages = (messages) => {
 
   return messages
     .filter(Boolean)
+    .filter((message) => !String(message.id || '').startsWith('auto-accept-'))
     .map((message, index) => ({
       id: String(message.id || `message-${index + 1}`),
       sender: message.sender === 'cleaner' ? 'cleaner' : 'customer',
