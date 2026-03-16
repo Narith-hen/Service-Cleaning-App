@@ -508,6 +508,18 @@ const BookingPage = () => {
         } catch {
           /* ignore */
         }
+        // upload images if any
+        if (files.length) {
+          const toBase64 = (file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          const encoded = await Promise.all(files.map((f) => toBase64(f)));
+          await api.post(`/bookings/${bookingId}/images`, { images: encoded });
+        }
       }
 
       const { month, day } = formatDateParts(preferredDate);

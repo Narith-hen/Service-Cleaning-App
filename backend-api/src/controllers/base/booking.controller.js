@@ -1,5 +1,4 @@
 const db = require('../../config/db');
-const prisma = require('../../config/database');
 const AppError = require('../../utils/error.util');
 
 // Create booking (mysql2)
@@ -63,44 +62,64 @@ const createBooking = async (req, res, next) => {
 const getBookings = async (req, res, next) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const where = {};
-    if (status) where.booking_status = status;
-    
-    // If not admin, show only user's bookings
-    if (req.user.role.role_name !== 'admin') {
-      where.user_id = req.user.user_id;
+    const whereClauses = [];
+    const params = [];
+
+    if (status) {
+      whereClauses.push('LOWER(b.booking_status) = LOWER(?)');
+      params.push(status);
     }
 
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where,
-        include: {
-          service: true,
-          user: {
-            select: {
-              user_id: true,
-              username: true,
-              email: true
-            }
-          }
-        },
-        orderBy: { created_at: 'desc' },
-        skip: parseInt(skip),
-        take: parseInt(limit)
-      }),
-      prisma.booking.count({ where })
-    ]);
+    if (req.user.role.role_name !== 'admin') {
+      whereClauses.push('b.user_id = ?');
+      params.push(req.user.user_id);
+    }
+
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*,
+            s.name AS service_name,
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
+            u.email AS customer_email,
+            u.phone_number AS customer_phone,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            c.phone_number AS cleaner_phone,
+            c.email AS cleaner_email
+         FROM bookings b
+         JOIN services s ON s.service_id = b.service_id
+         JOIN users u ON u.user_id = b.user_id
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         ${whereSql}
+         ORDER BY b.created_at DESC
+         LIMIT ? OFFSET ?`,
+        [...params, parseInt(limit), offset]
+      );
+
+    const [countRows] = await db
+      .promise()
+      .query(
+        `SELECT COUNT(*) AS total 
+         FROM bookings b
+         ${whereSql}`,
+        params
+      );
+
+    const total = countRows?.[0]?.total || 0;
 
     res.status(200).json({
       success: true,
-      data: bookings,
+      data: rows,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (error) {
@@ -113,38 +132,49 @@ const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) },
-      include: {
-        service: true,
-        user: {
-          select: {
-            user_id: true,
-            username: true,
-            email: true,
-            phone_number: true
-          }
-        },
-        cleaner: {
-          select: {
-            user_id: true,
-            username: true,
-            phone_number: true
-          }
-        },
-        payment: true,
-        review: true,
-        promotion: true
-      }
-    });
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*,
+            s.name AS service_name,
+            s.price AS service_price,
+            u.user_id AS customer_id,
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
+            u.email AS customer_email,
+            u.phone_number AS customer_phone,
+            c.user_id AS cleaner_id,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            c.phone_number AS cleaner_phone,
+            c.email AS cleaner_email,
+            p.payment_id,
+            p.payment_status,
+            p.amount,
+            r.review_id,
+            r.rating,
+            r.command AS review_comment,
+            promo.promotion_id,
+            promo.discount_price,
+            promo.start_date,
+            promo.end_date
+         FROM bookings b
+         JOIN services s ON s.service_id = b.service_id
+         JOIN users u ON u.user_id = b.user_id
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN payments p ON p.booking_id = b.booking_id
+         LEFT JOIN reviews r ON r.booking_id = b.booking_id
+         LEFT JOIN promotions promo ON promo.promotion_id = b.promotion_id
+         WHERE b.booking_id = ?`,
+        [id]
+      );
 
-    if (!booking) {
+    if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
     res.status(200).json({
       success: true,
-      data: booking
+      data: rows[0]
     });
   } catch (error) {
     next(error);
@@ -157,30 +187,41 @@ const updateBooking = async (req, res, next) => {
     const { id } = req.params;
     const { booking_date, service_id, promotion_id } = req.body;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) }
-    });
-
-    if (!booking) {
+    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
-    const updatedBooking = await prisma.booking.update({
-      where: { booking_id: parseInt(id) },
-      data: {
-        booking_date: booking_date ? new Date(booking_date) : undefined,
-        service_id: service_id ? parseInt(service_id) : undefined,
-        promotion_id: promotion_id ? parseInt(promotion_id) : null
-      },
-      include: {
-        service: true
-      }
-    });
+    const payload = {};
+    if (booking_date) payload.booking_date = new Date(booking_date);
+    if (service_id) payload.service_id = parseInt(service_id);
+    if (promotion_id !== undefined) payload.promotion_id = promotion_id ? parseInt(promotion_id) : null;
+
+    if (Object.keys(payload).length === 0) {
+      return next(new AppError('No fields to update', 400));
+    }
+
+    const setSql = Object.keys(payload)
+      .map((field) => `${field} = ?`)
+      .join(', ');
+    const values = [...Object.values(payload), id];
+
+    await db.promise().query(`UPDATE bookings SET ${setSql} WHERE booking_id = ?`, values);
+
+    const [updated] = await db
+      .promise()
+      .query(
+        `SELECT b.*, s.name AS service_name 
+         FROM bookings b 
+         JOIN services s ON s.service_id = b.service_id 
+         WHERE b.booking_id = ?`,
+        [id]
+      );
 
     res.status(200).json({
       success: true,
       message: 'Booking updated successfully',
-      data: updatedBooking
+      data: updated?.[0]
     });
   } catch (error) {
     next(error);
@@ -192,17 +233,12 @@ const deleteBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) }
-    });
-
-    if (!booking) {
+    const [rows] = await db.promise().query('SELECT booking_id FROM bookings WHERE booking_id = ?', [id]);
+    if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
-    await prisma.booking.delete({
-      where: { booking_id: parseInt(id) }
-    });
+    await db.promise().query('DELETE FROM bookings WHERE booking_id = ?', [id]);
 
     res.status(200).json({
       success: true,
@@ -257,25 +293,44 @@ const assignCleaner = async (req, res, next) => {
     const { id } = req.params;
     const { cleaner_id } = req.body;
 
-    const booking = await prisma.booking.update({
-      where: { booking_id: parseInt(id) },
-      data: { cleaner_id: parseInt(cleaner_id) },
-      include: {
-        user: true,
-        cleaner: true,
-        service: true
-      }
-    });
+    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    if (!rows || rows.length === 0) {
+      return next(new AppError('Booking not found', 404));
+    }
 
-    await prisma.notification.create({
-      data: {
-        title: 'New Assignment',
-        message: `You have been assigned to booking #${id}`,
-        type_notification: 'assignment',
-        user_id: parseInt(cleaner_id),
-        booking_id: parseInt(id)
-      }
-    });
+    await db
+      .promise()
+      .query('UPDATE bookings SET cleaner_id = ? WHERE booking_id = ?', [cleaner_id, id]);
+
+    const [[booking]] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*, 
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username, 
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username, 
+            s.name AS service_name
+         FROM bookings b
+         JOIN users u ON u.user_id = b.user_id
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         JOIN services s ON s.service_id = b.service_id
+         WHERE b.booking_id = ?`,
+        [id]
+      );
+
+    await db
+      .promise()
+      .query(
+        'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [
+          'New Assignment',
+          `You have been assigned to booking #${id}`,
+          'assignment',
+          parseInt(cleaner_id),
+          parseInt(id)
+        ]
+      )
+      .catch(() => {});
 
     res.status(200).json({
       success: true,
@@ -330,33 +385,42 @@ const getBookingsByUser = async (req, res, next) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where: { user_id: parseInt(userId) },
-        include: {
-          service: true,
-          payment: true,
-          review: true
-        },
-        orderBy: { created_at: 'desc' },
-        skip: parseInt(skip),
-        take: parseInt(limit)
-      }),
-      prisma.booking.count({
-        where: { user_id: parseInt(userId) }
-      })
-    ]);
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*,
+            s.name AS service_name,
+            p.payment_status,
+            p.amount,
+            r.rating,
+            r.review_id
+         FROM bookings b
+         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN payments p ON p.booking_id = b.booking_id
+         LEFT JOIN reviews r ON r.booking_id = b.booking_id
+         WHERE b.user_id = ?
+         ORDER BY b.created_at DESC
+         LIMIT ? OFFSET ?`,
+        [userId, parseInt(limit), offset]
+      );
+
+    const [countRows] = await db
+      .promise()
+      .query('SELECT COUNT(*) AS total FROM bookings WHERE user_id = ?', [userId]);
+
+    const total = countRows?.[0]?.total || 0;
 
     res.status(200).json({
       success: true,
-      data: bookings,
+      data: rows,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (error) {
@@ -369,37 +433,39 @@ const getBookingsByCleaner = async (req, res, next) => {
   try {
     const { cleanerId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
-        where: { cleaner_id: parseInt(cleanerId) },
-        include: {
-          service: true,
-          user: {
-            select: {
-              username: true,
-              phone_number: true
-            }
-          }
-        },
-        orderBy: { created_at: 'desc' },
-        skip: parseInt(skip),
-        take: parseInt(limit)
-      }),
-      prisma.booking.count({
-        where: { cleaner_id: parseInt(cleanerId) }
-      })
-    ]);
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*,
+            s.name AS service_name,
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
+            u.phone_number AS customer_phone
+         FROM bookings b
+         JOIN services s ON s.service_id = b.service_id
+         JOIN users u ON u.user_id = b.user_id
+         WHERE b.cleaner_id = ?
+         ORDER BY b.created_at DESC
+         LIMIT ? OFFSET ?`,
+        [cleanerId, parseInt(limit), offset]
+      );
+
+    const [countRows] = await db
+      .promise()
+      .query('SELECT COUNT(*) AS total FROM bookings WHERE cleaner_id = ?', [cleanerId]);
+
+    const total = countRows?.[0]?.total || 0;
 
     res.status(200).json({
       success: true,
-      data: bookings,
+      data: rows,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (error) {
@@ -412,24 +478,38 @@ const getBookingHistory = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: parseInt(id) },
-      include: {
-        service: true,
-        user: true,
-        cleaner: true,
-        payment: true,
-        review: true
-      }
-    });
+    const [rows] = await db
+      .promise()
+      .query(
+        `SELECT 
+            b.*,
+            s.name AS service_name,
+            TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
+            u.phone_number AS customer_phone,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            c.phone_number AS cleaner_phone,
+            p.payment_status,
+            p.amount,
+            r.rating,
+            r.review_id,
+            r.command AS review_comment
+         FROM bookings b
+         JOIN services s ON s.service_id = b.service_id
+         JOIN users u ON u.user_id = b.user_id
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN payments p ON p.booking_id = b.booking_id
+         LEFT JOIN reviews r ON r.booking_id = b.booking_id
+         WHERE b.booking_id = ?`,
+        [id]
+      );
 
-    if (!booking) {
+    if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
     res.status(200).json({
       success: true,
-      data: booking
+      data: rows[0]
     });
   } catch (error) {
     next(error);
@@ -450,9 +530,11 @@ const trackBooking = async (req, res, next) => {
             b.booking_date,
             b.booking_time,
             b.cleaner_id,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_full_name,
             c.first_name AS cleaner_first_name,
             c.last_name AS cleaner_last_name,
             c.phone_number AS cleaner_phone,
+            c.email AS cleaner_email,
             s.name AS service_name
          FROM bookings b
          LEFT JOIN users c ON c.user_id = b.cleaner_id
@@ -586,3 +668,32 @@ module.exports = {
   getAvailableBookings,
   claimBooking
 };
+
+// Add booking images (mysql2)
+const addBookingImages = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { images } = req.body;
+
+    if (!Array.isArray(images) || images.length === 0) {
+      return next(new AppError('No images provided', 400));
+    }
+
+    const values = images.map((url) => [id, url]);
+    await db
+      .promise()
+      .query(
+        'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
+        [values.map(([bid, url]) => [bid, url, new Date()])]
+      );
+
+    res.status(201).json({
+      success: true,
+      message: 'Images saved'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.addBookingImages = addBookingImages;

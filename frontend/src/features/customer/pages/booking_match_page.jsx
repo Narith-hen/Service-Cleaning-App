@@ -25,6 +25,7 @@ const BookingMatchPage = () => {
   const [progress, setProgress] = useState(65);
   const [isFading, setIsFading] = useState(false);
   const [acceptedId, setAcceptedId] = useState(null);
+  const [promptBookingId, setPromptBookingId] = useState(null);
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
   const [trackedBookingId, setTrackedBookingId] = useState(() => {
@@ -61,6 +62,7 @@ const BookingMatchPage = () => {
         const stored = localStorage.getItem(ACCEPTED_BOOKING_KEY);
         if (stored) {
           setAcceptedId(stored);
+          setPromptBookingId(stored);
           localStorage.removeItem(ACCEPTED_BOOKING_KEY);
         }
         const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
@@ -86,6 +88,7 @@ const BookingMatchPage = () => {
         const status = resp?.data?.data?.booking_status?.toLowerCase();
         if (status === 'confirmed') {
           setAcceptedId(trackedBookingId);
+          setPromptBookingId(trackedBookingId);
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
         } else if (status === 'cancelled') {
@@ -101,12 +104,15 @@ const BookingMatchPage = () => {
     return () => clearInterval(pollStatus);
   }, [trackedBookingId]);
 
-  useEffect(() => {
-    if (!acceptedId) return;
-    // brief alert then navigate to chat
-    alert(`Your booking #${acceptedId} has been accepted. Opening chat with your cleaner.`);
-    navigate(`/customer/chat/${acceptedId}`);
-  }, [acceptedId, navigate]);
+  const handleOpenChat = () => {
+    if (!promptBookingId) return;
+    alert(`Your booking #${promptBookingId} has been accepted. Opening chat with your cleaner.`);
+    navigate(`/customer/chat/${promptBookingId}`);
+  };
+
+  const handleLater = () => {
+    setPromptBookingId(null);
+  };
 
   return (
     <div className="booking-match-page">
@@ -173,7 +179,35 @@ const BookingMatchPage = () => {
             Next
           </button>
         </div>
+        {promptBookingId && (
+          <div className="match-alert" role="status" aria-live="assertive">
+            <strong>Cleaner accepted your booking.</strong>
+            <div className="alert-actions">
+              <button type="button" className="alert-primary" onClick={handleOpenChat}>
+                Open Chat
+              </button>
+              <button type="button" className="alert-secondary" onClick={handleLater}>
+                Later
+              </button>
+            </div>
+          </div>
+        )}
       </section>
+
+      {promptBookingId && (
+        <div className="match-toast" role="status" aria-live="assertive">
+          <div className="toast-icon">✓</div>
+          <div className="toast-body">
+            <strong>Cleaner accepted your booking.</strong>
+            <button type="button" className="toast-primary" onClick={handleOpenChat}>
+              Open Chat
+            </button>
+            <button type="button" className="toast-link" onClick={handleLater}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

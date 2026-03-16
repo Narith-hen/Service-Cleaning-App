@@ -6,7 +6,7 @@ import '../../../styles/customer/chat.scss';
 import '../../../styles/cleaner/my_jobs.scss';
 import api from '../../../services/api';
 
-// Demo data - in production, this would come from API
+// Fallback data when API is unavailable
 const DEMO_BOOKINGS = [
   {
     id: 'booking-1',
@@ -16,15 +16,6 @@ const DEMO_BOOKINGS = [
     date: 'March 24, 2026',
     time: '09:00 AM - 12:00 PM',
     status: 'confirmed'
-  },
-  {
-    id: 'booking-2',
-    jobId: '#SOMA-48285',
-    title: 'Office Cleaning',
-    cleanerName: 'John Smith',
-    date: 'March 28, 2026',
-    time: '02:00 PM - 05:00 PM',
-    status: 'pending'
   }
 ];
 
@@ -34,50 +25,91 @@ const CustomerChatPage = () => {
   const navigate = useNavigate();
   const bookingId = pathBookingId || searchParams.get('booking');
 
-  const [dynamicBookings, setDynamicBookings] = useState(DEMO_BOOKINGS);
+  const [dynamicBookings, setDynamicBookings] = useState([]);
 
   useEffect(() => {
-    const fetchBooking = async () => {
-      if (!bookingId) return;
+    const normalizeEntry = (trackData = {}, base = {}) => {
+      const cleanerName =
+        trackData.cleaner_full_name?.trim() ||
+        [trackData.cleaner_first_name, trackData.cleaner_last_name].filter(Boolean).join(' ').trim() ||
+        'Assigned Cleaner';
+
+      const dateStr = trackData.booking_date
+        ? new Date(trackData.booking_date).toDateString()
+        : base.booking_date
+          ? new Date(base.booking_date).toDateString()
+          : '';
+
+      return {
+        id: String(trackData.booking_id || base.booking_id || base.id || ''),
+        jobId: `#JOB-${trackData.booking_id || base.booking_id || base.id || ''}`,
+        title: trackData.service_name || base.service?.name || 'Cleaning',
+        cleanerName,
+        cleanerPhone: trackData.cleaner_phone || base.cleaner_phone || '',
+        cleanerEmail: trackData.cleaner_email || base.cleaner_email || '',
+        customerName: trackData.customer_full_name || '',
+        customerPhone: trackData.customer_phone || '',
+        customerEmail: trackData.customer_email || '',
+        date: dateStr,
+        time: trackData.booking_time || base.booking_time || '',
+        status: trackData.booking_status || base.booking_status || 'confirmed'
+      };
+    };
+
+    const hydrateBookings = async () => {
       try {
-        const resp = await api.get(`/bookings/track/${bookingId}`);
-        const data = resp?.data?.data;
-        if (!data) return;
-        const cleanerName = [data.cleaner_first_name, data.cleaner_last_name]
-          .filter(Boolean)
-          .join(' ')
-          .trim() || 'Assigned Cleaner';
-        const timeRange = data.booking_time || '';
-        const dateStr = data.booking_date ? new Date(data.booking_date).toDateString() : '';
-        const entry = {
-          id: String(data.booking_id),
-          jobId: `#JOB-${data.booking_id}`,
-          title: data.service_name || 'Cleaning',
-          cleanerName,
-          date: dateStr,
-          time: timeRange,
-          status: data.booking_status || 'confirmed'
-        };
-        setDynamicBookings((prev) => {
-          const exists = prev.some((b) => String(b.id) === String(entry.id));
-          if (exists) {
-            return prev.map((b) => (String(b.id) === String(entry.id) ? entry : b));
-          }
-          return [entry, ...prev];
+        const listResp = await api.get('/bookings', {
+          params: { status: 'confirmed' }
         });
+        const bookings = listResp?.data?.data || [];
+
+        const enriched = await Promise.all(
+          bookings.map(async (b) => {
+            try {
+              const t = await api.get(`/bookings/track/${b.booking_id}`);
+              const track = t?.data?.data || {};
+              return normalizeEntry(track, b);
+            } catch {
+              return normalizeEntry({}, b);
+            }
+          })
+        );
+
+        if (bookingId && !enriched.some((b) => String(b.id) === String(bookingId))) {
+          try {
+            const t = await api.get(`/bookings/track/${bookingId}`);
+            const track = t?.data?.data;
+            if (track) {
+              enriched.unshift(normalizeEntry(track));
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        setDynamicBookings(enriched.length ? enriched : DEMO_BOOKINGS);
       } catch {
-        // ignore; fallback to demo data
+        setDynamicBookings(DEMO_BOOKINGS);
       }
     };
-    fetchBooking();
+
+    hydrateBookings();
   }, [bookingId]);
 
   const [selectedBooking, setSelectedBooking] = useState(
     bookingId || dynamicBookings[0]?.id || null
   );
 
+  useEffect(() => {
+    const source = dynamicBookings.length ? dynamicBookings : DEMO_BOOKINGS;
+    if (!selectedBooking && source[0]?.id) {
+      setSelectedBooking(source[0].id);
+    }
+  }, [dynamicBookings, selectedBooking]);
+
   const activeBooking = useMemo(() => {
-    return dynamicBookings.find((b) => String(b.id) === String(selectedBooking)) || dynamicBookings[0];
+    const source = dynamicBookings.length ? dynamicBookings : DEMO_BOOKINGS;
+    return source.find((b) => String(b.id) === String(selectedBooking)) || source[0];
   }, [dynamicBookings, selectedBooking]);
 
   if (!activeBooking) {
@@ -117,7 +149,7 @@ const CustomerChatPage = () => {
           </div>
 
           <div className="chat-booking-list">
-            {DEMO_BOOKINGS.map((booking) => (
+            {(dynamicBookings.length ? dynamicBookings : DEMO_BOOKINGS).map((booking) => (
               <button
                 key={booking.id}
                 type="button"
@@ -146,6 +178,12 @@ const CustomerChatPage = () => {
             <div className="chat-header-info">
               <h2>{activeBooking.cleanerName}</h2>
               <p>{activeBooking.title} - {activeBooking.jobId}</p>
+              {activeBooking.cleanerPhone && (
+                <small className="chat-meta-line">Phone: {activeBooking.cleanerPhone}</small>
+              )}
+              {activeBooking.cleanerEmail && (
+                <small className="chat-meta-line">Email: {activeBooking.cleanerEmail}</small>
+              )}
             </div>
             <div className="chat-header-meta">
               <span className="chat-date">{activeBooking.date}</span>

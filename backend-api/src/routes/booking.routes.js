@@ -14,7 +14,8 @@ const {
   getBookingHistory,
   trackBooking,
   getAvailableBookings,
-  claimBooking
+  claimBooking,
+  addBookingImages
 } = require('../controllers'); // Import from index.js
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
@@ -95,6 +96,12 @@ router.patch('/:id/claim', [
 router.get('/history/:id', [
   param('id').isInt()
 ], validate, getBookingHistory);
+
+// Booking images
+router.post('/:id/images', [
+  param('id').isInt(),
+  body('images').isArray({ min: 1 })
+], validate, addBookingImages);
 
 // Single booking operations
 router.get('/:id', [
