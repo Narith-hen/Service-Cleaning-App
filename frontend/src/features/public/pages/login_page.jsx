@@ -22,25 +22,25 @@ const LoginPage = () => {
             const result = await login(values.email, values.password);
             
             if (result.success) {
-                // Redirect based on role
-                switch(result.user.role) {
-                    case 'admin':
-                        navigate('/admin/dashboard');
-                        break;
-                    case 'customer':
-                        navigate('/customer/dashboard');
-                        break;
-                    case 'cleaner':
-                        navigate('/cleaner/dashboard');
-                        break;
-                    default:
-                        navigate('/');
-                }
-            } else {
-                setError('Invalid email or password');
-            }
+                 // Redirect based on role
+                 switch(result.user.role) {
+                     case 'admin':
+                         navigate('/admin/dashboard');
+                         break;
+                     case 'customer':
+                         navigate('/customer/dashboard');
+                         break;
+                     case 'cleaner':
+                         navigate('/cleaner/dashboard');
+                         break;
+                     default:
+                         navigate('/');
+                 }
+             } else {
+                setError(result?.error || 'Invalid email or password');
+             }
         } catch {
-            setError('An error occurred. Please try again.');
+             setError('An error occurred. Please try again.');
         } finally {
             setLoading(false);
         }

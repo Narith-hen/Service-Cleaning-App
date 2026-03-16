@@ -9,6 +9,21 @@ const getUserTableColumns = async (promiseDb) => {
   return new Set((columns || []).map((column) => column.Field));
 };
 
+const getUniqueIndexColumns = async (promiseDb, tableName, columnNames) => {
+  const wanted = new Set((columnNames || []).map((name) => String(name).toLowerCase()));
+  if (!wanted.size) return new Set();
+
+  const [rows] = await promiseDb.query(`SHOW INDEX FROM \`${tableName}\` WHERE Non_unique = 0`);
+  const uniqueColumns = new Set();
+
+  for (const row of rows || []) {
+    const col = String(row?.Column_name || '').toLowerCase();
+    if (wanted.has(col)) uniqueColumns.add(col);
+  }
+
+  return uniqueColumns;
+};
+
 const slugify = (value) =>
   String(value || '')
     .trim()
@@ -57,6 +72,12 @@ const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
 
   const columns = await getUserTableColumns(promiseDb);
   const hasUsername = columns.has('username');
+  const uniqueNameColumns = (columns.has('first_name') || columns.has('last_name'))
+    ? await getUniqueIndexColumns(promiseDb, 'users', ['first_name', 'last_name'])
+    : new Set();
+  const isFirstNameUnique = uniqueNameColumns.has('first_name');
+  const isLastNameUnique = uniqueNameColumns.has('last_name');
+
   const companyName = String(profile.company_name || '').trim();
   const displayName = companyName || (email ? email.split('@')[0] : '') || `cleaner-${cleanerId}`;
 
@@ -107,11 +128,17 @@ const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
 
   if (columns.has('first_name')) {
     insertColumns.push('first_name');
-    insertValues.push(displayName);
+    // Some dev DBs were created with an incorrect UNIQUE index on first_name.
+    // If it exists, use a deterministic unique value to prevent accept/claim failures.
+    const firstName = isFirstNameUnique ? `${displayName}-${cleanerId}` : displayName;
+    insertValues.push(String(firstName).slice(0, 100));
   }
   if (columns.has('last_name')) {
     insertColumns.push('last_name');
-    insertValues.push('');
+    // Some dev DBs were created with an incorrect UNIQUE index on last_name.
+    // If it exists, avoid inserting the same blank last_name for every cleaner.
+    const lastName = isLastNameUnique ? `cleaner-${cleanerId}` : '';
+    insertValues.push(String(lastName).slice(0, 100));
   }
 
   insertColumns.push('email');
@@ -659,7 +686,7 @@ const claimBooking = async (req, res, next) => {
     const { id } = req.params;
     const promiseDb = db.promise();
     const accountSource = String(req.user?.account_source || '').toLowerCase();
-    const roleName = String(req.user?.role?.role_name || '').toLowerCase();
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
     if (roleName !== 'cleaner' && roleName !== 'admin') {
       return next(new AppError('Not authorized', 403));
     }

@@ -40,6 +40,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) =>
   const editInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatBodyRef = useRef(null);
+  const lastReadReceiptRef = useRef({ threadId: null, messageId: null });
 
   useEffect(() => {
     const el = chatBodyRef.current;
@@ -48,12 +49,24 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) =>
     // Only scroll when message count changes (new msg) or attachment is added, not on every status update
   }, [messages.length, pendingAttachment]);
 
-  // Emit message:read when chat is viewed
+  // Emit message:read (and persist) when chat is viewed or when a new incoming message arrives.
   useEffect(() => {
-    if (messages.length > 0) {
-      markAsRead();
+    if (!messages.length) return;
+
+    const lastIncoming = [...messages].reverse().find((m) => m?.sender && m.sender !== 'customer');
+    const messageId = lastIncoming?.id ? String(lastIncoming.id) : null;
+    if (!messageId) return;
+
+    if (
+      lastReadReceiptRef.current.threadId === String(threadId) &&
+      lastReadReceiptRef.current.messageId === messageId
+    ) {
+      return;
     }
-  }, [threadId]);
+
+    lastReadReceiptRef.current = { threadId: String(threadId), messageId };
+    markAsRead({ messageId });
+  }, [threadId, messages.length, markAsRead]);
 
   const openFilePicker = () => {
     fileInputRef.current?.click();

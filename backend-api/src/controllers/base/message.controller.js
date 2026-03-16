@@ -4,6 +4,9 @@ const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');
 
 const serializeMessage = (message) => {
+  const senderRoleName = String(message.sender_role_name || '').trim().toLowerCase();
+  const receiverRoleName = String(message.receiver_role_name || '').trim().toLowerCase();
+
   return {
     id: message.message_id?.toString(),
     booking_id: message.booking_id ? message.booking_id.toString() : null,
@@ -21,13 +24,13 @@ const serializeMessage = (message) => {
       user_id: message.sender_user_id,
       username: (message.sender_first_name || '') + ' ' + (message.sender_last_name || ''),
       email: message.sender_email,
-      role: { role_name: message.sender_role_id === 1 ? 'customer' : 'cleaner' }
+      role: { role_name: senderRoleName || null }
     },
     receiver: {
       user_id: message.receiver_user_id,
       username: (message.receiver_first_name || '') + ' ' + (message.receiver_last_name || ''),
       email: message.receiver_email,
-      role: { role_name: message.receiver_role_id === 1 ? 'customer' : 'cleaner' }
+      role: { role_name: receiverRoleName || null }
     }
   };
 };
@@ -64,12 +67,16 @@ const getMessagesByBooking = async (req, res, next) => {
         s_acc.user_id as sender_user_id,
         r_acc.user_id as receiver_user_id,
         su.first_name as sender_first_name, su.last_name as sender_last_name, su.email as sender_email, su.role_id as sender_role_id,
-        ru.first_name as receiver_first_name, ru.last_name as receiver_last_name, ru.email as receiver_email, ru.role_id as receiver_role_id
+        sr.role_name as sender_role_name,
+        ru.first_name as receiver_first_name, ru.last_name as receiver_last_name, ru.email as receiver_email, ru.role_id as receiver_role_id,
+        rr.role_name as receiver_role_name
       FROM messages m
       LEFT JOIN acc s_acc ON m.sender_id = s_acc.acc_id
       LEFT JOIN acc r_acc ON m.receiver_id = r_acc.acc_id
       LEFT JOIN users su ON s_acc.user_id = su.user_id
       LEFT JOIN users ru ON r_acc.user_id = ru.user_id
+      LEFT JOIN roles sr ON su.role_id = sr.role_id
+      LEFT JOIN roles rr ON ru.role_id = rr.role_id
       WHERE m.booking_id = ?
       ORDER BY m.created_at ASC
     `, [bookingIdValue]);
@@ -129,12 +136,16 @@ const createMessage = async (req, res, next) => {
         s_acc.user_id as sender_user_id,
         r_acc.user_id as receiver_user_id,
         su.first_name as sender_first_name, su.last_name as sender_last_name, su.email as sender_email, su.role_id as sender_role_id,
-        ru.first_name as receiver_first_name, ru.last_name as receiver_last_name, ru.email as receiver_email, ru.role_id as receiver_role_id
+        sr.role_name as sender_role_name,
+        ru.first_name as receiver_first_name, ru.last_name as receiver_last_name, ru.email as receiver_email, ru.role_id as receiver_role_id,
+        rr.role_name as receiver_role_name
       FROM messages m
       LEFT JOIN acc s_acc ON m.sender_id = s_acc.acc_id
       LEFT JOIN acc r_acc ON m.receiver_id = r_acc.acc_id
       LEFT JOIN users su ON s_acc.user_id = su.user_id
       LEFT JOIN users ru ON r_acc.user_id = ru.user_id
+      LEFT JOIN roles sr ON su.role_id = sr.role_id
+      LEFT JOIN roles rr ON ru.role_id = rr.role_id
       WHERE m.message_id = ?
     `, [insertResult.insertId]);
 

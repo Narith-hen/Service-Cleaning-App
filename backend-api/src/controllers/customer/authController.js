@@ -213,6 +213,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   const loginId = String(email || "").trim();
+  const normalizedLoginId = loginId.toLowerCase();
 
   if (!loginId || !password) {
     return res.status(400).json({
@@ -234,7 +235,7 @@ exports.login = async (req, res) => {
       r.role_name
     FROM users u
     LEFT JOIN roles r ON r.role_id = u.role_id
-    WHERE u.email = ? OR u.user_code = ?
+    WHERE LOWER(u.email) = ? OR LOWER(u.user_code) = ?
     LIMIT 1
   `;
   const findCleanerSql = `
@@ -251,19 +252,19 @@ exports.login = async (req, res) => {
       r.role_name
     FROM cleaner_profile cp
     LEFT JOIN roles r ON r.role_id = cp.role_id
-    WHERE cp.company_email = ? OR cp.cleaner_code = ?
+    WHERE LOWER(cp.company_email) = ? OR LOWER(cp.cleaner_code) = ?
     LIMIT 1
   `;
 
   try {
     const promiseDb = db.promise();
     let accountSource = "users";
-    let [rows] = await promiseDb.query(findUserSql, [loginId, loginId]);
+    let [rows] = await promiseDb.query(findUserSql, [normalizedLoginId, normalizedLoginId]);
     let user = rows?.[0];
 
     if (!user) {
       accountSource = "cleaner_profile";
-      [rows] = await promiseDb.query(findCleanerSql, [loginId, loginId]);
+      [rows] = await promiseDb.query(findCleanerSql, [normalizedLoginId, normalizedLoginId]);
       user = rows?.[0];
     }
 
@@ -310,7 +311,7 @@ exports.login = async (req, res) => {
     }
 
     const role = String(
-      user.role_name || (Number(user.role_id) === 1 ? "admin" : Number(user.role_id) === 2 ? "cleaner" : "customer")
+      user.role_name || (Number(user.role_id) === 1 ? "admin" : Number(user.role_id) === 3 ? "cleaner" : "customer")
     ).toLowerCase();
     const token = generateToken({
       user_id: user.user_id,

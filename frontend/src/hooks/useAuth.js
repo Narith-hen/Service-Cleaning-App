@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const AUTH_USER_UPDATED_EVENT = 'auth-user-updated';
+const ENABLE_MOCK_AUTH = import.meta.env.DEV && String(import.meta.env.VITE_ENABLE_MOCK_AUTH || '').toLowerCase() === 'true';
 
 const readStoredUser = () => {
   const savedUser = localStorage.getItem('user');
@@ -63,7 +64,7 @@ const normalizeUserData = (payload = {}, previous = null) => {
       payload.role ||
       payload.role_name ||
       previous?.role ||
-      (payload.role_id === 1 ? 'admin' : payload.role_id === 2 ? 'cleaner' : 'customer')
+      (payload.role_id === 1 ? 'admin' : payload.role_id === 3 ? 'cleaner' : 'customer')
     ).toLowerCase(),
   };
 };
@@ -172,15 +173,24 @@ export const useAuth = () => {
     setError(null);
 
     try {
+      const normalizedEmail = String(email || '').trim();
+      const normalizedPassword = String(password || '');
+
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword }),
       });
 
-      const result = await response.json();
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
       if (!response.ok || !result?.success) {
-        throw new Error(result?.message || 'Invalid email or password');
+        const message = result?.message || (response.status ? `Login failed (HTTP ${response.status})` : 'Login failed');
+        throw new Error(message);
       }
 
       const userData = result.data || {};
@@ -201,21 +211,23 @@ export const useAuth = () => {
 
       return { success: true, user: normalizedUser };
     } catch (error) {
-      // Mock fallback for local testing without API
-      let userToLogin = null;
-      if (email) {
-        userToLogin = Object.values(MOCK_USERS).find((mockUser) => (
-          mockUser.email.toLowerCase() === email.toLowerCase()
-        ));
-      } else {
-        userToLogin = MOCK_USERS[role];
-      }
+      if (ENABLE_MOCK_AUTH) {
+        // Mock fallback for local testing without API
+        let userToLogin = null;
+        if (email) {
+          userToLogin = Object.values(MOCK_USERS).find((mockUser) => (
+            mockUser.email.toLowerCase() === String(email).toLowerCase()
+          ));
+        } else {
+          userToLogin = MOCK_USERS[role];
+        }
 
-      if (userToLogin && password === 'password123') {
-        setUser(userToLogin);
-        localStorage.setItem('user', JSON.stringify(userToLogin));
-        window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
-        return { success: true, user: userToLogin };
+        if (userToLogin && password === 'password123') {
+          setUser(userToLogin);
+          localStorage.setItem('user', JSON.stringify(userToLogin));
+          window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+          return { success: true, user: userToLogin };
+        }
       }
 
       const message = error.message || 'Invalid email or password';
@@ -227,9 +239,9 @@ export const useAuth = () => {
   };
 
   // Quick login functions for testing
-  const loginAsAdmin = () => login('admin@sevanow.com', 'password123', 'admin');
+  const loginAsAdmin = () => login('admin@example.com', 'password123', 'admin');
   const loginAsCustomer = () => login('john@example.com', 'password123', 'customer');
-  const loginAsCleaner = () => login('maria@sevanow.com', 'password123', 'cleaner');
+  const loginAsCleaner = () => login('maria@example.com', 'password123', 'cleaner');
 
   const logout = async () => {
     setLoading(true);

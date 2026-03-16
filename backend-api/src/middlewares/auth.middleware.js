@@ -102,7 +102,10 @@ const authorize = (...roles) => {
       return next(new AppError('Not authenticated', 401));
     }
 
-    if (!roles.includes(req.user.role.role_name)) {
+    const allowedRoles = roles.map((role) => String(role || '').trim().toLowerCase());
+    const userRole = String(req.user?.role?.role_name || '').trim().toLowerCase();
+
+    if (!allowedRoles.includes(userRole)) {
       return next(new AppError('Not authorized', 403));
     }
 

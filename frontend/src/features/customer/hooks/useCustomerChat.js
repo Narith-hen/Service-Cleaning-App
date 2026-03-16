@@ -192,13 +192,19 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       );
     };
 
-    const onMessagesSeen = ({ readerId }) => {
+    const onMessagesSeen = ({ messageId }) => {
+      if (messageId) {
+        const seenId = String(messageId);
+        setMessages((prev) => prev.map((m) => m.id === seenId ? { ...m, status: 'seen' } : m));
+        return;
+      }
+
       setMessages((prev) => {
         const customerMessages = prev.filter((m) => m.sender === 'customer');
         if (customerMessages.length > 0) {
           const latestCustomerMessage = customerMessages[customerMessages.length - 1];
           if (latestCustomerMessage.status !== 'seen') {
-            return prev.map((m) => 
+            return prev.map((m) =>
               m.id === latestCustomerMessage.id ? { ...m, status: 'seen' } : m
             );
           }
@@ -230,13 +236,6 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
         if (nextOtherId) setOtherUserId(String(nextOtherId));
       }
 
-      // When receiving a new message, automatically mark it as seen
-      setTimeout(() => {
-        socket.emit('message:read', {
-          threadId: normalizedThreadId,
-          bookingId: normalizedThreadId
-        });
-      }, 500);
     };
 
     // Listen for typing indicator from cleaner
@@ -406,12 +405,13 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [messages, isConnected]);
 
-  const markAsRead = useCallback(() => {
+  const markAsRead = useCallback(({ messageId } = {}) => {
     const socket = socketRef.current;
     if (socket && socket.connected) {
       socket.emit('message:read', {
         threadId: normalizedThreadId,
-        bookingId: normalizedThreadId
+        bookingId: normalizedThreadId,
+        ...(messageId ? { messageId: String(messageId) } : {})
       });
     }
 
@@ -419,7 +419,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       api.patch(`/messages/booking/${normalizedThreadId}/read`).catch(() => {});
     }
     clearUnread(normalizedThreadId);
-  }, [normalizedThreadId]);
+  }, [normalizedThreadId, clearUnread]);
 
   const notifyTyping = useCallback(() => {
     const socket = socketRef.current;

@@ -190,15 +190,20 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
     };
 
     const onMessagesSeen = ({ readerId, messageId }) => {
-      // When customer reads messages, mark the latest cleaner message as seen
       console.log('[useCleanerChat] Messages seen by:', readerId);
+      if (messageId) {
+        const seenId = String(messageId);
+        setMessages((prev) => prev.map((m) => m.id === seenId ? { ...m, status: 'seen' } : m));
+        return;
+      }
+
+      // Fallback: mark the latest cleaner message as seen.
       setMessages((prev) => {
         const cleanerMessages = prev.filter((m) => m.sender === 'cleaner');
         if (cleanerMessages.length > 0) {
           const latestCleanerMessage = cleanerMessages[cleanerMessages.length - 1];
-          // Only update if the message is not already seen
           if (latestCleanerMessage.status !== 'seen') {
-            return prev.map((m) => 
+            return prev.map((m) =>
               m.id === latestCleanerMessage.id ? { ...m, status: 'seen' } : m
             );
           }
@@ -407,12 +412,13 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
   }, [messages, isConnected]);
 
   // Function to emit message:read event when customer views messages
-  const markAsRead = useCallback(() => {
+  const markAsRead = useCallback(({ messageId } = {}) => {
     const socket = socketRef.current;
     if (socket && socket.connected) {
       socket.emit('message:read', {
         threadId: normalizedThreadId,
-        bookingId: normalizedThreadId
+        bookingId: normalizedThreadId,
+        ...(messageId ? { messageId: String(messageId) } : {})
       });
       console.log('[useCleanerChat] Emitted message:read for thread:', normalizedThreadId);
     }
@@ -421,7 +427,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
       api.patch(`/messages/booking/${normalizedThreadId}/read`).catch(() => {});
     }
     clearUnread(normalizedThreadId);
-  }, [normalizedThreadId]);
+  }, [normalizedThreadId, clearUnread]);
 
   const notifyTyping = useCallback(() => {
     const socket = socketRef.current;
