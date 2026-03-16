@@ -11,7 +11,6 @@ import {
   UserAddOutlined,
   DownOutlined,
   LogoutOutlined,
-  MessageOutlined,
   HistoryOutlined,
   BellOutlined
 } from '@ant-design/icons';

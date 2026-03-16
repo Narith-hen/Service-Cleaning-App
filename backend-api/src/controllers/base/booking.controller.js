@@ -1,6 +1,138 @@
 const db = require('../../config/db');
 const prisma = require('../../config/database');
 const AppError = require('../../utils/error.util');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+
+const getUserTableColumns = async (promiseDb) => {
+  const [columns] = await promiseDb.query('SHOW COLUMNS FROM users');
+  return new Set((columns || []).map((column) => column.Field));
+};
+
+const slugify = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
+  const cleanerId = Number.parseInt(cleanerProfileId, 10);
+  if (!Number.isInteger(cleanerId) || cleanerId <= 0) {
+    throw new AppError('Invalid cleaner id', 400);
+  }
+
+  const [existingById] = await promiseDb.query(
+    'SELECT user_id FROM users WHERE user_id = ? LIMIT 1',
+    [cleanerId]
+  );
+  if (existingById?.[0]?.user_id) {
+    return cleanerId;
+  }
+
+  const [profileRows] = await promiseDb.query(
+    `
+      SELECT cleaner_id, company_email, company_name, phone_number, role_id
+      FROM cleaner_profile
+      WHERE cleaner_id = ?
+      LIMIT 1
+    `,
+    [cleanerId]
+  );
+  const profile = profileRows?.[0];
+  if (!profile) {
+    throw new AppError('Cleaner profile not found', 404);
+  }
+
+  const email = String(profile.company_email || '').trim();
+  if (email) {
+    const [existingByEmail] = await promiseDb.query(
+      'SELECT user_id FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+    if (existingByEmail?.[0]?.user_id) {
+      return Number(existingByEmail[0].user_id);
+    }
+  }
+
+  const columns = await getUserTableColumns(promiseDb);
+  const hasUsername = columns.has('username');
+  const companyName = String(profile.company_name || '').trim();
+  const displayName = companyName || (email ? email.split('@')[0] : '') || `cleaner-${cleanerId}`;
+
+  let username = null;
+  if (hasUsername) {
+    const baseUsername = slugify(companyName) || (email ? slugify(email.split('@')[0]) : '') || `cleaner-${cleanerId}`;
+    username = baseUsername.slice(0, 60);
+
+    const [usernameRows] = await promiseDb.query(
+      'SELECT user_id FROM users WHERE username = ? LIMIT 1',
+      [username]
+    );
+    if (usernameRows?.length) {
+      username = `${username}-${cleanerId}`.slice(0, 90);
+    }
+  }
+
+  const passwordPlain = crypto.randomBytes(18).toString('hex');
+  const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
+  const passwordHash = await bcrypt.hash(passwordPlain, saltRounds);
+
+  // Prefer the cleaner role id from profile, otherwise lookup by role_name.
+  let roleId = Number(profile.role_id || 0);
+  if (!roleId) {
+    const [roleRows] = await promiseDb.query(
+      `SELECT role_id FROM roles WHERE LOWER(role_name) = 'cleaner' LIMIT 1`
+    );
+    roleId = Number(roleRows?.[0]?.role_id || 0) || 2;
+  }
+
+  const phoneNumber = String(profile.phone_number || '').trim() || 'N/A';
+  const insertColumns = [];
+  const insertValues = [];
+
+  // Set explicit PK to satisfy bookings FK when cleaner_profile ids are used.
+  insertColumns.push('user_id');
+  insertValues.push(cleanerId);
+
+  if (hasUsername) {
+    insertColumns.push('username');
+    insertValues.push(username);
+  }
+
+  if (columns.has('user_code')) {
+    insertColumns.push('user_code');
+    insertValues.push(`CLN${String(cleanerId).padStart(3, '0')}`);
+  }
+
+  if (columns.has('first_name')) {
+    insertColumns.push('first_name');
+    insertValues.push(displayName);
+  }
+  if (columns.has('last_name')) {
+    insertColumns.push('last_name');
+    insertValues.push('');
+  }
+
+  insertColumns.push('email');
+  insertValues.push(email || `cleaner-${cleanerId}@local.invalid`);
+
+  if (columns.has('phone_number')) {
+    insertColumns.push('phone_number');
+    insertValues.push(phoneNumber);
+  }
+
+  insertColumns.push('password');
+  insertValues.push(passwordHash);
+
+  insertColumns.push('role_id');
+  insertValues.push(roleId);
+
+  const placeholders = insertColumns.map(() => '?').join(', ');
+  const colSql = insertColumns.map((c) => `\`${c}\``).join(', ');
+  await promiseDb.query(`INSERT INTO users (${colSql}) VALUES (${placeholders})`, insertValues);
+  return cleanerId;
+};
 
 // Create booking (mysql2)
 const createBooking = async (req, res, next) => {
@@ -525,30 +657,35 @@ const getAvailableBookings = async (req, res, next) => {
 const claimBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const cleanerId = req.user?.user_id;
+    const promiseDb = db.promise();
+    const accountSource = String(req.user?.account_source || '').toLowerCase();
+    const roleName = String(req.user?.role?.role_name || '').toLowerCase();
+    if (roleName !== 'cleaner' && roleName !== 'admin') {
+      return next(new AppError('Not authorized', 403));
+    }
+    const rawCleanerId = req.user?.user_id;
+    const cleanerId = accountSource === 'cleaner_profile'
+      ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+      : rawCleanerId;
     if (!cleanerId) return next(new AppError('Unauthorized', 401));
 
-    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
     if (booking.cleaner_id && booking.cleaner_id !== cleanerId) {
       return next(new AppError('Booking already assigned to another cleaner', 400));
     }
-    if (booking.booking_status !== 'pending') {
+    if (String(booking.booking_status || '').toLowerCase() !== 'pending') {
       return next(new AppError('Only pending bookings can be claimed', 400));
     }
 
-    await db
-      .promise()
-      .query(
+    await promiseDb.query(
         'UPDATE bookings SET cleaner_id = ?, booking_status = ? WHERE booking_id = ?',
         [cleanerId, 'confirmed', id]
       );
 
     // Notify customer if notifications table exists
-    await db
-      .promise()
-      .query(
+    await promiseDb.query(
         'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [
           'Booking accepted',

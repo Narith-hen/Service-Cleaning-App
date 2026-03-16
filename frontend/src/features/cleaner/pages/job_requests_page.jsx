@@ -65,6 +65,7 @@ const JobRequestsPage = () => {
   const [adjustmentTotalById, setAdjustmentTotalById] = useState({});
   const [detailRequestId, setDetailRequestId] = useState(null);
   const [acceptLoadingRequestId, setAcceptLoadingRequestId] = useState(null);
+  const acceptDelayTimerRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
@@ -108,6 +109,10 @@ const JobRequestsPage = () => {
     fetchRequests();
   }, []);
 
+  useEffect(() => () => {
+    if (acceptDelayTimerRef.current) clearTimeout(acceptDelayTimerRef.current);
+  }, []);
+
   const totalCount = useMemo(() => requests.length, [requests.length]);
   const activeRequest = useMemo(
     () => requests.find((job) => job.id === activeMessageRequestId) || null,
@@ -136,6 +141,21 @@ const JobRequestsPage = () => {
   const onDecline = (id) => {
     if (acceptLoadingRequestId !== null) return;
     const declineBooking = async () => {
+      const hasToken = (() => {
+        try {
+          const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+          return Boolean(savedUser?.token || localStorage.getItem('token'));
+        } catch {
+          return Boolean(localStorage.getItem('token'));
+        }
+      })();
+      if (!hasToken) {
+        setStatusMessage('Please sign in as a cleaner before declining.');
+        setAcceptLoadingRequestId(null);
+        navigate('/auth/login');
+        return;
+      }
+
       setAcceptLoadingRequestId(id);
       try {
         await api.patch(`/bookings/${id}/status`, { booking_status: 'cancelled' });
@@ -146,8 +166,14 @@ const JobRequestsPage = () => {
         } catch {
           /* ignore */
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        const status = error?.response?.status;
+        const apiMessage = error?.response?.data?.message;
+        if (status === 401) {
+          setStatusMessage('Please sign in again to decline this booking.');
+        } else {
+          setStatusMessage(apiMessage || (status ? `Failed to decline (status ${status}).` : 'Failed to decline.'));
+        }
       } finally {
         setAcceptLoadingRequestId(null);
         setDetailRequestId((prev) => (prev === id ? null : prev));
@@ -157,30 +183,37 @@ const JobRequestsPage = () => {
   };
 
   const openMessageView = (request) => {
-    if (!request || acceptLoadingRequestId !== null) return;
-    if (request.status !== 'accepted' && request.status !== 'cancelled') {
-      markRequestAccepted(request.id);
-    }
+    if (!request) return;
+    if (acceptLoadingRequestId !== null && acceptLoadingRequestId !== request.id) return;
     setDetailRequestId(null);
-<<<<<<< HEAD
+    setStatusMessage('Opening chat...');
+
     setAcceptLoadingRequestId(request.id);
-    if (acceptDelayTimerRef.current) {
-      clearTimeout(acceptDelayTimerRef.current);
-    }
+    if (acceptDelayTimerRef.current) clearTimeout(acceptDelayTimerRef.current);
     acceptDelayTimerRef.current = setTimeout(() => {
       setActiveMessageRequestId(request.id);
       setAcceptLoadingRequestId(null);
       acceptDelayTimerRef.current = null;
-    }, 1000);
-=======
-    setActiveMessageRequestId(request.id);
-    setAcceptLoadingRequestId(null);
-    setStatusMessage('Booking accepted. Opening chat...');
->>>>>>> rathana
+    }, 500);
   };
 
   const handleAcceptClick = (request) => {
     const acceptBooking = async () => {
+      const hasToken = (() => {
+        try {
+          const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+          return Boolean(savedUser?.token || localStorage.getItem('token'));
+        } catch {
+          return Boolean(localStorage.getItem('token'));
+        }
+      })();
+      if (!hasToken) {
+        setStatusMessage('Please sign in as a cleaner before accepting.');
+        setAcceptLoadingRequestId(null);
+        navigate('/auth/login');
+        return;
+      }
+
       setAcceptLoadingRequestId(request.id);
       try {
         await api.patch(`/bookings/${request.id}/claim`);
@@ -192,7 +225,16 @@ const JobRequestsPage = () => {
         } catch {
           /* ignore storage errors */
         }
-      } catch {
+      } catch (error) {
+        const status = error?.response?.status;
+        const apiMessage = error?.response?.data?.message;
+        if (status === 401) {
+          setStatusMessage('Please sign in again to accept this booking.');
+        } else if (status === 400) {
+          setStatusMessage(apiMessage || 'Unable to accept: booking may already be claimed.');
+        } else {
+          setStatusMessage(apiMessage || (status ? `Failed to accept (status ${status}).` : 'Failed to accept.'));
+        }
         setAcceptLoadingRequestId(null);
       }
     };
@@ -243,7 +285,6 @@ const JobRequestsPage = () => {
     } catch {
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
     }
-    notifyCustomer(normalizedRequest, 'accepted');
 
     navigate('/cleaner/my-jobs');
   };
@@ -481,7 +522,7 @@ const JobRequestsPage = () => {
               <button
                 type="button"
                 className="detail-primary-btn"
-                onClick={() => openMessageView(detailRequest)}
+                onClick={() => handleAcceptClick(detailRequest)}
                 disabled={acceptLoadingRequestId !== null}
               >
                 {acceptLoadingRequestId === detailRequest.id ? 'Loading...' : 'Accept'}
