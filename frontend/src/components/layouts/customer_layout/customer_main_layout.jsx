@@ -19,6 +19,7 @@ const MainLayout = () => {
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const drawerWidth = viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420;
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -96,11 +97,12 @@ const MainLayout = () => {
         placement="right"
         onClose={() => setMobileOpen(false)}
         open={mobileOpen}
-        width={viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420}
+        size="default"
         closable={false}
         styles={{
           body: { padding: 0 },
           header: { display: 'none' },
+          section: { width: drawerWidth },
           mask: {
             backdropFilter: 'blur(4px)',
             backgroundColor: 'rgba(0, 0, 0, 0.25)'

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Clock3, Home, SearchCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/customer/booking_match.scss';
+import api from '../../../services/api';
 
 const statusUpdates = [
   {
@@ -23,6 +24,16 @@ const BookingMatchPage = () => {
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(65);
   const [isFading, setIsFading] = useState(false);
+  const [acceptedId, setAcceptedId] = useState(null);
+  const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
+  const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
+  const [trackedBookingId, setTrackedBookingId] = useState(() => {
+    try {
+      return localStorage.getItem('last_booking_id');
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -42,6 +53,60 @@ const BookingMatchPage = () => {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Poll localStorage to detect when cleaner accepted and jump to chat
+  useEffect(() => {
+    const poll = setInterval(() => {
+      try {
+        const stored = localStorage.getItem(ACCEPTED_BOOKING_KEY);
+        if (stored) {
+          setAcceptedId(stored);
+          localStorage.removeItem(ACCEPTED_BOOKING_KEY);
+        }
+        const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
+        if (cancelled) {
+          alert('Your booking was declined by the cleaner.');
+          localStorage.removeItem(CANCELLED_BOOKING_KEY);
+          localStorage.removeItem('last_booking_id');
+          navigate('/customer/bookings');
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 1500);
+    return () => clearInterval(poll);
+  }, []);
+
+  // Poll backend for status of last booking and redirect when confirmed
+  useEffect(() => {
+    if (!trackedBookingId) return;
+    const pollStatus = setInterval(async () => {
+      try {
+        const resp = await api.get(`/bookings/track/${trackedBookingId}`);
+        const status = resp?.data?.data?.booking_status?.toLowerCase();
+        if (status === 'confirmed') {
+          setAcceptedId(trackedBookingId);
+          localStorage.removeItem('last_booking_id');
+          clearInterval(pollStatus);
+        } else if (status === 'cancelled') {
+          alert('Your booking was declined by the cleaner.');
+          localStorage.removeItem('last_booking_id');
+          clearInterval(pollStatus);
+          navigate('/customer/bookings');
+        }
+      } catch {
+        // ignore
+      }
+    }, 2000);
+    return () => clearInterval(pollStatus);
+  }, [trackedBookingId]);
+
+  useEffect(() => {
+    if (!acceptedId) return;
+    // brief alert then navigate to chat
+    alert(`Your booking #${acceptedId} has been accepted. Opening chat with your cleaner.`);
+    navigate(`/customer/chat/${acceptedId}`);
+  }, [acceptedId, navigate]);
 
   return (
     <div className="booking-match-page">

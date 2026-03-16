@@ -11,6 +11,8 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import summaryImage from '../../../assets/image.png';
 import '../../../styles/customer/booking.scss';
+import { formatDateParts } from '../../../utils/bookingSync';
+import api from '../../../services/api';
 
 const hourOptions = ['08 AM', '09 AM', '10 AM', '11 AM', '12 PM', '01 PM', '02 PM', '03 PM'];
 const minuteOptions = ['00', '15', '30', '45'];
@@ -18,7 +20,15 @@ const timeOptions = hourOptions.flatMap((hour) => {
   const [clock, meridiem] = hour.split(' ');
   return minuteOptions.map((minute) => `${clock}:${minute} ${meridiem}`);
 });
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${apiHost}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
 
 const BookingPage = () => {
   const navigate = useNavigate();
@@ -29,39 +39,84 @@ const BookingPage = () => {
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const geocoderRef = useRef(null);
   const [address, setAddress] = useState('');
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [preferredDate, setPreferredDate] = useState('');
-  const [startTime, setStartTime] = useState(timeOptions[8]);
-  const [endTime, setEndTime] = useState(timeOptions[12]);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [services, setServices] = useState([]);
+  const [serviceId, setServiceId] = useState('');
+  const [loadingServices, setLoadingServices] = useState(false);
   const bookingTime = `${startTime} - ${endTime}`;
   const [isAddressVerified, setIsAddressVerified] = useState(false);
   const [mapError, setMapError] = useState('');
+  const [mapWarning, setMapWarning] = useState('');
   const [isMapReady, setIsMapReady] = useState(false);
+  const showKeyHint = typeof mapError === 'string' && mapError.startsWith('Missing Google Maps API key');
 
-  const loadGoogleMaps = (apiKey) =>
+  const loadGoogleMaps = (apiKey, hostLabel) =>
     new Promise((resolve, reject) => {
-      if (window.google?.maps?.places) {
+      if (window.google?.maps?.Map) {
         resolve();
         return;
       }
 
+      const handleReady = () => {
+        if (window.google?.maps?.Map) {
+          resolve();
+          return;
+        }
+        reject(
+          new Error(
+            'Google Maps loaded but Map class is unavailable. Check API key permissions or script blockers.'
+          )
+        );
+      };
+
       const existingScript = document.getElementById('google-maps-sdk');
       if (existingScript) {
-        existingScript.addEventListener('load', () => resolve());
-        existingScript.addEventListener('error', () => reject(new Error('Google Maps failed to load')));
-        return;
+        // If the cached script was loaded with a different key, replace it so the new key takes effect.
+        const existingSrc = existingScript.getAttribute('src') || '';
+        if (existingSrc.includes(apiKey)) {
+          existingScript.addEventListener('load', handleReady);
+          existingScript.addEventListener('error', () =>
+            reject(
+              new Error(
+                `Google Maps failed to load (possible 401/403). Check API key, billing, and HTTP referrer for "${hostLabel}".`
+              )
+            )
+          );
+          return;
+        }
+        existingScript.remove();
       }
 
       const script = document.createElement('script');
       script.id = 'google-maps-sdk';
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      window.__googleMapsInit = () => {
+        delete window.__googleMapsInit;
+        handleReady();
+      };
+      const encodedKey = encodeURIComponent(apiKey);
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodedKey}&libraries=places&v=weekly&callback=__googleMapsInit`;
       script.async = true;
       script.defer = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Google Maps failed to load'));
+      script.onload = () => {
+        if (!window.__googleMapsInit) {
+          handleReady();
+        }
+      };
+      script.onerror = () =>
+        reject(
+          new Error(
+            `Google Maps failed to load (possible 401/403). Check API key, billing, and HTTP referrer for "${hostLabel}".`
+          )
+        );
       document.head.appendChild(script);
     });
 
@@ -115,7 +170,7 @@ const BookingPage = () => {
     event.preventDefault();
   };
 
-  useEffect(() => {
+  useEffect (() => {
     if (!GOOGLE_MAPS_KEY) {
       setMapError('Missing Google Maps API key.');
       setIsMapReady(false);
@@ -123,42 +178,109 @@ const BookingPage = () => {
     }
 
     let cancelled = false;
-    loadGoogleMaps(GOOGLE_MAPS_KEY)
+    const host = typeof window !== 'undefined' ? window.location.host : 'your-domain';
+    const origin = typeof window !== 'undefined' ? window.location.origin : `https://${host}`;
+    const pathHint = typeof window !== 'undefined' ? window.location.pathname : '';
+    const handleAuthFailure = () => {
+      if (cancelled) return;
+      setMapError(
+        `Google Maps authentication failed. Verify billing is enabled, the Maps JavaScript + Places APIs are enabled, and whitelist an HTTP referrer like "${origin}/*" (current path: "${pathHint}").`
+      );
+      setIsMapReady(false);
+    };
+
+    window.gm_authFailure = handleAuthFailure;
+    loadGoogleMaps(GOOGLE_MAPS_KEY, host)
       .then(() => {
         if (!cancelled) {
+          if (!window.google?.maps) {
+            setMapError('Google Maps failed to initialize.');
+            setIsMapReady(false);
+            return;
+          }
+          if (!window.google?.maps?.places) {
+            setMapWarning('Places API not available. Address autocomplete is disabled.');
+          } else {
+            setMapWarning('');
+          }
           setMapError('');
           setIsMapReady(true);
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
-          setMapError('Unable to load Google Maps.');
+          setMapError(error?.message || 'Unable to load Google Maps.');
           setIsMapReady(false);
         }
       });
 
     return () => {
       cancelled = true;
+      if (window.gm_authFailure === handleAuthFailure) {
+        delete window.gm_authFailure;
+      }
     };
   }, []);
 
   useEffect(() => {
     if (!isMapReady || !window.google?.maps || !mapRef.current || mapInstanceRef.current) return;
 
-    const defaultCenter = { lat: 11.5564, lng: 104.9282 };
-    const map = new window.google.maps.Map(mapRef.current, {
-      center: defaultCenter,
-      zoom: 13,
-      mapTypeControl: false,
-      fullscreenControl: false,
-      streetViewControl: false
+    if (!window.google?.maps?.Map || !window.google?.maps?.Marker) {
+      setMapError((prev) => prev || 'Google Maps is not available. Please refresh and try again.');
+      setIsMapReady(false);
+      return;
+    }
+
+    try {
+      const defaultCenter = { lat: 11.5564, lng: 104.9282 };
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: defaultCenter,
+        zoom: 13,
+        mapTypeControl: false,
+        fullscreenControl: false,
+        streetViewControl: false
+      });
+
+      mapInstanceRef.current = map;
+      markerRef.current = new window.google.maps.Marker({
+        map,
+        position: defaultCenter
+      });
+      if (window.google?.maps?.Geocoder) {
+        geocoderRef.current = new window.google.maps.Geocoder();
+      }
+    } catch (error) {
+      setMapError(error?.message || 'Failed to initialize Google Maps.');
+      setIsMapReady(false);
+    }
+  }, [isMapReady]);
+
+  useEffect(() => {
+    if (!isMapReady || !window.google?.maps || !mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+    const listener = map.addListener('click', (event) => {
+      if (!event?.latLng) return;
+      const position = event.latLng;
+      if (markerRef.current) {
+        markerRef.current.setPosition(position);
+      }
+      map.panTo(position);
+      map.setZoom(16);
+      setIsAddressVerified(true);
+
+      if (geocoderRef.current) {
+        geocoderRef.current.geocode({ location: position }, (results, status) => {
+          if (status === 'OK' && results?.[0]?.formatted_address) {
+            setAddress(results[0].formatted_address);
+          }
+        });
+      }
     });
 
-    mapInstanceRef.current = map;
-    markerRef.current = new window.google.maps.Marker({
-      map,
-      position: defaultCenter
-    });
+    return () => {
+      if (listener) window.google.maps.event.removeListener(listener);
+    };
   }, [isMapReady]);
 
   useEffect(() => {
@@ -192,6 +314,45 @@ const BookingPage = () => {
     };
   }, [isMapReady]);
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setMapWarning('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    if (!isMapReady || !mapInstanceRef.current) {
+      setMapWarning('Map is not ready yet.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        mapInstanceRef.current.panTo(coords);
+        mapInstanceRef.current.setZoom(16);
+        if (markerRef.current) {
+          markerRef.current.setPosition(coords);
+        }
+        setIsAddressVerified(true);
+
+        if (geocoderRef.current) {
+          geocoderRef.current.geocode({ location: coords }, (results, status) => {
+            if (status === 'OK' && results?.[0]?.formatted_address) {
+              setAddress(results[0].formatted_address);
+            }
+          });
+        }
+      },
+      () => {
+        setMapWarning('Unable to access your current location.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
   const stateService = locationHook.state?.service || locationHook.state || null;
   const storedService = (() => {
     if (typeof window === 'undefined') return null;
@@ -202,11 +363,24 @@ const BookingPage = () => {
     }
   })();
   const selectedService = stateService || storedService;
-  const serviceTitle = selectedService?.title || 'School Cleaning';
-  const serviceDescription =
-    selectedService?.description ||
-    'A comprehensive scrub for your entire home, focusing on often-neglected areas. Ideal for refreshing your space or preparing for special occasions.';
-  const serviceImage = selectedService?.image || summaryImage;
+  const serviceTitle = (() => {
+    const fromList = services.find((svc) => String(svc.id) === String(serviceId))?.title;
+    return fromList || selectedService?.title || selectedService?.name || 'School Cleaning';
+  })();
+  const serviceDescription = (() => {
+    const fromList = services.find((svc) => String(svc.id) === String(serviceId))?.description;
+    return (
+      fromList ||
+      selectedService?.description ||
+      'A comprehensive scrub for your entire home, focusing on often-neglected areas. Ideal for refreshing your space or preparing for special occasions.'
+    );
+  })();
+  const serviceImage =
+    toAbsoluteImageUrl(
+      services.find((svc) => String(svc.id) === String(serviceId))?.image ||
+        selectedService?.image ||
+        ''
+    ) || summaryImage;
 
   useEffect(() => {
     if (!stateService) return;
@@ -217,6 +391,150 @@ const BookingPage = () => {
       // Ignore storage failures (private mode, quotas).
     }
   }, [stateService]);
+
+  // Fetch services so booking always references real DB items.
+  useEffect(() => {
+    const fetchServices = async () => {
+      setLoadingServices(true);
+      try {
+        const response = await api.get('/services', { params: { page: 1, limit: 50 } });
+        const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const mapped = rows.map((item, idx) => ({
+          id: item.service_id || item.id || idx,
+          title: item.name || `Service ${idx + 1}`,
+          description: item.description || '',
+          image: toAbsoluteImageUrl(item.images?.[0]?.image_url || item.image || '') || summaryImage,
+          price: item.price || 0
+        }));
+        setServices(mapped);
+
+        // Try to keep current selection; otherwise default to first.
+        const incoming =
+          selectedService?.service_id ||
+          selectedService?.id ||
+          (locationHook.state && (locationHook.state.service_id || locationHook.state.id));
+        if (incoming && mapped.some((m) => Number(m.id) === Number(incoming))) {
+          setServiceId(String(incoming));
+        } else if (mapped[0]) {
+          setServiceId(String(mapped[0].id));
+        }
+      } catch (error) {
+        setServices([]);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+
+    fetchServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleConfirmBooking = async () => {
+    if (!preferredDate || !startTime || !endTime) {
+      setStatusMessage({
+        title: 'Missing details',
+        message: 'Please select date, start time, and end time before confirming.',
+        ago: ''
+      });
+      return;
+    }
+
+    // Basic auth guard to avoid silent 401s.
+    const hasToken = (() => {
+      try {
+        const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+        return Boolean(savedUser?.token || localStorage.getItem('token'));
+      } catch {
+        return false;
+      }
+    })();
+    if (!hasToken) {
+      setStatusMessage({
+        title: 'Sign in required',
+        message: 'Please log in as a customer before booking.',
+        ago: ''
+      });
+      navigate('/login');
+      return;
+    }
+
+    const parseTime = (timeString) => {
+      const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (!match) return { hours: 0, minutes: 0 };
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const meridiem = match[3].toUpperCase();
+      if (meridiem === 'PM' && hours !== 12) hours += 12;
+      if (meridiem === 'AM' && hours === 12) hours = 0;
+      return { hours, minutes };
+    };
+
+    const { hours, minutes } = parseTime(startTime);
+    const bookingDate = new Date(preferredDate);
+    bookingDate.setHours(hours, minutes, 0, 0);
+
+    const selectedFromList = services.find((svc) => String(svc.id) === String(serviceId));
+    const numericServiceId = selectedFromList ? Number(selectedFromList.id) : Number(serviceId);
+
+    if (!serviceId || !Number.isFinite(numericServiceId)) {
+      setStatusMessage({
+        title: 'Service missing',
+        message: 'Unable to identify the selected service. Please choose a valid service again.',
+        ago: ''
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        booking_date: bookingDate.toISOString(),
+        service_id: numericServiceId,
+        address: address || 'Address pending',
+        start_time: startTime,
+        end_time: endTime
+      };
+
+      if (details && details.trim()) {
+        payload.notes = details.trim();
+      }
+
+      const resp = await api.post('/bookings', payload);
+      const bookingId = resp?.data?.data?.booking_id;
+
+      if (bookingId) {
+        try {
+          localStorage.setItem('last_booking_id', String(bookingId));
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const { month, day } = formatDateParts(preferredDate);
+      setStatusMessage({
+        title: 'Request submitted',
+        message: `We are matching you with a cleaner. Request date: ${month} ${day}, ${startTime} - ${endTime}.`,
+        ago: 'just now'
+      });
+      navigate('/customer/bookings/matching');
+    } catch (error) {
+      const status = error?.response?.status;
+      const apiMessage = error?.response?.data?.message;
+      const validationMessages = Array.isArray(error?.response?.data?.errors)
+        ? error.response.data.errors.map((e) => e.msg).join(', ')
+        : null;
+      setStatusMessage({
+        title: 'Failed to book',
+        message:
+          validationMessages ||
+          apiMessage ||
+          (status ? `Request failed with status ${status}` : 'Please try again.'),
+        ago: ''
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="booking-page-v2">
@@ -240,7 +558,25 @@ const BookingPage = () => {
             <span className="section-dot" aria-hidden>
               1
             </span>
-            <h3>Search Cleaning Location</h3>
+            <h3>Select Service &amp; Add Location</h3>
+          </div>
+          <div className="form-field">
+            <label htmlFor="service-select">Select Service</label>
+            <select
+              id="service-select"
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              disabled={loadingServices || services.length === 0}
+            >
+              {loadingServices && <option>Loading services...</option>}
+              {!loadingServices && services.length === 0 && <option>No services available</option>}
+              {!loadingServices &&
+                services.map((svc) => (
+                  <option key={svc.id} value={svc.id}>
+                    {svc.title}
+                  </option>
+                ))}
+            </select>
           </div>
           <div className="input-shell">
             <Search size={16} />
@@ -254,19 +590,29 @@ const BookingPage = () => {
                 setIsAddressVerified(false);
               }}
             />
+            <button type="button" className="locate-btn" onClick={handleUseCurrentLocation}>
+              Use current location
+            </button>
           </div>
           <div className="map-shell map-shell--google" aria-label="map-preview">
             {mapError ? (
               <div className="map-fallback">
                 <p>{mapError}</p>
-                <p>Add `VITE_GOOGLE_MAPS_API_KEY` to your frontend .env file.</p>
+                {showKeyHint && <p>Add `VITE_GOOGLE_MAPS_API_KEY` to your frontend `.env` file.</p>}
               </div>
             ) : !isMapReady ? (
               <div className="map-fallback">
                 <p>Loading map...</p>
               </div>
             ) : (
-              <div className="map-canvas" ref={mapRef} />
+              <>
+                <div className="map-canvas" ref={mapRef} />
+                {mapWarning && (
+                  <div className="map-warning" role="status">
+                    {mapWarning}
+                  </div>
+                )}
+              </>
             )}
             {isAddressVerified && (
               <div className="map-badge">
@@ -362,6 +708,15 @@ const BookingPage = () => {
             </span>
             <h3>Select Date and Time</h3>
           </div>
+          {statusMessage && (
+            <div className="booking-status-banner" role="status">
+              <p>
+                <strong>{statusMessage.title}</strong>
+              </p>
+              <p>{statusMessage.message}</p>
+              {statusMessage.ago && <small>{statusMessage.ago}</small>}
+            </div>
+          )}
           <div className="form-field">
             <label htmlFor="preferred-date">Preferred Date</label>
             <input
@@ -375,6 +730,9 @@ const BookingPage = () => {
             <div className="form-field">
               <label htmlFor="start-time">Start Time (Hour &amp; Minute)</label>
               <select id="start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
+                <option value="" disabled>
+                  Select start time
+                </option>
                 {timeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
@@ -385,6 +743,9 @@ const BookingPage = () => {
             <div className="form-field">
               <label htmlFor="end-time">End Time (Hour &amp; Minute)</label>
               <select id="end-time" value={endTime} onChange={(e) => setEndTime(e.target.value)}>
+                <option value="" disabled>
+                  Select end time
+                </option>
                 {timeOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
@@ -399,8 +760,8 @@ const BookingPage = () => {
           <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')}>
             <ArrowLeft size={16} /> Back to Service
           </button>
-          <button type="button" className="next-btn" onClick={() => navigate('/customer/bookings/matching')}>
-            Confirm Booking <ArrowRight size={16} />
+          <button type="button" className="next-btn" onClick={handleConfirmBooking} disabled={submitting}>
+            {submitting ? 'Submitting...' : 'Confirm Booking'} <ArrowRight size={16} />
           </button>
         </footer>
       </div>

@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
 import '../../../styles/customer/chat.scss';
 import '../../../styles/cleaner/my_jobs.scss';
+import api from '../../../services/api';
 
 // Demo data - in production, this would come from API
 const DEMO_BOOKINGS = [
@@ -29,14 +30,55 @@ const DEMO_BOOKINGS = [
 
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
+  const { bookingId: pathBookingId } = useParams();
   const navigate = useNavigate();
-  const bookingId = searchParams.get('booking');
-  
-  const [selectedBooking, setSelectedBooking] = useState(bookingId || DEMO_BOOKINGS[0]?.id || null);
+  const bookingId = pathBookingId || searchParams.get('booking');
+
+  const [dynamicBookings, setDynamicBookings] = useState(DEMO_BOOKINGS);
+
+  useEffect(() => {
+    const fetchBooking = async () => {
+      if (!bookingId) return;
+      try {
+        const resp = await api.get(`/bookings/track/${bookingId}`);
+        const data = resp?.data?.data;
+        if (!data) return;
+        const cleanerName = [data.cleaner_first_name, data.cleaner_last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Assigned Cleaner';
+        const timeRange = data.booking_time || '';
+        const dateStr = data.booking_date ? new Date(data.booking_date).toDateString() : '';
+        const entry = {
+          id: String(data.booking_id),
+          jobId: `#JOB-${data.booking_id}`,
+          title: data.service_name || 'Cleaning',
+          cleanerName,
+          date: dateStr,
+          time: timeRange,
+          status: data.booking_status || 'confirmed'
+        };
+        setDynamicBookings((prev) => {
+          const exists = prev.some((b) => String(b.id) === String(entry.id));
+          if (exists) {
+            return prev.map((b) => (String(b.id) === String(entry.id) ? entry : b));
+          }
+          return [entry, ...prev];
+        });
+      } catch {
+        // ignore; fallback to demo data
+      }
+    };
+    fetchBooking();
+  }, [bookingId]);
+
+  const [selectedBooking, setSelectedBooking] = useState(
+    bookingId || dynamicBookings[0]?.id || null
+  );
 
   const activeBooking = useMemo(() => {
-    return DEMO_BOOKINGS.find(b => b.id === selectedBooking) || DEMO_BOOKINGS[0];
-  }, [selectedBooking]);
+    return dynamicBookings.find((b) => String(b.id) === String(selectedBooking)) || dynamicBookings[0];
+  }, [dynamicBookings, selectedBooking]);
 
   if (!activeBooking) {
     return (

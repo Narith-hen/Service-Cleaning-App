@@ -16,6 +16,7 @@ import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
 import CustomerChatPage from '../features/customer/pages/chat_page';
 import CustomerServicesPage from '../features/public/pages/services_page';
+import ErrorBoundary from '../components/common/error_boundary';
 
 export const customerRoutes = {
   path: '/customer',
@@ -43,7 +44,11 @@ export const customerRoutes = {
     },
     {
       path: 'bookings',
-      element: <CustomerBookings />
+      element: (
+        <ErrorBoundary fallbackTitle="Booking page failed to load.">
+          <CustomerBookings />
+        </ErrorBoundary>
+      )
     },
     {
       path: 'bookings/matching',
@@ -55,7 +60,11 @@ export const customerRoutes = {
     },
     {
       path: 'bookings/:bookingId',
-      element: <CustomerBookings />
+      element: (
+        <ErrorBoundary fallbackTitle="Booking page failed to load.">
+          <CustomerBookings />
+        </ErrorBoundary>
+      )
     },
     {
       path: 'chat',

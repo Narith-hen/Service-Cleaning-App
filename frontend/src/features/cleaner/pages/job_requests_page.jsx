@@ -11,36 +11,34 @@ import {
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import '../../../styles/cleaner/job_requests.scss';
 import '../../../styles/cleaner/my_jobs.scss';
+import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/bookingSync';
+import api from '../../../services/api';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const JOB_REQUEST_STATUS_STORAGE_KEY = 'cleaner_job_request_statuses';
 
-const initialRequests = [
-  {
-    id: 8921,
-    service: 'Deep Cleaning',
-    serviceTone: 'deep',
-    customer: 'Sarah Jenkins',
-    address: '24 Garden St, Phnom Penh',
-    timeRange: '09:00 AM - 01:00 PM',
-    amount: '$45.00',
-    month: 'OCT',
-    day: '24',
-    status: 'pending'
-  },
-  {
-    id: 8925,
-    service: 'Regular Clean',
-    serviceTone: 'regular',
-    customer: 'Michael Chen',
-    address: 'Apt 4B, Sky Condominium',
-    timeRange: '02:00 PM - 04:00 PM',
-    amount: '$25.00',
-    month: 'OCT',
-    day: '25',
-    status: 'accepted'
-  }
-];
+const mapBookingToRequest = (booking) => {
+  const date = booking?.booking_date ? new Date(booking.booking_date) : null;
+  const { month, day } = formatDateParts(date?.toISOString());
+  const startTime = booking?.booking_time || (date
+    ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'TBD');
+  return {
+    id: booking.booking_id,
+    service: booking.service_name || booking.service?.name || 'Cleaning',
+    serviceTone: deriveServiceTone(booking.service_name || booking.service?.name || ''),
+    customer:
+      booking.customer_name ||
+      [booking.first_name, booking.last_name].filter(Boolean).join(' ').trim() ||
+      booking.user?.username ||
+      'Customer',
+    address: booking.address || 'Address shared after accept',
+    timeRange: startTime,
+    amount: toMoney(booking.total_price || 0),
+    month,
+    day,
+    status: booking.booking_status || 'pending'
+  };
+};
 
 const getRequestChecklist = (request) => {
   if (request?.serviceTone === 'deep') {
@@ -62,12 +60,15 @@ const getRequestChecklist = (request) => {
 
 const JobRequestsPage = () => {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState(initialRequests);
+  const [requests, setRequests] = useState([]);
   const [activeMessageRequestId, setActiveMessageRequestId] = useState(null);
   const [adjustmentTotalById, setAdjustmentTotalById] = useState({});
   const [detailRequestId, setDetailRequestId] = useState(null);
   const [acceptLoadingRequestId, setAcceptLoadingRequestId] = useState(null);
-  const acceptDelayTimerRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
+  const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
+  const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
 
   const getDefaultAdjustmentTotal = (request) => {
     if (!request) return '185.00';
@@ -90,39 +91,22 @@ const JobRequestsPage = () => {
     }));
   };
 
-  useEffect(() => {
+  const fetchRequests = async () => {
+    setLoading(true);
     try {
-      const raw = localStorage.getItem(JOB_REQUEST_STATUS_STORAGE_KEY);
-      if (!raw) return;
-
-      const storedStatuses = JSON.parse(raw);
-      if (!storedStatuses || typeof storedStatuses !== 'object') return;
-
-      setRequests((prev) =>
-        prev.map((job) => {
-          const persistedStatus = storedStatuses[job.id];
-          if (persistedStatus === 'accepted' || persistedStatus === 'pending') {
-            return { ...job, status: persistedStatus };
-          }
-          return job;
-        })
-      );
+      const response = await api.get('/bookings/available', { params: { limit: 20 } });
+      const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+      setRequests(rows.map(mapBookingToRequest));
     } catch {
-      setRequests(initialRequests);
+      setRequests([]);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchRequests();
   }, []);
-
-  useEffect(() => {
-    try {
-      const statusById = requests.reduce((acc, job) => {
-        acc[job.id] = job.status;
-        return acc;
-      }, {});
-      localStorage.setItem(JOB_REQUEST_STATUS_STORAGE_KEY, JSON.stringify(statusById));
-    } catch {
-      localStorage.setItem(JOB_REQUEST_STATUS_STORAGE_KEY, JSON.stringify({}));
-    }
-  }, [requests]);
 
   const totalCount = useMemo(() => requests.length, [requests.length]);
   const activeRequest = useMemo(
@@ -141,41 +125,66 @@ const JobRequestsPage = () => {
     }
   }, [requests, detailRequestId]);
 
-  useEffect(() => () => {
-    if (acceptDelayTimerRef.current) {
-      clearTimeout(acceptDelayTimerRef.current);
-    }
-  }, []);
-
   const markRequestAccepted = (id) => {
     setRequests((prev) => prev.map((job) => (job.id === id ? { ...job, status: 'accepted' } : job)));
   };
 
+  const markRequestCancelled = (id) => {
+    setRequests((prev) => prev.map((job) => (job.id === id ? { ...job, status: 'cancelled' } : job)));
+  };
+
   const onDecline = (id) => {
     if (acceptLoadingRequestId !== null) return;
-    setRequests((prev) => prev.filter((job) => job.id !== id));
-    setDetailRequestId((prev) => (prev === id ? null : prev));
+    const declineBooking = async () => {
+      setAcceptLoadingRequestId(id);
+      try {
+        await api.patch(`/bookings/${id}/status`, { booking_status: 'cancelled' });
+        markRequestCancelled(id);
+        setStatusMessage('Booking declined and customer notified.');
+        try {
+          localStorage.setItem(CANCELLED_BOOKING_KEY, String(id));
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        // ignore
+      } finally {
+        setAcceptLoadingRequestId(null);
+        setDetailRequestId((prev) => (prev === id ? null : prev));
+      }
+    };
+    declineBooking();
   };
 
   const openMessageView = (request) => {
     if (!request || acceptLoadingRequestId !== null) return;
-    if (request.status !== 'accepted') {
+    if (request.status !== 'accepted' && request.status !== 'cancelled') {
       markRequestAccepted(request.id);
     }
     setDetailRequestId(null);
-    setAcceptLoadingRequestId(request.id);
-    if (acceptDelayTimerRef.current) {
-      clearTimeout(acceptDelayTimerRef.current);
-    }
-    acceptDelayTimerRef.current = setTimeout(() => {
-      setActiveMessageRequestId(request.id);
-      setAcceptLoadingRequestId(null);
-      acceptDelayTimerRef.current = null;
-    }, 5000);
+    setActiveMessageRequestId(request.id);
+    setAcceptLoadingRequestId(null);
+    setStatusMessage('Booking accepted. Opening chat...');
   };
 
   const handleAcceptClick = (request) => {
-    openMessageView(request);
+    const acceptBooking = async () => {
+      setAcceptLoadingRequestId(request.id);
+      try {
+        await api.patch(`/bookings/${request.id}/claim`);
+        markRequestAccepted(request.id);
+        openMessageView(request);
+        // flag for customer side to pick up and jump to chat
+        try {
+          localStorage.setItem(ACCEPTED_BOOKING_KEY, String(request.id));
+        } catch {
+          /* ignore storage errors */
+        }
+      } catch {
+        setAcceptLoadingRequestId(null);
+      }
+    };
+    acceptBooking();
   };
 
   const handleConfirmAdjustment = (request, totalInputValue) => {
@@ -188,9 +197,10 @@ const JobRequestsPage = () => {
     const normalizedRequest = request || activeRequest;
     if (!normalizedRequest) return;
     const parsedTotal = Number(totalInputValue);
-    const safeTotal = Number.isFinite(parsedTotal) && parsedTotal > 0
-      ? parsedTotal.toFixed(2)
-      : getDefaultAdjustmentTotal(normalizedRequest);
+    const numericTotal = Number.isFinite(parsedTotal) && parsedTotal > 0
+      ? parsedTotal
+      : Number(getDefaultAdjustmentTotal(normalizedRequest));
+    const safeTotal = toMoney(numericTotal);
 
     // Ensure request is accepted when adjustment is confirmed.
     setRequests((prev) =>
@@ -199,27 +209,13 @@ const JobRequestsPage = () => {
       )
     );
 
-    try {
-      const rawStatuses = localStorage.getItem(JOB_REQUEST_STATUS_STORAGE_KEY);
-      const statusById = rawStatuses ? JSON.parse(rawStatuses) : {};
-      localStorage.setItem(
-        JOB_REQUEST_STATUS_STORAGE_KEY,
-        JSON.stringify({ ...statusById, [normalizedRequest.id]: 'accepted' })
-      );
-    } catch {
-      localStorage.setItem(
-        JOB_REQUEST_STATUS_STORAGE_KEY,
-        JSON.stringify({ [normalizedRequest.id]: 'accepted' })
-      );
-    }
-
     const confirmedJob = {
       id: `confirmed-${normalizedRequest.id}`,
       sourceRequestId: normalizedRequest.id,
       status: 'upcoming',
       title: normalizedRequest.serviceTone === 'deep' ? 'Deep House Cleaning' : normalizedRequest.service,
       jobId: `#SOMA-${normalizedRequest.id}`,
-      price: `$${safeTotal}`,
+      price: safeTotal,
       day: normalizedRequest.day || String(now.getDate()),
       monthYear,
       timeRange: normalizedRequest.timeRange || '09:00 AM - 12:00 PM',
@@ -235,6 +231,7 @@ const JobRequestsPage = () => {
     } catch {
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
     }
+    notifyCustomer(normalizedRequest, 'accepted');
 
     navigate('/cleaner/my-jobs');
   };
@@ -342,7 +339,13 @@ const JobRequestsPage = () => {
       </div>
 
       <div className="request-list">
-        {requests.map((request) => (
+        {statusMessage && (
+          <div className="requests-banner" role="status">
+            {statusMessage}
+          </div>
+        )}
+        {loading && <p style={{ padding: '12px 16px' }}>Loading requests...</p>}
+        {!loading && requests.map((request) => (
           <article
             key={request.id}
             className={`request-card ${detailRequestId === request.id ? 'active' : ''}`}
@@ -377,12 +380,14 @@ const JobRequestsPage = () => {
                   e.stopPropagation();
                   handleAcceptClick(request);
                 }}
-                disabled={acceptLoadingRequestId !== null}
+                disabled={acceptLoadingRequestId !== null || request.status === 'cancelled'}
               >
                 {acceptLoadingRequestId === request.id
                   ? 'Loading...'
                   : request.status === 'accepted'
                     ? 'Accepted'
+                    : request.status === 'cancelled'
+                      ? 'Cancelled'
                     : 'Accept'}
               </button>
               <button
@@ -392,13 +397,16 @@ const JobRequestsPage = () => {
                   e.stopPropagation();
                   onDecline(request.id);
                 }}
-                disabled={acceptLoadingRequestId !== null}
+                disabled={acceptLoadingRequestId !== null || request.status === 'cancelled'}
               >
-                Decline
+                {request.status === 'cancelled' ? 'Cancelled' : 'Decline'}
               </button>
             </div>
           </article>
         ))}
+        {!loading && requests.length === 0 && (
+          <p style={{ padding: '12px 16px', color: '#6b7280' }}>No pending requests right now.</p>
+        )}
       </div>
 
       {detailRequest && (
@@ -421,7 +429,13 @@ const JobRequestsPage = () => {
               </div>
               <div className="request-detail-item">
                 <small>Status</small>
-                <strong>{detailRequest.status === 'accepted' ? 'Accepted' : 'Pending'}</strong>
+                <strong>
+                  {detailRequest.status === 'accepted'
+                    ? 'Accepted'
+                    : detailRequest.status === 'cancelled'
+                      ? 'Cancelled'
+                      : 'Pending'}
+                </strong>
               </div>
               <div className="request-detail-item">
                 <small>Address</small>
