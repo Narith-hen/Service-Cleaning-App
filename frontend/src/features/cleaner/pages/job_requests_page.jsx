@@ -162,21 +162,9 @@ const JobRequestsPage = () => {
       markRequestAccepted(request.id);
     }
     setDetailRequestId(null);
-<<<<<<< HEAD
-    setAcceptLoadingRequestId(request.id);
-    if (acceptDelayTimerRef.current) {
-      clearTimeout(acceptDelayTimerRef.current);
-    }
-    acceptDelayTimerRef.current = setTimeout(() => {
-      setActiveMessageRequestId(request.id);
-      setAcceptLoadingRequestId(null);
-      acceptDelayTimerRef.current = null;
-    }, 1000);
-=======
     setActiveMessageRequestId(request.id);
     setAcceptLoadingRequestId(null);
     setStatusMessage('Booking accepted. Opening chat...');
->>>>>>> rathana
   };
 
   const handleAcceptClick = (request) => {
