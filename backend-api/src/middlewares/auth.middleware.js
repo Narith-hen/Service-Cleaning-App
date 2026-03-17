@@ -17,14 +17,15 @@ const authenticate = async (req, res, next) => {
     const tokenRoleId = Number(decoded?.role_id || 0);
     const roleFromTokenId = tokenRoleId === 1
       ? 'admin'
-      : tokenRoleId === 3
+      : tokenRoleId === 2
         ? 'cleaner'
-        : tokenRoleId
+        : tokenRoleId === 3
           ? 'customer'
           : '';
 
     const promiseDb = db.promise();
     let row = null;
+    let sourceTable = 'users';
 
     if (accountSource === 'cleaner_profile') {
       const [cleanerRows] = await promiseDb.query(
@@ -42,6 +43,7 @@ const authenticate = async (req, res, next) => {
         [decoded.user_id]
       );
       row = cleanerRows?.[0] || null;
+      sourceTable = 'cleaner_profile';
     } else {
       const [userRows] = await promiseDb.query(
         `
@@ -58,6 +60,7 @@ const authenticate = async (req, res, next) => {
         [decoded.user_id]
       );
       row = userRows?.[0] || null;
+      sourceTable = row ? 'users' : sourceTable;
     }
 
     if (!row && accountSource !== 'cleaner_profile') {
@@ -76,10 +79,13 @@ const authenticate = async (req, res, next) => {
         [decoded.user_id]
       );
       row = cleanerRows?.[0] || null;
+      if (row) sourceTable = 'cleaner_profile';
     }
-    const resolvedSource = accountSource === 'cleaner_profile' || !row?.email || accountSource === 'cleaner'
-      ? accountSource || 'users'
-      : 'users';
+    const resolvedSource = (accountSource === 'cleaner_profile' || accountSource === 'cleaner')
+      ? accountSource
+      : sourceTable === 'cleaner_profile'
+        ? 'cleaner_profile'
+        : 'users';
 
     const resolvedRoleName = String(row?.role_name || tokenRole || roleFromTokenId || '').trim().toLowerCase();
     const user = row
