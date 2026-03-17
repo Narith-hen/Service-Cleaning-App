@@ -186,11 +186,6 @@ const JobRequestsPage = () => {
     if (!request) return;
     if (acceptLoadingRequestId !== null && acceptLoadingRequestId !== request.id) return;
     setDetailRequestId(null);
-<<<<<<< HEAD
-    setActiveMessageRequestId(request.id);
-    setAcceptLoadingRequestId(null);
-    setStatusMessage('Booking accepted. Opening chat...');
-=======
     setStatusMessage('Opening chat...');
 
     setAcceptLoadingRequestId(request.id);
@@ -200,7 +195,6 @@ const JobRequestsPage = () => {
       setAcceptLoadingRequestId(null);
       acceptDelayTimerRef.current = null;
     }, 500);
->>>>>>> 4b6045497caf4b407b6a185f2ca16cea5d2eab1d
   };
 
   const handleAcceptClick = (request) => {
