@@ -142,6 +142,11 @@
   letter-spacing: -0.4px;
 }
 
+.match-card h1.matched {
+  color: var(--brand-deep);
+  animation: text-pop-in 0.6s ease-out;
+}
+
 .status-desc {
   margin: 0 0 16px;
   color: var(--text-muted);
@@ -230,10 +235,14 @@
   margin-top: 18px;
   position: relative;
   z-index: 1;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .match-actions button {
-  width: 100%;
+  flex: 1;
+  min-width: 100px;
   margin: 0;
   display: block;
   background: rgba(255, 255, 255, 0.72);
@@ -251,6 +260,18 @@
   background: #ffffff;
   border-color: rgba(252, 165, 165, 0.65);
   color: #ef4444;
+}
+
+.match-actions .skip-btn {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.match-actions .skip-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
 }
 
 @keyframes pulse-border {
@@ -275,6 +296,7 @@
   }
 }
 
+<<<<<<< HEAD
 /* Toast for acceptance */
 .match-toast {
   position: fixed;
@@ -328,6 +350,12 @@
   font-weight: 600;
   cursor: pointer;
   padding: 4px 6px;
+=======
+@keyframes text-pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+>>>>>>> develop
 }
 
 @media (max-width: 480px) {

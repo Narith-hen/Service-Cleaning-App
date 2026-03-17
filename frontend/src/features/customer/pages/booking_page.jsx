@@ -6,7 +6,8 @@ import {
   Image as ImageIcon,
   MapPin,
   Search,
-  UploadCloud
+  UploadCloud,
+  X
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import summaryImage from '../../../assets/image.png';
@@ -44,6 +45,8 @@ const BookingPage = () => {
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const prevFilesLengthRef = useRef(0);
   const [preferredDate, setPreferredDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -153,6 +156,49 @@ const BookingPage = () => {
       nextUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [files]);
+
+  useEffect(() => {
+    setSelectedImages((prev) => {
+      if (!files.length) return [];
+
+      const maxIndex = files.length - 1;
+      const sanitized = (Array.isArray(prev) ? prev : []).filter(
+        (idx) => Number.isInteger(idx) && idx >= 0 && idx <= maxIndex
+      );
+
+      const prevLen = prevFilesLengthRef.current;
+      const next = new Set(sanitized);
+
+      if (next.size === 0) {
+        for (let i = 0; i < files.length; i += 1) next.add(i);
+      } else if (files.length > prevLen) {
+        for (let i = prevLen; i < files.length; i += 1) next.add(i);
+      }
+
+      return Array.from(next).sort((a, b) => a - b);
+    });
+
+    prevFilesLengthRef.current = files.length;
+  }, [files.length]);
+
+  const handleImageSelect = (index) => {
+    setSelectedImages((prev) => {
+      const prevSet = new Set(Array.isArray(prev) ? prev : []);
+      if (prevSet.has(index)) prevSet.delete(index);
+      else prevSet.add(index);
+      return Array.from(prevSet).sort((a, b) => a - b);
+    });
+  };
+
+  const handleRemoveImage = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelectedImages((prev) =>
+      (Array.isArray(prev) ? prev : [])
+        .filter((i) => i !== index)
+        .map((i) => (i > index ? i - 1 : i))
+    );
+    prevFilesLengthRef.current = Math.max(0, prevFilesLengthRef.current - 1);
+  };
 
   const handleDropzoneKey = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -505,6 +551,8 @@ const BookingPage = () => {
       if (bookingId) {
         try {
           localStorage.setItem('last_booking_id', String(bookingId));
+          localStorage.setItem('last_booking_start_time', String(startTime || ''));
+          localStorage.setItem('last_booking_service_title', String(serviceTitle || ''));
         } catch {
           /* ignore */
         }
@@ -528,7 +576,13 @@ const BookingPage = () => {
         message: `We are matching you with a cleaner. Request date: ${month} ${day}, ${startTime} - ${endTime}.`,
         ago: 'just now'
       });
-      navigate('/customer/bookings/matching');
+      navigate('/customer/bookings/matching', {
+        state: {
+          bookingId: bookingId ? String(bookingId) : null,
+          serviceTitle,
+          startTime
+        }
+      });
     } catch (error) {
       const status = error?.response?.status;
       const apiMessage = error?.response?.data?.message;
@@ -563,6 +617,26 @@ const BookingPage = () => {
             <h2>{serviceTitle}</h2>
             <p>{serviceDescription}</p>
           </div>
+          {previewUrls.length > 0 && (
+            <div className="uploaded-images-display">
+              <h4>Your Uploaded Photos ({selectedImages.length})</h4>
+              <div className="uploaded-images-grid">
+                {previewUrls.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`uploaded-image-thumb ${selectedImages.includes(index) ? 'selected' : ''}`}
+                  >
+                    <img src={preview} alt={`Uploaded ${index + 1}`} />
+                    {selectedImages.includes(index) && (
+                      <div className="thumb-selected-badge">
+                        <Check size={12} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="booking-section">
@@ -689,9 +763,49 @@ const BookingPage = () => {
             />
           </div>
           {files.length > 0 && (
-            <p className="upload-count">
-              {files.length} file{files.length > 1 ? 's' : ''} selected
-            </p>
+            <>
+              <p className="upload-count">
+                {files.length} file{files.length > 1 ? 's' : ''} selected
+              </p>
+              <div className="image-previews">
+                {previewUrls.map((preview, index) => (
+                  <div
+                    key={index}
+                    className={`image-preview-item ${selectedImages.includes(index) ? 'selected' : ''}`}
+                    onClick={() => handleImageSelect(index)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleImageSelect(index);
+                      }
+                    }}
+                  >
+                    <img src={preview} alt={`Upload ${index + 1}`} />
+                    <div className="image-overlay">
+                      {selectedImages.includes(index) ? (
+                        <Check size={20} className="check-icon" />
+                      ) : (
+                        <span className="select-hint">Click to select</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="remove-image-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveImage(index);
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="selection-info">
+                {selectedImages.length} of {files.length} images selected
+              </p>
+            </>
           )}
         </section>
 

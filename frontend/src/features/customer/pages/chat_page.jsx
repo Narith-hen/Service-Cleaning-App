@@ -1,12 +1,39 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
+import {
+  MessageOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined
+} from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
-import '../../../styles/customer/chat.scss';
-import '../../../styles/cleaner/my_jobs.scss';
 import api from '../../../services/api';
+import '../../../styles/cleaner/my_jobs.scss';
 
-const DEMO_BOOKINGS = [];
+const fallbackBookings = [];
+
+const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
+  booking_id: String(booking?.booking_id ?? booking?.id ?? bookingIdFallback ?? 'unknown'),
+  booking_date: booking?.booking_date || booking?.date || new Date().toISOString(),
+  booking_time: booking?.booking_time || booking?.time || '',
+  address:
+    booking?.address
+    || booking?.location
+    || booking?.service_location
+    || booking?.service?.location
+    || booking?.service_address
+    || 'Location not provided',
+  service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || booking?.title || 'Cleaning Service' },
+  cleaner: booking?.cleaner || {
+    username:
+      booking?.cleaner_name
+      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
+      || booking?.cleaner_username
+      || 'Cleaner'
+  }
+});
 
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
@@ -16,14 +43,7 @@ const CustomerChatPage = () => {
   const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
   const LAST_BOOKING_KEY = 'last_booking_id';
 
-  const [dynamicBookings, setDynamicBookings] = useState([]);
-  const [fallbackBookingId, setFallbackBookingId] = useState(() => {
-    try {
-      return localStorage.getItem(LAST_BOOKING_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [dynamicBookings, setDynamicBookings] = useState(() => fallbackBookings);
 
   useEffect(() => {
     const normalizeEntry = (trackData = {}, base = {}) => {
@@ -58,8 +78,16 @@ const CustomerChatPage = () => {
 
     const hydrateBookings = async () => {
       try {
-        const listResp = await api.get('/bookings', {
-          params: { status: 'confirmed' }
+        const resp = await api.get(`/bookings/track/${bookingId}`);
+        const data = resp?.data?.data;
+        if (!data) return;
+        const entry = normalizeTrackedBooking(data, bookingId);
+        setDynamicBookings((prev) => {
+          const exists = prev.some((b) => String(b.booking_id) === String(entry.booking_id));
+          if (exists) {
+            return prev.map((b) => (String(b.booking_id) === String(entry.booking_id) ? entry : b));
+          }
+          return [entry, ...prev];
         });
         const bookings = listResp?.data?.data || [];
 
@@ -123,7 +151,7 @@ const CustomerChatPage = () => {
   }, [bookingId, fallbackBookingId]);
 
   const [selectedBooking, setSelectedBooking] = useState(
-    bookingId || dynamicBookings[0]?.id || null
+    bookingId || dynamicBookings[0]?.booking_id || null
   );
 
   useEffect(() => {
@@ -137,8 +165,7 @@ const CustomerChatPage = () => {
   }, [dynamicBookings, selectedBooking, bookingId]);
 
   const activeBooking = useMemo(() => {
-    const source = dynamicBookings;
-    return source.find((b) => String(b.id) === String(selectedBooking)) || source[0];
+    return dynamicBookings.find((b) => String(b.booking_id) === String(selectedBooking)) || dynamicBookings[0];
   }, [dynamicBookings, selectedBooking]);
 
   // Alert the customer when a booking is confirmed (once per booking)
@@ -177,76 +204,74 @@ const CustomerChatPage = () => {
     );
   }
 
+  // Get cleaner name from the booking
+  const cleanerName = activeBooking.cleaner?.username || 'Cleaner';
+  const cleanerId = activeBooking.cleaner?.id || '11';
+  const serviceName = activeBooking.service?.name || 'Cleaning Service';
+  const jobId = `#SOMA-${activeBooking.booking_id}`;
+  const bookingDate = activeBooking.booking_date
+    ? new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'TBD';
+  const bookingTime = activeBooking.booking_time || '09:00 AM';
+  const bookingLocation =
+    activeBooking.address
+    || activeBooking.location
+    || activeBooking.service_location
+    || activeBooking.service?.location
+    || 'Location not provided';
+
   return (
-    <div className="customer-chat-page">
-      <div className="customer-chat-container">
-        {/* Booking List Sidebar */}
-        <aside className="customer-chat-sidebar">
-          <div className="chat-sidebar-header">
-            <button 
-              type="button" 
-              className="back-btn-icon"
-              onClick={() => navigate('/customer/dashboard')}
-              aria-label="Back to dashboard"
-            >
-              <ArrowLeftOutlined />
-            </button>
-            <h3>My Chats</h3>
+    <div className="cleaner-my-jobs-v2">
+      <div className="my-jobs-message-breadcrumb">
+        <button type="button" onClick={() => navigate('/customer/bookings')}>My Bookings</button>
+        <span>&gt;</span>
+        <strong>Chat</strong>
+      </div>
+
+      <div className="my-jobs-message-view">
+        <CustomerMessagePanel
+          threadId={String(activeBooking.booking_id)}
+          cleanerName={cleanerName}
+          cleanerId={cleanerId}
+          subtitle={`${serviceName} Job - ${jobId}`}
+        />
+
+        <aside className="my-jobs-details-panel">
+          <h5>JOB DETAILS</h5>
+
+          <div className="my-jobs-details-card">
+            <div className="my-jobs-detail-row">
+              <span className="my-jobs-detail-icon"><CalendarOutlined /></span>
+              <div>
+                <small>Date &amp; Time</small>
+                <strong>{bookingDate}, {bookingTime}</strong>
+              </div>
+            </div>
+
+            <div className="my-jobs-detail-row">
+              <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
+              <div>
+                <small>Location</small>
+                <strong>{bookingLocation}</strong>
+              </div>
+            </div>
           </div>
 
-          <div className="chat-booking-list">
-            {dynamicBookings.map((booking) => (
-              <button
-                key={booking.id}
-                type="button"
-                className={`chat-booking-item ${selectedBooking === booking.id ? 'active' : ''}`}
-                onClick={() => setSelectedBooking(booking.id)}
-              >
-                <div className="booking-avatar">
-                  {booking.cleanerAvatar ? (
-                    <img src={booking.cleanerAvatar} alt={booking.cleanerName} />
-                  ) : (
-                    booking.cleanerName.charAt(0)
-                  )}
-                </div>
-                <div className="booking-info">
-                  <strong>{booking.cleanerName}</strong>
-                  <small>{booking.title}</small>
-                  <span className="booking-date">{booking.date}</span>
-                </div>
-                {booking.status === 'confirmed' && (
-                  <span className="booking-status confirmed">✓</span>
-                )}
-              </button>
-            ))}
+          <div className="my-jobs-checklist-card">
+            <h6>Checklist Preview</h6>
+            <ul>
+              <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
+              <li><CheckCircleOutlined /> Bathroom Sanitization</li>
+              <li><ClockCircleOutlined /> Window Cleaning (Pending)</li>
+            </ul>
           </div>
+
+          <button type="button" className="my-jobs-contract-btn">
+            <FileTextOutlined /> View Full Job Contract
+          </button>
+
+          <div className="my-jobs-map-preview" />
         </aside>
-
-        {/* Chat Area */}
-        <div className="customer-chat-main">
-          <div className="customer-chat-header">
-            <div className="chat-header-info">
-              <h2>{activeBooking.cleanerName}</h2>
-              <p>{activeBooking.title} - {activeBooking.jobId}</p>
-              {activeBooking.cleanerPhone && (
-                <small className="chat-meta-line">Phone: {activeBooking.cleanerPhone}</small>
-              )}
-              {activeBooking.cleanerEmail && (
-                <small className="chat-meta-line">Email: {activeBooking.cleanerEmail}</small>
-              )}
-            </div>
-            <div className="chat-header-meta">
-              <span className="chat-date">{activeBooking.date}</span>
-              <span className="chat-time">{activeBooking.time}</span>
-            </div>
-          </div>
-
-          <CustomerMessagePanel
-            threadId={activeBooking.id}
-            cleanerName={activeBooking.cleanerName}
-            subtitle={`${activeBooking.title} - ${activeBooking.jobId}`}
-          />
-        </div>
       </div>
     </div>
   );

@@ -1,9 +1,12 @@
-import { useOutletContext } from 'react-router-dom';
-import ContactContent from '../../../pages/public/ContactPage';
+import React from 'react';
 
-const ContactPage = () => {
-  const { darkMode = false } = useOutletContext() || {};
-  return <ContactContent embedded darkMode={darkMode} />;
+const CustomerContactPage = () => {
+  return (
+    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+      <h1>Contact Us</h1>
+      <p>Customer contact page - for help/contact routes.</p>
+    </div>
+  );
 };
 
-export default ContactPage;
+export default CustomerContactPage;

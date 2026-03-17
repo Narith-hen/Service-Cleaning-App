@@ -21,12 +21,15 @@ model User {
   bookings Booking[]
   reviews  Review[]
 
-  // Cleaner relations (FIXED)
+  // Cleaner relations
   cleaner_bookings Booking[] @relation("cleaner_bookings")
   cleaner_reviews  Review[]  @relation("cleaner_reviews")
 
   notifications Notification[]
   setting       Setting?
+
+  sent_messages     Message[] @relation("sent_messages")
+  received_messages Message[] @relation("received_messages")
 }
 
 model Role {
@@ -50,6 +53,7 @@ model Service {
   description String         @db.Text
   bookings    Booking[]
   images      ServiceImage[]
+  messages    Message[]
 }
 
 model ServiceImage {
@@ -79,6 +83,7 @@ model Booking {
   review        Review?
   payment       Payment?
   notifications Notification[]
+  messages      Message[]
 }
 
 model Promotion {
@@ -136,4 +141,27 @@ model Setting {
   user_id              Int      @unique
 
   user User @relation(fields: [user_id], references: [user_id])
+}
+
+model Message {
+  id                 Int      @id @default(autoincrement()) @map("id")
+  booking_id         Int?
+  service_id         Int?
+  service_package_id Int?
+  sender_id          Int
+  receiver_id        Int
+  message            String?  @db.Text
+  file_url           String?  @db.VarChar(191)
+  file_type          String?  @db.VarChar(191)
+  is_read            Boolean  @default(false)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  seen_at            DateTime?
+
+  sender             User     @relation("sent_messages", fields: [sender_id], references: [user_id])
+  receiver           User     @relation("received_messages", fields: [receiver_id], references: [user_id])
+  booking            Booking? @relation(fields: [booking_id], references: [booking_id])
+  service            Service? @relation(fields: [service_id], references: [service_id])
+
+  @@map("messages")
 }

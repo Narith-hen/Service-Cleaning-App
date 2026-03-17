@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const { redis, subscriber } = require('./redis');
+const jwt = require('jsonwebtoken');
 
 const connectedUsers = new Map(); // userId -> socketId
 const userSockets = new Map(); // socketId -> userId
@@ -23,10 +24,9 @@ const initializeSocket = (server) => {
         return next(new Error('Authentication required'));
       }
 
-      // Verify token with backend API or JWT
-      // For now, we'll trust the token from the client
-      // In production, verify with your auth service
-      socket.userId = socket.handshake.auth.userId;
+      const secret = process.env.JWT_SECRET || 'dev-local-jwt-secret-change-me';
+      const decoded = jwt.verify(token, secret);
+      socket.userId = decoded.user_id;
       next();
     } catch (error) {
       next(new Error('Authentication failed'));
@@ -51,6 +51,12 @@ const initializeSocket = (server) => {
     // Subscribe to Redis channels for this user
     subscribeToUserChannels(socket);
 
+    // Handle cleaner joining the general cleaners room
+    socket.on('join:cleaners', () => {
+      socket.join('cleaners-room');
+      console.log(`User ${socket.userId} joined the general cleaners room.`);
+    });
+
     // Handle joining booking room
     socket.on('booking:join', (bookingId) => {
       socket.join(`booking:${bookingId}`);
@@ -63,14 +69,33 @@ const initializeSocket = (server) => {
       console.log(`User ${socket.userId} left booking room: ${bookingId}`);
     });
 
+    // Handle customer joining a matching room while waiting for a cleaner
+    socket.on('join:matching', (bookingId) => {
+      socket.join(`booking:${bookingId}`);
+      console.log(`User ${socket.userId} is waiting for a match for booking: ${bookingId}`);
+    });
+
     // Handle message read event
     socket.on('message:read', (data) => {
       // When a user reads messages in a booking, notify others in the room.
       // The client will determine if they are the recipient and should update the UI.
-      if (data.bookingId) {
-        socket.to(`booking:${data.bookingId}`).emit('messages:seen', {
-          readerId: socket.userId,
-          messageId: data.messageId
+      const bookingId = data?.bookingId;
+      if (!bookingId) return;
+
+      const messageId = data?.messageId != null && String(data.messageId).trim() !== ''
+        ? String(data.messageId)
+        : null;
+
+      socket.to(`booking:${bookingId}`).emit('messages:seen', {
+        readerId: socket.userId,
+        ...(messageId ? { messageId } : {})
+      });
+
+      // Back-compat: some clients listen for a single-message seen event.
+      if (messageId) {
+        socket.to(`booking:${bookingId}`).emit('message:seen', {
+          id: messageId,
+          readerId: socket.userId
         });
       }
     });
@@ -80,6 +105,12 @@ const initializeSocket = (server) => {
       const { bookingId, message } = data;
       
       if (!bookingId || !message) return;
+
+      const senderId = String(message.senderId || message.sender_id || '');
+      if (!senderId || senderId !== String(socket.userId)) {
+        console.warn('Rejected message: sender mismatch', senderId, socket.userId);
+        return;
+      }
       
       // Broadcast the new message to others in the booking room
       socket.to(`booking:${bookingId}`).emit('message:new', message);
@@ -123,6 +154,22 @@ const initializeSocket = (server) => {
         userId: socket.userId,
         isTyping: data.isTyping
       });
+    });
+
+    // Handle new job posting from customer
+    socket.on('job:new', (jobDetails) => {
+      // Broadcast to all cleaners in the cleaners-room
+      io.to('cleaners-room').emit('job:available', jobDetails);
+      console.log('New job available, notifying cleaners:', jobDetails.bookingId);
+    });
+
+    // Handle cleaner accepting a job
+    socket.on('job:accepted', ({ bookingId, cleaner }) => {
+      // Notify the customer on the matching page
+      io.to(`booking:${bookingId}`).emit('job:matched', { bookingId, cleaner });
+      // Notify other cleaners to remove this job from their list
+      io.to('cleaners-room').emit('job:removed', { bookingId });
+      console.log(`Job ${bookingId} was accepted by cleaner ${cleaner.id}`);
     });
 
     // Handle disconnect

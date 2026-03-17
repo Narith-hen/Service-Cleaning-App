@@ -1,66 +1,42 @@
-const nodemailer = require('nodemailer');
-const queueService = require('./queue.service');
+const { Resend } = require('resend');
 
-class EmailService {
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+let resendClient = null;
+
+const getResendClient = () => {
+  if (resendClient) return resendClient;
+  if (!process.env.RESEND_API_KEY) return null;
+  resendClient = new Resend(process.env.RESEND_API_KEY);
+  return resendClient;
+};
+
+const sendWelcomeEmail = async ({ to, firstName }) => {
+  const client = getResendClient();
+  const from = process.env.RESEND_FROM;
+
+  if (!client || !from) {
+    return null;
+  }
+
+  try {
+    await client.emails.send({
+      from,
+      to: [to],
+      subject: 'Welcome to Somaet',
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+          <h2>Welcome to Somaet, ${firstName || 'there'}!</h2>
+          <p>Thanks for signing up. You can now chat directly with your cleaner for every booking.</p>
+          <p>If you have any questions, just reply to this email.</p>
+        </div>
+      `
     });
+  } catch (error) {
+    console.error('Failed to send welcome email:', error?.message || error);
   }
 
-  async sendEmail(to, subject, html) {
-    try {
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@samaeat.com',
-        to,
-        subject,
-        html
-      };
+  return true;
+};
 
-      // Queue email for workers to process
-      await queueService.addJob('email', {
-        type: 'send_email',
-        data: mailOptions
-      });
-
-      return { queued: true, to, subject };
-    } catch (error) {
-      console.error('Error queueing email:', error);
-      throw error;
-    }
-  }
-
-  async sendBookingConfirmation(email, bookingDetails) {
-    const subject = 'Booking Confirmation - Samaeat';
-    const html = `
-      <h1>Booking Confirmed!</h1>
-      <p>Your booking has been confirmed with ID: #${bookingDetails.booking_id}</p>
-      <p>Service: ${bookingDetails.service.name}</p>
-      <p>Date: ${new Date(bookingDetails.booking_date).toLocaleDateString()}</p>
-      <p>Total Price: $${bookingDetails.total_price}</p>
-    `;
-
-    return await this.sendEmail(email, subject, html);
-  }
-
-  async sendPasswordReset(email, resetToken) {
-    const subject = 'Password Reset Request - Samaeat';
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    const html = `
-      <h1>Password Reset</h1>
-      <p>Click the link below to reset your password:</p>
-      <a href="${resetLink}">Reset Password</a>
-      <p>This link will expire in 1 hour.</p>
-    `;
-
-    return await this.sendEmail(email, subject, html);
-  }
-}
-
-module.exports = new EmailService();
+module.exports = {
+  sendWelcomeEmail
+};

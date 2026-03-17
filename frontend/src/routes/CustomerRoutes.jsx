@@ -6,6 +6,7 @@ import SearchPage from '../pages/customer/SearchPage';
 import BookingPage from '../pages/customer/BookingPage';
 import MyBookingsPage from '../pages/customer/MyBookingsPage';
 import FavoritesPage from '../pages/customer/FavoritesPage';
+import CustomerMessagesPage from '../features/customer/pages/messages_page';
 
 const CustomerRoutes = () => {
   return (
@@ -15,6 +16,7 @@ const CustomerRoutes = () => {
         <Route path="search" element={<SearchPage />} />
         <Route path="book/:cleanerId" element={<BookingPage />} />
         <Route path="bookings" element={<MyBookingsPage />} />
+        <Route path="messages" element={<CustomerMessagesPage />} />
         <Route path="favorites" element={<FavoritesPage />} />
       </Route>
     </Routes>

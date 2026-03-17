@@ -1,8 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Clock3, Home, SearchCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import '../../../styles/customer/booking_match.scss';
 import api from '../../../services/api';
+
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+
+// Create a shared socket instance
+let socketInstance = null;
+const getSocket = () => {
+  if (!socketInstance) {
+    socketInstance = io(SOCKET_URL, {
+      autoConnect: false,
+      transports: ['websocket', 'polling']
+    });
+  }
+  return socketInstance;
+};
 
 const statusUpdates = [
   {
@@ -21,14 +36,16 @@ const statusUpdates = [
 
 const BookingMatchPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(65);
   const [isFading, setIsFading] = useState(false);
+  const [isMatched, setIsMatched] = useState(false);
   const [acceptedId, setAcceptedId] = useState(null);
   const [promptBookingId, setPromptBookingId] = useState(null);
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
-  const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
+  const socketRef = useRef(null);
   const [trackedBookingId, setTrackedBookingId] = useState(() => {
     try {
       return localStorage.getItem('last_booking_id');
@@ -37,24 +54,116 @@ const BookingMatchPage = () => {
     }
   });
 
+  const bookingId =
+    location?.state?.bookingId ||
+    location?.state?.booking_id ||
+    trackedBookingId ||
+    null;
+
+  const serviceTitle = (() => {
+    const fromState = location?.state?.serviceTitle || location?.state?.service?.title || location?.state?.service?.name;
+    if (fromState) return fromState;
+    try {
+      const storedTitle = localStorage.getItem('last_booking_service_title');
+      if (storedTitle) return storedTitle;
+      const stored = JSON.parse(localStorage.getItem('selectedService') || 'null');
+      return stored?.title || stored?.name || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const startTime = (() => {
+    const fromState = location?.state?.startTime || location?.state?.booking_time;
+    if (fromState) return fromState;
+    try {
+      return localStorage.getItem('last_booking_start_time');
+    } catch {
+      return null;
+    }
+  })();
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setIsFading(true);
+    const finalBookingId = bookingId || 'demo-1';
+    const socket = getSocket();
+    socketRef.current = socket;
 
-      setTimeout(() => {
-        setStep((prev) => (prev + 1) % statusUpdates.length);
-        setIsFading(false);
-      }, 500);
+    const onConnect = () => {
+      console.log('[BookingMatch] Socket connected');
+      // Join a room for this specific booking to get match updates
+      socket.emit('join:matching', finalBookingId);
 
+      // Announce the new job to cleaners
+      const jobDetails = {
+        bookingId: finalBookingId,
+        serviceTitle: serviceTitle || 'Residential Cleaning',
+        startTime: startTime || '10:00 AM'
+      };
+      socket.emit('job:new', jobDetails);
+    };
+
+    const onJobMatched = ({ bookingId: matchedBookingId, cleaner }) => {
+      if (matchedBookingId === finalBookingId) {
+        console.log(`[BookingMatch] Matched with cleaner:`, cleaner);
+        setIsMatched(true);
+        setProgress(100);
+        setStep(statusUpdates.length); // Go to a new "Matched!" step
+
+        // Navigate to chat after a short delay
+        setTimeout(() => {
+          navigate(`/customer/chat?booking=${finalBookingId}`);
+        }, 2000);
+      }
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('job:matched', onJobMatched);
+
+    let progressInterval, statusTimer;
+    if (!isMatched) {
+      progressInterval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) return prev;
+        if (prev >= 95) {
+          clearInterval(progressInterval);
+          return 95;
+        }
         const next = prev + Math.floor(Math.random() * 8);
         return Math.min(next, 95);
       });
-    }, 3500);
+    }, 1500);
 
-    return () => clearInterval(timer);
-  }, []);
+      statusTimer = setInterval(() => {
+      setIsFading(true);
+        setTimeout(() => {
+        setStep((prev) => {
+          if (prev >= statusUpdates.length - 1) {
+            clearInterval(statusTimer);
+            return statusUpdates.length - 1;
+          }
+          return prev + 1;
+        });
+        setIsFading(false);
+        }, 500);
+      }, 3500);
+    }
+
+    if (!socket.connected) {
+      const token = localStorage.getItem('token') || 'demo-customer-token';
+      const userId = 'hen-narith'; // Hardcoded for demo
+      socket.auth = { token, userId };
+      socket.connect();
+    } else {
+      onConnect();
+    }
+
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(statusTimer);
+      socket.off('connect', onConnect);
+      socket.off('job:matched', onJobMatched);
+      socket.emit('booking:leave', finalBookingId);
+    };
+  }, [navigate, bookingId, serviceTitle, startTime, isMatched]);
 
   // Poll localStorage to detect when cleaner accepted and jump to chat
   useEffect(() => {
@@ -91,26 +200,33 @@ const BookingMatchPage = () => {
 
   // Poll backend for status of last booking and redirect when confirmed
   useEffect(() => {
-    if (!trackedBookingId) return;
+    const effectiveBookingId = bookingId || trackedBookingId;
+    if (!effectiveBookingId) return;
     const pollStatus = setInterval(async () => {
       try {
-        const resp = await api.get(`/bookings/track/${trackedBookingId}`);
-        const status = resp?.data?.data?.booking_status?.toLowerCase();
-        if (status === 'confirmed') {
-          setAcceptedId(trackedBookingId);
-          setPromptBookingId(trackedBookingId);
-          try {
-            const key = `${ALERTED_BOOKING_PREFIX}${trackedBookingId}`;
-            if (!localStorage.getItem(key)) {
-              alert(`Your booking #${trackedBookingId} has been accepted. Opening chat with your cleaner.`);
-              localStorage.setItem(key, '1');
-            }
-          } catch {
-            /* ignore storage errors */
-          }
+        const resp = await api.get(`/bookings/track/${effectiveBookingId}`);
+        const payload = resp?.data?.data || {};
+        const status = String(
+          payload?.booking_status ??
+          payload?.status ??
+          payload?.bookingStatus ??
+          ''
+        ).toLowerCase();
+        const acceptedStatuses = new Set(['confirmed', 'accepted', 'claimed', 'assigned', 'in_progress']);
+        const hasCleaner =
+          payload?.cleaner_id != null ||
+          payload?.cleaner != null ||
+          payload?.cleaner_first_name ||
+          payload?.cleaner_last_name;
+
+        if (acceptedStatuses.has(status) || hasCleaner) {
+          setIsMatched(true);
+          setAcceptedId(String(payload?.booking_id ?? effectiveBookingId));
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
-        } else if (status === 'cancelled') {
+          setProgress(100);
+          setStep(statusUpdates.length);
+        } else if (status === 'cancelled' || status === 'rejected' || status === 'declined') {
           alert('Your booking was declined by the cleaner.');
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
@@ -121,17 +237,14 @@ const BookingMatchPage = () => {
       }
     }, 2000);
     return () => clearInterval(pollStatus);
-  }, [trackedBookingId]);
+  }, [trackedBookingId, bookingId, navigate]);
 
-  const handleOpenChat = () => {
-    if (!promptBookingId) return;
-    alert(`Your booking #${promptBookingId} has been accepted. Opening chat with your cleaner.`);
-    navigate(`/customer/chat/${promptBookingId}`);
-  };
-
-  const handleLater = () => {
-    setPromptBookingId(null);
-  };
+  useEffect(() => {
+    if (!acceptedId) return;
+    // brief alert then navigate to chat
+    alert(`Your booking #${acceptedId} has been accepted. Opening chat with your cleaner.`);
+    navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedId))}`);
+  }, [acceptedId, navigate]);
 
   return (
     <div className="booking-match-page">
@@ -151,8 +264,17 @@ const BookingMatchPage = () => {
           </div>
         </div>
 
-        <h1 className={isFading ? 'fade' : ''}>{statusUpdates[step].title}</h1>
-        <p className={`status-desc ${isFading ? 'fade' : ''}`}>{statusUpdates[step].desc}</p>
+        {isMatched ? (
+          <>
+            <h1 className="matched">Cleaner Found!</h1>
+            <p className="status-desc">You've been matched. Redirecting to chat...</p>
+          </>
+        ) : (
+          <>
+            <h1 className={isFading ? 'fade' : ''}>{statusUpdates[step]?.title || 'Almost Matched!'}</h1>
+            <p className={`status-desc ${isFading ? 'fade' : ''}`}>{statusUpdates[step]?.desc || 'Finalizing details...'}</p>
+          </>
+        )}
 
         <article className="progress-card">
           <div className="progress-top">
@@ -174,18 +296,25 @@ const BookingMatchPage = () => {
         <div className="service-meta">
           <p>
             <Home size={12} />
-            Residential
+            {serviceTitle || 'Residential'}
           </p>
           <span>|</span>
           <p>
             <Clock3 size={12} />
-            10:00 AM
+            {startTime || '10:00 AM'}
           </p>
         </div>
 
         <div className="match-actions">
           <button type="button" onClick={() => navigate('/customer/dashboard')}>
             Cancel Matching
+          </button>
+          <button
+            type="button"
+            className="skip-btn"
+            onClick={() => navigate('/customer/bookings/quotes')}
+          >
+            Skip Matching
           </button>
           <button
             type="button"
