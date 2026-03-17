@@ -96,6 +96,28 @@
   padding: 4px 12px;
 }
 
+.status-pill.completed {
+  background: #64748b;
+}
+
+.status-pill.in-progress {
+  background: #f59e0b;
+}
+
+.my-job-card-v2.completed {
+  opacity: 0.85;
+}
+
+.my-job-card-v2.completed .my-job-date-v2::after {
+  background: linear-gradient(
+    180deg,
+    rgba(211, 219, 229, 0.6) 0%,
+    rgba(211, 219, 229, 0.4) 35%,
+    rgba(211, 219, 229, 0.6) 72%,
+    rgba(211, 219, 229, 0.8) 100%
+  );
+}
+
 .day-value {
   margin-top: 12px;
   font-size: 54px;
