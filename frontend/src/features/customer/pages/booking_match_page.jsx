@@ -45,6 +45,7 @@ const BookingMatchPage = () => {
   const [promptBookingId, setPromptBookingId] = useState(null);
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
+  const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
   const socketRef = useRef(null);
   const [trackedBookingId, setTrackedBookingId] = useState(() => {
     try {
@@ -176,7 +177,7 @@ const BookingMatchPage = () => {
           try {
             const key = `${ALERTED_BOOKING_PREFIX}${stored}`;
             if (!localStorage.getItem(key)) {
-              alert(`Your booking #${stored} has been accepted by the cleaner.`);
+              alert(`Your booking #${stored} was accepted. Open chat to talk with your cleaner.`);
               localStorage.setItem(key, '1');
             }
           } catch {
@@ -239,11 +240,19 @@ const BookingMatchPage = () => {
     return () => clearInterval(pollStatus);
   }, [trackedBookingId, bookingId, navigate]);
 
+  const handleOpenChat = () => {
+    if (!promptBookingId) return;
+    navigate(`/customer/messages?booking=${encodeURIComponent(String(promptBookingId))}`);
+    setPromptBookingId(null);
+  };
+
+  const handleLater = () => {
+    setPromptBookingId(null);
+  };
+
   useEffect(() => {
     if (!acceptedId) return;
-    // brief alert then navigate to chat
-    alert(`Your booking #${acceptedId} has been accepted. Opening chat with your cleaner.`);
-    navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedId))}`);
+    // Keep the prompt visible for user action (Open Chat / Later)
   }, [acceptedId, navigate]);
 
   return (
