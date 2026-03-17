@@ -240,15 +240,7 @@ exports.login = async (req, res) => {
   `;
   const findCleanerSql = `
     SELECT
-      cp.cleaner_id AS user_id,
-      cp.cleaner_code AS user_code,
-      cp.company_name AS first_name,
-      NULL AS last_name,
-      cp.company_email AS email,
-      cp.phone_number,
-      cp.profile_image AS avatar,
-      cp.password,
-      cp.role_id,
+      cp.*,
       r.role_name
     FROM cleaner_profile cp
     LEFT JOIN roles r ON r.role_id = cp.role_id
@@ -258,56 +250,104 @@ exports.login = async (req, res) => {
 
   try {
     const promiseDb = db.promise();
-    let accountSource = "users";
-    let [rows] = await promiseDb.query(findUserSql, [normalizedLoginId, normalizedLoginId]);
-    let user = rows?.[0];
 
-    if (!user) {
-      accountSource = "cleaner_profile";
-      [rows] = await promiseDb.query(findCleanerSql, [normalizedLoginId, normalizedLoginId]);
-      user = rows?.[0];
-    }
+    const normalizeCleanerRow = (row) => {
+      if (!row) return null;
+      return {
+        ...row,
+        user_id: row.user_id ?? row.cleaner_id,
+        user_code: row.user_code ?? row.cleaner_code,
+        first_name: row.first_name ?? row.company_name ?? null,
+        last_name: row.last_name ?? null,
+        email: row.email ?? row.company_email ?? null,
+        phone_number: row.phone_number ?? null,
+        avatar: row.avatar ?? row.profile_image ?? null,
+      };
+    };
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
+    const verifyPasswordAndMaybeUpgrade = async (accountSource, candidate) => {
+      const storedPassword = String(
+        candidate?.password ?? candidate?.hashed_password ?? candidate?.cleaner_password ?? ""
+      );
+      if (!storedPassword) return { ok: false };
 
-    const storedPassword = String(user.password || "");
-    const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
-    let isPasswordValid = false;
+      const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
+      let isPasswordValid = false;
 
-    if (isBcryptHash) {
-      isPasswordValid = await bcrypt.compare(password, storedPassword);
-    } else {
-      // Legacy records may still store plain text passwords.
-      isPasswordValid = password === storedPassword;
+      if (isBcryptHash) {
+        isPasswordValid = await bcrypt.compare(password, storedPassword);
+      } else {
+        // Legacy records may still store plain text passwords.
+        isPasswordValid = password === storedPassword;
 
-      // Upgrade plain text password to bcrypt hash after successful login.
-      if (isPasswordValid) {
-        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
-        const upgradedHash = await bcrypt.hash(password, saltRounds);
-        if (accountSource === "users") {
-          await promiseDb.query(
-            "UPDATE users SET password = ? WHERE user_id = ?",
-            [upgradedHash, user.user_id]
-          );
-        } else {
-          await promiseDb.query(
-            "UPDATE cleaner_profile SET password = ? WHERE cleaner_id = ?",
-            [upgradedHash, user.user_id]
-          );
+        // Upgrade plain text password to bcrypt hash after successful login.
+        if (isPasswordValid) {
+          const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
+          const upgradedHash = await bcrypt.hash(password, saltRounds);
+          if (accountSource === "users") {
+            await promiseDb.query(
+              "UPDATE users SET password = ? WHERE user_id = ?",
+              [upgradedHash, candidate.user_id]
+            );
+          } else {
+            await promiseDb.query(
+              "UPDATE cleaner_profile SET password = ? WHERE cleaner_id = ?",
+              [upgradedHash, candidate.user_id]
+            );
+          }
         }
       }
-    }
 
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+      return { ok: isPasswordValid };
+    };
+
+    let accountSource = "users";
+    let [rows] = await promiseDb.query(findUserSql, [normalizedLoginId, normalizedLoginId]);
+    let user = rows?.[0] || null;
+
+    if (user) {
+      const userCheck = await verifyPasswordAndMaybeUpgrade("users", user);
+      if (!userCheck.ok) {
+        // If a cleaner shares the same email/code, try that account too.
+        [rows] = await promiseDb.query(findCleanerSql, [normalizedLoginId, normalizedLoginId]);
+        const cleanerCandidate = normalizeCleanerRow(rows?.[0] || null);
+        if (cleanerCandidate) {
+          const cleanerCheck = await verifyPasswordAndMaybeUpgrade("cleaner_profile", cleanerCandidate);
+          if (cleanerCheck.ok) {
+            accountSource = "cleaner_profile";
+            user = cleanerCandidate;
+          } else {
+            return res.status(401).json({
+              success: false,
+              message: "Invalid email or password",
+            });
+          }
+        } else {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid email or password",
+          });
+        }
+      }
+    } else {
+      [rows] = await promiseDb.query(findCleanerSql, [normalizedLoginId, normalizedLoginId]);
+      user = normalizeCleanerRow(rows?.[0] || null);
+      accountSource = "cleaner_profile";
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid email or password",
+        });
+      }
+
+      const cleanerCheck = await verifyPasswordAndMaybeUpgrade("cleaner_profile", user);
+      if (!cleanerCheck.ok) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid email or password",
+        });
+      }
     }
 
     const role = String(
