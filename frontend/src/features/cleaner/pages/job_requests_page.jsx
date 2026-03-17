@@ -31,6 +31,7 @@ const mapBookingToRequest = (booking) => {
       [booking.first_name, booking.last_name].filter(Boolean).join(' ').trim() ||
       booking.user?.username ||
       'Customer',
+    customerId: booking.user_id || booking.customer_id || booking.user?.user_id || '3',
     address: booking.address || 'Address shared after accept',
     timeRange: startTime,
     amount: toMoney(booking.total_price || 0),
@@ -70,6 +71,49 @@ const JobRequestsPage = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
+
+  const getMonthYearLabel = (request) => {
+    const now = new Date();
+    const monthLabel = request?.month && request.month !== 'TBD'
+      ? request.month
+      : now.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    return `${monthLabel} ${now.getFullYear()}`;
+  };
+
+  const persistConfirmedJob = (request) => {
+    if (!request) return;
+    const confirmedJob = {
+      id: `confirmed-${request.id}`,
+      sourceRequestId: request.id,
+      status: 'upcoming',
+      title: request.serviceTone === 'deep' ? 'Deep House Cleaning' : request.service || 'Cleaning Job',
+      jobId: `#SOMA-${request.id}`,
+      price: request.amount || toMoney(0),
+      day: request.day || String(new Date().getDate()).padStart(2, '0'),
+      monthYear: getMonthYearLabel(request),
+      timeRange: request.timeRange || '09:00 AM - 12:00 PM',
+      location: request.address || 'Phnom Penh, Cambodia',
+      customer: request.customer || 'Customer',
+      customerId: request.customerId || '3',
+      bedrooms: '3 Bedrooms',
+      floors: '2 Floors'
+    };
+
+    try {
+      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const safeList = Array.isArray(parsed) ? parsed : [];
+      const next = [
+        confirmedJob,
+        ...safeList.filter((job) => (
+          String(job?.sourceRequestId || job?.id) !== String(request.id)
+        ))
+      ];
+      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
+    }
+  };
 
   const getDefaultAdjustmentTotal = (request) => {
     if (!request) return '185.00';
@@ -187,14 +231,8 @@ const JobRequestsPage = () => {
     if (acceptLoadingRequestId !== null && acceptLoadingRequestId !== request.id) return;
     setDetailRequestId(null);
     setStatusMessage('Opening chat...');
-
-    setAcceptLoadingRequestId(request.id);
-    if (acceptDelayTimerRef.current) clearTimeout(acceptDelayTimerRef.current);
-    acceptDelayTimerRef.current = setTimeout(() => {
-      setActiveMessageRequestId(request.id);
-      setAcceptLoadingRequestId(null);
-      acceptDelayTimerRef.current = null;
-    }, 500);
+    persistConfirmedJob(request);
+    navigate(`/cleaner/messages?thread=${encodeURIComponent(String(request.id))}`);
   };
 
   const handleAcceptClick = (request) => {
