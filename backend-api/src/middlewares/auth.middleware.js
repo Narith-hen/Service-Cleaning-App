@@ -13,6 +13,15 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
     const accountSource = String(decoded?.account_source || '').toLowerCase();
+    const tokenRole = String(decoded?.role || '').trim().toLowerCase();
+    const tokenRoleId = Number(decoded?.role_id || 0);
+    const roleFromTokenId = tokenRoleId === 1
+      ? 'admin'
+      : tokenRoleId === 3
+        ? 'cleaner'
+        : tokenRoleId
+          ? 'customer'
+          : '';
 
     const promiseDb = db.promise();
     let row = null;
@@ -72,6 +81,7 @@ const authenticate = async (req, res, next) => {
       ? accountSource || 'users'
       : 'users';
 
+    const resolvedRoleName = String(row?.role_name || tokenRole || roleFromTokenId || '').trim().toLowerCase();
     const user = row
       ? {
           user_id: row.user_id,
@@ -79,7 +89,7 @@ const authenticate = async (req, res, next) => {
           role_id: row.role_id,
           role: {
             role_id: row.role_id,
-            role_name: row.role_name,
+            role_name: resolvedRoleName || row.role_name,
           },
           account_source: resolvedSource,
         }
@@ -92,6 +102,15 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error?.name === 'TokenExpiredError') {
+      return next(new AppError('Token expired', 401));
+    }
+    if (error?.name === 'JsonWebTokenError') {
+      return next(new AppError('Invalid token', 401));
+    }
+    if (error instanceof AppError) {
+      return next(error);
+    }
     next(new AppError('Authentication failed', 401));
   }
 };
