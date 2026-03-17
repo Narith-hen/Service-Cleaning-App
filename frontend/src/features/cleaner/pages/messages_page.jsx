@@ -16,24 +16,7 @@ import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/cleaner/messages.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const fallbackThreads = [
-  {
-    id: 'default-1',
-    sourceRequestId: 'default-1',
-    status: 'upcoming',
-    title: 'Deep House Cleaning',
-    jobId: '#SOMA-48291',
-    price: '$85.00',
-    day: '24',
-    monthYear: 'June 2026',
-    timeRange: '09:00 AM - 12:00 PM',
-    location: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
-    customer: 'Sovan Reach',
-    bedrooms: '3 Bedrooms',
-    floors: '2 Floors',
-    image: officeImage
-  }
-];
+const fallbackThreads = [];
 
 const normalizeThread = (job, index) => ({
   id: String(job?.id || job?.sourceRequestId || `thread-${index + 1}`),
@@ -47,6 +30,7 @@ const normalizeThread = (job, index) => ({
   timeRange: job?.timeRange || '09:00 AM - 12:00 PM',
   location: job?.location || 'Phnom Penh, Cambodia',
   customer: job?.customer || 'Customer',
+  customerId: job?.customerId || job?.customer_id || '3',
   bedrooms: job?.bedrooms || '3 Bedrooms',
   floors: job?.floors || '2 Floors',
   image: job?.image || officeImage
@@ -77,7 +61,7 @@ const getPreviewText = (messageList) => {
 
 const MessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [threads, setThreads] = useState(fallbackThreads);
+  const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
@@ -89,11 +73,14 @@ const MessagesPage = () => {
       const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length === 0) return;
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        setThreads([]);
+        return;
+      }
       const normalized = parsed.filter(Boolean).map(normalizeThread);
       setThreads(normalized);
     } catch {
-      setThreads(fallbackThreads);
+      setThreads([]);
     }
   }, []);
 
@@ -256,6 +243,7 @@ const MessagesPage = () => {
               <CleanerMessagePanel
                 threadId={String(activeThread.sourceRequestId || activeThread.id)}
                 customerName={activeThread.customer}
+                customerId={String(activeThread.customerId)}
                 subtitle={`${activeThread.title} Job - ${activeThread.jobId}`}
               />
 

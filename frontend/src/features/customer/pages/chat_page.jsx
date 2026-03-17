@@ -1,21 +1,39 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeftOutlined, MessageOutlined } from '@ant-design/icons';
+import {
+  MessageOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined
+} from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
-import api from '../../../services/api';
 
-const fallbackBookings = [
-  {
-    booking_id: 'demo-1',
-    booking_date: '2026-03-14T09:00:00',
-    booking_time: '09:00 AM',
-    address: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
-    service: { name: 'Deep House Cleaning' },
-    cleaner: { username: 'Narith Hen' }
+const fallbackBookings = [];
+
+const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
+  booking_id: String(booking?.booking_id ?? booking?.id ?? bookingIdFallback ?? 'unknown'),
+  booking_date: booking?.booking_date || booking?.date || new Date().toISOString(),
+  booking_time: booking?.booking_time || booking?.time || '',
+  address:
+    booking?.address
+    || booking?.location
+    || booking?.service_location
+    || booking?.service?.location
+    || booking?.service_address
+    || 'Location not provided',
+  service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || booking?.title || 'Cleaning Service' },
+  cleaner: booking?.cleaner || {
+    username:
+      booking?.cleaner_name
+      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
+      || booking?.cleaner_username
+      || 'Cleaner'
   }
-];
+});
 
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
@@ -23,7 +41,7 @@ const CustomerChatPage = () => {
   const navigate = useNavigate();
   const bookingId = pathBookingId || searchParams.get('booking');
 
-  const [dynamicBookings, setDynamicBookings] = useState(DEMO_BOOKINGS);
+  const [dynamicBookings, setDynamicBookings] = useState(() => fallbackBookings);
 
   useEffect(() => {
     const fetchBooking = async () => {
@@ -32,25 +50,11 @@ const CustomerChatPage = () => {
         const resp = await api.get(`/bookings/track/${bookingId}`);
         const data = resp?.data?.data;
         if (!data) return;
-        const cleanerName = [data.cleaner_first_name, data.cleaner_last_name]
-          .filter(Boolean)
-          .join(' ')
-          .trim() || 'Assigned Cleaner';
-        const timeRange = data.booking_time || '';
-        const dateStr = data.booking_date ? new Date(data.booking_date).toDateString() : '';
-        const entry = {
-          id: String(data.booking_id),
-          jobId: `#JOB-${data.booking_id}`,
-          title: data.service_name || 'Cleaning',
-          cleanerName,
-          date: dateStr,
-          time: timeRange,
-          status: data.booking_status || 'confirmed'
-        };
+        const entry = normalizeTrackedBooking(data, bookingId);
         setDynamicBookings((prev) => {
-          const exists = prev.some((b) => String(b.id) === String(entry.id));
+          const exists = prev.some((b) => String(b.booking_id) === String(entry.booking_id));
           if (exists) {
-            return prev.map((b) => (String(b.id) === String(entry.id) ? entry : b));
+            return prev.map((b) => (String(b.booking_id) === String(entry.booking_id) ? entry : b));
           }
           return [entry, ...prev];
         });
@@ -62,11 +66,11 @@ const CustomerChatPage = () => {
   }, [bookingId]);
 
   const [selectedBooking, setSelectedBooking] = useState(
-    bookingId || dynamicBookings[0]?.id || null
+    bookingId || dynamicBookings[0]?.booking_id || null
   );
 
   const activeBooking = useMemo(() => {
-    return dynamicBookings.find((b) => String(b.id) === String(selectedBooking)) || dynamicBookings[0];
+    return dynamicBookings.find((b) => String(b.booking_id) === String(selectedBooking)) || dynamicBookings[0];
   }, [dynamicBookings, selectedBooking]);
 
   if (!activeBooking) {
@@ -90,9 +94,12 @@ const CustomerChatPage = () => {
 
   // Get cleaner name from the booking
   const cleanerName = activeBooking.cleaner?.username || 'Cleaner';
+  const cleanerId = activeBooking.cleaner?.id || '11';
   const serviceName = activeBooking.service?.name || 'Cleaning Service';
   const jobId = `#SOMA-${activeBooking.booking_id}`;
-  const bookingDate = new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const bookingDate = activeBooking.booking_date
+    ? new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'TBD';
   const bookingTime = activeBooking.booking_time || '09:00 AM';
   const bookingLocation =
     activeBooking.address
@@ -113,6 +120,7 @@ const CustomerChatPage = () => {
         <CustomerMessagePanel
           threadId={String(activeBooking.booking_id)}
           cleanerName={cleanerName}
+          cleanerId={cleanerId}
           subtitle={`${serviceName} Job - ${jobId}`}
         />
 

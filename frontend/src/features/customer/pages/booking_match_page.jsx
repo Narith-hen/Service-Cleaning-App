@@ -40,9 +40,11 @@ const BookingMatchPage = () => {
   const [step, setStep] = useState(0);
   const [progress, setProgress] = useState(65);
   const [isFading, setIsFading] = useState(false);
+  const [isMatched, setIsMatched] = useState(false);
   const [acceptedId, setAcceptedId] = useState(null);
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
+  const socketRef = useRef(null);
   const [trackedBookingId, setTrackedBookingId] = useState(() => {
     try {
       return localStorage.getItem('last_booking_id');
@@ -50,6 +52,35 @@ const BookingMatchPage = () => {
       return null;
     }
   });
+
+  const bookingId =
+    location?.state?.bookingId ||
+    location?.state?.booking_id ||
+    trackedBookingId ||
+    null;
+
+  const serviceTitle = (() => {
+    const fromState = location?.state?.serviceTitle || location?.state?.service?.title || location?.state?.service?.name;
+    if (fromState) return fromState;
+    try {
+      const storedTitle = localStorage.getItem('last_booking_service_title');
+      if (storedTitle) return storedTitle;
+      const stored = JSON.parse(localStorage.getItem('selectedService') || 'null');
+      return stored?.title || stored?.name || null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const startTime = (() => {
+    const fromState = location?.state?.startTime || location?.state?.booking_time;
+    if (fromState) return fromState;
+    try {
+      return localStorage.getItem('last_booking_start_time');
+    } catch {
+      return null;
+    }
+  })();
 
   useEffect(() => {
     const finalBookingId = bookingId || 'demo-1';
@@ -158,16 +189,33 @@ const BookingMatchPage = () => {
 
   // Poll backend for status of last booking and redirect when confirmed
   useEffect(() => {
-    if (!trackedBookingId) return;
+    const effectiveBookingId = bookingId || trackedBookingId;
+    if (!effectiveBookingId) return;
     const pollStatus = setInterval(async () => {
       try {
-        const resp = await api.get(`/bookings/track/${trackedBookingId}`);
-        const status = resp?.data?.data?.booking_status?.toLowerCase();
-        if (status === 'confirmed') {
-          setAcceptedId(trackedBookingId);
+        const resp = await api.get(`/bookings/track/${effectiveBookingId}`);
+        const payload = resp?.data?.data || {};
+        const status = String(
+          payload?.booking_status ??
+          payload?.status ??
+          payload?.bookingStatus ??
+          ''
+        ).toLowerCase();
+        const acceptedStatuses = new Set(['confirmed', 'accepted', 'claimed', 'assigned', 'in_progress']);
+        const hasCleaner =
+          payload?.cleaner_id != null ||
+          payload?.cleaner != null ||
+          payload?.cleaner_first_name ||
+          payload?.cleaner_last_name;
+
+        if (acceptedStatuses.has(status) || hasCleaner) {
+          setIsMatched(true);
+          setAcceptedId(String(payload?.booking_id ?? effectiveBookingId));
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
-        } else if (status === 'cancelled') {
+          setProgress(100);
+          setStep(statusUpdates.length);
+        } else if (status === 'cancelled' || status === 'rejected' || status === 'declined') {
           alert('Your booking was declined by the cleaner.');
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
@@ -178,13 +226,13 @@ const BookingMatchPage = () => {
       }
     }, 2000);
     return () => clearInterval(pollStatus);
-  }, [trackedBookingId]);
+  }, [trackedBookingId, bookingId, navigate]);
 
   useEffect(() => {
     if (!acceptedId) return;
     // brief alert then navigate to chat
     alert(`Your booking #${acceptedId} has been accepted. Opening chat with your cleaner.`);
-    navigate(`/customer/chat/${acceptedId}`);
+    navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedId))}`);
   }, [acceptedId, navigate]);
 
   return (

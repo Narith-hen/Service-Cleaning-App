@@ -10,35 +10,7 @@ const CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 // Socket.io server URL - configure based on environment
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
 
-const defaultMessages = [
-  {
-    id: 'seed-1',
-    sender: 'cleaner',
-    text: "Hi! I've accepted your cleaning request for tomorrow. I'll be arriving around 9 AM.",
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:42:00',
-    status: 'seen'
-  },
-  {
-    id: 'seed-2',
-    sender: 'customer',
-    text: 'Great! Looking forward to it. Please focus on the kitchen and bathrooms.',
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:45:00',
-    status: 'seen'
-  },
-  {
-    id: 'seed-3',
-    sender: 'cleaner',
-    text: 'No problem! I\'ll give extra attention to those areas. See you tomorrow!',
-    imageUrl: '',
-    imageName: '',
-    createdAt: '2026-03-10T10:48:00',
-    status: 'seen'
-  }
-];
+const defaultMessages = [];
 
 const normalizeThreadId = (threadId) => String(threadId || 'default');
 
@@ -153,7 +125,7 @@ const getSocket = () => {
   return socketInstance;
 };
 
-export const useCustomerChat = ({ threadId }) => {
+export const useCustomerChat = ({ threadId, receiverId }) => {
   const normalizedThreadId = useMemo(() => normalizeThreadId(threadId), [threadId]);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -220,13 +192,19 @@ export const useCustomerChat = ({ threadId }) => {
       );
     };
 
-    const onMessagesSeen = ({ readerId }) => {
+    const onMessagesSeen = ({ messageId }) => {
+      if (messageId) {
+        const seenId = String(messageId);
+        setMessages((prev) => prev.map((m) => m.id === seenId ? { ...m, status: 'seen' } : m));
+        return;
+      }
+
       setMessages((prev) => {
         const customerMessages = prev.filter((m) => m.sender === 'customer');
         if (customerMessages.length > 0) {
           const latestCustomerMessage = customerMessages[customerMessages.length - 1];
           if (latestCustomerMessage.status !== 'seen') {
-            return prev.map((m) => 
+            return prev.map((m) =>
               m.id === latestCustomerMessage.id ? { ...m, status: 'seen' } : m
             );
           }
@@ -258,13 +236,6 @@ export const useCustomerChat = ({ threadId }) => {
         if (nextOtherId) setOtherUserId(String(nextOtherId));
       }
 
-      // When receiving a new message, automatically mark it as seen
-      setTimeout(() => {
-        socket.emit('message:read', {
-          threadId: normalizedThreadId,
-          bookingId: normalizedThreadId
-        });
-      }, 500);
     };
 
     // Listen for typing indicator from cleaner
@@ -434,12 +405,13 @@ export const useCustomerChat = ({ threadId }) => {
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [messages, isConnected]);
 
-  const markAsRead = useCallback(() => {
+  const markAsRead = useCallback(({ messageId } = {}) => {
     const socket = socketRef.current;
     if (socket && socket.connected) {
       socket.emit('message:read', {
         threadId: normalizedThreadId,
-        bookingId: normalizedThreadId
+        bookingId: normalizedThreadId,
+        ...(messageId ? { messageId: String(messageId) } : {})
       });
     }
 
@@ -447,7 +419,7 @@ export const useCustomerChat = ({ threadId }) => {
       api.patch(`/messages/booking/${normalizedThreadId}/read`).catch(() => {});
     }
     clearUnread(normalizedThreadId);
-  }, [normalizedThreadId]);
+  }, [normalizedThreadId, clearUnread]);
 
   const notifyTyping = useCallback(() => {
     const socket = socketRef.current;
@@ -522,7 +494,8 @@ export const useCustomerChat = ({ threadId }) => {
         booking_id: normalizedThreadId,
         message: trimmedText,
         file_url: resolvedUrl || undefined,
-        file_type: resolvedName || undefined
+        file_type: resolvedName || undefined,
+        receiver_id: receiverId || otherUserId
       });
 
       console.log('[useCustomerChat] API Response:', response);
@@ -559,18 +532,13 @@ export const useCustomerChat = ({ threadId }) => {
 
       return { success: true };
     } catch (error) {
-      console.log('[useCustomerChat] Send message error:', error);
-
-      // Fallback: If API fails (likely due to demo booking ID 'demo-1' not existing on backend),
-      // we simulate success so the chat remains usable in the frontend demo.
-      console.log('[useCustomerChat] Falling back to local simulation due to API error');
-      
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? { ...optimisticMessage, status: 'sent' } : msg))
-      );
-
-      // Return success: true so the input clears and the message stays visible
-      return { success: true };
+      console.error('[useCustomerChat] Send message error:', error);
+      // Remove the optimistic message from the UI on failure
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      return {
+        success: false,
+        error: error?.response?.data?.message || 'Failed to send message. Check server connection.'
+      };
     }
   };
 

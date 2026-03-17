@@ -79,10 +79,23 @@ const initializeSocket = (server) => {
     socket.on('message:read', (data) => {
       // When a user reads messages in a booking, notify others in the room.
       // The client will determine if they are the recipient and should update the UI.
-      if (data.bookingId) {
-        socket.to(`booking:${data.bookingId}`).emit('messages:seen', {
-          readerId: socket.userId,
-          messageId: data.messageId
+      const bookingId = data?.bookingId;
+      if (!bookingId) return;
+
+      const messageId = data?.messageId != null && String(data.messageId).trim() !== ''
+        ? String(data.messageId)
+        : null;
+
+      socket.to(`booking:${bookingId}`).emit('messages:seen', {
+        readerId: socket.userId,
+        ...(messageId ? { messageId } : {})
+      });
+
+      // Back-compat: some clients listen for a single-message seen event.
+      if (messageId) {
+        socket.to(`booking:${bookingId}`).emit('message:seen', {
+          id: messageId,
+          readerId: socket.userId
         });
       }
     });

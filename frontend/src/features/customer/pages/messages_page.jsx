@@ -14,16 +14,7 @@ import { useChatStore } from '../../../store/chatStore';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/customer/messages.scss';
 
-const fallbackBookings = [
-  {
-    booking_id: 'demo-1',
-    booking_date: '2026-03-14T09:00:00',
-    booking_time: '09:00 AM',
-    address: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
-    service: { name: 'Deep House Cleaning' },
-    cleaner: { username: 'Narith Hen' }
-  }
-];
+const fallbackBookings = [];
 
 const getPreviewText = (messageList) => {
   if (!Array.isArray(messageList) || messageList.length === 0) return 'Tap to open conversation.';
@@ -49,8 +40,14 @@ const normalizeBooking = (booking) => ({
     || booking?.service_location
     || booking?.service?.location
     || 'Location not provided',
-  service: booking?.service || { name: 'Cleaning Service' },
-  cleaner: booking?.cleaner || { username: 'Cleaner' }
+  service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || 'Cleaning Service' },
+  cleaner: booking?.cleaner || {
+    username:
+      booking?.cleaner_name
+      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
+      || booking?.cleaner_username
+      || 'Cleaner'
+  }
 });
 
 const getAuthToken = () => {
@@ -80,7 +77,7 @@ const CustomerMessagesPage = () => {
         const bookingsData = response?.data?.data || [];
         let normalizedBookings = bookingsData.length > 0
           ? bookingsData.map(normalizeBooking)
-          : fallbackBookings.map(normalizeBooking);
+          : [].map(normalizeBooking);
 
         const bookingId = searchParams.get('booking') || searchParams.get('thread');
         if (bookingId && !normalizedBookings.some((b) => b.booking_id === String(bookingId))) {
@@ -91,7 +88,7 @@ const CustomerMessagesPage = () => {
               booking_time: '10:00 AM',
               address: '123 Harmony Lane, Bright City',
               service: { name: 'Custom Cleaning' },
-              cleaner: { username: 'Narith Hen' }
+              cleaner: { id: '11', username: 'Cleaner 1' }
             }),
             ...normalizedBookings
           ];
@@ -100,7 +97,7 @@ const CustomerMessagesPage = () => {
         setBookings(normalizedBookings);
       } catch (error) {
         console.error('Failed to fetch bookings:', error);
-        let normalizedBookings = fallbackBookings.map(normalizeBooking);
+        let normalizedBookings = [].map(normalizeBooking);
         const bookingId = searchParams.get('booking') || searchParams.get('thread');
         if (bookingId && !normalizedBookings.some((b) => b.booking_id === String(bookingId))) {
           normalizedBookings = [
@@ -110,7 +107,7 @@ const CustomerMessagesPage = () => {
               booking_time: '10:00 AM',
               address: '123 Harmony Lane, Bright City',
               service: { name: 'Custom Cleaning' },
-              cleaner: { username: 'Narith Hen' }
+              cleaner: { id: '11', username: 'Cleaner 1' }
             }),
             ...normalizedBookings
           ];
@@ -298,6 +295,7 @@ const CustomerMessagesPage = () => {
                 threadId={String(activeBooking.booking_id)}
                 cleanerName={cleanerName}
                 subtitle={`${serviceName} Job - ${jobId}`}
+                cleanerId={String(activeBooking.cleaner_id)}
               />
 
               <aside className="my-jobs-details-panel">

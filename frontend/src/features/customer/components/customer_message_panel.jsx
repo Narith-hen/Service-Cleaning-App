@@ -23,8 +23,8 @@ const toDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
-  const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping, otherUserId } = useCustomerChat({ threadId });
+const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) => {
+  const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping, otherUserId } = useCustomerChat({ threadId, receiverId: cleanerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
   const onlineUsers = useChatStore((state) => state.onlineUsers);
@@ -40,6 +40,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
   const editInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatBodyRef = useRef(null);
+  const lastReadReceiptRef = useRef({ threadId: null, messageId: null });
 
   useEffect(() => {
     const el = chatBodyRef.current;
@@ -48,12 +49,24 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
     // Only scroll when message count changes (new msg) or attachment is added, not on every status update
   }, [messages.length, pendingAttachment]);
 
-  // Emit message:read when chat is viewed
+  // Emit message:read (and persist) when chat is viewed or when a new incoming message arrives.
   useEffect(() => {
-    if (messages.length > 0) {
-      markAsRead();
+    if (!messages.length) return;
+
+    const lastIncoming = [...messages].reverse().find((m) => m?.sender && m.sender !== 'customer');
+    const messageId = lastIncoming?.id ? String(lastIncoming.id) : null;
+    if (!messageId) return;
+
+    if (
+      lastReadReceiptRef.current.threadId === String(threadId) &&
+      lastReadReceiptRef.current.messageId === messageId
+    ) {
+      return;
     }
-  }, [threadId]);
+
+    lastReadReceiptRef.current = { threadId: String(threadId), messageId };
+    markAsRead({ messageId });
+  }, [threadId, messages.length, markAsRead]);
 
   const openFilePicker = () => {
     fileInputRef.current?.click();
@@ -133,19 +146,26 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle }) => {
   };
 
   const handleSend = async () => {
-    const result = await sendMessage({
-      text: draftMessage,
-      attachment: pendingAttachment
-    });
+    const textToSend = draftMessage;
+    const attachmentToSend = pendingAttachment;
 
-    if (!result.success) {
-      setInputError(result.error);
-      return;
-    }
-
+    // 1. Clear UI immediately for better UX (Optimistic clear)
     setDraftMessage('');
     setPendingAttachment(null);
     setInputError('');
+
+    // 2. Send in background
+    const result = await sendMessage({
+      text: textToSend,
+      attachment: attachmentToSend
+    });
+
+    // 3. Handle Failure: Restore draft so user doesn't lose it
+    if (!result.success) {
+      setInputError(result.error);
+      setDraftMessage(textToSend);
+      if (attachmentToSend) setPendingAttachment(attachmentToSend);
+    }
   };
 
   return (
