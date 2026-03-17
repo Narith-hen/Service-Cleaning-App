@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   BellOutlined,
   CheckOutlined,
@@ -32,6 +33,8 @@ const CleanerHeader = () => {
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
 
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
@@ -52,15 +55,6 @@ const CleanerHeader = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target) &&
-        notificationButtonRef.current &&
-        !notificationButtonRef.current.contains(event.target)
-      ) {
-        setIsNotificationOpen(false);
-      }
-
-      if (
         profileRef.current &&
         !profileRef.current.contains(event.target) &&
         profileButtonRef.current &&
@@ -74,6 +68,27 @@ const CleanerHeader = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleNavbarMessage = (event) => {
+      const detail = event?.detail || {};
+      if (!detail.text) return;
+      setToast({ text: detail.text, type: detail.type || 'success' });
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = setTimeout(() => setToast(null), detail.duration || 3000);
+    };
+
+    window.addEventListener('cleaner:navbar-message', handleNavbarMessage);
+    return () => {
+      window.removeEventListener('cleaner:navbar-message', handleNavbarMessage);
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+
   const handleNotificationClick = (notification) => {
     if (!notification.is_read) {
       markAsRead(notification.id);
@@ -85,11 +100,8 @@ const CleanerHeader = () => {
   };
 
   const handleBellClick = () => {
-    setIsNotificationOpen(!isNotificationOpen);
     setIsProfileOpen(false);
-    if (!isNotificationOpen) {
-      fetchNotifications(true);
-    }
+    setIsNotificationOpen(true);
   };
 
   const handleProfileClick = () => {
@@ -136,21 +148,10 @@ const CleanerHeader = () => {
     }
   };
 
-  return (
-    <header className="admin-header">
-      <div className="header-controls">
-        <div className="dropdown-wrapper">
-          <button
-            ref={notificationButtonRef}
-            className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
-            onClick={handleBellClick}
-            title="Notifications"
-          >
-            <BellOutlined />
-            {unreadCount > 0 && <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-          </button>
-
-          {isNotificationOpen && (
+  const notificationOverlay =
+    isNotificationOpen && typeof document !== 'undefined'
+      ? createPortal(
+          <div className="notification-overlay">
             <div className="dropdown-menu notifications-dropdown" ref={notificationRef}>
               <div className="dropdown-header">
                 <h3>Notifications</h3>
@@ -196,7 +197,7 @@ const CleanerHeader = () => {
                 <div className="dropdown-footer">
                   <button
                     onClick={() => {
-                      navigate('/notifications');
+                      navigate('/cleaner/notifications');
                       setIsNotificationOpen(false);
                     }}
                   >
@@ -205,7 +206,32 @@ const CleanerHeader = () => {
                 </div>
               )}
             </div>
-          )}
+          </div>,
+          document.body
+        )
+      : null;
+
+  return (
+    <>
+      {notificationOverlay}
+      <header className="admin-header">
+      {toast && (
+        <div className={`header-toast ${toast.type}`}>
+          <span>{toast.text}</span>
+        </div>
+      )}
+      <div className="header-controls">
+        <div className="dropdown-wrapper">
+          <button
+            ref={notificationButtonRef}
+            type="button"
+            className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
+            onClick={handleBellClick}
+            title="Notifications"
+          >
+            <BellOutlined />
+            {unreadCount > 0 && <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+          </button>
         </div>
 
         <div className="dropdown-wrapper">
@@ -265,7 +291,8 @@ const CleanerHeader = () => {
           )}
         </div>
       </div>
-    </header>
+      </header>
+    </>
   );
 };
 

@@ -8,6 +8,242 @@
   min-height: 100vh;
 }
 
+.cleaner-settings-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.settings-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+}
+
+.settings-hero-media {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-hero-text {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.settings-hero-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e2e8f0;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.settings-panels {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+}
+
+.settings-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+
+  h3 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.settings-section-title {
+  margin: 16px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  input,
+  select {
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0 12px;
+    font-size: 14px;
+    color: #0f172a;
+    background: #ffffff;
+  }
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+}
+
+.field-error {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.password-rule {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 600;
+  text-align: left;
+}
+
+.password-rule.is-valid {
+  color: #16a34a;
+}
+
+.settings-password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input {
+    width: 100%;
+    padding-right: 46px;
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+  }
+
+  input::placeholder {
+    color: #94a3b8;
+  }
+}
+
+.settings-eye-btn {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-eye-btn.icon {
+  width: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.settings-eye-btn.inside {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  height: 30px;
+  width: 30px;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.settings-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.settings-ghost-button {
+  border: 1px solid #dbe2ea;
+  background: #f8fafc;
+  color: #1e293b;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.settings-primary-button {
+  margin-top: 8px;
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .settings-container {
   max-width: 840px;
   margin: 0 auto;
@@ -885,9 +1121,22 @@
   .settings-grid {
     grid-template-columns: 1fr;
   }
+
+  .settings-panels {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
+  .settings-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
   .settings-profile-banner h1 {
     font-size: 29px;
   }

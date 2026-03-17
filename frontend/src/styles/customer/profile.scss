@@ -125,6 +125,30 @@
     }
   }
 
+  .profile-update-btn {
+    border: 1px solid #d6e2ee;
+    background: #f8fafc;
+    color: #0f172a;
+    padding: 8px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+  }
+
   .profile-message {
     margin: 14px 0 0;
     padding: 11px 13px;

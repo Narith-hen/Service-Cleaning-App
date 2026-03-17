@@ -5,7 +5,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import '../../../styles/customer/profile.scss';
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateUser, uploadAvatar } = useAuth();
   const location = useLocation();
   const fileInputRef = useRef(null);
 
@@ -31,6 +31,8 @@ const ProfilePage = () => {
   const [draft, setDraft] = useState(baseProfile);
   const [isEditing, setIsEditing] = useState(location.pathname.endsWith('/edit'));
   const [message, setMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setProfile(baseProfile);
@@ -61,7 +63,9 @@ const ProfilePage = () => {
 
   const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
   const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
-  const initials = (firstInitial + lastInitial) || String(draft.name || 'C').trim().charAt(0).toUpperCase() || 'C';
+  const initials = (firstInitial + lastInitial)
+    || String(draft.name || 'C').trim().charAt(0).toUpperCase()
+    || 'C';
 
   const handleDraftChange = (key, value) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -69,6 +73,43 @@ const ProfilePage = () => {
 
   const handlePickImage = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleSaveAvatarFile = async (file, previewUrl) => {
+    if (!file && !previewUrl) {
+      setMessage('Please choose a photo first.');
+      return;
+    }
+
+    setIsSaving(true);
+    setMessage('');
+
+    try {
+      if (file) {
+        const result = await uploadAvatar(file);
+        if (!result?.success) {
+          throw new Error(result?.error || 'Failed to upload photo.');
+        }
+        const nextAvatar = result.user?.avatar || previewUrl || draft.avatar;
+        setProfile((prev) => ({ ...prev, avatar: nextAvatar }));
+        setDraft((prev) => ({ ...prev, avatar: nextAvatar }));
+      } else {
+        const result = await updateUser({ avatar: previewUrl || draft.avatar });
+        if (!result?.success) {
+          throw new Error(result?.error || 'Failed to update photo.');
+        }
+        const nextAvatar = result.user?.avatar || previewUrl || draft.avatar;
+        setProfile((prev) => ({ ...prev, avatar: nextAvatar }));
+        setDraft((prev) => ({ ...prev, avatar: nextAvatar }));
+      }
+
+      setSelectedFile(null);
+      setMessage('Photo updated successfully.');
+    } catch (error) {
+      setMessage(error.message || 'Failed to upload photo.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAvatarChange = (event) => {
@@ -82,8 +123,11 @@ const ProfilePage = () => {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setDraft((prev) => ({ ...prev, avatar: String(reader.result) }));
+      const previewUrl = String(reader.result);
+      setDraft((prev) => ({ ...prev, avatar: previewUrl }));
+      setSelectedFile(file);
       setMessage('');
+      handleSaveAvatarFile(file, previewUrl);
     };
     reader.readAsDataURL(file);
   };
@@ -121,7 +165,12 @@ const ProfilePage = () => {
             ) : (
               <div className="avatar-fallback">{initials}</div>
             )}
-            <button type="button" className="avatar-edit-btn" onClick={handlePickImage} aria-label="Change photo">
+            <button
+              type="button"
+              className="avatar-edit-btn"
+              onClick={handlePickImage}
+              aria-label="Change photo"
+            >
               <CameraOutlined />
             </button>
             <input
@@ -132,6 +181,15 @@ const ProfilePage = () => {
               style={{ display: 'none' }}
             />
           </div>
+
+          <button
+            type="button"
+            className="profile-update-btn"
+            onClick={handlePickImage}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Updating...' : 'Update'}
+          </button>
 
           <p className={`hero-status ${isOnline ? 'is-online' : 'is-offline'}`}>
             {isOnline ? 'online' : 'offline'}
