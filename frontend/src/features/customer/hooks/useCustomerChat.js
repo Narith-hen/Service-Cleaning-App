@@ -37,6 +37,7 @@ const sanitizeMessages = (messages) => {
 
   return messages
     .filter(Boolean)
+    .filter((message) => !String(message.id || '').startsWith('auto-accept-'))
     .map((message, index) => ({
       id: String(message.id || `message-${index + 1}`),
       sender: message.sender === 'customer' ? 'customer' : 'cleaner',

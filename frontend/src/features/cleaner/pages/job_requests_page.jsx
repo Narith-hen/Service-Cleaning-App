@@ -1,9 +1,9 @@
 ﻿﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
   ClockCircleOutlined,
-  DollarCircleOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   FileTextOutlined
@@ -14,7 +14,22 @@ import '../../../styles/cleaner/my_jobs.scss';
 import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/bookingSync';
 import api from '../../../services/api';
 
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+
+// Create a shared socket instance
+let socketInstance = null;
+const getSocket = () => {
+  if (!socketInstance) {
+    socketInstance = io(SOCKET_URL, {
+      autoConnect: false,
+      transports: ['websocket', 'polling']
+    });
+  }
+  return socketInstance;
+};
+
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
 const mapBookingToRequest = (booking) => {
   const date = booking?.booking_date ? new Date(booking.booking_date) : null;
@@ -31,11 +46,13 @@ const mapBookingToRequest = (booking) => {
       [booking.first_name, booking.last_name].filter(Boolean).join(' ').trim() ||
       booking.user?.username ||
       'Customer',
+    customerAvatar: booking.customer_avatar || booking.user?.avatar || '',
     address: booking.address || 'Address shared after accept',
     timeRange: startTime,
     amount: toMoney(booking.total_price || 0),
     month,
     day,
+    bookingDate: booking?.booking_date || null,
     status: booking.booking_status || 'pending'
   };
 };
@@ -62,34 +79,47 @@ const JobRequestsPage = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [activeMessageRequestId, setActiveMessageRequestId] = useState(null);
-  const [adjustmentTotalById, setAdjustmentTotalById] = useState({});
   const [detailRequestId, setDetailRequestId] = useState(null);
   const [acceptLoadingRequestId, setAcceptLoadingRequestId] = useState(null);
   const acceptDelayTimerRef = useRef(null);
+  const socketRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
 
-  const getDefaultAdjustmentTotal = (request) => {
-    if (!request) return '185.00';
-    if (request.serviceTone === 'deep') return '185.00';
-    const numericAmount = Number(String(request.amount || '').replace(/[^0-9.]/g, ''));
-    return Number.isFinite(numericAmount) && numericAmount > 0 ? numericAmount.toFixed(2) : '0.00';
-  };
+  const persistConfirmedJob = (request) => {
+    if (!request) return;
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const bookingDate = request.bookingDate ? new Date(request.bookingDate) : new Date();
+    const monthYear = `${monthNames[bookingDate.getMonth()]} ${bookingDate.getFullYear()}`;
 
-  const normalizeMoneyInput = (value) => {
-    const cleaned = String(value || '').replace(/[^0-9.]/g, '');
-    const [head = '', ...tail] = cleaned.split('.');
-    const decimal = tail.join('').slice(0, 2);
-    return decimal.length > 0 ? `${head}.${decimal}` : head;
-  };
+    const confirmedJob = {
+      id: `confirmed-${request.id}`,
+      sourceRequestId: request.id,
+      status: 'upcoming',
+      title: request.serviceTone === 'deep' ? 'Deep House Cleaning' : request.service,
+      jobId: `#SOMA-${request.id}`,
+      price: request.amount || toMoney(0),
+      day: request.day || String(bookingDate.getDate()),
+      monthYear,
+      timeRange: request.timeRange || '09:00 AM - 12:00 PM',
+      location: request.address,
+      customer: request.customer,
+      customerId: request.customerId || '3',
+      customerAvatar: request.customerAvatar || '',
+      bedrooms: '3 Bedrooms',
+      floors: '2 Floors'
+    };
 
-  const handleAdjustmentTotalChange = (requestId, value) => {
-    setAdjustmentTotalById((prev) => ({
-      ...prev,
-      [requestId]: normalizeMoneyInput(value)
-    }));
+    try {
+      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
+    } catch {
+      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
+    }
   };
 
   const fetchRequests = async () => {
@@ -107,6 +137,45 @@ const JobRequestsPage = () => {
 
   useEffect(() => {
     fetchRequests();
+  }, []);
+
+  useEffect(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
+
+    const onConnect = () => {
+      console.log('[JobRequests] Socket connected');
+    };
+
+    socket.on('connect', onConnect);
+
+    if (!socket.connected) {
+      const token = (() => {
+        try {
+          const stored = JSON.parse(localStorage.getItem('user') || 'null');
+          return stored?.token || localStorage.getItem('token') || null;
+        } catch {
+          return localStorage.getItem('token') || null;
+        }
+      })();
+      if (token) {
+        let userId = 'unknown';
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || 'null');
+          userId = user?.id || user?.user_id || userId;
+        } catch {
+          /* ignore */
+        }
+        socket.auth = { token, userId };
+        socket.connect();
+      }
+    } else {
+      onConnect();
+    }
+
+    return () => {
+      socket.off('connect', onConnect);
+    };
   }, []);
 
   useEffect(() => () => {
@@ -218,12 +287,51 @@ const JobRequestsPage = () => {
       try {
         await api.patch(`/bookings/${request.id}/claim`);
         markRequestAccepted(request.id);
-        openMessageView(request);
+        persistConfirmedJob(request);
+        setStatusMessage('Opening chat...');
+        navigate(`/cleaner/messages?thread=${request.id}`);
         // flag for customer side to pick up and jump to chat
         try {
           localStorage.setItem(ACCEPTED_BOOKING_KEY, String(request.id));
         } catch {
           /* ignore storage errors */
+        }
+        // Notify customer in real time so they can jump to chat
+        const socket = socketRef.current;
+        if (socket) {
+          const cleanerDetails = (() => {
+            try {
+              const stored = JSON.parse(localStorage.getItem('user') || 'null');
+              const name = [stored?.first_name, stored?.last_name].filter(Boolean).join(' ').trim();
+              return {
+                id: stored?.id || stored?.user_id || 'cleaner',
+                name: name || stored?.username || 'Cleaner'
+              };
+            } catch {
+              return { id: 'cleaner', name: 'Cleaner' };
+            }
+          })();
+          if (socket.connected) {
+            socket.emit('job:accepted', { bookingId: request.id, cleaner: cleanerDetails });
+          } else {
+            const emitWhenReady = () => {
+              socket.emit('job:accepted', { bookingId: request.id, cleaner: cleanerDetails });
+              socket.off('connect', emitWhenReady);
+            };
+            socket.on('connect', emitWhenReady);
+            if (!socket.connected) {
+              try {
+                const stored = JSON.parse(localStorage.getItem('user') || 'null');
+                const token = stored?.token || localStorage.getItem('token') || null;
+                if (token) {
+                  socket.auth = { token, userId: cleanerDetails.id };
+                  socket.connect();
+                }
+              } catch {
+                /* ignore */
+              }
+            }
+          }
         }
       } catch (error) {
         const status = error?.response?.status;
@@ -239,55 +347,6 @@ const JobRequestsPage = () => {
       }
     };
     acceptBooking();
-  };
-
-  const handleConfirmAdjustment = (request, totalInputValue) => {
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    const now = new Date();
-    const monthYear = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-    const normalizedRequest = request || activeRequest;
-    if (!normalizedRequest) return;
-    const parsedTotal = Number(totalInputValue);
-    const numericTotal = Number.isFinite(parsedTotal) && parsedTotal > 0
-      ? parsedTotal
-      : Number(getDefaultAdjustmentTotal(normalizedRequest));
-    const safeTotal = toMoney(numericTotal);
-
-    // Ensure request is accepted when adjustment is confirmed.
-    setRequests((prev) =>
-      prev.map((job) =>
-        job.id === normalizedRequest.id ? { ...job, status: 'accepted' } : job
-      )
-    );
-
-    const confirmedJob = {
-      id: `confirmed-${normalizedRequest.id}`,
-      sourceRequestId: normalizedRequest.id,
-      status: 'upcoming',
-      title: normalizedRequest.serviceTone === 'deep' ? 'Deep House Cleaning' : normalizedRequest.service,
-      jobId: `#SOMA-${normalizedRequest.id}`,
-      price: safeTotal,
-      day: normalizedRequest.day || String(now.getDate()),
-      monthYear,
-      timeRange: normalizedRequest.timeRange || '09:00 AM - 12:00 PM',
-      location: normalizedRequest.address,
-      customer: normalizedRequest.customer,
-      customerId: normalizedRequest.customerId || '3',
-      bedrooms: '3 Bedrooms',
-      floors: '2 Floors'
-    };
-
-    try {
-      // Keep only one latest confirmed job for My Jobs page.
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
-    } catch {
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
-    }
-
-    navigate('/cleaner/my-jobs');
   };
 
   if (activeRequest) {
@@ -342,38 +401,6 @@ const JobRequestsPage = () => {
             </button>
 
             <div className="my-jobs-map-preview" />
-
-            <div className="adjustment-card">
-              <h4>
-                <span className="adjustment-title-icon"><DollarCircleOutlined /></span>
-                Cost of cleaning
-              </h4>
-              <p>You&apos;ve requested an additional $35.00 for Window Cleaning services.</p>
-              <div className="adjustment-actions">
-                <div className="adjustment-total">
-                  <small>Total Job :</small>
-                  <div className="total-input-wrap">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Enter your cost"
-                      value={adjustmentTotalById[activeRequest.id] ?? ''}
-                      onChange={(e) => handleAdjustmentTotalChange(activeRequest.id, e.target.value)}
-                      aria-label="Total job amount"
-                    />
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleConfirmAdjustment(
-                    activeRequest,
-                    adjustmentTotalById[activeRequest.id] ?? ''
-                  )}
-                >
-                  Submit
-                </button>
-              </div>
-            </div>
           </aside>
         </div>
       </div>

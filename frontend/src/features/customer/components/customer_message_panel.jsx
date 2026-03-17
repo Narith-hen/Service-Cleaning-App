@@ -178,7 +178,6 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) =>
           </div>
           <div>
             <h3>{cleanerName}</h3>
-            <p>{subtitle}</p>
           </div>
         </div>
         <div className="my-jobs-chat-header-actions">

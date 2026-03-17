@@ -205,7 +205,7 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                     <p className={`mb-6 line-clamp-3 leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
                       {truncateWords(service.description, 25)}
                     </p>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-center">
                       <Link
                         to={bookServicePath}
                         state={{
@@ -218,7 +218,7 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                             image: service.image
                           }
                         }}
-                        className={`inline-flex items-center gap-2 rounded-lg border border-[#32c753] px-5 py-2.5 text-sm font-bold transition-all duration-300 hover:bg-[#32c753] hover:text-white ${
+                        className={`inline-flex items-center gap-2 rounded-[24px] border border-[#32c753] px-5 py-2.5 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#32c753] hover:text-white hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#32c753]/40 ${
                           darkMode ? "text-[#7ce892]" : "text-[#32c753]"
                         }`}
                       >
@@ -227,9 +227,6 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>
                       </Link>
-                      <span className={`text-xs font-medium ${darkMode ? "text-slate-500" : "text-gray-400"}`}>
-                        View Details
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -241,3 +238,5 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
     </div>
   );
 }
+
+
