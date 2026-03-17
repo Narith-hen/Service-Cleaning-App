@@ -8,7 +8,10 @@ import {
   SoundOutlined,
   AudioMutedOutlined,
   PlusCircleOutlined,
-  SendOutlined
+  SendOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
 import { formatCleanerChatTime, useCleanerChat } from '../hooks/useCleanerChat';
 import { useChatStore } from '../../../store/chatStore';
@@ -23,7 +26,16 @@ const toDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-const CleanerMessagePanel = ({ threadId, customerName, subtitle, customerId, customerAvatar }) => {
+const CleanerMessagePanel = ({ 
+  threadId, 
+  customerName, 
+  subtitle, 
+  customerId, 
+  customerAvatar,
+  customerPhone,
+  customerEmail,
+  customerAddress 
+}) => {
   const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping, otherUserId } = useCleanerChat({ threadId, receiverId: customerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
@@ -190,8 +202,21 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle, customerId, cus
             </div>
             <span className={`my-jobs-chat-online-dot ${isOtherOnline ? 'online' : 'offline'}`} />
           </div>
-          <div>
+          <div className="my-jobs-customer-info">
             <h3>{customerName}</h3>
+            {(customerPhone || customerEmail || customerAddress) && (
+              <div className="my-jobs-customer-details">
+                {customerPhone && (
+                  <span><PhoneOutlined /> {customerPhone}</span>
+                )}
+                {customerEmail && (
+                  <span><MailOutlined /> {customerEmail}</span>
+                )}
+                {customerAddress && (
+                  <span><EnvironmentOutlined /> {customerAddress}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

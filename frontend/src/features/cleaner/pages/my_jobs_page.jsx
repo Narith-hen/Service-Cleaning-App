@@ -18,10 +18,23 @@ import homeImage from '../../../assets/home.png';
 import windowImage from '../../../assets/window.png';
 import constructionImage from '../../../assets/Construction Cleaning.png';
 import customerHomeImage from '../../../assets/customer_home.png';
+import customerAvatar1 from '../../../assets/larryta.png';
+import customerAvatar2 from '../../../assets/mey.JPG';
+import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
+
+// Helper to save chat threads to localStorage
+const saveChatThreads = (threads) => {
+  try {
+    localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
 
 const pickJobImage = (job) => {
   // Apply real service images based on job type/service
@@ -52,6 +65,10 @@ const fallbackJobs = [
     timeRange: '09:00 AM - 12:00 PM',
     location: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
     customer: 'Sovan Reach',
+    customerId: '3',
+    customerPhone: '+855 12 345 678',
+    customerEmail: 'sovanreach@email.com',
+    customerAvatar: customerAvatar1,
     bedrooms: '3 Bedrooms',
     floors: '2 Floors',
     image: homeImage,
@@ -69,6 +86,10 @@ const fallbackJobs = [
     timeRange: '08:00 AM - 11:00 AM',
     location: '456 Business Center, Phnom Penh, Cambodia',
     customer: 'Mey Sotharith',
+    customerId: '4',
+    customerPhone: '+855 10 987 654',
+    customerEmail: 'meysotharith@company.com',
+    customerAvatar: customerAvatar2,
     bedrooms: '5 Rooms',
     floors: '1 Floor',
     image: officeImage,
@@ -86,6 +107,10 @@ const fallbackJobs = [
     timeRange: '10:00 AM - 01:00 PM',
     location: '789 Riverside, Phnom Penh, Cambodia',
     customer: 'Larry Ta',
+    customerId: '5',
+    customerPhone: '+855 98 765 432',
+    customerEmail: 'larryta@email.com',
+    customerAvatar: customerAvatar3,
     bedrooms: '4 Bedrooms',
     floors: '2 Floors',
     image: windowImage,
@@ -129,6 +154,10 @@ const MyJobsPage = () => {
           timeRange: job.timeRange || '09:00 AM - 12:00 PM',
           location: job.location || 'Phnom Penh, Cambodia',
           customer: job.customer || 'Customer',
+          customerId: job.customerId || job.customer_id || '3',
+          customerPhone: job.customerPhone || job.customer_phone || '',
+          customerEmail: job.customerEmail || job.customer_email || '',
+          customerAvatar: job.customerAvatar || '',
           bedrooms: job.bedrooms || '3 Bedrooms',
           floors: job.floors || '2 Floors',
           serviceType: job.serviceType || 'home',
@@ -211,6 +240,11 @@ const MyJobsPage = () => {
           <CleanerMessagePanel
             threadId={activeMessageJob.sourceRequestId || activeMessageJob.id}
             customerName={activeMessageJob.customer}
+            customerId={activeMessageJob.customerId || '3'}
+            customerAvatar={activeMessageJob.customerAvatar}
+            customerPhone={activeMessageJob.customerPhone}
+            customerEmail={activeMessageJob.customerEmail}
+            customerAddress={activeMessageJob.location}
             subtitle={`${activeMessageJob.title} Job - ${activeMessageJob.jobId}`}
           />
 
@@ -367,7 +401,42 @@ const MyJobsPage = () => {
                 <button
                   type="button"
                   className="ghost-btn"
-                  onClick={() => setActiveMessageJobId(job.id)}
+                  onClick={() => {
+                    // Save job to chat threads for history
+                    const threadData = {
+                      id: job.id,
+                      sourceRequestId: job.sourceRequestId,
+                      status: job.status,
+                      title: job.title,
+                      jobId: job.jobId,
+                      price: job.price,
+                      day: job.day,
+                      monthYear: job.monthYear,
+                      timeRange: job.timeRange,
+                      location: job.location,
+                      customer: job.customer,
+                      customerId: job.customerId || '3',
+                      customerPhone: job.customerPhone || '',
+                      customerEmail: job.customerEmail || '',
+                      customerAvatar: job.customerAvatar || '',
+                      bedrooms: job.bedrooms,
+                      floors: job.floors,
+                      image: job.image,
+                      serviceType: job.serviceType
+                    };
+                    
+                    try {
+                      const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+                      const existing = raw ? JSON.parse(raw) : [];
+                      const threadId = job.sourceRequestId || job.id;
+                      const filtered = existing.filter(t => (t.sourceRequestId || t.id) !== threadId);
+                      saveChatThreads([threadData, ...filtered]);
+                    } catch (e) {
+                      // Ignore
+                    }
+                    
+                    setActiveMessageJobId(job.id);
+                  }}
                 >
                   <MessageOutlined /> Messages
                 </button>

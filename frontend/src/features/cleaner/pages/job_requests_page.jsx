@@ -111,12 +111,26 @@ const JobRequestsPage = () => {
       customer: request.customer,
       customerId: request.customerId || '3',
       customerAvatar: request.customerAvatar || '',
+      customerPhone: request.customerPhone || '',
+      customerEmail: request.customerEmail || '',
       bedrooms: '3 Bedrooms',
       floors: '2 Floors'
     };
 
     try {
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
+      // Get existing jobs
+      const existingRaw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const existingJobs = existingRaw ? JSON.parse(existingRaw) : [];
+      
+      // Add new job to the beginning
+      const updatedJobs = [confirmedJob, ...existingJobs];
+      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updatedJobs));
+      
+      // Also save to chat threads for history
+      const chatRaw = localStorage.getItem(CLEANER_CHAT_STORAGE_KEY);
+      const existingThreads = chatRaw ? JSON.parse(chatRaw) : {};
+      existingThreads[request.id] = []; // Initialize empty messages for this thread
+      localStorage.setItem(CLEANER_CHAT_STORAGE_KEY, JSON.stringify(existingThreads));
     } catch {
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
     }

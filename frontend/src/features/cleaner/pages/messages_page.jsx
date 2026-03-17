@@ -16,7 +16,30 @@ import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/cleaner/messages.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
 const fallbackThreads = [];
+
+// Helper to save chat threads to localStorage
+const saveChatThreads = (threads) => {
+  try {
+    localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
+
+// Helper to load chat threads from localStorage
+const loadChatThreads = () => {
+  try {
+    const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    // Ignore
+  }
+  return [];
+};
 
 const normalizeThread = (job, index) => ({
   id: String(job?.id || job?.sourceRequestId || `thread-${index + 1}`),
@@ -32,6 +55,9 @@ const normalizeThread = (job, index) => ({
   customer: job?.customer || 'Customer',
   customerId: job?.customerId || job?.customer_id || '3',
   customerAvatar: job?.customerAvatar || job?.customer_avatar || '',
+  customerPhone: job?.customerPhone || job?.customer_phone || '',
+  customerEmail: job?.customerEmail || job?.customer_email || '',
+  customerAddress: job?.customerAddress || job?.customer_address || job?.location || '',
   bedrooms: job?.bedrooms || '3 Bedrooms',
   floors: job?.floors || '2 Floors',
   image: job?.image || officeImage
@@ -74,15 +100,36 @@ const MessagesPage = () => {
 
   useEffect(() => {
     try {
+      // First, try to load saved chat threads from localStorage
+      const savedThreads = loadChatThreads();
+      
+      // Also load from confirmed jobs
       const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        setThreads([]);
+      if (!raw && savedThreads.length > 0) {
+        // No new jobs but have old chat threads - use those
+        setThreads(savedThreads);
         return;
       }
+      
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        // Use saved threads if no new jobs
+        setThreads(savedThreads.length > 0 ? savedThreads : []);
+        return;
+      }
+      
       const normalized = parsed.filter(Boolean).map(normalizeThread);
-      setThreads(normalized);
+      
+      // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
+      const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
+      const mergedThreads = [
+        ...normalized,
+        ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
+      ];
+      
+      // Save merged threads back to localStorage
+      saveChatThreads(mergedThreads);
+      setThreads(mergedThreads);
     } catch {
       setThreads([]);
     }
@@ -283,7 +330,13 @@ const MessagesPage = () => {
                   className={`cleaner-messages-thread ${isActive ? 'active' : ''}`}
                   onClick={() => handleSelectThread(thread)}
                 >
-                  <div className="thread-avatar">{thread.customer.charAt(0)}</div>
+                  <div className="thread-avatar">
+                    {thread.customerAvatar ? (
+                      <img src={thread.customerAvatar} alt={thread.customer} className="thread-avatar-image" />
+                    ) : (
+                      thread.customer.charAt(0)
+                    )}
+                  </div>
                   <div className="thread-meta">
                     <strong>{thread.customer}</strong>
                     <span>{preview}</span>
@@ -308,6 +361,9 @@ const MessagesPage = () => {
                 customerName={activeThread.customer}
                 customerId={String(activeThread.customerId)}
                 customerAvatar={activeThread.customerAvatar}
+                customerPhone={activeThread.customerPhone}
+                customerEmail={activeThread.customerEmail}
+                customerAddress={activeThread.customerAddress}
                 subtitle={`${activeThread.title} Job - ${activeThread.jobId}`}
               />
 
