@@ -15,6 +15,7 @@ import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/customer/messages.scss';
 
 const fallbackBookings = [];
+const CUSTOMER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
 const getPreviewText = (messageList) => {
   if (!Array.isArray(messageList) || messageList.length === 0) return 'Tap to open conversation.';
@@ -59,6 +60,30 @@ const getAuthToken = () => {
   }
 };
 
+const readStoredThreadIds = () => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_CHAT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return [];
+    return Object.keys(parsed || {}).filter((key) => key && key !== 'default');
+  } catch {
+    return [];
+  }
+};
+
+const hasStoredMessages = (threadId) => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_CHAT_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    const list = parsed && typeof parsed === 'object' ? parsed[String(threadId)] : null;
+    return Array.isArray(list) && list.length > 0;
+  } catch {
+    return false;
+  }
+};
+
 const CustomerMessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [bookings, setBookings] = useState([]);
@@ -68,6 +93,7 @@ const CustomerMessagesPage = () => {
     searchParams.get('thread') || searchParams.get('booking')
   );
   const unreadByThread = useChatStore((state) => state.unreadByThread);
+  const emptyPreviewText = 'Tap to open conversation.';
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -94,6 +120,45 @@ const CustomerMessagesPage = () => {
           ];
         }
 
+        const storedThreadIds = readStoredThreadIds();
+        if (storedThreadIds.length) {
+          const existing = new Set(normalizedBookings.map((b) => String(b.booking_id)));
+          const synthetic = storedThreadIds
+            .filter((id) => !existing.has(String(id)))
+            .map((id) =>
+              normalizeBooking({
+                booking_id: id,
+                booking_date: new Date().toISOString(),
+                booking_time: '09:00 AM',
+                address: 'Location not provided',
+                service: { name: 'Cleaning Service' },
+                cleaner: { id: '11', username: 'Cleaner' }
+              })
+            );
+          normalizedBookings = [...synthetic, ...normalizedBookings];
+
+          if (getAuthToken()) {
+            const toHydrate = storedThreadIds.filter((id) => !existing.has(String(id)));
+            const hydrated = await Promise.all(
+              toHydrate.map(async (id) => {
+                try {
+                  const resp = await api.get(`/bookings/track/${id}`);
+                  const data = resp?.data?.data;
+                  return data ? normalizeBooking(data) : null;
+                } catch {
+                  return null;
+                }
+              })
+            );
+
+            hydrated.filter(Boolean).forEach((entry) => {
+              normalizedBookings = normalizedBookings.map((booking) =>
+                String(booking.booking_id) === String(entry.booking_id) ? entry : booking
+              );
+            });
+          }
+        }
+
         setBookings(normalizedBookings);
       } catch (error) {
         console.error('Failed to fetch bookings:', error);
@@ -111,6 +176,44 @@ const CustomerMessagesPage = () => {
             }),
             ...normalizedBookings
           ];
+        }
+        const storedThreadIds = readStoredThreadIds();
+        if (storedThreadIds.length) {
+          const existing = new Set(normalizedBookings.map((b) => String(b.booking_id)));
+          const synthetic = storedThreadIds
+            .filter((id) => !existing.has(String(id)))
+            .map((id) =>
+              normalizeBooking({
+                booking_id: id,
+                booking_date: new Date().toISOString(),
+                booking_time: '09:00 AM',
+                address: 'Location not provided',
+                service: { name: 'Cleaning Service' },
+                cleaner: { id: '11', username: 'Cleaner' }
+              })
+            );
+          normalizedBookings = [...synthetic, ...normalizedBookings];
+
+          if (getAuthToken()) {
+            const toHydrate = storedThreadIds.filter((id) => !existing.has(String(id)));
+            const hydrated = await Promise.all(
+              toHydrate.map(async (id) => {
+                try {
+                  const resp = await api.get(`/bookings/track/${id}`);
+                  const data = resp?.data?.data;
+                  return data ? normalizeBooking(data) : null;
+                } catch {
+                  return null;
+                }
+              })
+            );
+
+            hydrated.filter(Boolean).forEach((entry) => {
+              normalizedBookings = normalizedBookings.map((booking) =>
+                String(booking.booking_id) === String(entry.booking_id) ? entry : booking
+              );
+            });
+          }
         }
         setBookings(normalizedBookings);
       } finally {
@@ -130,12 +233,12 @@ const CustomerMessagesPage = () => {
         return;
       }
 
-      if (!getAuthToken()) {
-        const fallbackMap = bookings.reduce((acc, booking) => {
-          const threadId = String(booking.booking_id);
-          acc[threadId] = 'Tap to open conversation.';
-          return acc;
-        }, {});
+        if (!getAuthToken()) {
+          const fallbackMap = bookings.reduce((acc, booking) => {
+            const threadId = String(booking.booking_id);
+            acc[threadId] = emptyPreviewText;
+            return acc;
+          }, {});
         if (!cancelled) {
           setThreadPreviews(fallbackMap);
         }
@@ -151,7 +254,7 @@ const CustomerMessagesPage = () => {
               const payload = response?.data?.data || [];
               return [threadId, getPreviewText(payload)];
             } catch {
-              return [threadId, 'Tap to open conversation.'];
+              return [threadId, emptyPreviewText];
             }
           })
         );
@@ -181,23 +284,37 @@ const CustomerMessagesPage = () => {
   }, [searchParams, activeThreadId]);
 
   useEffect(() => {
-    if (!bookings.length) return;
+    if (!visibleBookings.length) return;
     const normalizedActive = String(activeThreadId || '');
-    const exists = bookings.some((booking) => booking.booking_id === normalizedActive);
+    const exists = visibleBookings.some((booking) => booking.booking_id === normalizedActive);
     if (exists) return;
-    const first = bookings[0];
+    const first = visibleBookings[0];
     const nextId = String(first.booking_id);
     const params = new URLSearchParams(searchParams);
     params.set('thread', nextId);
     setSearchParams(params, { replace: true });
     setActiveThreadId(nextId);
-  }, [bookings, activeThreadId, searchParams, setSearchParams]);
+  }, [visibleBookings, activeThreadId, searchParams, setSearchParams]);
 
   const activeBooking = useMemo(() => {
-    if (!bookings.length) return null;
+    if (!visibleBookings.length) return null;
     const activeId = String(activeThreadId || '');
-    return bookings.find((b) => b.booking_id === activeId) || bookings[0];
-  }, [bookings, activeThreadId]);
+    return visibleBookings.find((b) => b.booking_id === activeId) || visibleBookings[0];
+  }, [visibleBookings, activeThreadId]);
+
+  const visibleBookings = useMemo(() => {
+    if (!bookings.length) return [];
+    const forcedId = String(searchParams.get('booking') || searchParams.get('thread') || '');
+    return bookings.filter((booking) => {
+      const threadId = String(booking.booking_id);
+      if (forcedId && threadId === forcedId) return true;
+      const preview = threadPreviews[threadId];
+      const unreadCount = unreadByThread[threadId] || 0;
+      if (unreadCount > 0) return true;
+      if (preview && preview !== emptyPreviewText) return true;
+      return hasStoredMessages(threadId);
+    });
+  }, [bookings, threadPreviews, unreadByThread, emptyPreviewText, searchParams]);
 
   const handleSelectThread = (booking) => {
     const nextId = String(booking.booking_id);
@@ -217,7 +334,7 @@ const CustomerMessagesPage = () => {
     );
   }
 
-  if (!bookings.length) {
+  if (!bookings.length || !visibleBookings.length) {
     return (
       <div className="customer-messages-page">
         <div className="customer-messages-empty">
@@ -249,7 +366,7 @@ const CustomerMessagesPage = () => {
           <p className="customer-messages-kicker">Conversations</p>
           <h1>Messages</h1>
         </div>
-        <span className="customer-messages-count">{bookings.length} threads</span>
+        <span className="customer-messages-count">{visibleBookings.length} threads</span>
       </div>
 
       <div className="customer-messages-shell">
@@ -259,10 +376,10 @@ const CustomerMessagesPage = () => {
             <MessageOutlined />
           </div>
           <div className="customer-messages-thread-list">
-            {bookings.map((booking) => {
+            {visibleBookings.map((booking) => {
               const threadId = String(booking.booking_id);
               const isActive = String(activeBooking?.booking_id) === threadId;
-              const preview = threadPreviews[threadId] || 'Tap to open conversation.';
+              const preview = threadPreviews[threadId] || emptyPreviewText;
               const unreadCount = unreadByThread[threadId] || 0;
               return (
                 <button

@@ -18,6 +18,8 @@ const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
   booking_id: String(booking?.booking_id ?? booking?.id ?? bookingIdFallback ?? 'unknown'),
   booking_date: booking?.booking_date || booking?.date || new Date().toISOString(),
   booking_time: booking?.booking_time || booking?.time || '',
+  total_price: booking?.total_price ?? booking?.price ?? null,
+  negotiated_price: booking?.negotiated_price ?? null,
   address:
     booking?.address
     || booking?.location
@@ -35,6 +37,12 @@ const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
   }
 });
 
+const formatMoney = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '';
+  return `$${numeric.toFixed(2)}`;
+};
+
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
   const { bookingId: pathBookingId } = useParams();
@@ -42,107 +50,38 @@ const CustomerChatPage = () => {
   const bookingId = pathBookingId || searchParams.get('booking');
   const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
   const LAST_BOOKING_KEY = 'last_booking_id';
+  const fallbackBookingId = (() => {
+    try {
+      return localStorage.getItem(LAST_BOOKING_KEY);
+    } catch {
+      return null;
+    }
+  })();
 
   const [dynamicBookings, setDynamicBookings] = useState(() => fallbackBookings);
 
   useEffect(() => {
-    const normalizeEntry = (trackData = {}, base = {}) => {
-      const cleanerName =
-        trackData.cleaner_display_name?.trim() ||
-        trackData.cleaner_full_name?.trim() ||
-        [trackData.cleaner_first_name, trackData.cleaner_last_name].filter(Boolean).join(' ').trim() ||
-        'Assigned Cleaner';
-
-      const dateStr = trackData.booking_date
-        ? new Date(trackData.booking_date).toDateString()
-        : base.booking_date
-          ? new Date(base.booking_date).toDateString()
-          : '';
-
-      return {
-        id: String(trackData.booking_id || base.booking_id || base.id || ''),
-        jobId: `#JOB-${trackData.booking_id || base.booking_id || base.id || ''}`,
-        title: trackData.service_name || base.service?.name || 'Cleaning',
-        cleanerName,
-        cleanerAvatar: trackData.cleaner_avatar || base.cleaner_avatar || '',
-        cleanerPhone: trackData.cleaner_phone || base.cleaner_phone || '',
-        cleanerEmail: trackData.cleaner_email || base.cleaner_email || '',
-        customerName: trackData.customer_full_name || '',
-        customerPhone: trackData.customer_phone || '',
-        customerEmail: trackData.customer_email || '',
-        date: dateStr,
-        time: trackData.booking_time || base.booking_time || '',
-        status: trackData.booking_status || base.booking_status || 'confirmed'
-      };
-    };
-
     const hydrateBookings = async () => {
+      const targetId = bookingId || fallbackBookingId;
+      if (targetId) {
+        try {
+          const resp = await api.get(`/bookings/track/${targetId}`);
+          const data = resp?.data?.data;
+          if (data) {
+            setDynamicBookings([normalizeTrackedBooking(data, targetId)]);
+            return;
+          }
+        } catch {
+          // ignore and fall back to list
+        }
+      }
+
       try {
-        const resp = await api.get(`/bookings/track/${bookingId}`);
-        const data = resp?.data?.data;
-        if (!data) return;
-        const entry = normalizeTrackedBooking(data, bookingId);
-        setDynamicBookings((prev) => {
-          const exists = prev.some((b) => String(b.booking_id) === String(entry.booking_id));
-          if (exists) {
-            return prev.map((b) => (String(b.booking_id) === String(entry.booking_id) ? entry : b));
-          }
-          return [entry, ...prev];
-        });
-        const bookings = listResp?.data?.data || [];
-
-        const enriched = await Promise.all(
-          bookings.map(async (b) => {
-            try {
-              const t = await api.get(`/bookings/track/${b.booking_id}`);
-              const track = t?.data?.data || {};
-              return normalizeEntry(track, b);
-            } catch {
-              return normalizeEntry({}, b);
-            }
-          })
-        );
-
-        if (bookingId && !enriched.some((b) => String(b.id) === String(bookingId))) {
-          try {
-            const t = await api.get(`/bookings/track/${bookingId}`);
-            const track = t?.data?.data;
-            if (track) {
-              enriched.unshift(normalizeEntry(track));
-            }
-          } catch {
-            /* ignore */
-          }
-        }
-
-        // If still empty but we have a booking id, try direct track fetch
-        const directId = bookingId || fallbackBookingId;
-        let finalList = [...enriched].sort((a, b) => Number(b.id) - Number(a.id));
-        if (!finalList.length && directId) {
-          try {
-            const t = await api.get(`/bookings/track/${directId}`);
-            const track = t?.data?.data;
-            if (track) finalList.push(normalizeEntry(track));
-          } catch {
-            /* ignore */
-          }
-        }
-
-        setDynamicBookings(finalList);
-      } catch (err) {
-        // If list fetch fails, try at least to load the targeted booking
-        if (bookingId) {
-          try {
-            const t = await api.get(`/bookings/track/${bookingId}`);
-            const track = t?.data?.data;
-            if (track) {
-              setDynamicBookings([normalizeEntry(track)]);
-              return;
-            }
-          } catch {
-            /* ignore */
-          }
-        }
+        const listResp = await api.get('/bookings', { params: { page: 1, limit: 20 } });
+        const bookings = Array.isArray(listResp?.data?.data) ? listResp.data.data : [];
+        const normalized = bookings.map((b) => normalizeTrackedBooking(b, b?.booking_id));
+        setDynamicBookings(normalized);
+      } catch {
         setDynamicBookings([]);
       }
     };
@@ -219,6 +158,9 @@ const CustomerChatPage = () => {
     || activeBooking.service_location
     || activeBooking.service?.location
     || 'Location not provided';
+  const negotiatedPrice = activeBooking?.negotiated_price != null
+    ? formatMoney(activeBooking.negotiated_price)
+    : '';
 
   return (
     <div className="cleaner-my-jobs-v2">
@@ -257,6 +199,16 @@ const CustomerChatPage = () => {
             </div>
           </div>
 
+          <div className="my-jobs-details-card my-jobs-details-card--service">
+            <div className="my-jobs-detail-row">
+              <span className="my-jobs-detail-icon"><FileTextOutlined /></span>
+              <div>
+                <small>Service</small>
+                <strong>{serviceName}</strong>
+              </div>
+            </div>
+          </div>
+
           <div className="my-jobs-checklist-card">
             <h6>Checklist Preview</h6>
             <ul>
@@ -269,6 +221,19 @@ const CustomerChatPage = () => {
           <button type="button" className="my-jobs-contract-btn">
             <FileTextOutlined /> View Full Job Contract
           </button>
+
+          {negotiatedPrice && (
+            <div className="my-jobs-price-card">
+              <div className="my-jobs-price-header">
+                <div>
+                  <small>NEGOTIATED PRICE</small>
+                  <strong>{negotiatedPrice}</strong>
+                </div>
+                <span className="my-jobs-price-badge">Cleaner</span>
+              </div>
+              <p className="my-jobs-price-status">Your cleaner submitted a new agreed price.</p>
+            </div>
+          )}
 
           <div className="my-jobs-map-preview" />
         </aside>

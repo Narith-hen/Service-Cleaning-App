@@ -23,6 +23,14 @@ const getUniqueIndexColumns = async (promiseDb, tableName, columnNames) => {
   return uniqueColumns;
 };
 
+const ensureBookingNegotiatedPriceColumn = async (promiseDb) => {
+  const [rows] = await promiseDb.query("SHOW COLUMNS FROM bookings LIKE 'negotiated_price'");
+  if (rows && rows.length > 0) return;
+  await promiseDb.query(
+    'ALTER TABLE bookings ADD COLUMN negotiated_price FLOAT NULL AFTER total_price'
+  );
+};
+
 const slugify = (value) =>
   String(value || '')
     .trim()
@@ -462,6 +470,68 @@ const updateBookingStatus = async (req, res, next) => {
   }
 };
 
+// Update negotiated price (cleaner/admin)
+const updateNegotiatedPrice = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const rawPrice = req.body?.negotiated_price;
+    const negotiatedPrice = Number(rawPrice);
+    if (!Number.isFinite(negotiatedPrice) || negotiatedPrice <= 0) {
+      return next(new AppError('Valid negotiated_price is required', 400));
+    }
+
+    const promiseDb = db.promise();
+    await ensureBookingNegotiatedPriceColumn(promiseDb);
+
+    const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const booking = rows?.[0];
+    if (!booking) return next(new AppError('Booking not found', 404));
+
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    if (roleName !== 'admin') {
+      const accountSource = String(req.user?.account_source || '').toLowerCase();
+      const rawCleanerId = req.user?.user_id;
+      const cleanerId = accountSource === 'cleaner_profile'
+        ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+        : rawCleanerId;
+      if (!cleanerId) return next(new AppError('Unauthorized', 401));
+      if (booking.cleaner_id && booking.cleaner_id !== cleanerId) {
+        return next(new AppError('Not authorized for this booking', 403));
+      }
+      if (!booking.cleaner_id) {
+        await promiseDb.query(
+          'UPDATE bookings SET cleaner_id = ? WHERE booking_id = ?',
+          [cleanerId, id]
+        );
+      }
+    }
+
+    await promiseDb.query(
+      'UPDATE bookings SET negotiated_price = ? WHERE booking_id = ?',
+      [negotiatedPrice, id]
+    );
+
+    await promiseDb.query(
+      'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+      [
+        'Price updated',
+        `Your cleaner proposed a price of $${negotiatedPrice.toFixed(2)} for booking #${id}.`,
+        'booking',
+        booking.user_id,
+        id
+      ]
+    ).catch(() => {});
+
+    res.status(200).json({
+      success: true,
+      message: 'Negotiated price updated',
+      data: { booking_id: id, negotiated_price: negotiatedPrice }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Assign cleaner
 const assignCleaner = async (req, res, next) => {
   try {
@@ -711,15 +781,18 @@ const getBookingHistory = async (req, res, next) => {
 const trackBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const promiseDb = db.promise();
+    await ensureBookingNegotiatedPriceColumn(promiseDb);
 
-    const [rows] = await db
-      .promise()
+    const [rows] = await promiseDb
       .query(
         `SELECT 
             b.booking_id,
             b.booking_status,
             b.booking_date,
             b.booking_time,
+            b.total_price,
+            b.negotiated_price,
             b.cleaner_id,
             cp.company_name AS cleaner_company,
             COALESCE(cp.company_name, TRIM(CONCAT_WS(' ', c.first_name, c.last_name))) AS cleaner_display_name,
@@ -873,7 +946,8 @@ module.exports = {
   getBookingHistory,
   trackBooking,
   getAvailableBookings,
-  claimBooking
+  claimBooking,
+  updateNegotiatedPrice
 };
 
 // Add booking images (mysql2)

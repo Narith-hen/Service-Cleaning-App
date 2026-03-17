@@ -68,6 +68,7 @@ model Booking {
   booking_date   DateTime
   booking_status String   @db.VarChar(50)
   total_price    Float
+  negotiated_price Float?
   payment_status String   @db.VarChar(50)
   created_at     DateTime @default(now())
   user_id        Int

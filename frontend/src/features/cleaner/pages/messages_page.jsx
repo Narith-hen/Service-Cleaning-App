@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   MessageOutlined,
   CalendarOutlined,
@@ -31,6 +31,7 @@ const normalizeThread = (job, index) => ({
   location: job?.location || 'Phnom Penh, Cambodia',
   customer: job?.customer || 'Customer',
   customerId: job?.customerId || job?.customer_id || '3',
+  customerAvatar: job?.customerAvatar || job?.customer_avatar || '',
   bedrooms: job?.bedrooms || '3 Bedrooms',
   floors: job?.floors || '2 Floors',
   image: job?.image || officeImage
@@ -61,11 +62,14 @@ const getPreviewText = (messageList) => {
 
 const MessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
   const [threadPreviews, setThreadPreviews] = useState({});
+  const [priceInput, setPriceInput] = useState('');
+  const [priceStatus, setPriceStatus] = useState('');
   const unreadByThread = useChatStore((state) => state.unreadByThread);
 
   useEffect(() => {
@@ -167,6 +171,65 @@ const MessagesPage = () => {
     );
   }, [threads, activeThreadId]);
 
+  useEffect(() => {
+    if (!activeThread?.price) {
+      setPriceInput('');
+      return;
+    }
+    const numeric = String(activeThread.price).replace(/[^0-9.]/g, '');
+    setPriceInput(numeric);
+  }, [activeThread]);
+
+  const handleSubmitPrice = async () => {
+    if (!activeThread) return;
+    const numeric = Number(String(priceInput || '').replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      setPriceStatus('Enter a valid price to submit.');
+      return;
+    }
+
+    const activeKey = String(activeThread.sourceRequestId || activeThread.id);
+    setPriceStatus('Submitting price...');
+
+    try {
+      const response = await api.patch(`/bookings/${activeKey}/price`, {
+        negotiated_price: numeric
+      });
+      const saved = response?.data?.data?.negotiated_price;
+      const formatted = `$${Number(saved ?? numeric).toFixed(2)}`;
+
+      setThreads((prev) =>
+        prev.map((thread) =>
+          String(thread.sourceRequestId || thread.id) === activeKey
+            ? { ...thread, price: formatted }
+            : thread
+        )
+      );
+
+      try {
+        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed)) {
+          const updated = parsed.map((job) =>
+            String(job?.sourceRequestId || job?.id) === activeKey
+              ? { ...job, price: formatted }
+              : job
+          );
+          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+        }
+      } catch {
+        /* ignore storage errors */
+      }
+
+      setPriceStatus('Price submitted for this booking.');
+      navigate('/cleaner/my-jobs');
+    } catch (error) {
+      const apiMessage = error?.response?.data?.message;
+      setPriceStatus(apiMessage || 'Failed to submit price.');
+      return;
+    }
+  };
+
   const handleSelectThread = (thread) => {
     const nextId = String(thread.sourceRequestId || thread.id);
     const params = new URLSearchParams(searchParams);
@@ -244,6 +307,7 @@ const MessagesPage = () => {
                 threadId={String(activeThread.sourceRequestId || activeThread.id)}
                 customerName={activeThread.customer}
                 customerId={String(activeThread.customerId)}
+                customerAvatar={activeThread.customerAvatar}
                 subtitle={`${activeThread.title} Job - ${activeThread.jobId}`}
               />
 
@@ -268,6 +332,16 @@ const MessagesPage = () => {
                   </div>
                 </div>
 
+                <div className="my-jobs-details-card my-jobs-details-card--service">
+                  <div className="my-jobs-detail-row">
+                    <span className="my-jobs-detail-icon"><FileTextOutlined /></span>
+                    <div>
+                      <small>Service</small>
+                      <strong>{activeThread.title}</strong>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="my-jobs-checklist-card">
                   <h6>Checklist Preview</h6>
                   <ul>
@@ -282,6 +356,35 @@ const MessagesPage = () => {
                 </button>
 
                 <div className="my-jobs-map-preview" />
+
+                <div className="my-jobs-price-card">
+                  <div className="my-jobs-price-header">
+                    <div>
+                      <small>NEGOTIATED PRICE</small>
+                      <strong>{activeThread.price}</strong>
+                    </div>
+                    <span className="my-jobs-price-badge">Cleaner</span>
+                  </div>
+                  <label className="my-jobs-price-label" htmlFor="negotiatedPrice">
+                    Submit agreed price
+                  </label>
+                  <div className="my-jobs-price-input">
+                    <input
+                      id="negotiatedPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <button type="button" className="my-jobs-price-submit" onClick={handleSubmitPrice}>
+                    Submit agreed price
+                  </button>
+                  {priceStatus && <p className="my-jobs-price-status">{priceStatus}</p>}
+                </div>
+
               </aside>
             </div>
           )}

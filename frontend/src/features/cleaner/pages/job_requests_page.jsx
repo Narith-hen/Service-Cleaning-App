@@ -1,4 +1,5 @@
 ﻿﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
@@ -12,6 +13,20 @@ import '../../../styles/cleaner/job_requests.scss';
 import '../../../styles/cleaner/my_jobs.scss';
 import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/bookingSync';
 import api from '../../../services/api';
+
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+
+// Create a shared socket instance
+let socketInstance = null;
+const getSocket = () => {
+  if (!socketInstance) {
+    socketInstance = io(SOCKET_URL, {
+      autoConnect: false,
+      transports: ['websocket', 'polling']
+    });
+  }
+  return socketInstance;
+};
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
@@ -67,6 +82,7 @@ const JobRequestsPage = () => {
   const [detailRequestId, setDetailRequestId] = useState(null);
   const [acceptLoadingRequestId, setAcceptLoadingRequestId] = useState(null);
   const acceptDelayTimerRef = useRef(null);
+  const socketRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
@@ -94,6 +110,7 @@ const JobRequestsPage = () => {
       location: request.address,
       customer: request.customer,
       customerId: request.customerId || '3',
+      customerAvatar: request.customerAvatar || '',
       bedrooms: '3 Bedrooms',
       floors: '2 Floors'
     };
@@ -120,6 +137,45 @@ const JobRequestsPage = () => {
 
   useEffect(() => {
     fetchRequests();
+  }, []);
+
+  useEffect(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
+
+    const onConnect = () => {
+      console.log('[JobRequests] Socket connected');
+    };
+
+    socket.on('connect', onConnect);
+
+    if (!socket.connected) {
+      const token = (() => {
+        try {
+          const stored = JSON.parse(localStorage.getItem('user') || 'null');
+          return stored?.token || localStorage.getItem('token') || null;
+        } catch {
+          return localStorage.getItem('token') || null;
+        }
+      })();
+      if (token) {
+        let userId = 'unknown';
+        try {
+          const user = JSON.parse(localStorage.getItem('user') || 'null');
+          userId = user?.id || user?.user_id || userId;
+        } catch {
+          /* ignore */
+        }
+        socket.auth = { token, userId };
+        socket.connect();
+      }
+    } else {
+      onConnect();
+    }
+
+    return () => {
+      socket.off('connect', onConnect);
+    };
   }, []);
 
   useEffect(() => () => {
@@ -239,6 +295,43 @@ const JobRequestsPage = () => {
           localStorage.setItem(ACCEPTED_BOOKING_KEY, String(request.id));
         } catch {
           /* ignore storage errors */
+        }
+        // Notify customer in real time so they can jump to chat
+        const socket = socketRef.current;
+        if (socket) {
+          const cleanerDetails = (() => {
+            try {
+              const stored = JSON.parse(localStorage.getItem('user') || 'null');
+              const name = [stored?.first_name, stored?.last_name].filter(Boolean).join(' ').trim();
+              return {
+                id: stored?.id || stored?.user_id || 'cleaner',
+                name: name || stored?.username || 'Cleaner'
+              };
+            } catch {
+              return { id: 'cleaner', name: 'Cleaner' };
+            }
+          })();
+          if (socket.connected) {
+            socket.emit('job:accepted', { bookingId: request.id, cleaner: cleanerDetails });
+          } else {
+            const emitWhenReady = () => {
+              socket.emit('job:accepted', { bookingId: request.id, cleaner: cleanerDetails });
+              socket.off('connect', emitWhenReady);
+            };
+            socket.on('connect', emitWhenReady);
+            if (!socket.connected) {
+              try {
+                const stored = JSON.parse(localStorage.getItem('user') || 'null');
+                const token = stored?.token || localStorage.getItem('token') || null;
+                if (token) {
+                  socket.auth = { token, userId: cleanerDetails.id };
+                  socket.connect();
+                }
+              } catch {
+                /* ignore */
+              }
+            }
+          }
         }
       } catch (error) {
         const status = error?.response?.status;
