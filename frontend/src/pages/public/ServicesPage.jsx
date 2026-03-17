@@ -3,56 +3,54 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
-import homeImage from "../../assets/home.png";
+import homeImage from "../../assets/Homes .png";
+import DeepImage from "../../assets/Deep.png";
+import ConditioningImage from "../../assets/co.png";
+import CarpetImage from "../../assets/Carpet.png";
+import FloorImage from "../../assets/Floor Buffing.png";
 import officeImage from "../../assets/office.png";
 import windowImage from "../../assets/window.png";
-import shopImage from "../../assets/shop.png";
 import moveImage from "../../assets/move.png";
+import shopImage from "../../assets/shop.png";
 import proImage from "../../assets/pro.png";
 
 const fallbackServices = [
   {
     id: "fallback-1",
-    title: "Home Cleaning",
-    description: "Keep your home fresh and healthy with routine dust, stain, and floor care.",
+    title: " Homes & Offices",
+    description: "Our regular cleaning services keep your space looking its best, week in and week out. Whether it’s your home, office, or commercial site, we deliver a dependable, high-standard clean that saves you time and stress - without cutting corners. Tailored to your schedule - weekly, fortnightly, or monthly Same trusted team for every visit Fully insured and background-checked cleaners Affordable, reliable, and thorough",
     image: homeImage,
     status: "active",
   },
   {
     id: "fallback-2",
-    title: "Office Cleaning",
-    description: "Create a cleaner workspace that helps your team stay focused and productive.",
-    image: officeImage,
+    title: "Homes & Businesses",
+    description: "Our deep cleaning service goes far beyond surface-level tidying. We target the grime, bacteria, and buildup that regular cleaning leaves behind delivering a thorough, top-to-bottom reset for your space. Ideal for move-ins, end-of-lease, post-renovation, or periodic hygiene overhauls. Floor-to-ceiling cleaning of all rooms and surfaces Disinfection of high-touch points and hidden zones Professional-grade tools and non-toxic solutions Trusted by homeowners, tenants, landlords, and businesses a cleaner workspace that helps your team stay focused and productive.",
+    image: DeepImage,
     status: "active",
   },
   {
     id: "fallback-3",
-    title: "Window Cleaning",
-    description: "Window cleaning is the process of washing and wiping windows using water, cleaning liquid.",
-    image: windowImage,
+    title: "Air Conditioning Cleaning",
+    description: "Dusty filters and mouldy ducts don’t just affect your air con’s performance; they impact your health. Our professional air conditioning cleaning services remove hidden contaminants, boost energy efficiency, and improve air quality in your home or workplace. Reduces allergens, mould spores, and odours Lowers energy bills by improving system efficiency Extends the life of your unit Keeps your air fresh, healthy, and breathable",
+    image: ConditioningImage,
     status: "active",
   },
   {
     id: "fallback-4",
-    title: "Move In/Out Cleaning",
-    description: "Detailed move-in and move-out service to leave every room spotless and ready.",
-    image: moveImage,
+    title: "Carpet Cleaning ",
+    description: "Tired of dirty, stained, or smelly carpets? Our professional carpet cleaning service gives your floors a complete refresh. We use hot water extraction and high-powered vacuums to pull out years of dirt, dust, and bacteria - without leaving them soaked or damaged. Eco-friendly, non-toxic chemicals Quick drying times (2–4 hours average) Safe for kids, pets, and allergy sufferers Affordable rates and fixed quotes move-in and move-out service to leave every room spotless and ready.",
+    image: CarpetImage,
     status: "active",
   },
   {
     id: "fallback-5",
-    title: "Shop Cleaning",
-    description: "Shop cleaning is the process of removing dust, dirt, and trash from a shop to keep the environment clean and organized.make you happy",
-    image: shopImage,
+    title: "Floor Buffing ",
+    description: "Shop We provide expert floor buffing and pressure washing services that leave your spaces looking polished, professional, and deeply clean. Whether it’s commercial flooring that needs a high-gloss finish or outdoor surfaces covered in grime, we’ve got the equipment and expertise to get it done right. - Industrial-grade equipment for superior shine and grime removal - Experienced professionals trained in surface-specific care - Suitable for tile, concrete, stone, vinyl, and more - Safe, eco-friendly products and methods is the process of removing dust, dirt, and trash from a shop to keep the environment clean and organized.make you happy",
+    image: FloorImage,
     status: "active",
   },
-  {
-    id: "fallback-6",
-    title: "Post-Construction Cleaning",
-    description: "Post-construction cleaning is a specialized deep cleaning service performed after building",
-    image: proImage,
-    status: "active",
-  },
+ 
 ];
 
 const fallbackImages = [homeImage, officeImage, windowImage, moveImage, shopImage, proImage];
