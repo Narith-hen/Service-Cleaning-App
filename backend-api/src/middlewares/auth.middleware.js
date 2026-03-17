@@ -104,8 +104,15 @@ const authorize = (...roles) => {
 
     const allowedRoles = roles.map((role) => String(role || '').trim().toLowerCase());
     const userRole = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    const accountSource = String(req.user?.account_source || '').trim().toLowerCase();
+    const effectiveRoles = new Set();
+    if (userRole) effectiveRoles.add(userRole);
+    if (accountSource === 'cleaner_profile' || accountSource === 'cleaner') {
+      effectiveRoles.add('cleaner');
+    }
 
-    if (!allowedRoles.includes(userRole)) {
+    const isAllowed = allowedRoles.some((role) => effectiveRoles.has(role));
+    if (!isAllowed) {
       return next(new AppError('Not authorized', 403));
     }
 

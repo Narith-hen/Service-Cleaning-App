@@ -4,6 +4,11 @@ const AppError = require('../../utils/error.util');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
+const getBookingTableColumns = async (promiseDb) => {
+  const [columns] = await promiseDb.query('SHOW COLUMNS FROM bookings');
+  return new Set((columns || []).map((column) => column.Field));
+};
+
 const getUserTableColumns = async (promiseDb) => {
   const [columns] = await promiseDb.query('SHOW COLUMNS FROM users');
   return new Set((columns || []).map((column) => column.Field));
@@ -172,9 +177,11 @@ const createBooking = async (req, res, next) => {
       return next(new AppError('booking_date and service_id are required', 400));
     }
 
-    const [serviceRows] = await db
-      .promise()
-      .query('SELECT * FROM services WHERE service_id = ?', [service_id]);
+    const promiseDb = db.promise();
+    const [serviceRows] = await promiseDb.query(
+      'SELECT * FROM services WHERE service_id = ?',
+      [service_id]
+    );
 
     if (!serviceRows || serviceRows.length === 0) {
       return next(new AppError('Service not found', 404));
@@ -185,28 +192,44 @@ const createBooking = async (req, res, next) => {
     const booking_reference = `BK-${Date.now()}`;
     const booking_time = start_time && end_time ? `${start_time} - ${end_time}` : start_time || '';
 
-    const [result] = await db
-      .promise()
-      .query(
-        `INSERT INTO bookings 
-          (booking_reference, booking_date, booking_time, address, booking_desc, booking_status, total_price, payment_status, user_id, service_id, created_at) 
-         VALUES (?, ?, ?, ?, ?, 'pending', ?, 'pending', ?, ?, NOW())`,
-        [
-          booking_reference,
-          new Date(booking_date),
-          booking_time,
-          address || 'Address pending',
-          notes || '',
-          total_price,
-          user_id,
-          service_id
-        ]
-      );
+    const bookingColumns = await getBookingTableColumns(promiseDb);
+    const insertColumns = [];
+    const insertValues = [];
+    const appendBookingField = (column, value, required = false) => {
+      if (bookingColumns.has(column)) {
+        insertColumns.push(column);
+        insertValues.push(value);
+        return;
+      }
+      if (required) {
+        throw new AppError(`Missing required bookings column: ${column}`, 500);
+      }
+    };
+
+    appendBookingField('booking_reference', booking_reference, true);
+    appendBookingField('booking_date', new Date(booking_date), true);
+    appendBookingField('booking_time', booking_time);
+    appendBookingField('address', address || 'Address pending');
+    appendBookingField('booking_desc', notes || '');
+    appendBookingField('booking_status', 'pending', true);
+    appendBookingField('total_price', total_price, true);
+    appendBookingField('payment_status', 'pending', true);
+    appendBookingField('user_id', user_id, true);
+    appendBookingField('service_id', service_id, true);
+    appendBookingField('created_at', new Date());
+
+    const placeholders = insertColumns.map(() => '?').join(', ');
+    const columnSql = insertColumns.map((column) => `\`${column}\``).join(', ');
+    const [result] = await promiseDb.query(
+      `INSERT INTO bookings (${columnSql}) VALUES (${placeholders})`,
+      insertValues
+    );
 
     const booking_id = result.insertId;
-    const [createdRows] = await db
-      .promise()
-      .query('SELECT * FROM bookings WHERE booking_id = ?', [booking_id]);
+    const [createdRows] = await promiseDb.query(
+      'SELECT * FROM bookings WHERE booking_id = ?',
+      [booking_id]
+    );
 
     res.status(201).json({
       success: true,
@@ -599,26 +622,29 @@ const getBookingHistory = async (req, res, next) => {
 const trackBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const promiseDb = db.promise();
+    const bookingColumns = await getBookingTableColumns(promiseDb);
+    const bookingTimeSelect = bookingColumns.has('booking_time')
+      ? 'b.booking_time'
+      : 'NULL AS booking_time';
 
-    const [rows] = await db
-      .promise()
-      .query(
-        `SELECT 
-            b.booking_id,
-            b.booking_status,
-            b.booking_date,
-            b.booking_time,
-            b.cleaner_id,
-            c.first_name AS cleaner_first_name,
-            c.last_name AS cleaner_last_name,
-            c.phone_number AS cleaner_phone,
-            s.name AS service_name
-         FROM bookings b
-         LEFT JOIN users c ON c.user_id = b.cleaner_id
-         LEFT JOIN services s ON s.service_id = b.service_id
-         WHERE b.booking_id = ?`,
-        [id]
-      );
+    const [rows] = await promiseDb.query(
+      `SELECT 
+          b.booking_id,
+          b.booking_status,
+          b.booking_date,
+          ${bookingTimeSelect},
+          b.cleaner_id,
+          c.first_name AS cleaner_first_name,
+          c.last_name AS cleaner_last_name,
+          c.phone_number AS cleaner_phone,
+          s.name AS service_name
+       FROM bookings b
+       LEFT JOIN users c ON c.user_id = b.cleaner_id
+       LEFT JOIN services s ON s.service_id = b.service_id
+       WHERE b.booking_id = ?`,
+      [id]
+    );
 
     if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
@@ -687,7 +713,9 @@ const claimBooking = async (req, res, next) => {
     const promiseDb = db.promise();
     const accountSource = String(req.user?.account_source || '').toLowerCase();
     const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
-    if (roleName !== 'cleaner' && roleName !== 'admin') {
+    const isCleanerSource = accountSource === 'cleaner_profile' || accountSource === 'cleaner';
+    const isAllowedRole = roleName === 'cleaner' || roleName === 'admin' || isCleanerSource;
+    if (!isAllowedRole) {
       return next(new AppError('Not authorized', 403));
     }
     const rawCleanerId = req.user?.user_id;
