@@ -500,7 +500,7 @@ const BookingPage = () => {
         message: 'Please log in as a customer before booking.',
         ago: ''
       });
-      navigate('/login');
+      navigate('/auth/login');
       return;
     }
 
@@ -555,6 +555,18 @@ const BookingPage = () => {
           localStorage.setItem('last_booking_service_title', String(serviceTitle || ''));
         } catch {
           /* ignore */
+        }
+        // upload images if any
+        if (files.length) {
+          const toBase64 = (file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          const encoded = await Promise.all(files.map((f) => toBase64(f)));
+          await api.post(`/bookings/${bookingId}/images`, { images: encoded });
         }
       }
 

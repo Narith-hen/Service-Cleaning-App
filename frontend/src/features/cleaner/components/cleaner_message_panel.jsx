@@ -8,7 +8,10 @@ import {
   SoundOutlined,
   AudioMutedOutlined,
   PlusCircleOutlined,
-  SendOutlined
+  SendOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
 import { formatCleanerChatTime, useCleanerChat } from '../hooks/useCleanerChat';
 import { useChatStore } from '../../../store/chatStore';
@@ -23,7 +26,16 @@ const toDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-const CleanerMessagePanel = ({ threadId, customerName, subtitle, customerId }) => {
+const CleanerMessagePanel = ({ 
+  threadId, 
+  customerName, 
+  subtitle, 
+  customerId, 
+  customerAvatar,
+  customerPhone,
+  customerEmail,
+  customerAddress 
+}) => {
   const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping, otherUserId } = useCleanerChat({ threadId, receiverId: customerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
@@ -32,6 +44,7 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle, customerId }) =
   const [draftMessage, setDraftMessage] = useState('');
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [inputError, setInputError] = useState('');
+  const [avatarError, setAvatarError] = useState(false);
   // Edit state
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState('');
@@ -176,12 +189,34 @@ const CleanerMessagePanel = ({ threadId, customerName, subtitle, customerId }) =
       <div className="my-jobs-chat-header">
         <div className="my-jobs-chat-customer">
           <div className="my-jobs-chat-avatar-wrap">
-            <div className="my-jobs-chat-avatar">{customerName.charAt(0)}</div>
+            <div className="my-jobs-chat-avatar">
+              {customerAvatar ? (
+                <img
+                  src={customerAvatar}
+                  alt={customerName}
+                  className="my-jobs-chat-avatar-image"
+                />
+              ) : (
+                customerName.charAt(0)
+              )}
+            </div>
             <span className={`my-jobs-chat-online-dot ${isOtherOnline ? 'online' : 'offline'}`} />
           </div>
-          <div>
+          <div className="my-jobs-customer-info">
             <h3>{customerName}</h3>
-            <p>{subtitle}</p>
+            {(customerPhone || customerEmail || customerAddress) && (
+              <div className="my-jobs-customer-details">
+                {customerPhone && (
+                  <span><PhoneOutlined /> {customerPhone}</span>
+                )}
+                {customerEmail && (
+                  <span><MailOutlined /> {customerEmail}</span>
+                )}
+                {customerAddress && (
+                  <span><EnvironmentOutlined /> {customerAddress}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

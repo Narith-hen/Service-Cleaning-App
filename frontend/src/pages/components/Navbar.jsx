@@ -55,14 +55,14 @@ export default function Navbar() {
 
         <div className="hidden md:flex items-center gap-3">
           <Link
-            to="/login"
+            to="/auth/login"
             className="px-4 py-2 rounded-full text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100 transition"
           >
             Login
           </Link>
 
           <Link
-            to="/register"
+            to="/auth/register"
             className="px-5 py-2 rounded-full text-sm font-semibold text-white bg-[#32c753] shadow-md hover:scale-105 transition-transform duration-300"
           >
             Register
@@ -95,14 +95,14 @@ export default function Navbar() {
             })}
 
             <Link
-              to="/login"
+              to="/auth/login"
               className="mt-2 px-4 py-2 rounded-full border border-slate-300 text-center font-semibold text-slate-700"
             >
               Login
             </Link>
 
             <Link
-              to="/register"
+              to="/auth/register"
               className="px-4 py-2 rounded-full text-center font-semibold text-white bg-[#32c753]"
             >
               Register

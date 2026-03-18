@@ -10,6 +10,14 @@ import RegisterPage from '../features/public/pages/register_page';
 import NotFoundPage from '../features/public/pages/notfound_page';
 export const publicRoutes = [
   {
+    path: '/login',
+    element: <Navigate to="/auth/login" replace />
+  },
+  {
+    path: '/register',
+    element: <Navigate to="/auth/register" replace />
+  },
+  {
     path: '/',
     element: <MainLayout />,
     children: [
