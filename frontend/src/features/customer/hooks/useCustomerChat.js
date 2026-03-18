@@ -10,6 +10,25 @@ const CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 // Socket.io server URL - configure based on environment
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
 
+// Backend API URL for serving uploaded images
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+// Helper to get full image URL (handles both cloudinary and local uploads)
+const getFullImageUrl = (fileUrl) => {
+  if (!fileUrl) return '';
+  // If it's already a full URL (cloudinary or external), return as is
+  if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+    return fileUrl;
+  }
+  // If it's a local path, prepend the backend API URL
+  if (fileUrl.startsWith('/uploads/')) {
+    // Remove leading slash from fileUrl if present
+    const cleanPath = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+    return `${API_BASE_URL}/${cleanPath}`;
+  }
+  return fileUrl;
+};
+
 const defaultMessages = [];
 
 const normalizeThreadId = (threadId) => String(threadId || 'default');
@@ -96,7 +115,7 @@ const mapApiMessage = (message, currentUserId) => {
     senderId: senderId || null,
     receiverId: message?.receiver_id != null ? String(message.receiver_id) : null,
     text: message?.message || '',
-    imageUrl: message?.file_url || '',
+    imageUrl: getFullImageUrl(message?.file_url || ''),
     imageName: message?.file_type || '',
     createdAt: message?.created_at || new Date().toISOString(),
     edited: message?.edited === true,
@@ -361,6 +380,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       cancelled = true;
     };
   }, [normalizedThreadId, clearUnread]);
+
 
   // Save messages to localStorage
   useEffect(() => {

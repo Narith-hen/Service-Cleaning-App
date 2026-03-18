@@ -23,7 +23,7 @@ const toDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) => {
+const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, cleanerId }) => {
   const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping, otherUserId } = useCustomerChat({ threadId, receiverId: cleanerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
@@ -173,7 +173,13 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) =>
       <div className="my-jobs-chat-header">
         <div className="my-jobs-chat-customer">
           <div className="my-jobs-chat-avatar-wrap">
-            <div className="my-jobs-chat-avatar">{cleanerName.charAt(0)}</div>
+            <div className="my-jobs-chat-avatar">
+              {cleanerAvatar ? (
+                <img src={cleanerAvatar} alt={cleanerName} className="my-jobs-chat-avatar-image" />
+              ) : (
+                cleanerName.charAt(0)
+              )}
+            </div>
             <span className={`my-jobs-chat-online-dot ${isOtherOnline ? 'online' : 'offline'}`} />
           </div>
           <div>
@@ -212,7 +218,13 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) =>
               return (
                 <div key={message.id} className={`my-jobs-chat-row ${isCustomer ? 'right' : 'left'}`}>
                   {!isCustomer && (
-                    <div className="my-jobs-chat-mini-avatar">{cleanerName.charAt(0)}</div>
+                    <div className="my-jobs-chat-mini-avatar">
+                      {cleanerAvatar ? (
+                        <img src={cleanerAvatar} alt={cleanerName} className="my-jobs-chat-mini-avatar-image" />
+                      ) : (
+                        cleanerName.charAt(0)
+                      )}
+                    </div>
                   )}
 
                   <div className="my-jobs-chat-content">
@@ -295,7 +307,13 @@ const CustomerMessagePanel = ({ threadId, cleanerName, subtitle, cleanerId }) =>
 
             {isCleanerTyping && (
               <div className="my-jobs-chat-row left">
-                <div className="my-jobs-chat-mini-avatar">{cleanerName.charAt(0)}</div>
+                <div className="my-jobs-chat-mini-avatar">
+                  {cleanerAvatar ? (
+                    <img src={cleanerAvatar} alt={cleanerName} className="my-jobs-chat-mini-avatar-image" />
+                  ) : (
+                    cleanerName.charAt(0)
+                  )}
+                </div>
                 <div className="my-jobs-chat-content">
                   <div className="my-jobs-chat-bubble-wrap">
                     <div className="my-jobs-chat-bubble typing-indicator">

@@ -17,6 +17,25 @@ import '../../../styles/customer/messages.scss';
 const fallbackBookings = [];
 const CUSTOMER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
+// Backend API URL for serving uploaded files
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+// Helper to get full URL (handles both cloudinary and local uploads)
+const getFullImageUrl = (fileUrl) => {
+  if (!fileUrl) return '';
+  // If it's already a full URL (cloudinary or external), return as is
+  if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+    return fileUrl;
+  }
+  // If it's a local path, prepend the backend API URL
+  if (fileUrl.startsWith('/uploads/')) {
+    // Remove leading slash from fileUrl if present
+    const cleanPath = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+    return `${API_BASE_URL}/${cleanPath}`;
+  }
+  return fileUrl;
+};
+
 const getPreviewText = (messageList) => {
   if (!Array.isArray(messageList) || messageList.length === 0) return 'Tap to open conversation.';
   const last = [...messageList].reverse().find((msg) => msg && (msg.text || msg.imageUrl || msg.message || msg.file_url));
@@ -43,11 +62,11 @@ const normalizeBooking = (booking) => ({
     || 'Location not provided',
   service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || 'Cleaning Service' },
   cleaner: booking?.cleaner || {
-    username:
-      booking?.cleaner_name
-      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
-      || booking?.cleaner_username
-      || 'Cleaner'
+    id: booking?.cleaner_id || null,
+    username: booking?.cleaner_username || booking?.cleaner_display_name || 'Cleaner',
+    avatar: getFullImageUrl(booking?.cleaner_avatar || ''),
+    phone: booking?.cleaner_phone || '',
+    email: booking?.cleaner_email || ''
   }
 });
 
@@ -347,6 +366,8 @@ const CustomerMessagesPage = () => {
   }
 
   const cleanerName = activeBooking?.cleaner?.username || 'Cleaner';
+  const cleanerAvatar = activeBooking?.cleaner?.avatar || '';
+  const cleanerId = activeBooking?.cleaner?.id || activeBooking?.cleaner_id || '';
   const serviceName = activeBooking?.service?.name || 'Cleaning Service';
   const jobId = `#SOMA-${activeBooking?.booking_id}`;
   const bookingDate = activeBooking
@@ -388,7 +409,13 @@ const CustomerMessagesPage = () => {
                   className={`customer-messages-thread ${isActive ? 'active' : ''}`}
                   onClick={() => handleSelectThread(booking)}
                 >
-                  <div className="thread-avatar">{(booking.cleaner?.username || 'C').charAt(0)}</div>
+                  <div className="thread-avatar">
+                    {booking.cleaner?.avatar ? (
+                      <img src={booking.cleaner.avatar} alt={booking.cleaner?.username || 'Cleaner'} className="thread-avatar-image" />
+                    ) : (
+                      (booking.cleaner?.username || 'C').charAt(0)
+                    )}
+                  </div>
                   <div className="thread-meta">
                     <strong>{booking.cleaner?.username || 'Cleaner'}</strong>
                     <span>{preview}</span>
@@ -411,8 +438,9 @@ const CustomerMessagesPage = () => {
               <CustomerMessagePanel
                 threadId={String(activeBooking.booking_id)}
                 cleanerName={cleanerName}
+                cleanerAvatar={cleanerAvatar}
                 subtitle={`${serviceName} Job - ${jobId}`}
-                cleanerId={String(activeBooking.cleaner_id)}
+                cleanerId={String(cleanerId)}
               />
 
               <aside className="my-jobs-details-panel">
