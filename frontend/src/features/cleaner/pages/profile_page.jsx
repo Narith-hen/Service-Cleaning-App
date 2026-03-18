@@ -138,6 +138,34 @@ const ProfilePage = () => {
     setIsEditing(true);
   };
 
+  const handleCancelEdit = () => {
+    setDraft(profile);
+    setMessage('');
+    setIsEditing(false);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    setMessage('');
+    const payload = {
+      name: draft.name,
+      email: draft.email,
+      phone_number: draft.phone,
+      address: draft.address
+    };
+
+    const result = await updateUser(payload);
+    if (result?.success) {
+      setProfile((prev) => ({ ...prev, ...draft }));
+      setDraft((prev) => ({ ...prev }));
+      setIsEditing(false);
+      setMessage('Profile updated successfully.');
+    } else {
+      setMessage(result?.error || 'Failed to update profile.');
+    }
+    setIsSaving(false);
+  };
+
   return (
     <div className="customer-profile-page">
       <section className="profile-hero-card">
@@ -256,6 +284,17 @@ const ProfilePage = () => {
           )}
         </article>
       </section>
+
+      {isEditing && (
+        <div className="profile-actions">
+          <button type="button" className="profile-update-btn" onClick={handleSaveProfile} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button type="button" className="profile-cancel-btn" onClick={handleCancelEdit} disabled={isSaving}>
+            Cancel
+          </button>
+        </div>
+      )}
 
       <section className="profile-stats">
         <article>
