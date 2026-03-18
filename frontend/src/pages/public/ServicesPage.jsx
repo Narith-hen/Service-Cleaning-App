@@ -140,11 +140,18 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
       {!embedded && <Navbar />}
 
       <div className="max-w-6xl mx-auto pt-20 pb-24 px-6">
-        <h2 className={`text-4xl font-black text-center mb-1 ${darkMode ? "text-slate-100" : "text-slate-900"}`} style={{ fontSize: '32px', color: '#008000', fontWeight: 600, letterSpacing: '0.02em'
+        <h2
+          className={`text-4xl font-black text-center mb-1 ${darkMode ? "text-slate-100" : "text-slate-900"}`}
+          data-customer-reveal={useApiServices ? '' : undefined}
+          style={{ fontSize: '32px', color: '#008000', fontWeight: 600, letterSpacing: '0.02em'
         }}>
           OUR SERVICES
         </h2>
-        <p className={`mx-auto mb-5 max-w-2xl text-center leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
+        <p
+          className={`mx-auto mb-5 max-w-2xl text-center leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}
+          data-customer-reveal={useApiServices ? '' : undefined}
+          style={useApiServices ? { '--customer-reveal-delay': 1 } : undefined}
+        >
           Professional cleaning packages with modern service quality. Hover cards to preview
           the interactive layout.
         </p>
@@ -159,7 +166,7 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
           </div>
         ) : (
           <div className="mt-2 grid md:grid-cols-3 gap-8 lg:gap-10">
-            {orderedServices.map((service) => {
+            {orderedServices.map((service, index) => {
               const isInactive = service.status === "inactive";
               const statusText = isInactive ? "Inactive" : "Active";
               const statusBadgeClass = isInactive ? "bg-[#ef4444]" : "bg-[#22c55e]";
@@ -170,6 +177,9 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                   className={`group relative overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl ${
                     darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
                   }`}
+                  data-customer-reveal={useApiServices ? '' : undefined}
+                  data-customer-card={useApiServices ? '' : undefined}
+                  style={useApiServices ? { '--customer-reveal-delay': Math.min(index % 4, 3) } : undefined}
                 >
                   {/* Image Container */}
                   <div className="relative h-56 overflow-hidden">
@@ -219,6 +229,7 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
                         className={`inline-flex items-center gap-2 rounded-[24px] border border-[#32c753] px-5 py-2.5 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#32c753] hover:text-white hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#32c753]/40 ${
                           darkMode ? "text-[#7ce892]" : "text-[#32c753]"
                         }`}
+                        data-customer-button={useApiServices ? '' : undefined}
                       >
                         <span>Book Now</span>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -603,13 +603,13 @@ const BookingPage = () => {
   };
 
   return (
-    <div className="booking-page-v2">
-      <div className="booking-request-card">
-        <header className="booking-request-header">
+    <div className="booking-page-v2 customer-motion-disabled">
+      <div className="booking-request-card" data-customer-reveal data-customer-panel>
+        <header className="booking-request-header" data-customer-reveal style={{ '--customer-reveal-delay': 0 }}>
           <p>Service Booking</p>
         </header>
 
-        <section className="booking-service-summary">
+        <section className="booking-service-summary" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
           <div className="summary-thumb">
             <img src={serviceImage} alt={serviceTitle} loading="lazy" />
           </div>
@@ -639,7 +639,7 @@ const BookingPage = () => {
           )}
         </section>
 
-        <section className="booking-section">
+        <section className="booking-section" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
               1
@@ -676,7 +676,7 @@ const BookingPage = () => {
                 setIsAddressVerified(false);
               }}
             />
-            <button type="button" className="locate-btn" onClick={handleUseCurrentLocation}>
+            <button type="button" className="locate-btn" onClick={handleUseCurrentLocation} data-customer-button>
               Use current location
             </button>
           </div>
@@ -709,7 +709,7 @@ const BookingPage = () => {
           </div>
         </section>
 
-        <section className="booking-section">
+        <section className="booking-section" data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
               2
@@ -809,7 +809,7 @@ const BookingPage = () => {
           )}
         </section>
 
-        <section className="booking-section">
+        <section className="booking-section" data-customer-reveal style={{ '--customer-reveal-delay': 3 }}>
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
               3
@@ -827,7 +827,7 @@ const BookingPage = () => {
           />
         </section>
 
-        <section className="booking-section">
+        <section className="booking-section" data-customer-reveal style={{ '--customer-reveal-delay': 4 }}>
           <div className="section-heading">
             <span className="section-dot" aria-hidden>
               4
@@ -882,11 +882,11 @@ const BookingPage = () => {
           </div>
         </section>
 
-        <footer className="booking-actions">
-          <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')}>
+        <footer className="booking-actions" data-customer-reveal style={{ '--customer-reveal-delay': 4 }}>
+          <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')} data-customer-button>
             <ArrowLeft size={16} /> Back to Service
           </button>
-          <button type="button" className="next-btn" onClick={handleConfirmBooking} disabled={submitting}>
+          <button type="button" className="next-btn" onClick={handleConfirmBooking} disabled={submitting} data-customer-button>
             {submitting ? 'Submitting...' : 'Confirm Booking'} <ArrowRight size={16} />
           </button>
         </footer>

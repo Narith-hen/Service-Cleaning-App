@@ -351,7 +351,7 @@ exports.login = async (req, res) => {
     }
 
     const role = String(
-      user.role_name || (Number(user.role_id) === 1 ? "admin" : Number(user.role_id) === 3 ? "cleaner" : "customer")
+      user.role_name || (Number(user.role_id) === 1 ? "admin" : Number(user.role_id) === 2 ? "cleaner" : "customer")
     ).toLowerCase();
     const token = generateToken({
       user_id: user.user_id,

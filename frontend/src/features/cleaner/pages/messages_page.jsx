@@ -12,6 +12,10 @@ import CleanerMessagePanel from '../components/cleaner_message_panel';
 import officeImage from '../../../assets/office.png';
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
+import {
+  ensureRealtimeSocketConnected,
+  getRealtimeSocket
+} from '../../../services/socketService';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/cleaner/messages.scss';
 
@@ -33,7 +37,9 @@ const loadChatThreads = () => {
   try {
     const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((thread) => /^\d+$/.test(String(thread?.sourceRequestId || thread?.id || '')));
     }
   } catch (e) {
     // Ignore
@@ -86,6 +92,20 @@ const getPreviewText = (messageList) => {
   return 'Image attachment';
 };
 
+const extractRealtimeMessage = (payload) => {
+  if (payload?.message && typeof payload.message === 'object') {
+    return {
+      bookingId: String(payload.bookingId || payload.booking_id || payload.message.booking_id || ''),
+      message: payload.message
+    };
+  }
+
+  return {
+    bookingId: String(payload?.bookingId || payload?.booking_id || payload?.booking_id || ''),
+    message: payload
+  };
+};
+
 const MessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -97,6 +117,7 @@ const MessagesPage = () => {
   const [priceInput, setPriceInput] = useState('');
   const [priceStatus, setPriceStatus] = useState('');
   const unreadByThread = useChatStore((state) => state.unreadByThread);
+  const incrementUnread = useChatStore((state) => state.incrementUnread);
 
   useEffect(() => {
     try {
@@ -193,6 +214,57 @@ const MessagesPage = () => {
       setActiveThreadId(paramThreadId);
     }
   }, [searchParams, activeThreadId]);
+
+  useEffect(() => {
+    const socket = ensureRealtimeSocketConnected();
+    if (!socket) return undefined;
+
+    const onNewMessage = (payload) => {
+      const { bookingId, message } = extractRealtimeMessage(payload);
+      if (!bookingId || !message) return;
+
+      setThreadPreviews((prev) => ({
+        ...prev,
+        [bookingId]: getPreviewText([message])
+      }));
+
+      const currentActiveId = String(activeThreadId || '');
+      const senderRole = String(message?.sender?.role?.role_name || message?.sender || '').toLowerCase();
+      if (bookingId !== currentActiveId && senderRole === 'customer') {
+        incrementUnread(bookingId);
+      }
+
+      setThreads((prev) => {
+        if (prev.some((thread) => String(thread.sourceRequestId || thread.id) === bookingId)) {
+          return prev;
+        }
+
+        return [
+          normalizeThread({
+            sourceRequestId: bookingId,
+            id: bookingId,
+            customer: message?.sender?.username || 'Customer'
+          }, 0),
+          ...prev
+        ];
+      });
+    };
+
+    const onMessagesSeen = ({ bookingId }) => {
+      if (!bookingId) return;
+      if (String(activeThreadId || '') === String(bookingId)) {
+        useChatStore.getState().clearUnread(bookingId);
+      }
+    };
+
+    socket.on('message:new', onNewMessage);
+    socket.on('messages:seen', onMessagesSeen);
+
+    return () => {
+      getRealtimeSocket().off('message:new', onNewMessage);
+      getRealtimeSocket().off('messages:seen', onMessagesSeen);
+    };
+  }, [activeThreadId, incrementUnread]);
 
   useEffect(() => {
     if (!threads.length) return;

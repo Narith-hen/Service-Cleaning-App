@@ -103,22 +103,6 @@ const CustomerHistoryPage = () => {
     };
   }, []);
 
-  const stats = useMemo(() => {
-    const completed = history.filter((item) => item.rawStatus === 'completed').length;
-    const active = history.filter((item) => ['confirmed', 'accepted', 'pending', 'matching'].includes(item.rawStatus)).length;
-    const spent = history.reduce((sum, item) => {
-      const amount = Number(item.totalPrice);
-      return Number.isFinite(amount) ? sum + amount : sum;
-    }, 0);
-
-    return {
-      total: history.length,
-      active,
-      completed,
-      spent: formatMoney(spent)
-    };
-  }, [history]);
-
   const filteredHistory = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -140,35 +124,16 @@ const CustomerHistoryPage = () => {
 
   return (
     <div className="customer-history-page">
-      <section className="customer-history-hero">
+      <section className="customer-history-hero" data-customer-reveal>
         <div>
-          <p className="customer-history-kicker">My Cleaning Services</p>
           <h1>Booking History</h1>
           <p className="customer-history-subtitle">
             Track every service you booked with cleaners, from pending requests to completed visits.
           </p>
         </div>
-        <div className="customer-history-stats">
-          <article>
-            <strong>{stats.total}</strong>
-            <span>Total bookings</span>
-          </article>
-          <article>
-            <strong>{stats.active}</strong>
-            <span>Active now</span>
-          </article>
-          <article>
-            <strong>{stats.completed}</strong>
-            <span>Completed</span>
-          </article>
-          <article>
-            <strong>{stats.spent}</strong>
-            <span>Total spent</span>
-          </article>
-        </div>
       </section>
 
-      <section className="customer-history-toolbar">
+      <section className="customer-history-toolbar" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
         <div className="customer-history-search">
           <SearchOutlined />
           <input
@@ -191,6 +156,7 @@ const CustomerHistoryPage = () => {
               type="button"
               className={filter === item.key ? 'active' : ''}
               onClick={() => setFilter(item.key)}
+              data-customer-button
             >
               {item.label}
             </button>
@@ -212,7 +178,7 @@ const CustomerHistoryPage = () => {
         </div>
       ) : (
         <div className="customer-history-grid">
-          {filteredHistory.map((item) => {
+          {filteredHistory.map((item, index) => {
             const dateLabel = new Date(item.bookingDate).toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
@@ -220,7 +186,13 @@ const CustomerHistoryPage = () => {
             });
 
             return (
-              <article key={item.id} className="customer-history-card">
+              <article
+                key={item.id}
+                className="customer-history-card"
+                data-customer-reveal
+                data-customer-card
+                style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
+              >
                 <div className="customer-history-card-top">
                   <div>
                     <p className="customer-history-card-id">Booking #{item.id}</p>

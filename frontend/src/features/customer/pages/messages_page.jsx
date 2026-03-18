@@ -11,6 +11,10 @@ import {
 import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
+import {
+  ensureRealtimeSocketConnected,
+  getRealtimeSocket
+} from '../../../services/socketService';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/customer/messages.scss';
 
@@ -49,6 +53,29 @@ const getPreviewText = (messageList) => {
   return 'Image attachment';
 };
 
+const buildCleanerPayload = (booking) => {
+  const directCleaner = booking?.cleaner && typeof booking.cleaner === 'object' ? booking.cleaner : {};
+  const cleanerName =
+    directCleaner.username ||
+    directCleaner.name ||
+    booking?.cleaner_display_name ||
+    booking?.cleaner_name ||
+    booking?.cleaner_username ||
+    booking?.cleaner_full_name ||
+    [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim() ||
+    booking?.cleaner_company ||
+    'Cleaner';
+
+  return {
+    ...directCleaner,
+    id: directCleaner.id || booking?.cleaner_id || null,
+    username: cleanerName,
+    avatar: getFullImageUrl(directCleaner.avatar || booking?.cleaner_avatar || ''),
+    phone: directCleaner.phone || booking?.cleaner_phone || '',
+    email: directCleaner.email || booking?.cleaner_email || ''
+  };
+};
+
 const normalizeBooking = (booking) => ({
   booking_id: String(booking?.booking_id || booking?.id || 'unknown'),
   booking_date: booking?.booking_date || new Date().toISOString(),
@@ -60,13 +87,7 @@ const normalizeBooking = (booking) => ({
     || booking?.service?.location
     || 'Location not provided',
   service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || 'Cleaning Service' },
-  cleaner: booking?.cleaner || {
-    id: booking?.cleaner_id || null,
-    username: booking?.cleaner_username || booking?.cleaner_display_name || 'Cleaner',
-    avatar: getFullImageUrl(booking?.cleaner_avatar || ''),
-    phone: booking?.cleaner_phone || '',
-    email: booking?.cleaner_email || ''
-  }
+  cleaner: buildCleanerPayload(booking)
 });
 
 const getAuthToken = () => {
@@ -84,10 +105,24 @@ const readStoredThreadIds = () => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return [];
-    return Object.keys(parsed || {}).filter((key) => key && key !== 'default');
+    return Object.keys(parsed || {}).filter((key) => key && /^\d+$/.test(String(key)));
   } catch {
     return [];
   }
+};
+
+const extractRealtimeMessage = (payload) => {
+  if (payload?.message && typeof payload.message === 'object') {
+    return {
+      bookingId: String(payload.bookingId || payload.booking_id || payload.message.booking_id || ''),
+      message: payload.message
+    };
+  }
+
+  return {
+    bookingId: String(payload?.bookingId || payload?.booking_id || payload?.booking_id || ''),
+    message: payload
+  };
 };
 
 const CustomerMessagesPage = () => {
@@ -100,7 +135,19 @@ const CustomerMessagesPage = () => {
   );
   const contentRef = useRef(null);
   const unreadByThread = useChatStore((state) => state.unreadByThread);
+  const incrementUnread = useChatStore((state) => state.incrementUnread);
   const emptyPreviewText = 'Tap to open conversation.';
+
+  const fetchTrackedBooking = async (bookingId) => {
+    if (!bookingId || !getAuthToken()) return null;
+    try {
+      const response = await api.get(`/bookings/track/${bookingId}`);
+      const data = response?.data?.data;
+      return data ? normalizeBooking(data) : null;
+    } catch {
+      return null;
+    }
+  };
 
   const visibleBookings = useMemo(() => {
     if (bookings.length > 0) {
@@ -127,6 +174,7 @@ const CustomerMessagesPage = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       setLoading(true);
+      const selectedBookingId = searchParams.get('booking') || searchParams.get('thread');
       try {
         const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
         const bookingsData = response?.data?.data || [];
@@ -134,19 +182,21 @@ const CustomerMessagesPage = () => {
           ? bookingsData.map(normalizeBooking)
           : [].map(normalizeBooking);
 
-        const bookingId = searchParams.get('booking') || searchParams.get('thread');
-        if (bookingId && !normalizedBookings.some((b) => b.booking_id === String(bookingId))) {
-          normalizedBookings = [
-            normalizeBooking({
-              booking_id: bookingId,
-              booking_date: new Date().toISOString(),
-              booking_time: '10:00 AM',
-              address: '123 Harmony Lane, Bright City',
-              service: { name: 'Custom Cleaning' },
-              cleaner: { id: '11', username: 'Cleaner 1' }
-            }),
-            ...normalizedBookings
-          ];
+        if (selectedBookingId && !normalizedBookings.some((b) => b.booking_id === String(selectedBookingId))) {
+          const trackedBooking = await fetchTrackedBooking(selectedBookingId);
+          normalizedBookings = trackedBooking
+            ? [trackedBooking, ...normalizedBookings]
+            : [
+              normalizeBooking({
+                booking_id: selectedBookingId,
+                booking_date: new Date().toISOString(),
+                booking_time: '10:00 AM',
+                address: '123 Harmony Lane, Bright City',
+                service: { name: 'Custom Cleaning' },
+                cleaner: { id: null, username: 'Cleaner' }
+              }),
+              ...normalizedBookings
+            ];
         }
 
         const storedThreadIds = readStoredThreadIds();
@@ -192,19 +242,21 @@ const CustomerMessagesPage = () => {
       } catch (error) {
         console.error('Failed to fetch bookings:', error);
         let normalizedBookings = [].map(normalizeBooking);
-        const bookingId = searchParams.get('booking') || searchParams.get('thread');
-        if (bookingId && !normalizedBookings.some((b) => b.booking_id === String(bookingId))) {
-          normalizedBookings = [
-            normalizeBooking({
-              booking_id: bookingId,
-              booking_date: new Date().toISOString(),
-              booking_time: '10:00 AM',
-              address: '123 Harmony Lane, Bright City',
-              service: { name: 'Custom Cleaning' },
-              cleaner: { id: '11', username: 'Cleaner 1' }
-            }),
-            ...normalizedBookings
-          ];
+        if (selectedBookingId && !normalizedBookings.some((b) => b.booking_id === String(selectedBookingId))) {
+          const trackedBooking = await fetchTrackedBooking(selectedBookingId);
+          normalizedBookings = trackedBooking
+            ? [trackedBooking, ...normalizedBookings]
+            : [
+              normalizeBooking({
+                booking_id: selectedBookingId,
+                booking_date: new Date().toISOString(),
+                booking_time: '10:00 AM',
+                address: '123 Harmony Lane, Bright City',
+                service: { name: 'Custom Cleaning' },
+                cleaner: { id: null, username: 'Cleaner' }
+              }),
+              ...normalizedBookings
+            ];
         }
         const storedThreadIds = readStoredThreadIds();
         if (storedThreadIds.length) {
@@ -312,6 +364,62 @@ const CustomerMessagesPage = () => {
     }
   }, [searchParams, activeThreadId]);
 
+  useEffect(() => {
+    const socket = ensureRealtimeSocketConnected();
+    if (!socket) return undefined;
+
+    const onNewMessage = (payload) => {
+      const { bookingId, message } = extractRealtimeMessage(payload);
+      if (!bookingId || !message) return;
+
+      setThreadPreviews((prev) => ({
+        ...prev,
+        [bookingId]: getPreviewText([message])
+      }));
+
+      const currentActiveId = String(activeThreadId || '');
+      const senderRole = String(message?.sender?.role?.role_name || message?.sender || '').toLowerCase();
+      if (bookingId !== currentActiveId && senderRole === 'cleaner') {
+        incrementUnread(bookingId);
+      }
+
+      setBookings((prev) => {
+        if (prev.some((booking) => String(booking.booking_id) === bookingId)) {
+          return prev;
+        }
+
+        return [
+          normalizeBooking({
+            booking_id: bookingId,
+            booking_date: new Date().toISOString(),
+            booking_time: '09:00 AM',
+            service: { name: 'Cleaning Service' },
+            cleaner: {
+              id: message?.sender_id || message?.senderId || null,
+              username: message?.sender?.username || 'Cleaner'
+            }
+          }),
+          ...prev
+        ];
+      });
+    };
+
+    const onMessagesSeen = ({ bookingId }) => {
+      if (!bookingId) return;
+      if (String(activeThreadId || '') === String(bookingId)) {
+        useChatStore.getState().clearUnread(bookingId);
+      }
+    };
+
+    socket.on('message:new', onNewMessage);
+    socket.on('messages:seen', onMessagesSeen);
+
+    return () => {
+      getRealtimeSocket().off('message:new', onNewMessage);
+      getRealtimeSocket().off('messages:seen', onMessagesSeen);
+    };
+  }, [activeThreadId, incrementUnread]);
+
   // If `cleaner` query param is provided, prefer selecting threads for that cleaner
   useEffect(() => {
     const cleanerParam = searchParams.get('cleaner');
@@ -398,7 +506,7 @@ const CustomerMessagesPage = () => {
 
   return (
     <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
-      <div className="customer-messages-header">
+      <div className="customer-messages-header" data-customer-reveal>
         <div>
           <p className="customer-messages-kicker">Conversations</p>
           <h1>Messages</h1>
@@ -407,13 +515,18 @@ const CustomerMessagesPage = () => {
       </div>
 
       <div className="customer-messages-shell">
-        <aside className="customer-messages-list">
+        <aside
+          className="customer-messages-list"
+          data-customer-reveal
+          data-customer-panel
+          style={{ '--customer-reveal-delay': 1 }}
+        >
           <div className="customer-messages-list-header">
             <strong>All chats</strong>
             <MessageOutlined />
           </div>
           <div className="customer-messages-thread-list">
-            {visibleBookings.map((booking) => {
+            {visibleBookings.map((booking, index) => {
               const threadId = String(booking.booking_id);
               const isActive = String(activeBooking?.booking_id) === threadId;
               const preview = threadPreviews[threadId] || emptyPreviewText;
@@ -424,6 +537,8 @@ const CustomerMessagesPage = () => {
                   type="button"
                   className={`customer-messages-thread ${isActive ? 'active' : ''}`}
                   onClick={() => handleSelectThread(booking)}
+                  data-customer-button
+                  style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
                 >
                   <div className="thread-avatar">
                     {booking.cleaner?.avatar ? (
@@ -448,7 +563,7 @@ const CustomerMessagesPage = () => {
           </div>
         </aside>
 
-        <div className="customer-messages-content" ref={contentRef}>
+        <div className="customer-messages-content" ref={contentRef} data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
           {activeBooking && (
             <div className="my-jobs-message-view">
               <CustomerMessagePanel

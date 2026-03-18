@@ -122,6 +122,20 @@ const mapApiMessage = (message, currentUserId) => {
   };
 };
 
+const unwrapRealtimeMessagePayload = (payload) => {
+  if (payload?.message && typeof payload.message === 'object') {
+    return {
+      bookingId: String(payload.bookingId || payload.booking_id || payload.threadId || payload.message.booking_id || ''),
+      message: payload.message
+    };
+  }
+
+  return {
+    bookingId: String(payload?.bookingId || payload?.booking_id || payload?.threadId || payload?.booking_id || ''),
+    message: payload
+  };
+};
+
 export const formatCleanerChatTime = (createdAt) => {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return '';
@@ -233,7 +247,18 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
     };
 
     // Listen for incoming messages from customer
-    const onNewMessage = (message) => {
+    const onNewMessage = (incomingPayload) => {
+      const { bookingId: incomingBookingId, message: rawMessage } = unwrapRealtimeMessagePayload(incomingPayload);
+      const currentUserId = getStoredUserId();
+      const message = rawMessage?.message != null || rawMessage?.file_url != null
+        ? mapApiMessage(rawMessage, currentUserId)
+        : rawMessage;
+
+      if (incomingBookingId && incomingBookingId !== normalizedThreadId) {
+        incrementUnread(incomingBookingId);
+        return;
+      }
+
       console.log('[useCleanerChat] New message received:', message);
       setMessages((prev) => {
         // Prevent duplicates if message already exists
@@ -246,13 +271,15 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
           status: 'received'
         }];
       });
-      incrementUnread(normalizedThreadId);
-      playChatSound('message', soundEnabled);
+      if (message.sender !== 'cleaner') {
+        incrementUnread(normalizedThreadId);
+        playChatSound('message', soundEnabled);
+      }
       if (message?.senderId || message?.sender_id || message?.receiverId || message?.receiver_id) {
-        const currentUserId = String(getStoredUserId() || '');
+        const normalizedCurrentUserId = String(currentUserId || '');
         const senderId = String(message.senderId || message.sender_id || '');
         const receiverId = String(message.receiverId || message.receiver_id || '');
-        const nextOtherId = senderId && senderId !== currentUserId ? senderId : receiverId;
+        const nextOtherId = senderId && senderId !== normalizedCurrentUserId ? senderId : receiverId;
         if (nextOtherId) setOtherUserId(String(nextOtherId));
       }
     };
@@ -328,7 +355,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [normalizedThreadId]);
+  }, [normalizedThreadId, incrementUnread, soundEnabled, setUserOnline, setUserOffline]);
 
   // Load messages when thread changes
   useEffect(() => {
@@ -543,16 +570,6 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
       setMessages((prev) =>
         prev.map((msg) => (msg.id === tempId ? mapped : msg))
       );
-
-      const socket = socketRef.current;
-      if (socket && socket.connected) {
-        socket.emit('message:send', {
-          threadId: normalizedThreadId,
-          bookingId: normalizedThreadId,
-          message: mapped
-        });
-        console.log('[useCleanerChat] Emitted message:send:', mapped.id);
-      }
 
       if (mapped.senderId || mapped.receiverId) {
         const nextOtherId = mapped.senderId && mapped.senderId === String(currentUserId)

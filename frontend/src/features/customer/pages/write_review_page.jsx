@@ -44,7 +44,7 @@ const WriteReviewPage = () => {
 
   return (
     <div className="quotes-page">
-      <div className="quotes-steps">
+      <div className="quotes-steps" data-customer-reveal>
         {steps.map((step, index) => (
           <div key={step} className={`step-dot ${index === 2 ? 'active' : ''}`}>
             {step}
@@ -52,8 +52,8 @@ const WriteReviewPage = () => {
         ))}
       </div>
 
-      <section className="quotes-panel">
-        <aside className="request-sidebar">
+      <section className="quotes-panel" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
+        <aside className="request-sidebar" data-customer-panel>
           <p className="sidebar-label">REQUEST STATUS</p>
           <div className="sidebar-head">
             <h3>Apartment Cleaning</h3>
@@ -93,28 +93,34 @@ const WriteReviewPage = () => {
             <button type="button">+2 More</button>
           </div>
 
-          <button type="button" className="edit-btn" onClick={() => navigate('/customer/bookings')}>
+          <button type="button" className="edit-btn" onClick={() => navigate('/customer/bookings')} data-customer-button>
             Edit Request Details
           </button>
         </aside>
 
-        <main className="quotes-content">
+        <main className="quotes-content" data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
           <div className="quotes-head">
             <div>
               <h2>Quotes Received</h2>
               <p>3 cleaners are interested in your request</p>
             </div>
             <div className="head-actions">
-              <button type="button">
+              <button type="button" data-customer-button>
                 <Filter size={14} /> Filter
               </button>
-              <button type="button">Price: Low to High</button>
+              <button type="button" data-customer-button>Price: Low to High</button>
             </div>
           </div>
 
           <div className="quote-list">
-            {quotes.map((item) => (
-              <article key={item.name} className="quote-card">
+            {quotes.map((item, index) => (
+              <article
+                key={item.name}
+                className="quote-card"
+                data-customer-reveal
+                data-customer-card
+                style={{ '--customer-reveal-delay': Math.min(index % 3, 2) }}
+              >
                 <div className="avatar" />
                 <div className="quote-main">
                   <h3>
@@ -126,10 +132,10 @@ const WriteReviewPage = () => {
                   </p>
                   <p className="message">"{item.message}"</p>
                   <div className="quote-actions">
-                    <button type="button" className="chat-btn" onClick={() => navigate('/customer/notifications')}>
+                    <button type="button" className="chat-btn" onClick={() => navigate('/customer/notifications')} data-customer-button>
                       <MessageSquare size={14} /> Chat to Negotiate
                     </button>
-                    <button type="button" className="profile-btn" onClick={() => navigate('/customer/profile')}>
+                    <button type="button" className="profile-btn" onClick={() => navigate('/customer/profile')} data-customer-button>
                       View Full Profile
                     </button>
                   </div>
@@ -146,7 +152,7 @@ const WriteReviewPage = () => {
         </main>
       </section>
 
-      <div className="tip-box">
+      <div className="tip-box" data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
         <CircleFadingArrowUp size={16} />
         <p>
           <strong>Safe Negotiation Tip:</strong> Use the built-in chat to discuss specific tasks or

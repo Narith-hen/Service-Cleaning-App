@@ -186,7 +186,7 @@ const initializeSocket = (server) => {
   });
 
   // Subscribe to Redis channels for real-time updates from backend
-  subscriber.subscribe('booking:updates', 'notification:new', 'user:status');
+  subscriber.subscribe('booking:updates', 'notification:new', 'user:status', 'message:created', 'message:read');
 
   subscriber.on('message', (channel, message) => {
     try {
@@ -201,6 +201,12 @@ const initializeSocket = (server) => {
           break;
         case 'user:status':
           handleUserStatus(io, data);
+          break;
+        case 'message:created':
+          handleMessageCreated(io, data);
+          break;
+        case 'message:read':
+          handleMessageRead(io, data);
           break;
       }
     } catch (error) {
@@ -241,6 +247,45 @@ const handleNewNotification = (io, data) => {
 
 const handleUserStatus = (io, data) => {
   io.emit('user:status', data);
+};
+
+const handleMessageCreated = (io, data) => {
+  const bookingId = String(data?.bookingId || data?.booking_id || '');
+  const senderUserId = data?.senderUserId != null ? String(data.senderUserId) : null;
+  const receiverUserId = data?.receiverUserId != null ? String(data.receiverUserId) : null;
+  const payload = {
+    bookingId,
+    senderUserId,
+    receiverUserId,
+    message: data?.message || null
+  };
+
+  if (!bookingId || !payload.message) return;
+
+  io.to(`booking:${bookingId}`).emit('message:new', payload);
+
+  if (senderUserId) {
+    io.to(`user:${senderUserId}`).emit('message:new', payload);
+  }
+
+  if (receiverUserId && receiverUserId !== senderUserId) {
+    io.to(`user:${receiverUserId}`).emit('message:new', payload);
+  }
+};
+
+const handleMessageRead = (io, data) => {
+  const bookingId = String(data?.bookingId || data?.booking_id || '');
+  if (!bookingId) return;
+
+  const payload = {
+    bookingId,
+    readerId: data?.readerUserId != null ? String(data.readerUserId) : null,
+    messageId: data?.messageId != null ? String(data.messageId) : null,
+    updatedCount: Number(data?.updatedCount || 0),
+    seenAt: data?.seenAt || new Date().toISOString()
+  };
+
+  io.to(`booking:${bookingId}`).emit('messages:seen', payload);
 };
 
 module.exports = {

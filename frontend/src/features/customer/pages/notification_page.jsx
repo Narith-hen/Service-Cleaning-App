@@ -8,7 +8,6 @@ import {
   DeleteOutlined,
   StarOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import '../../../styles/customer/notification.scss';
 import {
   loadCustomerNotifications,
@@ -41,7 +40,6 @@ const areNotificationsEqual = (left = [], right = []) =>
   JSON.stringify(left) === JSON.stringify(right);
 
 const NotificationPage = () => {
-  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState(() =>
     loadCustomerNotifications(seedNotifications)
@@ -92,9 +90,8 @@ const NotificationPage = () => {
 
   return (
     <div className="notification-page">
-      <section className="notification-hero">
+      <section className="notification-hero" data-customer-reveal>
         <div>
-          <p className="notification-kicker">My Service Cleaning</p>
           <div className="header-title">
             <h1>Notifications</h1>
             {unreadCount > 0 && <span className="unread-badge">{unreadCount} unread</span>}
@@ -105,14 +102,15 @@ const NotificationPage = () => {
         </div>
       </section>
 
-      <section className="notification-shell notification-shell--single">
-        <div className="notification-main-card">
+      <section className="notification-shell notification-shell--single" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
+        <div className="notification-main-card" data-customer-panel>
           <div className="page-header">
             <div className="header-actions">
               <button
                 className="mark-all-btn"
                 onClick={handleMarkAllAsRead}
                 disabled={unreadCount === 0}
+                data-customer-button
               >
                 Mark all as read
               </button>
@@ -120,13 +118,13 @@ const NotificationPage = () => {
           </div>
 
           <div className="filter-tabs">
-            <button className={`tab-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
+            <button className={`tab-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')} data-customer-button>
               All ({notifications.length})
             </button>
-            <button className={`tab-btn ${filter === 'unread' ? 'active' : ''}`} onClick={() => setFilter('unread')}>
+            <button className={`tab-btn ${filter === 'unread' ? 'active' : ''}`} onClick={() => setFilter('unread')} data-customer-button>
               Unread ({unreadCount})
             </button>
-            <button className={`tab-btn ${filter === 'read' ? 'active' : ''}`} onClick={() => setFilter('read')}>
+            <button className={`tab-btn ${filter === 'read' ? 'active' : ''}`} onClick={() => setFilter('read')} data-customer-button>
               Read ({notifications.length - unreadCount})
             </button>
           </div>
@@ -139,7 +137,7 @@ const NotificationPage = () => {
                 <p>You're all caught up! Check back later for updates.</p>
               </div>
             ) : (
-              filteredNotifications.map((notification) => {
+              filteredNotifications.map((notification, index) => {
                 const derivedIcon =
                   notification.type === 'booking' ? <CheckCircleOutlined />
                     : notification.type === 'reminder' ? <ClockCircleOutlined />
@@ -153,6 +151,9 @@ const NotificationPage = () => {
                     key={notification.id}
                     className={`notification-item ${!notification.read ? 'unread' : ''}`}
                     onClick={() => handleMarkAsRead(notification.id)}
+                    data-customer-reveal
+                    data-customer-card
+                    style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
                   >
                     <div
                       className="notification-icon"
@@ -177,6 +178,7 @@ const NotificationPage = () => {
                         e.stopPropagation();
                         handleDelete(notification.id);
                       }}
+                      data-customer-button
                     >
                       <DeleteOutlined />
                     </button>

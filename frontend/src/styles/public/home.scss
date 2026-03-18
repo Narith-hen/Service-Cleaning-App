@@ -1,0 +1,251 @@
+.public-home-page {
+  --public-home-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --public-home-shadow: 0 20px 48px rgba(15, 23, 42, 0.12);
+  --public-home-shadow-hover: 0 28px 60px rgba(15, 23, 42, 0.18);
+}
+
+.public-home-page .public-home-reveal {
+  opacity: 0;
+  transform: translate3d(0, 36px, 0) scale(0.985);
+  transition:
+    opacity 700ms var(--public-home-ease),
+    transform 700ms var(--public-home-ease),
+    box-shadow 320ms ease,
+    border-color 320ms ease,
+    background-color 320ms ease;
+  will-change: opacity, transform;
+}
+
+.public-home-page .public-home-reveal.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.public-home-page .public-home-delay-1 {
+  transition-delay: 120ms;
+}
+
+.public-home-page .public-home-delay-2 {
+  transition-delay: 220ms;
+}
+
+.public-home-page .public-home-delay-3 {
+  transition-delay: 320ms;
+}
+
+.public-home-page .public-home-kicker {
+  position: relative;
+}
+
+.public-home-page .public-home-kicker::after {
+  content: '';
+  display: block;
+  width: 72px;
+  height: 2px;
+  margin-top: 14px;
+  background: linear-gradient(90deg, rgba(50, 199, 83, 0.95), rgba(50, 199, 83, 0.2));
+}
+
+.public-home-page .public-home-title span {
+  text-shadow: 0 10px 30px rgba(50, 199, 83, 0.18);
+}
+
+.public-home-page .public-home-primary-link,
+.public-home-page .public-home-cta-button {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 260ms var(--public-home-ease),
+    box-shadow 260ms ease,
+    filter 260ms ease,
+    background-color 260ms ease,
+    border-color 260ms ease;
+}
+
+.public-home-page .public-home-primary-link::before,
+.public-home-page .public-home-cta-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 25%, rgba(255, 255, 255, 0.25) 50%, transparent 75%);
+  transform: translateX(-130%);
+  transition: transform 700ms ease;
+}
+
+.public-home-page .public-home-primary-link:hover,
+.public-home-page .public-home-cta-button:hover {
+  transform: translateY(-3px);
+}
+
+.public-home-page .public-home-primary-link:hover::before,
+.public-home-page .public-home-cta-button:hover::before {
+  transform: translateX(130%);
+}
+
+.public-home-page .public-home-media-card {
+  position: relative;
+  transition: transform 400ms var(--public-home-ease), box-shadow 400ms ease;
+}
+
+.public-home-page .public-home-media-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+  opacity: 0;
+  transition: opacity 320ms ease;
+  pointer-events: none;
+}
+
+.public-home-page .public-home-media-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--public-home-shadow-hover);
+}
+
+.public-home-page .public-home-media-card:hover::after {
+  opacity: 1;
+}
+
+.public-home-page .public-home-media-image {
+  transition: transform 700ms var(--public-home-ease), filter 320ms ease;
+}
+
+.public-home-page .public-home-media-card:hover .public-home-media-image {
+  transform: scale(1.035);
+  filter: saturate(1.05);
+}
+
+.public-home-page .public-home-floating-card {
+  backdrop-filter: blur(18px);
+  transition: transform 320ms var(--public-home-ease), box-shadow 320ms ease;
+}
+
+.public-home-page .public-home-floating-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.16);
+}
+
+.public-home-page .public-home-process-card,
+.public-home-page .public-home-testimonial-card {
+  transition:
+    transform 320ms var(--public-home-ease),
+    box-shadow 320ms ease,
+    border-color 320ms ease,
+    background-color 320ms ease,
+    opacity 700ms var(--public-home-ease),
+    filter 320ms ease;
+}
+
+.public-home-page .public-home-process-card:hover {
+  transform: translateY(-8px);
+}
+
+.public-home-page .public-home-process-card:hover > div:first-child {
+  box-shadow: 0 18px 32px rgba(50, 199, 83, 0.28);
+}
+
+.public-home-page .public-home-testimonial-card:hover {
+  transform: translateY(-10px);
+  box-shadow: var(--public-home-shadow-hover);
+}
+
+.public-home-page .public-home-testimonial-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 24px 0;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(50, 199, 83, 0.9), rgba(96, 165, 250, 0.75));
+  transform: scaleX(0.2);
+  transform-origin: left;
+  opacity: 0;
+  transition: transform 320ms var(--public-home-ease), opacity 320ms ease;
+}
+
+.public-home-page .public-home-testimonial-card:hover::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.public-home-page .public-home-cta {
+  transition: transform 380ms var(--public-home-ease), box-shadow 380ms ease;
+}
+
+.public-home-page .public-home-cta:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 28px 70px rgba(8, 34, 20, 0.32);
+}
+
+.public-home-page .public-home-cta-button-primary {
+  box-shadow: 0 18px 30px rgba(8, 128, 0, 0.28);
+}
+
+.public-home-page .public-home-cta-button-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.public-home-page .public-home-cta-glow {
+  animation: public-home-glow 4.8s ease-in-out infinite;
+}
+
+@keyframes public-home-glow {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(0.92);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(1.08);
+    opacity: 0.72;
+  }
+}
+
+@media (max-width: 767px) {
+  .public-home-page .public-home-kicker::after {
+    width: 56px;
+    margin-top: 10px;
+  }
+
+  .public-home-page .public-home-floating-card {
+    left: 1rem;
+    right: 1rem;
+    bottom: -1.5rem;
+  }
+
+  .public-home-page .public-home-cta {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    border-radius: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-home-page .public-home-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .public-home-page .public-home-primary-link,
+  .public-home-page .public-home-cta-button,
+  .public-home-page .public-home-media-card,
+  .public-home-page .public-home-media-image,
+  .public-home-page .public-home-floating-card,
+  .public-home-page .public-home-process-card,
+  .public-home-page .public-home-testimonial-card,
+  .public-home-page .public-home-cta,
+  .public-home-page .public-home-cta-glow {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
+  .public-home-page .public-home-primary-link::before,
+  .public-home-page .public-home-cta-button::before,
+  .public-home-page .public-home-testimonial-card::after,
+  .public-home-page .public-home-media-card::after {
+    display: none;
+  }
+}

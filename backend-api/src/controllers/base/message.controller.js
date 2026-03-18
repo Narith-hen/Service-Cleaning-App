@@ -2,6 +2,10 @@ const db = require('../../config/db');
 const promiseDb = db.promise();
 const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');
+const {
+  publishMessageCreated,
+  publishMessageRead
+} = require('../../services/message-realtime.service');
 
 const getMessageTableColumns = async () => {
   const [columns] = await promiseDb.query('SHOW COLUMNS FROM messages');
@@ -186,10 +190,19 @@ const createMessage = async (req, res, next) => {
       WHERE m.${messageIdColumn || 'message_id'} = ?
     `, [insertResult.insertId]);
 
+    const serializedMessage = serializeMessage(newMessage[0]);
+
+    await publishMessageCreated({
+      bookingId: bookingIdValue,
+      senderUserId,
+      receiverUserId,
+      message: serializedMessage
+    });
+
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: serializeMessage(newMessage[0])
+      data: serializedMessage
     });
   } catch (error) {
     next(error);
@@ -218,6 +231,37 @@ const markMessagesRead = async (req, res, next) => {
       SET is_read = 1, seen_at = NOW() 
       WHERE booking_id = ? AND receiver_id = ? AND is_read = 0
     `, [bookingIdValue, receiverAccId]);
+
+    let latestSeenMessageId = null;
+    if (updated.affectedRows > 0) {
+      const messageColumns = await getMessageTableColumns();
+      const messageIdColumn = messageColumns.has('message_id')
+        ? 'message_id'
+        : messageColumns.has('id')
+          ? 'id'
+          : null;
+
+      if (messageIdColumn) {
+      const [latestSeenRows] = await promiseDb.query(`
+        SELECT ${messageIdColumn} AS message_id
+        FROM messages
+        WHERE booking_id = ? AND receiver_id = ?
+        ORDER BY COALESCE(seen_at, updated_at, created_at) DESC
+        LIMIT 1
+      `, [bookingIdValue, receiverAccId]);
+
+        if (latestSeenRows.length) {
+          latestSeenMessageId = latestSeenRows[0].message_id ?? null;
+        }
+      }
+    }
+
+    await publishMessageRead({
+      bookingId: bookingIdValue,
+      readerUserId: req.user.user_id,
+      messageId: latestSeenMessageId,
+      updatedCount: updated.affectedRows
+    });
 
     res.status(200).json({
       success: true,
