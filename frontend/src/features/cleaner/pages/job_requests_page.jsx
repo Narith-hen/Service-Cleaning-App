@@ -270,14 +270,8 @@ const JobRequestsPage = () => {
     if (acceptLoadingRequestId !== null && acceptLoadingRequestId !== request.id) return;
     setDetailRequestId(null);
     setStatusMessage('Opening chat...');
-
-    setAcceptLoadingRequestId(request.id);
-    if (acceptDelayTimerRef.current) clearTimeout(acceptDelayTimerRef.current);
-    acceptDelayTimerRef.current = setTimeout(() => {
-      setActiveMessageRequestId(request.id);
-      setAcceptLoadingRequestId(null);
-      acceptDelayTimerRef.current = null;
-    }, 500);
+    persistConfirmedJob(request);
+    navigate(`/cleaner/messages?thread=${encodeURIComponent(String(request.id))}`);
   };
 
   const handleAcceptClick = (request) => {

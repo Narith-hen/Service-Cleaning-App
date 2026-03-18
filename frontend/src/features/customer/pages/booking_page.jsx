@@ -500,7 +500,7 @@ const BookingPage = () => {
         message: 'Please log in as a customer before booking.',
         ago: ''
       });
-      navigate('/login');
+      navigate('/auth/login');
       return;
     }
 
