@@ -16,8 +16,8 @@ const SettingsPage = () => {
     next: false
   });
   const [passwords, setPasswords] = useState({
-    current: 'password123',
-    next: 'password123'
+    current: '',
+    next: ''
   });
   const [formData, setFormData] = useState({
     companyEmail: '',
@@ -169,6 +169,7 @@ const SettingsPage = () => {
     console.debug('[SettingsPage] updateUser result', result);
     if (result?.success) {
       setMessage('Information updated successfully.');
+      setPasswords({ current: '', next: '' });
       window.dispatchEvent(
         new CustomEvent('cleaner:navbar-message', {
           detail: { type: 'success', text: 'Information updated successfully.' }
@@ -246,9 +247,6 @@ const SettingsPage = () => {
                 placeholder="Enter company name"
                 className={showErrors && formErrors.companyName ? 'input-error' : ''}
               />
-              {showErrors && formErrors.companyName && (
-                <span className="field-error">{formErrors.companyName}</span>
-              )}
             </div>
             <div className="settings-field">
               <label>Company Email</label>
@@ -258,9 +256,6 @@ const SettingsPage = () => {
                 onChange={(event) => handleFieldChange('companyEmail', event.target.value)}
                 className={showErrors && formErrors.companyEmail ? 'input-error' : ''}
               />
-              {showErrors && formErrors.companyEmail && (
-                <span className="field-error">{formErrors.companyEmail}</span>
-              )}
             </div>
           </div>
 
@@ -272,9 +267,6 @@ const SettingsPage = () => {
               onChange={(event) => handleFieldChange('phoneNumber', event.target.value)}
               className={showErrors && formErrors.phoneNumber ? 'input-error' : ''}
             />
-            {showErrors && formErrors.phoneNumber && (
-              <span className="field-error">{formErrors.phoneNumber}</span>
-            )}
           </div>
 
           <div className="settings-field">
@@ -287,9 +279,6 @@ const SettingsPage = () => {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            {showErrors && formErrors.accountStatus && (
-              <span className="field-error">{formErrors.accountStatus}</span>
-            )}
           </div>
         </section>
 
@@ -302,6 +291,10 @@ const SettingsPage = () => {
               <input
                 type={showPasswords.current ? 'text' : 'password'}
                 placeholder="Enter your password"
+                name="cleaner-current-password"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
                 value={passwords.current}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -323,9 +316,6 @@ const SettingsPage = () => {
                 {showPasswords.current ? <EyeInvisibleOutlined /> : <EyeOutlined />}
               </button>
             </div>
-            {showErrors && formErrors.currentPassword && (
-              <span className="field-error">{formErrors.currentPassword}</span>
-            )}
           </div>
 
           <div className="settings-field">
@@ -334,6 +324,10 @@ const SettingsPage = () => {
               <input
                 type={showPasswords.next ? 'text' : 'password'}
                 placeholder="Enter your password"
+                name="cleaner-new-password"
+                autoComplete="new-password"
+                data-1p-ignore="true"
+                data-lpignore="true"
                 value={passwords.next}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -363,9 +357,6 @@ const SettingsPage = () => {
               >
                 {passwordRule}
               </p>
-            )}
-            {showErrors && formErrors.newPassword && (
-              <span className="field-error">{formErrors.newPassword}</span>
             )}
           </div>
 
