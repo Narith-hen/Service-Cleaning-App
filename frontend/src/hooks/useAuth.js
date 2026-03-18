@@ -40,8 +40,9 @@ const normalizeUserData = (payload = {}, previous = null) => {
   const lastName = payload.last_name ?? previous?.last_name ?? '';
   const roleId = payload.role_id ?? previous?.role_id ?? 2;
   const companyName = payload.company_name ?? payload.companyName ?? previous?.company_name ?? '';
+  const shouldPreferCompanyName = Boolean(companyName) && !payload.company_name && !payload.companyName;
   const mergedName =
-    payload.name ||
+    (shouldPreferCompanyName ? '' : payload.name) ||
     companyName ||
     [firstName, lastName].filter(Boolean).join(' ').trim();
 
