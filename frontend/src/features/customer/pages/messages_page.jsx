@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   MessageOutlined,
@@ -14,7 +14,6 @@ import { useChatStore } from '../../../store/chatStore';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/customer/messages.scss';
 
-const fallbackBookings = [];
 const CUSTOMER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
 // Backend API URL for serving uploaded files
@@ -91,18 +90,6 @@ const readStoredThreadIds = () => {
   }
 };
 
-const hasStoredMessages = (threadId) => {
-  try {
-    const raw = localStorage.getItem(CUSTOMER_CHAT_STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    const list = parsed && typeof parsed === 'object' ? parsed[String(threadId)] : null;
-    return Array.isArray(list) && list.length > 0;
-  } catch {
-    return false;
-  }
-};
-
 const CustomerMessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [bookings, setBookings] = useState([]);
@@ -111,8 +98,31 @@ const CustomerMessagesPage = () => {
   const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
+  const contentRef = useRef(null);
   const unreadByThread = useChatStore((state) => state.unreadByThread);
   const emptyPreviewText = 'Tap to open conversation.';
+
+  const visibleBookings = useMemo(() => {
+    if (bookings.length > 0) {
+      return bookings;
+    }
+
+    const storedThreadIds = readStoredThreadIds();
+    if (storedThreadIds.length > 0) {
+      return storedThreadIds.map((id) =>
+        normalizeBooking({
+          booking_id: String(id),
+          booking_date: new Date().toISOString(),
+          booking_time: '09:00 AM',
+          address: 'Location not provided',
+          service: { name: 'Cleaning Service' },
+          cleaner: { id: '11', username: 'Cleaner' }
+        })
+      );
+    }
+
+    return [];
+  }, [bookings]);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -247,17 +257,17 @@ const CustomerMessagesPage = () => {
     let cancelled = false;
 
     const loadPreviews = async () => {
-      if (!bookings.length) {
+      if (!visibleBookings.length) {
         setThreadPreviews({});
         return;
       }
 
-        if (!getAuthToken()) {
-          const fallbackMap = bookings.reduce((acc, booking) => {
-            const threadId = String(booking.booking_id);
-            acc[threadId] = emptyPreviewText;
-            return acc;
-          }, {});
+      if (!getAuthToken()) {
+        const fallbackMap = visibleBookings.reduce((acc, booking) => {
+          const threadId = String(booking.booking_id);
+          acc[threadId] = emptyPreviewText;
+          return acc;
+        }, {});
         if (!cancelled) {
           setThreadPreviews(fallbackMap);
         }
@@ -266,7 +276,7 @@ const CustomerMessagesPage = () => {
 
       try {
         const entries = await Promise.all(
-          bookings.map(async (booking) => {
+          visibleBookings.map(async (booking) => {
             const threadId = String(booking.booking_id);
             try {
               const response = await api.get(`/messages/booking/${threadId}`);
@@ -293,7 +303,7 @@ const CustomerMessagesPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [bookings]);
+  }, [visibleBookings, emptyPreviewText]);
 
   useEffect(() => {
     const paramThreadId = searchParams.get('thread') || searchParams.get('booking');
@@ -301,6 +311,20 @@ const CustomerMessagesPage = () => {
       setActiveThreadId(paramThreadId);
     }
   }, [searchParams, activeThreadId]);
+
+  // If `cleaner` query param is provided, prefer selecting threads for that cleaner
+  useEffect(() => {
+    const cleanerParam = searchParams.get('cleaner');
+    if (!cleanerParam || !bookings.length) return;
+    const matching = bookings.filter((b) => String(b.cleaner?.id || b.cleaner_id || '') === String(cleanerParam));
+    if (matching.length) {
+      const nextId = String(matching[0].booking_id);
+      setActiveThreadId(nextId);
+      const params = new URLSearchParams(searchParams);
+      params.set('thread', nextId);
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams, bookings, setSearchParams]);
 
   useEffect(() => {
     if (!visibleBookings.length) return;
@@ -321,31 +345,23 @@ const CustomerMessagesPage = () => {
     return visibleBookings.find((b) => b.booking_id === activeId) || visibleBookings[0];
   }, [visibleBookings, activeThreadId]);
 
-  const visibleBookings = useMemo(() => {
-    if (!bookings.length) return [];
-    const forcedId = String(searchParams.get('booking') || searchParams.get('thread') || '');
-    return bookings.filter((booking) => {
-      const threadId = String(booking.booking_id);
-      if (forcedId && threadId === forcedId) return true;
-      const preview = threadPreviews[threadId];
-      const unreadCount = unreadByThread[threadId] || 0;
-      if (unreadCount > 0) return true;
-      if (preview && preview !== emptyPreviewText) return true;
-      return hasStoredMessages(threadId);
-    });
-  }, [bookings, threadPreviews, unreadByThread, emptyPreviewText, searchParams]);
-
   const handleSelectThread = (booking) => {
     const nextId = String(booking.booking_id);
     const params = new URLSearchParams(searchParams);
     params.set('thread', nextId);
     setSearchParams(params, { replace: true });
     setActiveThreadId(nextId);
+
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 980px)').matches) {
+      window.requestAnimationFrame(() => {
+        contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   };
 
   if (loading) {
     return (
-      <div className="customer-messages-page">
+      <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
         <div className="customer-messages-empty">
           <p>Loading conversations...</p>
         </div>
@@ -353,13 +369,13 @@ const CustomerMessagesPage = () => {
     );
   }
 
-  if (!bookings.length || !visibleBookings.length) {
+  if (!visibleBookings.length) {
     return (
-      <div className="customer-messages-page">
+      <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
         <div className="customer-messages-empty">
           <MessageOutlined />
           <h3>No messages yet</h3>
-          <p>Your conversations will appear here once you have a confirmed booking.</p>
+          <p>Your conversations with cleaners will appear here after you make a booking.</p>
         </div>
       </div>
     );
@@ -381,7 +397,7 @@ const CustomerMessagesPage = () => {
   const bookingLocation = activeBooking?.address || 'Location not provided';
 
   return (
-    <div className="customer-messages-page">
+    <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
       <div className="customer-messages-header">
         <div>
           <p className="customer-messages-kicker">Conversations</p>
@@ -432,10 +448,11 @@ const CustomerMessagesPage = () => {
           </div>
         </aside>
 
-        <div className="customer-messages-content">
+        <div className="customer-messages-content" ref={contentRef}>
           {activeBooking && (
             <div className="my-jobs-message-view">
               <CustomerMessagePanel
+                key={String(activeBooking.booking_id)}
                 threadId={String(activeBooking.booking_id)}
                 cleanerName={cleanerName}
                 cleanerAvatar={cleanerAvatar}
