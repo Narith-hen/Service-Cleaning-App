@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   BellOutlined,
   CheckOutlined,
@@ -55,6 +54,15 @@ const CleanerHeader = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target) &&
+        notificationButtonRef.current &&
+        !notificationButtonRef.current.contains(event.target)
+      ) {
+        setIsNotificationOpen(false);
+      }
+
+      if (
         profileRef.current &&
         !profileRef.current.contains(event.target) &&
         profileButtonRef.current &&
@@ -100,8 +108,11 @@ const CleanerHeader = () => {
   };
 
   const handleBellClick = () => {
+    setIsNotificationOpen((prev) => !prev);
     setIsProfileOpen(false);
-    setIsNotificationOpen(true);
+    if (!isNotificationOpen) {
+      fetchNotifications(true);
+    }
   };
 
   const handleProfileClick = () => {
@@ -148,10 +159,28 @@ const CleanerHeader = () => {
     }
   };
 
-  const notificationOverlay =
-    isNotificationOpen && typeof document !== 'undefined'
-      ? createPortal(
-          <div className="notification-overlay">
+  return (
+    <>
+      <header className="admin-header">
+      {toast && (
+        <div className={`header-toast ${toast.type}`}>
+          <span>{toast.text}</span>
+        </div>
+      )}
+      <div className="header-controls">
+        <div className="dropdown-wrapper">
+          <button
+            ref={notificationButtonRef}
+            type="button"
+            className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
+            onClick={handleBellClick}
+            title="Notifications"
+          >
+            <BellOutlined />
+            {unreadCount > 0 && <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+          </button>
+
+          {isNotificationOpen && (
             <div className="dropdown-menu notifications-dropdown" ref={notificationRef}>
               <div className="dropdown-header">
                 <h3>Notifications</h3>
@@ -206,32 +235,7 @@ const CleanerHeader = () => {
                 </div>
               )}
             </div>
-          </div>,
-          document.body
-        )
-      : null;
-
-  return (
-    <>
-      {notificationOverlay}
-      <header className="admin-header">
-      {toast && (
-        <div className={`header-toast ${toast.type}`}>
-          <span>{toast.text}</span>
-        </div>
-      )}
-      <div className="header-controls">
-        <div className="dropdown-wrapper">
-          <button
-            ref={notificationButtonRef}
-            type="button"
-            className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
-            onClick={handleBellClick}
-            title="Notifications"
-          >
-            <BellOutlined />
-            {unreadCount > 0 && <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-          </button>
+          )}
         </div>
 
         <div className="dropdown-wrapper">

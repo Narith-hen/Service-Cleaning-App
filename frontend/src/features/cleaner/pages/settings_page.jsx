@@ -13,25 +13,17 @@ const SettingsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
-    next: false,
-    confirm: false
+    next: false
   });
   const [passwords, setPasswords] = useState({
     current: 'password123',
-    next: 'password123',
-    confirm: 'password123'
+    next: 'password123'
   });
   const [formData, setFormData] = useState({
-    cleanerCode: '',
     companyEmail: '',
     phoneNumber: '',
-    teamMembers: '',
-    latitude: '',
-    longitude: '',
     accountStatus: 'active',
-    address: '',
-    locLatitude: '',
-    locLongitude: ''
+    address: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -71,14 +63,8 @@ const SettingsPage = () => {
     setCompanyName((prev) => user.name || prev);
     setFormData((prev) => ({
       ...prev,
-      cleanerCode: user.user_code || prev.cleanerCode,
       companyEmail: user.email || prev.companyEmail,
       phoneNumber: user.phone_number || user.phone || prev.phoneNumber,
-      address: user.address || prev.address,
-      latitude: user.latitude || prev.latitude,
-      longitude: user.longitude || prev.longitude,
-      locLatitude: user.latitude || prev.locLatitude,
-      locLongitude: user.longitude || prev.locLongitude,
       accountStatus: user.account_status || prev.accountStatus
     }));
     if (user.avatar) {
@@ -142,30 +128,16 @@ const SettingsPage = () => {
 
   const validateForm = (nextData, nextPasswords) => {
     const errors = {};
-    if (!nextData.cleanerCode.trim()) errors.cleanerCode = 'Required';
     if (!companyName.trim()) errors.companyName = 'Required';
     if (!nextData.companyEmail.trim()) errors.companyEmail = 'Required';
     if (!/^\S+@\S+\.\S+$/.test(nextData.companyEmail)) errors.companyEmail = 'Invalid email';
     if (!nextData.phoneNumber.trim()) errors.phoneNumber = 'Required';
-    if (!nextData.teamMembers.trim()) errors.teamMembers = 'Required';
-    if (!nextData.latitude.trim()) errors.latitude = 'Required';
-    if (!nextData.longitude.trim()) errors.longitude = 'Required';
     if (!nextData.accountStatus) errors.accountStatus = 'Required';
-    if (!nextData.address.trim()) errors.address = 'Required';
-    if (!nextData.locLatitude.trim()) errors.locLatitude = 'Required';
-    if (!nextData.locLongitude.trim()) errors.locLongitude = 'Required';
 
     if (!nextPasswords.current.trim()) errors.currentPassword = 'Required';
     if (!nextPasswords.next.trim()) errors.newPassword = 'Required';
-    if (!nextPasswords.confirm.trim()) errors.confirmPassword = 'Required';
     if (nextPasswords.next && !meetsPasswordRule(nextPasswords.next)) {
       errors.newPassword = passwordRule;
-    }
-    if (nextPasswords.confirm && !meetsPasswordRule(nextPasswords.confirm)) {
-      errors.confirmPassword = passwordRule;
-    }
-    if (nextPasswords.next && nextPasswords.confirm && nextPasswords.next !== nextPasswords.confirm) {
-      errors.confirmPassword = 'Passwords do not match';
     }
     return errors;
   };
@@ -185,13 +157,10 @@ const SettingsPage = () => {
     if (Object.keys(errors).length > 0) return;
 
     const payload = {
-      cleaner_code: formData.cleanerCode,
       company_name: companyName,
+      name: companyName,
       company_email: formData.companyEmail,
       phone_number: formData.phoneNumber,
-      address: formData.address,
-      latitude: formData.locLatitude || formData.latitude,
-      longitude: formData.locLongitude || formData.longitude,
       account_status: formData.accountStatus,
     };
 
@@ -260,19 +229,6 @@ const SettingsPage = () => {
         <section className="settings-panel">
           <h3>Profile</h3>
 
-          <div className="settings-field">
-            <label>Cleaner Code</label>
-            <input
-              type="text"
-              value={formData.cleanerCode}
-              onChange={(event) => handleFieldChange('cleanerCode', event.target.value)}
-              className={showErrors && formErrors.cleanerCode ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.cleanerCode && (
-              <span className="field-error">{formErrors.cleanerCode}</span>
-            )}
-          </div>
-
           <div className="settings-section-title">Company Info</div>
 
           <div className="settings-grid-2">
@@ -322,46 +278,6 @@ const SettingsPage = () => {
           </div>
 
           <div className="settings-field">
-            <label>Team Members</label>
-            <input
-              type="text"
-              value={formData.teamMembers}
-              onChange={(event) => handleFieldChange('teamMembers', event.target.value)}
-              className={showErrors && formErrors.teamMembers ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.teamMembers && (
-              <span className="field-error">{formErrors.teamMembers}</span>
-            )}
-          </div>
-
-          <div className="settings-grid-2">
-            <div className="settings-field">
-              <label>Latitude</label>
-              <input
-                type="text"
-                value={formData.latitude}
-                onChange={(event) => handleFieldChange('latitude', event.target.value)}
-                className={showErrors && formErrors.latitude ? 'input-error' : ''}
-              />
-              {showErrors && formErrors.latitude && (
-                <span className="field-error">{formErrors.latitude}</span>
-              )}
-            </div>
-            <div className="settings-field">
-              <label>Longitude</label>
-              <input
-                type="text"
-                value={formData.longitude}
-                onChange={(event) => handleFieldChange('longitude', event.target.value)}
-                className={showErrors && formErrors.longitude ? 'input-error' : ''}
-              />
-              {showErrors && formErrors.longitude && (
-                <span className="field-error">{formErrors.longitude}</span>
-              )}
-            </div>
-          </div>
-
-          <div className="settings-field">
             <label>Account Status</label>
             <select
               value={formData.accountStatus}
@@ -378,47 +294,6 @@ const SettingsPage = () => {
         </section>
 
         <section className="settings-panel">
-          <h3>Location</h3>
-
-          <div className="settings-field">
-            <label>Address</label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(event) => handleFieldChange('address', event.target.value)}
-              className={showErrors && formErrors.address ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.address && (
-              <span className="field-error">{formErrors.address}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Latitude</label>
-            <input
-              type="text"
-              value={formData.locLatitude}
-              onChange={(event) => handleFieldChange('locLatitude', event.target.value)}
-              className={showErrors && formErrors.locLatitude ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.locLatitude && (
-              <span className="field-error">{formErrors.locLatitude}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Longitude</label>
-            <input
-              type="text"
-              value={formData.locLongitude}
-              onChange={(event) => handleFieldChange('locLongitude', event.target.value)}
-              className={showErrors && formErrors.locLongitude ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.locLongitude && (
-              <span className="field-error">{formErrors.locLongitude}</span>
-            )}
-          </div>
-
           <div className="settings-section-title">Security</div>
 
           <div className="settings-field">
@@ -491,47 +366,6 @@ const SettingsPage = () => {
             )}
             {showErrors && formErrors.newPassword && (
               <span className="field-error">{formErrors.newPassword}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Confirm Password</label>
-            <div className="settings-password-field">
-              <input
-                type={showPasswords.confirm ? 'text' : 'password'}
-                placeholder="Enter your password"
-                value={passwords.confirm}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setPasswords((prev) => ({ ...prev, confirm: value }));
-                  if (showErrors) {
-                    setFormErrors(validateForm(formData, { ...passwords, confirm: value }));
-                  }
-                }}
-                className={showErrors && formErrors.confirmPassword ? 'input-error' : ''}
-              />
-              <button
-                type="button"
-                className="settings-eye-btn icon inside"
-                onClick={() =>
-                  setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))
-                }
-                aria-label={showPasswords.confirm ? 'Hide password' : 'Show password'}
-              >
-                {showPasswords.confirm ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              </button>
-            </div>
-            {passwords.confirm && (
-              <p
-                className={`password-rule ${
-                  meetsPasswordRule(passwords.confirm) ? 'is-valid' : 'is-invalid'
-                }`}
-              >
-                {passwordRule}
-              </p>
-            )}
-            {showErrors && formErrors.confirmPassword && (
-              <span className="field-error">{formErrors.confirmPassword}</span>
             )}
           </div>
 

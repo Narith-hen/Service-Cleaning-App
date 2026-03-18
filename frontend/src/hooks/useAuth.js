@@ -39,12 +39,17 @@ const normalizeUserData = (payload = {}, previous = null) => {
   const firstName = payload.first_name ?? previous?.first_name ?? '';
   const lastName = payload.last_name ?? previous?.last_name ?? '';
   const roleId = payload.role_id ?? previous?.role_id ?? 2;
-  const mergedName = payload.name || [firstName, lastName].filter(Boolean).join(' ').trim();
+  const companyName = payload.company_name ?? payload.companyName ?? previous?.company_name ?? '';
+  const mergedName =
+    payload.name ||
+    companyName ||
+    [firstName, lastName].filter(Boolean).join(' ').trim();
 
   return {
     id: payload.user_id ?? previous?.id ?? previous?.user_id ?? payload.id,
     user_id: payload.user_id ?? previous?.user_id ?? payload.id,
     user_code: payload.user_code ?? previous?.user_code ?? null,
+    company_name: companyName || previous?.company_name || '',
     name: mergedName || previous?.name || 'Customer',
     first_name: firstName,
     last_name: lastName,
@@ -320,7 +325,7 @@ export const useAuth = () => {
         throw new Error(result?.message || 'Failed to update profile');
       }
 
-      const updatedUser = normalizeUserData(result.data || {}, user);
+      const updatedUser = normalizeUserData({ ...userData, ...(result.data || {}) }, user);
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
