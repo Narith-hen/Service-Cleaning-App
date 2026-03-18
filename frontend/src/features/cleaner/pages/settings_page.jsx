@@ -22,16 +22,16 @@ const SettingsPage = () => {
     confirm: 'password123'
   });
   const [formData, setFormData] = useState({
-    cleanerCode: 'CLN-0001',
-    companyEmail: 'sparkle@gmail.com',
-    phoneNumber: '+855 12345678',
-    teamMembers: 'Phnom Penh, Cambodia',
-    latitude: '11.5564',
-    longitude: '104.9282',
+    cleanerCode: '',
+    companyEmail: '',
+    phoneNumber: '',
+    teamMembers: '',
+    latitude: '',
+    longitude: '',
     accountStatus: 'active',
-    address: 'Phnom Penh, Cambodia',
-    locLatitude: '11.5564',
-    locLongitude: '104.9282'
+    address: '',
+    locLatitude: '',
+    locLongitude: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -73,7 +73,13 @@ const SettingsPage = () => {
       ...prev,
       cleanerCode: user.user_code || prev.cleanerCode,
       companyEmail: user.email || prev.companyEmail,
-      phoneNumber: user.phone_number || user.phone || prev.phoneNumber
+      phoneNumber: user.phone_number || user.phone || prev.phoneNumber,
+      address: user.address || prev.address,
+      latitude: user.latitude || prev.latitude,
+      longitude: user.longitude || prev.longitude,
+      locLatitude: user.latitude || prev.locLatitude,
+      locLongitude: user.longitude || prev.locLongitude,
+      accountStatus: user.account_status || prev.accountStatus
     }));
     if (user.avatar) {
       setPreview(normalizeAvatarUrl(user.avatar, profileImage));
@@ -189,7 +195,9 @@ const SettingsPage = () => {
       account_status: formData.accountStatus,
     };
 
+    console.debug('[SettingsPage] updateUser payload', payload);
     const result = await updateUser(payload);
+    console.debug('[SettingsPage] updateUser result', result);
     if (result?.success) {
       setMessage('Information updated successfully.');
       window.dispatchEvent(
@@ -200,6 +208,7 @@ const SettingsPage = () => {
       return;
     }
     const errorText = result?.error || 'Failed to update information.';
+    console.error('[SettingsPage] updateUser failed', errorText, result);
     setMessage(errorText);
     window.dispatchEvent(
       new CustomEvent('cleaner:navbar-message', {

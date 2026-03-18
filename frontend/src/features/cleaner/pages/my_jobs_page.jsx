@@ -14,16 +14,42 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons';
 import officeImage from '../../../assets/office.png';
+import homeImage from '../../../assets/home.png';
+import windowImage from '../../../assets/window.png';
+import constructionImage from '../../../assets/Construction Cleaning.png';
+import customerHomeImage from '../../../assets/customer_home.png';
+import customerAvatar1 from '../../../assets/larryta.png';
+import customerAvatar2 from '../../../assets/mey.JPG';
+import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
+
+// Helper to save chat threads to localStorage
+const saveChatThreads = (threads) => {
+  try {
+    localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
 
 const pickJobImage = (job) => {
-  // Apply office preview image for booking cards by default.
-  const imageHint = String(job?.image || '').toLowerCase();
-  if (imageHint.includes('office')) return officeImage;
-  return officeImage;
+  // Apply real service images based on job type/service
+  const title = String(job?.title || '').toLowerCase();
+  const serviceType = String(job?.serviceType || job?.image || '').toLowerCase();
+  
+  // Check title first, then service type
+  if (title.includes('office') || serviceType.includes('office')) return officeImage;
+  if (title.includes('window') || serviceType.includes('window')) return windowImage;
+  if (title.includes('construction') || serviceType.includes('construction')) return constructionImage;
+  if (title.includes('home') || title.includes('house') || title.includes('deep') || serviceType.includes('home')) return homeImage;
+  if (title.includes('customer') || serviceType.includes('customer')) return customerHomeImage;
+  
+  // Default to home image for cleaning services
+  return homeImage;
 };
 
 const fallbackJobs = [
@@ -39,9 +65,56 @@ const fallbackJobs = [
     timeRange: '09:00 AM - 12:00 PM',
     location: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
     customer: 'Sovan Reach',
+    customerId: '3',
+    customerPhone: '+855 12 345 678',
+    customerEmail: 'sovanreach@email.com',
+    customerAvatar: customerAvatar1,
     bedrooms: '3 Bedrooms',
     floors: '2 Floors',
-    image: officeImage
+    image: homeImage,
+    serviceType: 'home'
+  },
+  {
+    id: 'default-2',
+    sourceRequestId: 'default-2',
+    status: 'completed',
+    title: 'Office Deep Cleaning',
+    jobId: '#SOMA-48280',
+    price: '$120.00',
+    day: '20',
+    monthYear: 'June 2026',
+    timeRange: '08:00 AM - 11:00 AM',
+    location: '456 Business Center, Phnom Penh, Cambodia',
+    customer: 'Mey Sotharith',
+    customerId: '4',
+    customerPhone: '+855 10 987 654',
+    customerEmail: 'meysotharith@company.com',
+    customerAvatar: customerAvatar2,
+    bedrooms: '5 Rooms',
+    floors: '1 Floor',
+    image: officeImage,
+    serviceType: 'office'
+  },
+  {
+    id: 'default-3',
+    sourceRequestId: 'default-3',
+    status: 'completed',
+    title: 'Window Cleaning Service',
+    jobId: '#SOMA-48275',
+    price: '$65.00',
+    day: '15',
+    monthYear: 'June 2026',
+    timeRange: '10:00 AM - 01:00 PM',
+    location: '789 Riverside, Phnom Penh, Cambodia',
+    customer: 'Larry Ta',
+    customerId: '5',
+    customerPhone: '+855 98 765 432',
+    customerEmail: 'larryta@email.com',
+    customerAvatar: customerAvatar3,
+    bedrooms: '4 Bedrooms',
+    floors: '2 Floors',
+    image: windowImage,
+    serviceType: 'window'
   }
 ];
 
@@ -81,12 +154,17 @@ const MyJobsPage = () => {
           timeRange: job.timeRange || '09:00 AM - 12:00 PM',
           location: job.location || 'Phnom Penh, Cambodia',
           customer: job.customer || 'Customer',
+          customerId: job.customerId || job.customer_id || '3',
+          customerPhone: job.customerPhone || job.customer_phone || '',
+          customerEmail: job.customerEmail || job.customer_email || '',
+          customerAvatar: job.customerAvatar || '',
           bedrooms: job.bedrooms || '3 Bedrooms',
           floors: job.floors || '2 Floors',
+          serviceType: job.serviceType || 'home',
           image: pickJobImage(job)
         }));
 
-      setJobs([normalized[0]]);
+      setJobs(normalized);
     } catch {
       setJobs(fallbackJobs);
     }
@@ -162,6 +240,11 @@ const MyJobsPage = () => {
           <CleanerMessagePanel
             threadId={activeMessageJob.sourceRequestId || activeMessageJob.id}
             customerName={activeMessageJob.customer}
+            customerId={activeMessageJob.customerId || '3'}
+            customerAvatar={activeMessageJob.customerAvatar}
+            customerPhone={activeMessageJob.customerPhone}
+            customerEmail={activeMessageJob.customerEmail}
+            customerAddress={activeMessageJob.location}
             subtitle={`${activeMessageJob.title} Job - ${activeMessageJob.jobId}`}
           />
 
@@ -222,7 +305,7 @@ const MyJobsPage = () => {
       </div>
 
       <div className="my-jobs-list-v2">
-        {visibleJobs.slice(0, 1).map((job) => {
+        {visibleJobs.map((job) => {
           const actionState = jobActionStateById[job.id]
             || (job.status === 'completed'
               ? 'completed'
@@ -231,12 +314,14 @@ const MyJobsPage = () => {
                 : 'idle');
 
           return (
-            <article key={job.id} className="my-job-card-v2">
+            <article key={job.id} className={`my-job-card-v2 ${job.status === 'completed' ? 'completed' : ''}`}>
             <aside
               className="my-job-date-v2"
               style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
             >
-              <span className="status-pill">ACTIVE NOW</span>
+              <span className={`status-pill ${job.status}`}>
+                {job.status === 'completed' ? 'COMPLETED' : job.status === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE NOW'}
+              </span>
               <div className="day-value">{job.day}</div>
               <div className="month-value">{job.monthYear}</div>
 
@@ -306,13 +391,52 @@ const MyJobsPage = () => {
                   <CheckCircleOutlined /> Check My Job
                 </button>
 
-                <button type="button" className="ghost-btn">
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => handleCheckMyJob(job.id)}
+                >
                   <CompassOutlined /> Navigate to Location
                 </button>
                 <button
                   type="button"
                   className="ghost-btn"
-                  onClick={() => setActiveMessageJobId(job.id)}
+                  onClick={() => {
+                    // Save job to chat threads for history
+                    const threadData = {
+                      id: job.id,
+                      sourceRequestId: job.sourceRequestId,
+                      status: job.status,
+                      title: job.title,
+                      jobId: job.jobId,
+                      price: job.price,
+                      day: job.day,
+                      monthYear: job.monthYear,
+                      timeRange: job.timeRange,
+                      location: job.location,
+                      customer: job.customer,
+                      customerId: job.customerId || '3',
+                      customerPhone: job.customerPhone || '',
+                      customerEmail: job.customerEmail || '',
+                      customerAvatar: job.customerAvatar || '',
+                      bedrooms: job.bedrooms,
+                      floors: job.floors,
+                      image: job.image,
+                      serviceType: job.serviceType
+                    };
+                    
+                    try {
+                      const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+                      const existing = raw ? JSON.parse(raw) : [];
+                      const threadId = job.sourceRequestId || job.id;
+                      const filtered = existing.filter(t => (t.sourceRequestId || t.id) !== threadId);
+                      saveChatThreads([threadData, ...filtered]);
+                    } catch (e) {
+                      // Ignore
+                    }
+                    
+                    setActiveMessageJobId(job.id);
+                  }}
                 >
                   <MessageOutlined /> Messages
                 </button>

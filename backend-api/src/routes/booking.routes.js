@@ -14,7 +14,9 @@ const {
   getBookingHistory,
   trackBooking,
   getAvailableBookings,
-  claimBooking
+  claimBooking,
+  addBookingImages,
+  updateNegotiatedPrice
 } = require('../controllers'); // Import from index.js
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
@@ -50,6 +52,11 @@ const statusUpdateValidation = [
 const assignCleanerValidation = [
   param('id').isInt(),
   body('cleaner_id').isInt().withMessage('Cleaner ID is required')
+];
+
+const negotiatedPriceValidation = [
+  param('id').isInt(),
+  body('negotiated_price').isFloat({ min: 0.01 }).withMessage('Valid negotiated price required')
 ];
 
 // Create booking (customers only)
@@ -96,6 +103,12 @@ router.get('/history/:id', [
   param('id').isInt()
 ], validate, getBookingHistory);
 
+// Booking images
+router.post('/:id/images', [
+  param('id').isInt(),
+  body('images').isArray({ min: 1 })
+], validate, addBookingImages);
+
 // Single booking operations
 router.get('/:id', [
   param('id').isInt()
@@ -109,6 +122,7 @@ router.delete('/:id', authorize('admin'), [
 // Status management
 router.patch('/:id/status', authorize('admin', 'cleaner'), statusUpdateValidation, validate, updateBookingStatus);
 router.patch('/:id/assign', authorize('admin'), assignCleanerValidation, validate, assignCleaner);
+router.patch('/:id/price', authorize('admin', 'cleaner'), negotiatedPriceValidation, validate, updateNegotiatedPrice);
 router.patch('/:id/cancel', authorize('customer', 'admin'), [
   param('id').isInt(),
   body('reason').optional().isString()

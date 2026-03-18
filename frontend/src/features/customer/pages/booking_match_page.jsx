@@ -41,9 +41,9 @@ const BookingMatchPage = () => {
   const [progress, setProgress] = useState(65);
   const [isFading, setIsFading] = useState(false);
   const [isMatched, setIsMatched] = useState(false);
-  const [acceptedId, setAcceptedId] = useState(null);
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
+  const ALERTED_BOOKING_PREFIX = 'alerted_booking_';
   const socketRef = useRef(null);
   const [trackedBookingId, setTrackedBookingId] = useState(() => {
     try {
@@ -170,7 +170,16 @@ const BookingMatchPage = () => {
       try {
         const stored = localStorage.getItem(ACCEPTED_BOOKING_KEY);
         if (stored) {
-          setAcceptedId(stored);
+          try {
+            const key = `${ALERTED_BOOKING_PREFIX}${stored}`;
+            if (!localStorage.getItem(key)) {
+              alert(`Your booking #${stored} was accepted. Open chat to talk with your cleaner.`);
+              localStorage.setItem(key, '1');
+            }
+          } catch {
+            /* ignore */
+          }
+          navigate(`/customer/chat?booking=${encodeURIComponent(String(stored))}`);
           localStorage.removeItem(ACCEPTED_BOOKING_KEY);
         }
         const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
@@ -185,7 +194,7 @@ const BookingMatchPage = () => {
       }
     }, 1500);
     return () => clearInterval(poll);
-  }, []);
+  }, [navigate]);
 
   // Poll backend for status of last booking and redirect when confirmed
   useEffect(() => {
@@ -210,7 +219,17 @@ const BookingMatchPage = () => {
 
         if (acceptedStatuses.has(status) || hasCleaner) {
           setIsMatched(true);
-          setAcceptedId(String(payload?.booking_id ?? effectiveBookingId));
+          const acceptedBookingId = String(payload?.booking_id ?? effectiveBookingId);
+          try {
+            const key = `${ALERTED_BOOKING_PREFIX}${acceptedBookingId}`;
+            if (!localStorage.getItem(key)) {
+              alert(`Your booking #${acceptedBookingId} was accepted. Open chat to talk with your cleaner.`);
+              localStorage.setItem(key, '1');
+            }
+          } catch {
+            /* ignore */
+          }
+          navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedBookingId))}`);
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
           setProgress(100);
@@ -227,13 +246,6 @@ const BookingMatchPage = () => {
     }, 2000);
     return () => clearInterval(pollStatus);
   }, [trackedBookingId, bookingId, navigate]);
-
-  useEffect(() => {
-    if (!acceptedId) return;
-    // brief alert then navigate to chat
-    alert(`Your booking #${acceptedId} has been accepted. Opening chat with your cleaner.`);
-    navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedId))}`);
-  }, [acceptedId, navigate]);
 
   return (
     <div className="booking-match-page">
@@ -315,10 +327,10 @@ const BookingMatchPage = () => {
           >
             Next
           </button>
-        </div>
-      </section>
-    </div>
+        </div>\n</section>\n</div>
   );
 };
 
 export default BookingMatchPage;
+
+

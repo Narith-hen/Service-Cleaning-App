@@ -13,9 +13,19 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
     const accountSource = String(decoded?.account_source || '').toLowerCase();
+    const tokenRole = String(decoded?.role || '').trim().toLowerCase();
+    const tokenRoleId = Number(decoded?.role_id || 0);
+    const roleFromTokenId = tokenRoleId === 1
+      ? 'admin'
+      : tokenRoleId === 2
+        ? 'cleaner'
+        : tokenRoleId === 3
+          ? 'customer'
+          : '';
 
     const promiseDb = db.promise();
     let row = null;
+    let sourceTable = 'users';
 
     if (accountSource === 'cleaner_profile') {
       const [cleanerRows] = await promiseDb.query(
@@ -33,6 +43,7 @@ const authenticate = async (req, res, next) => {
         [decoded.user_id]
       );
       row = cleanerRows?.[0] || null;
+      sourceTable = 'cleaner_profile';
     } else {
       const [userRows] = await promiseDb.query(
         `
@@ -49,6 +60,7 @@ const authenticate = async (req, res, next) => {
         [decoded.user_id]
       );
       row = userRows?.[0] || null;
+      sourceTable = row ? 'users' : sourceTable;
     }
 
     if (!row && accountSource !== 'cleaner_profile') {
@@ -67,11 +79,15 @@ const authenticate = async (req, res, next) => {
         [decoded.user_id]
       );
       row = cleanerRows?.[0] || null;
+      if (row) sourceTable = 'cleaner_profile';
     }
-    const resolvedSource = accountSource === 'cleaner_profile' || !row?.email || accountSource === 'cleaner'
-      ? accountSource || 'users'
-      : 'users';
+    const resolvedSource = (accountSource === 'cleaner_profile' || accountSource === 'cleaner')
+      ? accountSource
+      : sourceTable === 'cleaner_profile'
+        ? 'cleaner_profile'
+        : 'users';
 
+    const resolvedRoleName = String(row?.role_name || tokenRole || roleFromTokenId || '').trim().toLowerCase();
     const user = row
       ? {
           user_id: row.user_id,
@@ -79,7 +95,7 @@ const authenticate = async (req, res, next) => {
           role_id: row.role_id,
           role: {
             role_id: row.role_id,
-            role_name: row.role_name,
+            role_name: resolvedRoleName || row.role_name,
           },
           account_source: resolvedSource,
         }
@@ -92,6 +108,15 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error?.name === 'TokenExpiredError') {
+      return next(new AppError('Token expired', 401));
+    }
+    if (error?.name === 'JsonWebTokenError') {
+      return next(new AppError('Invalid token', 401));
+    }
+    if (error instanceof AppError) {
+      return next(error);
+    }
     next(new AppError('Authentication failed', 401));
   }
 };
@@ -104,8 +129,15 @@ const authorize = (...roles) => {
 
     const allowedRoles = roles.map((role) => String(role || '').trim().toLowerCase());
     const userRole = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    const accountSource = String(req.user?.account_source || '').trim().toLowerCase();
+    const effectiveRoles = new Set();
+    if (userRole) effectiveRoles.add(userRole);
+    if (accountSource === 'cleaner_profile' || accountSource === 'cleaner') {
+      effectiveRoles.add('cleaner');
+    }
 
-    if (!allowedRoles.includes(userRole)) {
+    const isAllowed = allowedRoles.some((role) => effectiveRoles.has(role));
+    if (!isAllowed) {
       return next(new AppError('Not authorized', 403));
     }
 
