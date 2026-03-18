@@ -3,12 +3,18 @@ const promiseDb = db.promise();
 const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');
 
+const getMessageTableColumns = async () => {
+  const [columns] = await promiseDb.query('SHOW COLUMNS FROM messages');
+  return new Set((columns || []).map((column) => column.Field));
+};
+
 const serializeMessage = (message) => {
   const senderRoleName = String(message.sender_role_name || '').trim().toLowerCase();
   const receiverRoleName = String(message.receiver_role_name || '').trim().toLowerCase();
+  const messageId = message.message_id ?? message.id ?? null;
 
   return {
-    id: message.message_id?.toString(),
+    id: messageId ? messageId.toString() : null,
     booking_id: message.booking_id ? message.booking_id.toString() : null,
     service_id: message.service_id ? message.service_id.toString() : null,
     sender_id: message.sender_user_id?.toString(),
@@ -126,11 +132,42 @@ const createMessage = async (req, res, next) => {
       receiverAccId = res2.insertId;
     }
 
-    const [insertResult] = await promiseDb.query(`
-      INSERT INTO messages (booking_id, service_id, sender_id, receiver_id, message, file_url, file_type, is_read)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 0)
-    `, [bookingIdValue, booking.service_id, senderAccId, receiverAccId, message || null, file_url || null, file_type || null]);
-    
+    const messageColumns = await getMessageTableColumns();
+    const insertColumns = [];
+    const insertValues = [];
+    const appendMessageField = (column, value, required = false) => {
+      if (messageColumns.has(column)) {
+        insertColumns.push(column);
+        insertValues.push(value);
+        return;
+      }
+      if (required) {
+        throw new AppError(`Missing required messages column: ${column}`, 500);
+      }
+    };
+
+    appendMessageField('booking_id', bookingIdValue, true);
+    appendMessageField('service_id', booking.service_id);
+    appendMessageField('sender_id', senderAccId, true);
+    appendMessageField('receiver_id', receiverAccId, true);
+    appendMessageField('message', message || null);
+    appendMessageField('file_url', file_url || null);
+    appendMessageField('file_type', file_type || null);
+    appendMessageField('is_read', 0);
+
+    const placeholders = insertColumns.map(() => '?').join(', ');
+    const columnsSql = insertColumns.map((column) => `\`${column}\``).join(', ');
+    const [insertResult] = await promiseDb.query(
+      `INSERT INTO messages (${columnsSql}) VALUES (${placeholders})`,
+      insertValues
+    );
+
+    const messageIdColumn = messageColumns.has('message_id')
+      ? 'message_id'
+      : messageColumns.has('id')
+        ? 'id'
+        : null;
+
     const [newMessage] = await promiseDb.query(`
       SELECT m.*, 
         s_acc.user_id as sender_user_id,
@@ -146,7 +183,7 @@ const createMessage = async (req, res, next) => {
       LEFT JOIN users ru ON r_acc.user_id = ru.user_id
       LEFT JOIN roles sr ON su.role_id = sr.role_id
       LEFT JOIN roles rr ON ru.role_id = rr.role_id
-      WHERE m.message_id = ?
+      WHERE m.${messageIdColumn || 'message_id'} = ?
     `, [insertResult.insertId]);
 
     res.status(201).json({

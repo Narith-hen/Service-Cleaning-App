@@ -1,5 +1,3 @@
-import Navbar from "../components/Navbar";
-
 const contactItems = [
   {
     label: "Email",
@@ -16,8 +14,6 @@ const contactItems = [
 export default function ContactPage({ embedded = false, darkMode = false }) {
   return (
     <div className={`${darkMode ? "bg-[#0b1220] text-slate-100" : "bg-slate-50 text-slate-800"}`}>
-      {!embedded && <Navbar />}
-
       <section
         className={`relative overflow-hidden pb-20 pt-24 ${
           darkMode

@@ -5,7 +5,9 @@ import {
   EnvironmentOutlined,
   ClockCircleOutlined,
   CheckOutlined,
-  CheckCircleFilled
+  CheckCircleFilled,
+  PlusOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import '../../../styles/cleaner/job_execution.scss';
 
@@ -32,6 +34,8 @@ const defaultChecklist = [
   { id: 'item-6', label: 'Vacuuming and steam cleaning carpets', done: false, time: '' },
   { id: 'item-7', label: 'Sanitizing high-touch points (doorknobs, switches)', done: false, time: '' }
 ];
+
+const generateId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const normalizeConfirmedJob = (job) => ({
   id: job.id || job.sourceRequestId || 'default-1',
@@ -69,6 +73,7 @@ const JobExecutionPage = () => {
   }, [selectedJobId]);
 
   const [checklist, setChecklist] = useState(defaultChecklist);
+  const [newChecklistItem, setNewChecklistItem] = useState('');
 
   const completedCount = checklist.filter((item) => item.done).length;
   const priceValue = Number(String(currentJob.price || '$0').replace(/[^0-9.]/g, '')) || 0;
@@ -83,6 +88,30 @@ const JobExecutionPage = () => {
           : item
       )
     );
+  };
+
+  const handleAddChecklistItem = () => {
+    if (!newChecklistItem.trim()) return;
+    
+    const newItem = {
+      id: generateId(),
+      label: newChecklistItem.trim(),
+      done: false,
+      time: ''
+    };
+    
+    setChecklist((prev) => [...prev, newItem]);
+    setNewChecklistItem('');
+  };
+
+  const handleDeleteChecklistItem = (id) => {
+    setChecklist((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleAddChecklistItem();
+    }
   };
 
   const handleFinishJob = () => {
@@ -173,17 +202,47 @@ const JobExecutionPage = () => {
 
           <div className="checklist-items">
             {checklist.map((item) => (
-              <button
+              <div
                 key={item.id}
-                type="button"
                 className={`checklist-row ${item.done ? 'done' : ''}`}
-                onClick={() => toggleChecklistItem(item.id)}
               >
-                <span className="check-icon">{item.done ? <CheckOutlined /> : null}</span>
+                <button
+                  type="button"
+                  className="check-btn"
+                  onClick={() => toggleChecklistItem(item.id)}
+                >
+                  <span className="check-icon">{item.done ? <CheckOutlined /> : null}</span>
+                </button>
                 <span className="check-label">{item.label}</span>
                 <span className="check-time">{item.time}</span>
-              </button>
+                <button
+                  type="button"
+                  className="delete-btn"
+                  onClick={() => handleDeleteChecklistItem(item.id)}
+                >
+                  <DeleteOutlined />
+                </button>
+              </div>
             ))}
+            
+            <div className="add-checklist-row">
+              <input
+                type="text"
+                placeholder="Add new checklist item..."
+                value={newChecklistItem}
+                onChange={(e) => setNewChecklistItem(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="checklist-input"
+              />
+              <button
+                type="button"
+                className="add-btn"
+                onClick={handleAddChecklistItem}
+                disabled={!newChecklistItem.trim()}
+              >
+                <PlusOutlined /> Add
+              </button>
+            </div>
           </div>
         </section>
 
