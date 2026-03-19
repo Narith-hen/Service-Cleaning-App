@@ -21,14 +21,20 @@ const CleanerHeader = () => {
   } = useNotificationStore();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
+  const [toast, setToast] = useState(null);
   const profileRef = useRef(null);
   const profileButtonRef = useRef(null);
+  const toastTimerRef = useRef(null);
 
   const displayName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Cleaner User';
   const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
   const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
   const avatarInitials = (firstInitial + lastInitial) || String(displayName).trim().charAt(0).toUpperCase() || 'C';
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [user?.avatar]);
 
   useEffect(() => {
     if (user) {
@@ -65,6 +71,26 @@ const CleanerHeader = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleNavbarMessage = (event) => {
+      const detail = event?.detail || {};
+      if (!detail.text) return;
+      setToast({ text: detail.text, type: detail.type || 'success' });
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = setTimeout(() => setToast(null), detail.duration || 3000);
+    };
+
+    window.addEventListener('cleaner:navbar-message', handleNavbarMessage);
+    return () => {
+      window.removeEventListener('cleaner:navbar-message', handleNavbarMessage);
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleBellClick = () => {
     setIsProfileOpen(false);
     fetchNotifications(true);
@@ -83,7 +109,13 @@ const CleanerHeader = () => {
   };
 
   return (
-    <header className="admin-header">
+    <>
+      <header className="admin-header">
+      {toast && (
+        <div className={`header-toast ${toast.type}`}>
+          <span>{toast.text}</span>
+        </div>
+      )}
       <div className="header-controls">
         <div className="dropdown-wrapper">
           <button
@@ -98,8 +130,13 @@ const CleanerHeader = () => {
 
         <div className="dropdown-wrapper">
           <button ref={profileButtonRef} className="profile-btn" onClick={handleProfileClick}>
-            {user?.avatar ? (
-              <img src={user.avatar} alt="profile" className="profile-avatar" />
+            {user?.avatar && !avatarFailed ? (
+              <img
+                src={user.avatar}
+                alt="profile"
+                className="profile-avatar"
+                onError={() => setAvatarFailed(true)}
+              />
             ) : (
               <div className="profile-avatar profile-avatar-fallback">{avatarInitials}</div>
             )}
@@ -112,8 +149,13 @@ const CleanerHeader = () => {
           {isProfileOpen && (
             <div className="dropdown-menu profile-dropdown" ref={profileRef}>
               <div className="profile-header">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="profile" className="profile-large" />
+                {user?.avatar && !avatarFailed ? (
+                  <img
+                    src={user.avatar}
+                    alt="profile"
+                    className="profile-large"
+                    onError={() => setAvatarFailed(true)}
+                  />
                 ) : (
                   <div className="profile-large profile-avatar-fallback">{avatarInitials}</div>
                 )}
@@ -153,7 +195,8 @@ const CleanerHeader = () => {
           )}
         </div>
       </div>
-    </header>
+      </header>
+    </>
   );
 };
 

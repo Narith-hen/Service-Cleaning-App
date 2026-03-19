@@ -30,27 +30,43 @@ const persistUser = (nextUser) => {
 
 const normalizeAvatarUrl = (avatar) => {
   if (!avatar) return null;
-  if (/^https?:\/\//i.test(avatar)) return avatar;
-  if (avatar.startsWith('/')) return `${API_BASE_URL}${avatar}`;
-  return avatar;
+  const cleaned = String(avatar).replace(/\\/g, '/').trim();
+  if (!cleaned) return null;
+  if (/^data:/i.test(cleaned)) return cleaned;
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  if (cleaned.startsWith('/')) return `${API_BASE_URL}${cleaned}`;
+  if (cleaned.startsWith('uploads/') || cleaned.startsWith('public/')) {
+    return `${API_BASE_URL}/${cleaned}`;
+  }
+  return cleaned;
 };
 
 const normalizeUserData = (payload = {}, previous = null) => {
   const firstName = payload.first_name ?? previous?.first_name ?? '';
   const lastName = payload.last_name ?? previous?.last_name ?? '';
   const roleId = payload.role_id ?? previous?.role_id ?? 2;
-  const mergedName = payload.name || [firstName, lastName].filter(Boolean).join(' ').trim();
+  const companyName = payload.company_name ?? payload.companyName ?? previous?.company_name ?? '';
+  const shouldPreferCompanyName = Boolean(companyName) && !payload.company_name && !payload.companyName;
+  const mergedName =
+    (shouldPreferCompanyName ? '' : payload.name) ||
+    companyName ||
+    [firstName, lastName].filter(Boolean).join(' ').trim();
 
   return {
     id: payload.user_id ?? previous?.id ?? previous?.user_id ?? payload.id,
     user_id: payload.user_id ?? previous?.user_id ?? payload.id,
     user_code: payload.user_code ?? previous?.user_code ?? null,
+    company_name: companyName || previous?.company_name || '',
     name: mergedName || previous?.name || 'Customer',
     first_name: firstName,
     last_name: lastName,
     email: payload.email ?? previous?.email ?? '',
     phone: payload.phone ?? payload.phone_number ?? previous?.phone ?? '',
     phone_number: payload.phone_number ?? payload.phone ?? previous?.phone_number ?? '',
+    address: payload.address ?? previous?.address ?? '',
+    latitude: payload.latitude ?? previous?.latitude ?? '',
+    longitude: payload.longitude ?? previous?.longitude ?? '',
+    account_status: payload.account_status ?? payload.status ?? previous?.account_status ?? '',
     city: payload.city ?? previous?.city ?? '',
     state: payload.state ?? previous?.state ?? '',
     country: payload.country ?? previous?.country ?? '',
@@ -317,7 +333,7 @@ export const useAuth = () => {
         throw new Error(result?.message || 'Failed to update profile');
       }
 
-      const updatedUser = normalizeUserData(result.data || {}, user);
+      const updatedUser = normalizeUserData({ ...userData, ...(result.data || {}) }, user);
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
