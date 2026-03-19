@@ -1,18 +1,35 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
-  FileTextOutlined,
+  HomeOutlined,
   HistoryOutlined,
   SearchOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import api from '../../../services/api';
 import '../../../styles/customer/history.scss';
+import officeImage from '../../../assets/office.png';
+import homeImage from '../../../assets/home.png';
+import windowImage from '../../../assets/window.png';
+import constructionImage from '../../../assets/Construction Cleaning.png';
+import carpetImage from '../../../assets/Carpet.png';
+import floorBuffingImage from '../../../assets/Floor Buffing.png';
+import deepCleaningImage from '../../../assets/Deep.png';
+import homesServiceImage from '../../../assets/Homes .png';
+import airConditioningImage from '../../../assets/co.png';
+import moveImage from '../../../assets/move.png';
+import shopImage from '../../../assets/shop.png';
+import proImage from '../../../assets/pro.png';
 
 const STATUS_META = {
+  booked: { label: 'Service Booked', tone: 'pending', icon: <ClockCircleOutlined /> },
+  started: { label: 'Service Started', tone: 'confirmed', icon: <CheckCircleOutlined /> },
+  in_progress: { label: 'Service In Progress', tone: 'progress', icon: <ClockCircleOutlined /> },
+  'in-progress': { label: 'Service In Progress', tone: 'progress', icon: <ClockCircleOutlined /> },
   confirmed: { label: 'Confirmed', tone: 'confirmed', icon: <CheckCircleOutlined /> },
   accepted: { label: 'Accepted', tone: 'confirmed', icon: <CheckCircleOutlined /> },
   pending: { label: 'Pending', tone: 'pending', icon: <ClockCircleOutlined /> },
@@ -28,6 +45,42 @@ const formatMoney = (value) => {
   return `$${numeric.toFixed(2)}`;
 };
 
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
+
+const pickHistoryImage = (booking) => {
+  const apiImage = toAbsoluteImageUrl(booking?.service_image || booking?.image || '');
+  if (apiImage) return apiImage;
+
+  const title = String(
+    booking?.service?.name ||
+    booking?.service_name ||
+    booking?.serviceTitle ||
+    booking?.title ||
+    ''
+  ).toLowerCase();
+
+  if (title.includes('carpet')) return carpetImage;
+  if (title.includes('floor buff') || title.includes('pressure wash')) return floorBuffingImage;
+  if (title.includes('air') || title.includes('conditioning')) return airConditioningImage;
+  if (title.includes('deep')) return deepCleaningImage;
+  if (title.includes('move')) return moveImage;
+  if (title.includes('shop')) return shopImage;
+  if (title.includes('pro')) return proImage;
+  if (title.includes('home') || title.includes('house')) return homesServiceImage;
+  if (title.includes('office')) return officeImage;
+  if (title.includes('window')) return windowImage;
+  if (title.includes('construction')) return constructionImage;
+
+  return homeImage;
+};
+
 const normalizeStatus = (value) => {
   const key = String(value || 'pending').toLowerCase();
   return STATUS_META[key] || {
@@ -38,7 +91,11 @@ const normalizeStatus = (value) => {
 };
 
 const normalizeHistoryBooking = (booking, index = 0) => {
-  const rawStatus = booking?.booking_status || booking?.status || 'pending';
+  const rawStatus =
+    booking?.service_tracking_status ||
+    booking?.booking_status ||
+    booking?.status ||
+    'pending';
   const status = normalizeStatus(rawStatus);
 
   return {
@@ -51,7 +108,10 @@ const normalizeHistoryBooking = (booking, index = 0) => {
       'Cleaning Service',
     bookingDate: booking?.booking_date || booking?.date || new Date().toISOString(),
     bookingTime: booking?.booking_time || booking?.time || '09:00 AM',
+    serviceImage: pickHistoryImage(booking),
     cleanerName:
+      booking?.cleaner_display_name ||
+      booking?.cleaner_company ||
       booking?.cleaner?.username ||
       booking?.cleaner_name ||
       booking?.cleaner_username ||
@@ -64,9 +124,52 @@ const normalizeHistoryBooking = (booking, index = 0) => {
       booking?.service?.location ||
       'Location not provided',
     totalPrice: booking?.negotiated_price ?? booking?.total_price ?? booking?.price ?? null,
+    bedrooms: booking?.bedrooms || booking?.bedroom_count || booking?.room_count || '3 Bedrooms',
+    floors: booking?.floors || booking?.floor_count || '2 Floors',
     status,
-    rawStatus: String(rawStatus).toLowerCase()
+    rawStatus: String(rawStatus).toLowerCase(),
+    bookingStatus: String(booking?.booking_status || booking?.status || 'pending').toLowerCase()
   };
+};
+
+const getHistoryStatusButton = (rawStatus, status) => {
+  const normalized = String(rawStatus || '').toLowerCase();
+
+  if (normalized === 'in_progress' || normalized === 'in-progress' || normalized === 'started') {
+    return {
+      tone: 'progress',
+      icon: <ClockCircleOutlined />,
+      label: 'In Progress'
+    };
+  }
+
+  if (normalized === 'completed') {
+    return {
+      tone: 'completed',
+      icon: <CheckCircleOutlined />,
+      label: 'Completed'
+    };
+  }
+
+  if (normalized === 'cancelled' || normalized === 'rejected') {
+    return {
+      tone: 'cancelled',
+      icon: <HistoryOutlined />,
+      label: 'Cancelled'
+    };
+  }
+
+  return {
+    tone: status?.tone || 'pending',
+    icon: status?.icon || <ClockCircleOutlined />,
+    label: 'Service Booked'
+  };
+};
+
+const fetchCustomerHistoryRows = async () => {
+  const response = await api.get('/bookings/my-history', { params: { page: 1, limit: 5 } });
+  const rows = response?.data?.data;
+  return Array.isArray(rows) ? rows.slice(0, 5) : [];
 };
 
 const CustomerHistoryPage = () => {
@@ -74,21 +177,25 @@ const CustomerHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadHistory = async () => {
-      setLoading(true);
+      if (!cancelled && !hasLoadedRef.current) {
+        setLoading(true);
+      }
       try {
-        const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
-        const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const rows = await fetchCustomerHistoryRows();
         if (!cancelled) {
           setHistory(rows.map((booking, index) => normalizeHistoryBooking(booking, index)));
+          hasLoadedRef.current = true;
         }
       } catch {
         if (!cancelled) {
           setHistory([]);
+          hasLoadedRef.current = true;
         }
       } finally {
         if (!cancelled) {
@@ -98,8 +205,11 @@ const CustomerHistoryPage = () => {
     };
 
     loadHistory();
+    const intervalId = window.setInterval(loadHistory, 15000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, []);
 
@@ -111,13 +221,15 @@ const CustomerHistoryPage = () => {
         filter === 'all'
           ? true
           : filter === 'active'
-            ? ['confirmed', 'accepted', 'pending', 'matching'].includes(item.rawStatus)
-            : item.rawStatus === filter;
+            ? ['confirmed', 'accepted', 'pending', 'matching', 'started', 'in_progress', 'in-progress', 'booked'].includes(item.rawStatus)
+            : filter === 'completed'
+              ? ['completed'].includes(item.rawStatus)
+              : ['cancelled', 'rejected'].includes(item.rawStatus);
 
       if (!matchesFilter) return false;
       if (!normalizedQuery) return true;
 
-      return [item.serviceName, item.cleanerName, item.location, item.status.label]
+      return [item.serviceName, item.cleanerName, item.location, item.status.label, item.bookingStatus]
         .some((field) => String(field || '').toLowerCase().includes(normalizedQuery));
     });
   }, [history, filter, query]);
@@ -179,11 +291,18 @@ const CustomerHistoryPage = () => {
       ) : (
         <div className="customer-history-grid">
           {filteredHistory.map((item, index) => {
-            const dateLabel = new Date(item.bookingDate).toLocaleDateString('en-US', {
+            const bookingDate = new Date(item.bookingDate);
+            const dateLabel = bookingDate.toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
               year: 'numeric'
             });
+            const dayNumber = bookingDate.getDate().toString().padStart(2, '0');
+            const monthLabel = bookingDate.toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric'
+            });
+            const statusButton = getHistoryStatusButton(item.rawStatus, item.status);
 
             return (
               <article
@@ -193,49 +312,60 @@ const CustomerHistoryPage = () => {
                 data-customer-card
                 style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
               >
-                <div className="customer-history-card-top">
-                  <div>
-                    <p className="customer-history-card-id">Booking #{item.id}</p>
-                    <h2>{item.serviceName}</h2>
-                  </div>
-                  <span className={`customer-history-status ${item.status.tone}`}>
-                    {item.status.icon}
-                    {item.status.label}
-                  </span>
-                </div>
-
-                <div className="customer-history-meta-grid">
-                  <div className="customer-history-meta">
-                    <span><CalendarOutlined /></span>
-                    <div>
-                      <small>Date & time</small>
-                      <strong>{dateLabel}, {item.bookingTime}</strong>
+                <div className="customer-history-row">
+                  <aside
+                    className="customer-history-media"
+                    style={{ '--history-card-bg': `url(${item.serviceImage})` }}
+                  >
+                    <span className={`customer-history-media-status ${item.status.tone}`}>
+                      {item.rawStatus === 'in_progress' || item.rawStatus === 'started'
+                        ? 'IN PROGRESS'
+                        : item.rawStatus === 'completed'
+                          ? 'COMPLETED'
+                          : item.rawStatus === 'cancelled'
+                            ? 'CANCELLED'
+                            : 'BOOKED'}
+                    </span>
+                    <div className="customer-history-media-date">
+                      <strong>{dayNumber}</strong>
+                      <span>{monthLabel}</span>
                     </div>
-                  </div>
-
-                  <div className="customer-history-meta">
-                    <span><UserOutlined /></span>
-                    <div>
-                      <small>Cleaner</small>
-                      <strong>{item.cleanerName}</strong>
+                    <div className="customer-history-media-time">
+                      <small>Scheduled Time</small>
+                      <strong>{item.bookingTime}</strong>
                     </div>
-                  </div>
+                  </aside>
 
-                  <div className="customer-history-meta">
-                    <span><EnvironmentOutlined /></span>
-                    <div>
-                      <small>Location</small>
-                      <strong>{item.location}</strong>
+                  <section className="customer-history-body">
+                    <div className="customer-history-card-top">
+                      <div>
+                        <h2>{item.serviceName}</h2>
+                        <p className="customer-history-card-id">Job ID: #{item.id}</p>
+                      </div>
+                      <div className="customer-history-price">
+                        <strong>{formatMoney(item.totalPrice)}</strong>
+                        <small>Fixed Rate</small>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="customer-history-meta">
-                    <span><FileTextOutlined /></span>
-                    <div>
-                      <small>Payment</small>
-                      <strong>{formatMoney(item.totalPrice)}</strong>
+                    <div className="customer-history-summary">
+                      <p><EnvironmentOutlined /> {item.location}</p>
+                      <p><UserOutlined /> Cleaner: {item.cleanerName}</p>
+                      <p>
+                        <HomeOutlined /> {item.bedrooms}
+                        <span className="dot">•</span>
+                        <AppstoreOutlined /> {item.floors}
+                      </p>
+                      <p><CalendarOutlined /> {dateLabel}</p>
                     </div>
-                  </div>
+
+                    <div className="customer-history-footer">
+                      <span className={`customer-history-status customer-history-status-button ${statusButton.tone}`}>
+                        {statusButton.icon}
+                        {statusButton.label}
+                      </span>
+                    </div>
+                  </section>
                 </div>
               </article>
             );
