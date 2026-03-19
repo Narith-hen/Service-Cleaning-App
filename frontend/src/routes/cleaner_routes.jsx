@@ -16,6 +16,7 @@ import CleanerMessages from '../features/cleaner/pages/messages_page';
 import SettingsPage from '../features/cleaner/pages/settings_page';
 import HelpPage from '../features/cleaner/pages/help_page';
 import JobExecutionPage from '../features/cleaner/pages/job_execution_page';
+import CancelDuringWorkPage from '../features/cleaner/pages/Cancel-during-work';
 
 export const cleanerRoutes = {
   path: '/cleaner',
@@ -72,6 +73,14 @@ export const cleanerRoutes = {
     {
       path: 'job-execution',
       element: <JobExecutionPage />
+    },
+    {
+      path: 'cancel-during-work',
+      element: <CancelDuringWorkPage />
+    },
+    {
+      path: 'cancel-during-work/:jobId',
+      element: <CancelDuringWorkPage />
     },
     {
       path: 'schedule/weekly',

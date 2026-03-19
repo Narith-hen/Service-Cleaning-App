@@ -453,30 +453,6 @@ const CustomerMessagesPage = () => {
     const activeId = String(activeThreadId || '');
     return visibleBookings.find((b) => b.booking_id === activeId) || visibleBookings[0];
   }, [visibleBookings, activeThreadId]);
-
-<<<<<<< HEAD
-  const visibleBookings = useMemo(() => {
-    if (!bookings.length) return [];
-    const forcedId = String(searchParams.get('booking') || searchParams.get('thread') || '');
-    return bookings.filter((booking) => {
-      const threadId = String(booking.booking_id);
-      if (forcedId && threadId === forcedId) return true;
-      const hasAssignedCleaner = Boolean(
-        booking?.cleaner?.id
-        || booking?.cleaner_id
-      );
-      const status = String(booking?.booking_status || '').toLowerCase();
-      if (hasAssignedCleaner && status !== 'cancelled') return true;
-      const preview = threadPreviews[threadId];
-      const unreadCount = unreadByThread[threadId] || 0;
-      if (unreadCount > 0) return true;
-      if (preview && preview !== emptyPreviewText) return true;
-      return hasStoredMessages(threadId);
-    });
-  }, [bookings, threadPreviews, unreadByThread, emptyPreviewText, searchParams]);
-
-=======
->>>>>>> develop
   const handleSelectThread = (booking) => {
     const nextId = String(booking.booking_id);
     const params = new URLSearchParams(searchParams);

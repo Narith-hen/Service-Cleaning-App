@@ -127,8 +127,8 @@ const CustomerChatPage = () => {
     if (!selectedBooking) {
       if (bookingId) {
         setSelectedBooking(bookingId);
-      } else if (dynamicBookings[0]?.id) {
-        setSelectedBooking(dynamicBookings[0].id);
+      } else if (dynamicBookings[0]?.booking_id) {
+        setSelectedBooking(dynamicBookings[0].booking_id);
       }
     }
   }, [dynamicBookings, selectedBooking, bookingId]);
@@ -139,14 +139,14 @@ const CustomerChatPage = () => {
 
   // Alert the customer when a booking is confirmed (once per booking)
   useEffect(() => {
-    if (!activeBooking?.id) return;
-    const key = `${ALERTED_BOOKING_PREFIX}${activeBooking.id}`;
+    if (!activeBooking?.booking_id) return;
+    const key = `${ALERTED_BOOKING_PREFIX}${activeBooking.booking_id}`;
     try {
       if (
-        String(activeBooking.status || '').toLowerCase() === 'confirmed' &&
+        String(activeBooking.booking_status || activeBooking.status || '').toLowerCase() === 'confirmed' &&
         !localStorage.getItem(key)
       ) {
-        alert(`Your cleaner accepted booking #${activeBooking.id}.`);
+        alert(`Your cleaner accepted booking #${activeBooking.booking_id}.`);
         localStorage.setItem(key, '1');
       }
     } catch {

@@ -17,11 +17,7 @@ import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
 import CustomerChatPage from '../features/customer/pages/chat_page';
 import CustomerMessagesPage from '../features/customer/pages/messages_page';
-<<<<<<< HEAD
-import CustomerAboutPage from '../features/public/pages/about_page';
-=======
 import CustomerAboutPage from '../features/customer/pages/about_page';
->>>>>>> develop
 import CustomerServicesPage from '../features/public/pages/services_page';
 import CustomerContactPage from '../features/public/pages/contact_page';
 import ErrorBoundary from '../components/common/error_boundary';
@@ -93,13 +89,10 @@ export const customerRoutes = {
     {
       path: 'messages',
       element: <CustomerMessagesPage />
-<<<<<<< HEAD
-=======
     },
     {
       path: 'history',
       element: <CustomerHistoryPage />
->>>>>>> develop
     },
     {
       path: 'profile',

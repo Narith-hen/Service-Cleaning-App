@@ -1,13 +1,36 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { MessageSquare, Star } from 'lucide-react';
-import '../../../styles/customer/write_review.scss'; // Reusing styles from the quotes page
+import '../../../styles/customer/write_review.scss';
 
 const BookingQuotesPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
-  const handleAcceptQuote = (bookingId) => {
-    // On accepting a quote, navigate to chat
-    navigate(`/customer/chat?booking=${bookingId}`);
+  const bookingId = (() => {
+    const fromState = location?.state?.bookingId || location?.state?.booking_id;
+    const fromQuery = searchParams.get('booking') || searchParams.get('thread');
+    const candidate = fromState || fromQuery;
+
+    if (candidate && /^\d+$/.test(String(candidate))) {
+      return String(candidate);
+    }
+
+    try {
+      const stored = localStorage.getItem('last_booking_id');
+      return stored && /^\d+$/.test(String(stored)) ? String(stored) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const handleAcceptQuote = () => {
+    if (!bookingId) {
+      navigate('/customer/bookings');
+      return;
+    }
+
+    navigate(`/customer/chat?booking=${encodeURIComponent(bookingId)}`);
   };
 
   return (
@@ -20,7 +43,6 @@ const BookingQuotesPage = () => {
           </div>
         </div>
         <div className="quote-list">
-          {/* Example Quote */}
           <article className="quote-card">
             <div className="avatar" />
             <div className="quote-main">
@@ -30,14 +52,16 @@ const BookingQuotesPage = () => {
               </p>
               <p className="message">"I specialize in deep cleaning and can start tomorrow. Happy to discuss details!"</p>
               <div className="quote-actions">
-                <button type="button" className="chat-btn" onClick={() => handleAcceptQuote('demo-quote-1')}>
+                <button type="button" className="chat-btn" onClick={handleAcceptQuote}>
                   <MessageSquare size={14} /> Chat to Negotiate
                 </button>
               </div>
             </div>
             <div className="quote-price">
               <strong>$120.00</strong>
-              <button className="accept-quote-btn" onClick={() => handleAcceptQuote('demo-quote-1')}>Accept & Book</button>
+              <button type="button" className="accept-quote-btn" onClick={handleAcceptQuote}>
+                Accept & Book
+              </button>
             </div>
           </article>
         </div>

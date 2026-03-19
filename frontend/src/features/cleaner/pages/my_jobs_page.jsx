@@ -1,11 +1,12 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
   UserOutlined,
   HomeOutlined,
   AppstoreOutlined,
   MessageOutlined,
+  CloseOutlined,
   PlayCircleOutlined,
   CalendarOutlined,
   FileTextOutlined,
@@ -145,12 +146,14 @@ const tabs = [
   { key: 'all', label: 'All Jobs' },
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'in-progress', label: 'In-Progress' },
-  { key: 'completed', label: 'Completed' }
+  { key: 'completed', label: 'Completed' },
+  {key: 'cancelled', label: 'Cancelled'}
 ];
 
 const MyJobsPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('all');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'all');
   const [jobs, setJobs] = useState(fallbackJobs);
   const [activeMessageJobId, setActiveMessageJobId] = useState(null);
   const [jobActionStateById, setJobActionStateById] = useState({});
@@ -193,6 +196,12 @@ const MyJobsPage = () => {
       setJobs(fallbackJobs);
     }
   }, []);
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
 
   const visibleJobs = useMemo(() => {
     if (activeTab === 'all') return jobs;
@@ -250,6 +259,17 @@ const MyJobsPage = () => {
 
   const handleOpenJobDetails = (jobId) => {
     navigate('/cleaner/job-execution', { state: { jobId } });
+  };
+
+  const handleCancelJob = (jobId) => {
+    const selectedJob = jobs.find((job) => job.id === jobId) || null;
+    navigate(`/cleaner/cancel-during-work/${encodeURIComponent(String(jobId))}`, {
+      state: {
+        jobId,
+        title: selectedJob?.title || 'Cleaning Job',
+        customer: selectedJob?.customer || 'Customer'
+      }
+    });
   };
 
   if (activeMessageJob) {
@@ -336,12 +356,14 @@ const MyJobsPage = () => {
               ? 'completed'
               : job.status === 'in-progress'
                 ? 'in-progress'
+                : job.status === 'cancelled'
+                  ? 'cancelled'
                 : 'idle');
 
           return (
             <article
               key={job.id}
-              className={`my-job-card-v2 ${job.status === 'completed' ? 'completed' : ''}`}
+              className={`my-job-card-v2 ${job.status === 'completed' ? 'completed' : job.status === 'cancelled' ? 'cancelled' : ''}`}
               role="button"
               tabIndex={0}
               onClick={() => handleOpenJobDetails(job.id)}
@@ -357,7 +379,13 @@ const MyJobsPage = () => {
               style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
             >
               <span className={`status-pill ${job.status}`}>
-                {job.status === 'completed' ? 'COMPLETED' : job.status === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE NOW'}
+                {job.status === 'completed'
+                  ? 'COMPLETED'
+                  : job.status === 'in-progress'
+                    ? 'IN PROGRESS'
+                    : job.status === 'cancelled'
+                      ? 'CANCELLED'
+                      : 'ACTIVE NOW'}
               </span>
               <div className="day-value">{job.day}</div>
               <div className="month-value">{job.monthYear}</div>
@@ -395,31 +423,63 @@ const MyJobsPage = () => {
 
               <div className="job-actions-v2">
                 {actionState === 'idle' && (
-                  <button
-                    type="button"
-                    className="start-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleStartJob(job.id);
-                    }}
-                  >
-                    <PlayCircleOutlined /> Start Job
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="start-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleStartJob(job.id);
+                      }}
+                    >
+                      <PlayCircleOutlined /> Start Job
+                    </button>
+
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      disabled
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                    >
+                      <CloseOutlined /> Cancel Job
+                    </button>
+                  </>
                 )}
 
                 {actionState === 'in-progress' && (
-                  <button
-                    type="button"
-                    className="progress-btn"
-                    disabled
-                  >
-                    <ClockCircleOutlined /> In progress
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="progress-btn"
+                      disabled
+                    >
+                      <ClockCircleOutlined /> In progress
+                    </button>
+
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleCancelJob(job.id);
+                      }}
+                    >
+                      <CloseOutlined /> Cancel Job
+                    </button>
+                  </>
                 )}
 
                 {actionState === 'completed' && (
                   <button type="button" className="completed-btn" disabled>
                     <CheckCircleOutlined /> Completed
+                  </button>
+                )}
+
+                {actionState === 'cancelled' && (
+                  <button type="button" className="cancelled-btn" disabled>
+                    <CloseOutlined /> Cancelled
                   </button>
                 )}
 

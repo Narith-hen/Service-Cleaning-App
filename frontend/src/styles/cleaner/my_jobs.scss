@@ -117,8 +117,16 @@
   background: #f59e0b;
 }
 
+.status-pill.cancelled {
+  background: #dc2626;
+}
+
 .my-job-card-v2.completed {
   opacity: 0.85;
+}
+
+.my-job-card-v2.cancelled {
+  opacity: 0.88;
 }
 
 .my-job-card-v2.completed .my-job-date-v2::after {
@@ -233,6 +241,8 @@
 .start-btn,
 .ghost-btn,
 .progress-btn,
+.cancel-btn,
+.cancelled-btn,
 .completed-btn {
   height: 44px;
   border-radius: 12px;
@@ -270,15 +280,39 @@
   color: #1bb45a;
 }
 
+.cancelled-btn {
+  min-width: 145px;
+  border-color: #f8b4b4;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.cancel-btn {
+  min-width: 170px;
+  border-color: #ff8e8e;
+  background: #fff;
+  color: #ff4d4f;
+}
+
 .progress-btn .anticon,
-.completed-btn .anticon {
+.completed-btn .anticon,
+.cancelled-btn .anticon,
+.cancel-btn .anticon {
   font-size: 18px;
 }
 
 .progress-btn:disabled,
-.completed-btn:disabled {
+.completed-btn:disabled,
+.cancelled-btn:disabled,
+.cancel-btn:disabled {
   cursor: default;
   opacity: 1;
+}
+
+.cancel-btn:disabled {
+  border-color: #f6b1b1;
+  background: #fff5f5;
+  color: #d98e8e;
 }
 
 .ghost-btn {
@@ -1147,6 +1181,8 @@
   .start-btn,
   .ghost-btn,
   .progress-btn,
+  .cancel-btn,
+  .cancelled-btn,
   .completed-btn {
     width: 100%;
   }
