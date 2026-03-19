@@ -110,7 +110,7 @@ const BookingMatchPage = () => {
 
         // Navigate to chat after a short delay
         setTimeout(() => {
-          navigate(`/customer/chat?booking=${finalBookingId}`);
+          navigate(`/customer/messages?thread=${finalBookingId}`);
         }, 2000);
       }
     };
@@ -179,7 +179,7 @@ const BookingMatchPage = () => {
           } catch {
             /* ignore */
           }
-          navigate(`/customer/chat?booking=${encodeURIComponent(String(stored))}`);
+          navigate(`/customer/messages?thread=${encodeURIComponent(String(stored))}`);
           localStorage.removeItem(ACCEPTED_BOOKING_KEY);
         }
         const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
@@ -229,7 +229,7 @@ const BookingMatchPage = () => {
           } catch {
             /* ignore */
           }
-          navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedBookingId))}`);
+          navigate(`/customer/messages?thread=${encodeURIComponent(String(acceptedBookingId))}`);
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
           setProgress(100);
@@ -332,5 +332,3 @@ const BookingMatchPage = () => {
 };
 
 export default BookingMatchPage;
-
-

@@ -52,6 +52,7 @@ const getPreviewText = (messageList) => {
 
 const normalizeBooking = (booking) => ({
   booking_id: String(booking?.booking_id || booking?.id || 'unknown'),
+  booking_status: String(booking?.booking_status || booking?.status || '').toLowerCase(),
   booking_date: booking?.booking_date || new Date().toISOString(),
   booking_time: booking?.booking_time || '09:00 AM',
   address:
@@ -327,6 +328,12 @@ const CustomerMessagesPage = () => {
     return bookings.filter((booking) => {
       const threadId = String(booking.booking_id);
       if (forcedId && threadId === forcedId) return true;
+      const hasAssignedCleaner = Boolean(
+        booking?.cleaner?.id
+        || booking?.cleaner_id
+      );
+      const status = String(booking?.booking_status || '').toLowerCase();
+      if (hasAssignedCleaner && status !== 'cancelled') return true;
       const preview = threadPreviews[threadId];
       const unreadCount = unreadByThread[threadId] || 0;
       if (unreadCount > 0) return true;

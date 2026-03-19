@@ -36,6 +36,19 @@ const ensureBookingNegotiatedPriceColumn = async (promiseDb) => {
   );
 };
 
+const ensureBookingImagesTable = async (promiseDb) => {
+  await promiseDb.query(`
+    CREATE TABLE IF NOT EXISTS booking_images (
+      id INT NOT NULL AUTO_INCREMENT,
+      booking_id INT NOT NULL,
+      image_url LONGTEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_booking_images_booking_id (booking_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+};
+
 const slugify = (value) =>
   String(value || '')
     .trim()
@@ -980,18 +993,39 @@ const addBookingImages = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { images } = req.body;
+    const bookingId = Number.parseInt(id, 10);
+    const promiseDb = db.promise();
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
 
     if (!Array.isArray(images) || images.length === 0) {
       return next(new AppError('No images provided', 400));
     }
 
-    const values = images.map((url) => [id, url]);
-    await db
-      .promise()
-      .query(
-        'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
-        [values.map(([bid, url]) => [bid, url, new Date()])]
-      );
+    await ensureBookingImagesTable(promiseDb);
+
+    const [bookingRows] = await promiseDb.query(
+      'SELECT booking_id FROM bookings WHERE booking_id = ? LIMIT 1',
+      [bookingId]
+    );
+    if (!bookingRows?.length) {
+      return next(new AppError('Booking not found', 404));
+    }
+
+    const normalizedImages = images
+      .map((url) => String(url || '').trim())
+      .filter(Boolean);
+
+    if (!normalizedImages.length) {
+      return next(new AppError('No valid images provided', 400));
+    }
+
+    await promiseDb.query(
+      'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
+      [normalizedImages.map((url) => [bookingId, url, new Date()])]
+    );
 
     res.status(201).json({
       success: true,
