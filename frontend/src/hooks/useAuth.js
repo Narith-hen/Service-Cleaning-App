@@ -60,11 +60,12 @@ const normalizeUserData = (payload = {}, previous = null) => {
     totalSpent: payload.totalSpent ?? previous?.totalSpent ?? 0,
     role_id: roleId,
     token: payload.token ?? previous?.token ?? null,
+    account_source: payload.account_source ?? previous?.account_source ?? 'users',
     role: (
       payload.role ||
       payload.role_name ||
       previous?.role ||
-      (payload.role_id === 1 ? 'admin' : payload.role_id === 3 ? 'cleaner' : 'customer')
+      (roleId === 1 ? 'admin' : roleId === 2 ? 'cleaner' : 'customer')
     ).toLowerCase(),
   };
 };

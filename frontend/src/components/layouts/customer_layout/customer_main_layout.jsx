@@ -5,6 +5,7 @@ import Footer from './footer';
 import { Drawer } from 'antd';
 import Sidebar from './sidebar'; 
 import '../../../styles/customer/customer_main_layout.css'; 
+import useCustomerPageMotion from '../../../features/customer/hooks/useCustomerPageMotion';
 
 const TARGET_SCREEN_BREAKPOINT = 1280;
 
@@ -12,6 +13,7 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
+  const isCustomerArea = location.pathname.startsWith('/customer');
   const isCustomerDashboard =
     location.pathname === '/customer/dashboard' || location.pathname === '/customer/home';
   
@@ -19,7 +21,9 @@ const MainLayout = () => {
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const mainContentRef = React.useRef(null);
   const drawerWidth = viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420;
+  const motionReady = useCustomerPageMotion(mainContentRef, isCustomerArea, [location.pathname]);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -45,7 +49,10 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="layout-root" style={{ width: '100%', minHeight: '100vh', margin: 0, padding: 0 }}>
+    <div
+      className={`layout-root ${isCustomerArea ? 'customer-motion-scope' : ''} ${motionReady ? 'customer-motion-ready' : ''}`}
+      style={{ width: '100%', minHeight: '100vh', margin: 0, padding: 0 }}
+    >
 
       {isHome && (
         <div 
@@ -83,13 +90,17 @@ const MainLayout = () => {
         />
       </header>
       
-      <main className="main-contents" style={{ 
+      <main
+        ref={mainContentRef}
+        className="main-contents"
+        style={{ 
         width: '100%', 
         flex: 1,
         background: darkMode ? '#0b1220' : 'white',
         minHeight: 'calc(100vh - 140px)',
         paddingTop: isCustomerDashboard ? 0 : 90
-      }}>
+      }}
+      >
         <Outlet context={{ darkMode }} />
       </main>
       

@@ -45,6 +45,19 @@
   background: #fff;
   display: grid;
   grid-template-columns: 27% 73%;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.my-job-card-v2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+  border-color: #c8d7ea;
+}
+
+.my-job-card-v2:focus-visible {
+  outline: 3px solid rgba(50, 199, 83, 0.2);
+  outline-offset: 3px;
 }
 
 .my-job-date-v2 {
@@ -213,6 +226,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .start-btn,
@@ -269,6 +284,10 @@
 .ghost-btn {
   background: #f8fbff;
   color: #2563eb;
+}
+
+.message-btn {
+  margin-left: auto;
 }
 
 .my-jobs-empty-v2 {
@@ -362,6 +381,7 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
+  border-radius: 999px;;
 }
 
 .my-jobs-chat-online-dot {
@@ -526,6 +546,15 @@
   font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+.my-jobs-chat-mini-avatar-image,
+.my-jobs-chat-mini-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 999px;
 }
 
 .my-jobs-chat-content {
@@ -1120,6 +1149,10 @@
   .progress-btn,
   .completed-btn {
     width: 100%;
+  }
+
+  .message-btn {
+    margin-left: 0;
   }
 
   .my-jobs-chat-customer h3 {

@@ -2,6 +2,55 @@ const { verifyToken } = require('../utils/jwt.util');
 const db = require('../config/db');
 const AppError = require('../utils/error.util');
 
+const getUserAccountById = async (promiseDb, userId) => {
+  const [rows] = await promiseDb.query(
+    `
+      SELECT
+        u.user_id,
+        u.email,
+        u.role_id,
+        r.role_name
+      FROM users u
+      LEFT JOIN roles r ON r.role_id = u.role_id
+      WHERE u.user_id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows?.[0] || null;
+};
+
+const getCleanerAccountById = async (promiseDb, userId) => {
+  const [rows] = await promiseDb.query(
+    `
+      SELECT
+        cp.cleaner_id AS user_id,
+        cp.company_email AS email,
+        cp.role_id,
+        r.role_name
+      FROM cleaner_profile cp
+      LEFT JOIN roles r ON r.role_id = cp.role_id
+      WHERE cp.cleaner_id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows?.[0] || null;
+};
+
+const normalizeAccountSource = (value) => {
+  const accountSource = String(value || '').trim().toLowerCase();
+  if (accountSource === 'cleaner_profile' || accountSource === 'cleaner') {
+    return 'cleaner_profile';
+  }
+  if (accountSource === 'users' || accountSource === 'user' || accountSource === 'customer' || accountSource === 'admin') {
+    return 'users';
+  }
+  return '';
+};
+
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -24,70 +73,51 @@ const authenticate = async (req, res, next) => {
           : '';
 
     const promiseDb = db.promise();
+    const normalizedAccountSource = normalizeAccountSource(accountSource);
+    const preferredRole = String(tokenRole || roleFromTokenId || '').trim().toLowerCase();
+
+    const [userRow, cleanerRow] = await Promise.all([
+      getUserAccountById(promiseDb, decoded.user_id),
+      getCleanerAccountById(promiseDb, decoded.user_id),
+    ]);
+
     let row = null;
-    let sourceTable = 'users';
+    let sourceTable = '';
 
-    if (accountSource === 'cleaner_profile') {
-      const [cleanerRows] = await promiseDb.query(
-        `
-          SELECT
-            cp.cleaner_id AS user_id,
-            cp.company_email AS email,
-            cp.role_id,
-            r.role_name
-          FROM cleaner_profile cp
-          LEFT JOIN roles r ON r.role_id = cp.role_id
-          WHERE cp.cleaner_id = ?
-          LIMIT 1
-        `,
-        [decoded.user_id]
-      );
-      row = cleanerRows?.[0] || null;
-      sourceTable = 'cleaner_profile';
+    // Prefer the explicit account source from the token when present.
+    if (normalizedAccountSource === 'cleaner_profile') {
+      row = cleanerRow || userRow;
+      sourceTable = cleanerRow ? 'cleaner_profile' : userRow ? 'users' : '';
+    } else if (normalizedAccountSource === 'users') {
+      row = userRow || cleanerRow;
+      sourceTable = userRow ? 'users' : cleanerRow ? 'cleaner_profile' : '';
+    } else if (preferredRole === 'cleaner') {
+      row = cleanerRow || userRow;
+      sourceTable = cleanerRow ? 'cleaner_profile' : userRow ? 'users' : '';
+    } else if (preferredRole === 'customer' || preferredRole === 'admin') {
+      row = userRow || cleanerRow;
+      sourceTable = userRow ? 'users' : cleanerRow ? 'cleaner_profile' : '';
+    } else if (userRow && cleanerRow) {
+      const userRoleName = String(userRow.role_name || '').trim().toLowerCase();
+      const cleanerRoleName = String(cleanerRow.role_name || '').trim().toLowerCase();
+
+      if (preferredRole && cleanerRoleName === preferredRole) {
+        row = cleanerRow;
+        sourceTable = 'cleaner_profile';
+      } else if (preferredRole && userRoleName === preferredRole) {
+        row = userRow;
+        sourceTable = 'users';
+      } else {
+        row = userRow;
+        sourceTable = 'users';
+      }
     } else {
-      const [userRows] = await promiseDb.query(
-        `
-          SELECT
-            u.user_id,
-            u.email,
-            u.role_id,
-            r.role_name
-          FROM users u
-          LEFT JOIN roles r ON r.role_id = u.role_id
-          WHERE u.user_id = ?
-          LIMIT 1
-        `,
-        [decoded.user_id]
-      );
-      row = userRows?.[0] || null;
-      sourceTable = row ? 'users' : sourceTable;
+      row = userRow || cleanerRow;
+      sourceTable = userRow ? 'users' : cleanerRow ? 'cleaner_profile' : '';
     }
 
-    if (!row && accountSource !== 'cleaner_profile') {
-      const [cleanerRows] = await promiseDb.query(
-        `
-          SELECT
-            cp.cleaner_id AS user_id,
-            cp.company_email AS email,
-            cp.role_id,
-            r.role_name
-          FROM cleaner_profile cp
-          LEFT JOIN roles r ON r.role_id = cp.role_id
-          WHERE cp.cleaner_id = ?
-          LIMIT 1
-        `,
-        [decoded.user_id]
-      );
-      row = cleanerRows?.[0] || null;
-      if (row) sourceTable = 'cleaner_profile';
-    }
-    const resolvedSource = (accountSource === 'cleaner_profile' || accountSource === 'cleaner')
-      ? accountSource
-      : sourceTable === 'cleaner_profile'
-        ? 'cleaner_profile'
-        : 'users';
-
-    const resolvedRoleName = String(row?.role_name || tokenRole || roleFromTokenId || '').trim().toLowerCase();
+    const resolvedSource = sourceTable === 'cleaner_profile' ? 'cleaner_profile' : 'users';
+    const resolvedRoleName = String(row?.role_name || preferredRole || '').trim().toLowerCase();
     const user = row
       ? {
           user_id: row.user_id,
