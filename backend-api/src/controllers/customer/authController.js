@@ -27,6 +27,35 @@ const ensureAvatarColumnExists = async () => {
   return true;
 };
 
+const getCleanerProfileColumns = async () => {
+  const [columns] = await db.promise().query('SHOW COLUMNS FROM cleaner_profile');
+  return new Set((columns || []).map((column) => column.Field));
+};
+
+const getCleanerStatusEnumValues = async () => {
+  const [rows] = await db.promise().query(`SHOW COLUMNS FROM cleaner_profile LIKE 'status'`);
+  const statusType = String(rows?.[0]?.Type || '');
+  const enumMatches = statusType.match(/'([^']+)'/g) || [];
+  return enumMatches.map((value) => value.replace(/'/g, ''));
+};
+
+const normalizeCleanerStatusInput = (status, allowedValues = []) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  const wanted = normalized === 'inactive' ? 'inactive' : normalized === 'pending' ? 'pending' : 'active';
+  const directMatch = allowedValues.find((value) => value.toLowerCase() === wanted);
+  if (directMatch) return directMatch;
+
+  if (wanted === 'pending') {
+    const inactiveMatch = allowedValues.find((value) => value.toLowerCase() === 'inactive');
+    if (inactiveMatch) return inactiveMatch;
+  }
+
+  const activeMatch = allowedValues.find((value) => value.toLowerCase() === 'active');
+  return activeMatch || null;
+};
+
 const buildProfileResponse = async (userId) => {
   const promiseDb = db.promise();
   const [userRows] = await promiseDb.query("SELECT * FROM users WHERE user_id = ? LIMIT 1", [userId]);
@@ -434,10 +463,100 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user?.user_id;
+    const accountSource = String(req.user?.account_source || '').trim().toLowerCase();
     if (!userId) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized",
+      });
+    }
+
+    if (accountSource === 'cleaner_profile') {
+      const cleanerColumns = await getCleanerProfileColumns();
+      const promiseDb = db.promise();
+      const updates = [];
+      const values = [];
+      const pushUpdate = (column, value) => {
+        if (!cleanerColumns.has(column) || value === undefined) return;
+        updates.push(`${column} = ?`);
+        values.push(value);
+      };
+
+      const cleanerName = toNullableString(req.body.company_name ?? req.body.companyName ?? req.body.name);
+      const cleanerEmail = toNullableString(req.body.company_email ?? req.body.email);
+      const cleanerPhone = toNullableString(req.body.phone_number ?? req.body.phone);
+      const cleanerAvatar = req.body.avatar === undefined ? undefined : toNullableString(req.body.avatar);
+      const cleanerStatus = req.body.account_status ?? req.body.status;
+      const currentPassword = toNullableString(req.body.current_password ?? req.body.currentPassword);
+      const newPassword = toNullableString(req.body.new_password ?? req.body.newPassword);
+
+      pushUpdate('company_name', cleanerName);
+      pushUpdate('company_email', cleanerEmail);
+      pushUpdate('phone_number', cleanerPhone);
+      pushUpdate('profile_image', cleanerAvatar);
+
+      if (newPassword !== undefined) {
+        if (!currentPassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'Current password is required to change password',
+          });
+        }
+
+        const [passwordRows] = await promiseDb.query(
+          'SELECT password FROM cleaner_profile WHERE cleaner_id = ? LIMIT 1',
+          [userId]
+        );
+        const storedPassword = String(passwordRows?.[0]?.password || '');
+        if (!storedPassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'Password is not available for this account',
+          });
+        }
+
+        const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
+        const currentPasswordMatches = isBcryptHash
+          ? await bcrypt.compare(currentPassword, storedPassword)
+          : currentPassword === storedPassword;
+
+        if (!currentPasswordMatches) {
+          return res.status(400).json({
+            success: false,
+            message: 'Current password is incorrect',
+          });
+        }
+
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+        pushUpdate('password', hashedPassword);
+      }
+
+      if (cleanerStatus !== undefined && cleanerColumns.has('status')) {
+        const allowedStatuses = await getCleanerStatusEnumValues();
+        const normalizedStatus = normalizeCleanerStatusInput(cleanerStatus, allowedStatuses);
+        if (!normalizedStatus) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid cleaner status',
+          });
+        }
+        pushUpdate('status', normalizedStatus);
+      }
+
+      if (updates.length > 0) {
+        values.push(userId);
+        await promiseDb.query(
+          `UPDATE cleaner_profile SET ${updates.join(', ')} WHERE cleaner_id = ?`,
+          values
+        );
+      }
+
+      const profile = await buildCleanerProfileResponse(userId);
+      return res.status(200).json({
+        success: true,
+        message: "Profile updated successfully",
+        data: profile,
       });
     }
 
@@ -506,6 +625,7 @@ exports.updateProfile = async (req, res) => {
 exports.uploadAvatar = async (req, res) => {
   try {
     const userId = req.user?.user_id;
+    const accountSource = String(req.user?.account_source || '').trim().toLowerCase();
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -517,6 +637,47 @@ exports.uploadAvatar = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Avatar file is required",
+      });
+    }
+
+    if (accountSource === 'cleaner_profile') {
+      const cleanerColumns = await getCleanerProfileColumns();
+      if (!cleanerColumns.has('profile_image')) {
+        return res.status(500).json({
+          success: false,
+          message: 'Cleaner profile image column is missing',
+        });
+      }
+
+      const [existingRows] = await db.promise().query(
+        "SELECT profile_image FROM cleaner_profile WHERE cleaner_id = ? LIMIT 1",
+        [userId]
+      );
+      const previousAvatar = existingRows?.[0]?.profile_image || null;
+      const avatarPath = `/uploads/avatars/${req.file.filename}`;
+
+      await db.promise().query(
+        "UPDATE cleaner_profile SET profile_image = ? WHERE cleaner_id = ?",
+        [avatarPath, userId]
+      );
+
+      if (
+        previousAvatar &&
+        typeof previousAvatar === "string" &&
+        previousAvatar.startsWith("/uploads/avatars/")
+      ) {
+        const oldFileName = previousAvatar.split("/").pop();
+        const oldFilePath = path.join(__dirname, "../../../uploads/avatars", oldFileName);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlink(oldFilePath, () => {});
+        }
+      }
+
+      const profile = await buildCleanerProfileResponse(userId);
+      return res.status(200).json({
+        success: true,
+        message: "Avatar uploaded successfully",
+        data: profile,
       });
     }
 
