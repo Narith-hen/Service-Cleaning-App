@@ -1,49 +1,40 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   BellOutlined,
-  CheckOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
   UserOutlined,
   EditOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
 import { useAuth } from "../../../hooks/useAuth";
-import { useNotificationStore } from "../../../features/admin/stores/notification.store";
-import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from 'date-fns';
+import { useNotificationStore } from "../../../features/cleaner/stores/useNotification.store";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../../styles/cleaner/cleaner_header.css";
 
 const CleanerHeader = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
-    notifications,
     unreadCount,
-    loading,
     fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
   } = useNotificationStore();
 
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const toastTimerRef = useRef(null);
-
-  const notificationRef = useRef(null);
   const profileRef = useRef(null);
-  const notificationButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
+  const toastTimerRef = useRef(null);
 
   const displayName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Cleaner User';
   const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
   const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
   const avatarInitials = (firstInitial + lastInitial) || String(displayName).trim().charAt(0).toUpperCase() || 'C';
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [user?.avatar]);
 
   useEffect(() => {
     if (user) {
@@ -52,16 +43,20 @@ const CleanerHeader = () => {
   }, [user, fetchNotifications]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target) &&
-        notificationButtonRef.current &&
-        !notificationButtonRef.current.contains(event.target)
-      ) {
-        setIsNotificationOpen(false);
-      }
+    const syncNotifications = () => {
+      fetchNotifications(true);
+    };
 
+    window.addEventListener('storage', syncNotifications);
+    window.addEventListener('cleaner-notifications-updated', syncNotifications);
+    return () => {
+      window.removeEventListener('storage', syncNotifications);
+      window.removeEventListener('cleaner-notifications-updated', syncNotifications);
+    };
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
       if (
         profileRef.current &&
         !profileRef.current.contains(event.target) &&
@@ -96,28 +91,14 @@ const CleanerHeader = () => {
     };
   }, []);
 
-
-  const handleNotificationClick = (notification) => {
-    if (!notification.is_read) {
-      markAsRead(notification.id);
-    }
-    if (notification.link) {
-      navigate(notification.link);
-    }
-    setIsNotificationOpen(false);
-  };
-
   const handleBellClick = () => {
-    setIsNotificationOpen((prev) => !prev);
     setIsProfileOpen(false);
-    if (!isNotificationOpen) {
-      fetchNotifications(true);
-    }
+    fetchNotifications(true);
+    navigate('/cleaner/notifications');
   };
 
   const handleProfileClick = () => {
     setIsProfileOpen(false);
-    setIsNotificationOpen(false);
     navigate('/cleaner/settings');
   };
 
@@ -125,38 +106,6 @@ const CleanerHeader = () => {
     await logout();
     navigate('/auth/login', { replace: true });
     setIsProfileOpen(false);
-  };
-
-  const handleMarkAllAsRead = (e) => {
-    e.stopPropagation();
-    markAllAsRead();
-  };
-
-  const handleDeleteNotification = (e, id) => {
-    e.stopPropagation();
-    deleteNotification(id);
-  };
-
-  const getNotificationIcon = (type) => {
-    switch (type?.toLowerCase()) {
-      case 'success':
-        return <CheckCircleOutlined style={{ color: '#10b981' }} />;
-      case 'error':
-        return <CloseCircleOutlined style={{ color: '#ef4444' }} />;
-      case 'warning':
-        return <WarningOutlined style={{ color: '#f59e0b' }} />;
-      case 'info':
-      default:
-        return <InfoCircleOutlined style={{ color: '#3b82f6' }} />;
-    }
-  };
-
-  const formatTime = (timestamp) => {
-    try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-    } catch {
-      return '';
-    }
   };
 
   return (
@@ -170,78 +119,24 @@ const CleanerHeader = () => {
       <div className="header-controls">
         <div className="dropdown-wrapper">
           <button
-            ref={notificationButtonRef}
-            type="button"
-            className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
+            className={`header-icon-btn ${location.pathname.startsWith('/cleaner/notifications') ? 'active' : ''}`}
             onClick={handleBellClick}
             title="Notifications"
           >
             <BellOutlined />
             {unreadCount > 0 && <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
           </button>
-
-          {isNotificationOpen && (
-            <div className="dropdown-menu notifications-dropdown" ref={notificationRef}>
-              <div className="dropdown-header">
-                <h3>Notifications</h3>
-                {unreadCount > 0 && (
-                  <button className="mark-read-btn" onClick={handleMarkAllAsRead}>
-                    <CheckOutlined /> Mark all read
-                  </button>
-                )}
-              </div>
-
-              <div className="dropdown-list">
-                {loading ? (
-                  <div className="dropdown-empty">Loading...</div>
-                ) : notifications.length === 0 ? (
-                  <div className="dropdown-empty">
-                    <BellOutlined />
-                    <p>No notifications</p>
-                  </div>
-                ) : (
-                  notifications.slice(0, 5).map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`dropdown-item ${!notification.is_read ? 'unread' : ''}`}
-                      onClick={() => handleNotificationClick(notification)}
-                    >
-                      <div className="item-icon">{getNotificationIcon(notification.type)}</div>
-                      <div className="item-content">
-                        <div className="item-header">
-                          <span className="item-title">{notification.title}</span>
-                          <span className="item-time">{formatTime(notification.created_at)}</span>
-                        </div>
-                        <p className="item-preview">{notification.message}</p>
-                      </div>
-                      <button className="item-delete" onClick={(e) => handleDeleteNotification(e, notification.id)}>
-                        x
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {notifications.length > 0 && (
-                <div className="dropdown-footer">
-                  <button
-                    onClick={() => {
-                      navigate('/cleaner/notifications');
-                      setIsNotificationOpen(false);
-                    }}
-                  >
-                    View all notifications
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="dropdown-wrapper">
           <button ref={profileButtonRef} className="profile-btn" onClick={handleProfileClick}>
-            {user?.avatar ? (
-              <img src={user.avatar} alt="profile" className="profile-avatar" />
+            {user?.avatar && !avatarFailed ? (
+              <img
+                src={user.avatar}
+                alt="profile"
+                className="profile-avatar"
+                onError={() => setAvatarFailed(true)}
+              />
             ) : (
               <div className="profile-avatar profile-avatar-fallback">{avatarInitials}</div>
             )}
@@ -254,8 +149,13 @@ const CleanerHeader = () => {
           {isProfileOpen && (
             <div className="dropdown-menu profile-dropdown" ref={profileRef}>
               <div className="profile-header">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt="profile" className="profile-large" />
+                {user?.avatar && !avatarFailed ? (
+                  <img
+                    src={user.avatar}
+                    alt="profile"
+                    className="profile-large"
+                    onError={() => setAvatarFailed(true)}
+                  />
                 ) : (
                   <div className="profile-large profile-avatar-fallback">{avatarInitials}</div>
                 )}

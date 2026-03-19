@@ -30,9 +30,15 @@ const persistUser = (nextUser) => {
 
 const normalizeAvatarUrl = (avatar) => {
   if (!avatar) return null;
-  if (/^https?:\/\//i.test(avatar)) return avatar;
-  if (avatar.startsWith('/')) return `${API_BASE_URL}${avatar}`;
-  return avatar;
+  const cleaned = String(avatar).replace(/\\/g, '/').trim();
+  if (!cleaned) return null;
+  if (/^data:/i.test(cleaned)) return cleaned;
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  if (cleaned.startsWith('/')) return `${API_BASE_URL}${cleaned}`;
+  if (cleaned.startsWith('uploads/') || cleaned.startsWith('public/')) {
+    return `${API_BASE_URL}/${cleaned}`;
+  }
+  return cleaned;
 };
 
 const normalizeUserData = (payload = {}, previous = null) => {
@@ -70,11 +76,12 @@ const normalizeUserData = (payload = {}, previous = null) => {
     totalSpent: payload.totalSpent ?? previous?.totalSpent ?? 0,
     role_id: roleId,
     token: payload.token ?? previous?.token ?? null,
+    account_source: payload.account_source ?? previous?.account_source ?? 'users',
     role: (
       payload.role ||
       payload.role_name ||
       previous?.role ||
-      (payload.role_id === 1 ? 'admin' : payload.role_id === 3 ? 'cleaner' : 'customer')
+      (roleId === 1 ? 'admin' : roleId === 2 ? 'cleaner' : 'customer')
     ).toLowerCase(),
   };
 };

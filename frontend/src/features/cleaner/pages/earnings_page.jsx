@@ -11,74 +11,14 @@ import {
 } from '@ant-design/icons';
 import { Select, DatePicker, Button } from 'antd';
 import { Line } from '@ant-design/charts';
-import homeImage from '../../../assets/home.png';
-import windowImage from '../../../assets/window.png';
-import officeImage from '../../../assets/office.png';
 import '../../../styles/cleaner/earnings.scss';
-
-const transactions = [
-  {
-    id: 1,
-    date: '2024-10-24',
-    status: 'COMPLETED',
-    statusType: 'completed',
-    transactionId: '#TRN-8821',
-    title: 'Full Apartment Deep Clean',
-    subtitle: 'Payment received via Direct Deposit',
-    amount: '+$180.00',
-    amountType: 'positive',
-    image: homeImage,
-    payoutMethod: 'Direct Deposit',
-    serviceAddress: '1200 Lakeview Towers, #402',
-    meta: [
-      { label: 'DATE', value: 'Oct 24, 2024', icon: <CalendarOutlined /> }
-    ]
-  },
-  {
-    id: 2,
-    date: '2024-10-25',
-    status: 'PENDING',
-    statusType: 'pending',
-    transactionId: '#TRN-8845',
-    title: 'Standard Recurring Clean',
-    subtitle: 'Processing for next payout cycle',
-    amount: '+$95.00',
-    amountType: 'default',
-    image: windowImage,
-    payoutMethod: 'Weekly Batch Payout',
-    serviceAddress: '88 Pine St, Suite 10',
-    meta: [
-      { label: 'PROCESSED ON', value: 'Today, 2:30 PM', icon: <ClockCircleOutlined /> }
-    ]
-  },
-  {
-    id: 3,
-    date: '2024-10-21',
-    status: 'COMPLETED',
-    statusType: 'completed',
-    transactionId: '#TRN-8790',
-    title: 'Move-out Sanitation',
-    subtitle: 'Payment received via Direct Deposit',
-    amount: '+$240.00',
-    amountType: 'positive',
-    image: officeImage,
-    payoutMethod: 'Direct Deposit',
-    serviceAddress: '14 Riverside Blvd, Unit 9',
-    meta: [
-      { label: 'DATE', value: 'Oct 21, 2024', icon: <CalendarOutlined /> }
-    ]
-  }
-];
-
-const monthlyEarningsData = [
-  { month: 'Apr', earnings: 320 },
-  { month: 'May', earnings: 450 },
-  { month: 'Jun', earnings: 380 },
-  { month: 'Jul', earnings: 520 },
-  { month: 'Aug', earnings: 480 },
-  { month: 'Sep', earnings: 610 },
-  { month: 'Oct', earnings: 515 }
-];
+import {
+  cleanerEarningsSummary,
+  cleanerMonthlyEarningsData,
+  cleanerTransactions,
+  formatMoney,
+  parseMoneyAmount
+} from '../data/earnings_data';
 
 const EarningsPage = () => {
   const [sortBy, setSortBy] = useState('most_recent');
@@ -94,7 +34,7 @@ const EarningsPage = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const chartConfig = {
-    data: monthlyEarningsData,
+    data: cleanerMonthlyEarningsData,
     xField: 'month',
     yField: 'earnings',
     smooth: true,
@@ -160,7 +100,7 @@ const EarningsPage = () => {
   };
 
   const filteredTransactions = useMemo(() => {
-    const filtered = transactions.filter((item) => {
+    const filtered = cleanerTransactions.filter((item) => {
       const statusMatch =
         appliedFilters.paymentStatus === 'all' ||
         item.status.toLowerCase() === appliedFilters.paymentStatus;
@@ -177,8 +117,8 @@ const EarningsPage = () => {
       }
 
       if (appliedFilters.sortBy === 'highest_amount') {
-        const amountA = Number(String(a.amount).replace(/[^0-9.-]/g, ''));
-        const amountB = Number(String(b.amount).replace(/[^0-9.-]/g, ''));
+        const amountA = parseMoneyAmount(a.amount);
+        const amountB = parseMoneyAmount(b.amount);
         return amountB - amountA;
       }
 
@@ -196,17 +136,17 @@ const EarningsPage = () => {
       <section className="earnings-stats-panel">
         <div className="earnings-total-card">
           <span className="earnings-total-label">Total Earnings</span>
-          <span className="earnings-total-value">$515.00</span>
+          <span className="earnings-total-value">{formatMoney(cleanerEarningsSummary.total)}</span>
           <span className="earnings-total-note">This month</span>
         </div>
         <div className="earnings-stat-cards">
           <div className="earnings-stat-card completed">
             <span className="stat-label">Completed</span>
-            <span className="stat-value">$420.00</span>
+            <span className="stat-value">{formatMoney(cleanerEarningsSummary.completed)}</span>
           </div>
           <div className="earnings-stat-card pending">
             <span className="stat-label">Pending</span>
-            <span className="stat-value">$95.00</span>
+            <span className="stat-value">{formatMoney(cleanerEarningsSummary.pending)}</span>
           </div>
         </div>
       </section>

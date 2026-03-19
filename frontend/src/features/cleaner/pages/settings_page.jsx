@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import '../../../styles/cleaner/settings.scss';
 import profileImage from '../../../assets/narith.png';
 import { useAuth } from '../../../hooks/useAuth';
-import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
+import { CameraOutlined, EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 
 const SettingsPage = () => {
   const { user, uploadAvatar, updateUser } = useAuth();
   const fileInputRef = useRef(null);
+  const currentPasswordRef = useRef(null);
+  const newPasswordRef = useRef(null);
   const [preview, setPreview] = useState(user?.avatar || profileImage);
-  const [fileName, setFileName] = useState('Profile-pic.jpg');
   const [message, setMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
@@ -72,6 +73,24 @@ const SettingsPage = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const clearAutofill = () => {
+      if (currentPasswordRef.current) currentPasswordRef.current.value = '';
+      if (newPasswordRef.current) newPasswordRef.current.value = '';
+      setPasswords({ current: '', next: '' });
+    };
+
+    clearAutofill();
+    const timer = setTimeout(clearAutofill, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handlePasswordFocus = (key, event) => {
+    if (!passwords[key] && event.currentTarget.value) {
+      event.currentTarget.value = '';
+    }
+  };
+
   const handlePickImage = () => {
     fileInputRef.current?.click();
   };
@@ -116,7 +135,6 @@ const SettingsPage = () => {
       return;
     }
 
-    setFileName(file.name || 'Profile-pic.jpg');
     const reader = new FileReader();
     reader.onload = () => {
       const previewUrl = String(reader.result);
@@ -126,16 +144,15 @@ const SettingsPage = () => {
     reader.readAsDataURL(file);
   };
 
-  const validateForm = (nextData, nextPasswords) => {
+  const validateForm = (nextData, nextPasswords, nextCompanyName = companyName) => {
     const errors = {};
-    if (!companyName.trim()) errors.companyName = 'Required';
+    if (!String(nextCompanyName || '').trim()) errors.companyName = 'Required';
     if (!nextData.companyEmail.trim()) errors.companyEmail = 'Required';
     if (!/^\S+@\S+\.\S+$/.test(nextData.companyEmail)) errors.companyEmail = 'Invalid email';
     if (!nextData.phoneNumber.trim()) errors.phoneNumber = 'Required';
     if (!nextData.accountStatus) errors.accountStatus = 'Required';
 
-    if (!nextPasswords.current.trim()) errors.currentPassword = 'Required';
-    if (!nextPasswords.next.trim()) errors.newPassword = 'Required';
+    
     if (nextPasswords.next && !meetsPasswordRule(nextPasswords.next)) {
       errors.newPassword = passwordRule;
     }
@@ -180,11 +197,6 @@ const SettingsPage = () => {
     const errorText = result?.error || 'Failed to update information.';
     console.error('[SettingsPage] updateUser failed', errorText, result);
     setMessage(errorText);
-    window.dispatchEvent(
-      new CustomEvent('cleaner:navbar-message', {
-        detail: { type: 'error', text: errorText }
-      })
-    );
   };
 
   return (
@@ -193,7 +205,13 @@ const SettingsPage = () => {
         <section className="settings-hero-card">
           <div className="settings-hero-left">
             <div className="settings-hero-media">
-              <div className="settings-hero-avatar">
+              <button
+                type="button"
+                className="settings-hero-avatar"
+                onClick={handlePickImage}
+                disabled={isSaving}
+                aria-label="Change profile photo"
+              >
                 <img
                   src={preview || profileImage}
                   alt="Cleaner profile"
@@ -202,21 +220,23 @@ const SettingsPage = () => {
                     event.currentTarget.src = profileImage;
                   }}
                 />
-              </div>
+                <span className="settings-hero-avatar-edit">
+                  <CameraOutlined />
+                </span>
+              </button>
             </div>
             <div className="settings-hero-text">
               <h2>{companyName || 'Company Name'}</h2>
-              <p>Upload a New Photo</p>
+              <button
+                type="button"
+                className="settings-hero-link"
+                onClick={handlePickImage}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Updating photo...' : 'Upload a New Photo'}
+              </button>
             </div>
           </div>
-          <button
-            className="settings-ghost-button"
-            type="button"
-            onClick={handlePickImage}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Updating...' : 'Update'}
-          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -239,9 +259,10 @@ const SettingsPage = () => {
                 type="text"
                 value={companyName}
                 onChange={(event) => {
-                  setCompanyName(event.target.value);
+                  const value = event.target.value;
+                  setCompanyName(value);
                   if (showErrors) {
-                    setFormErrors(validateForm(formData, passwords));
+                    setFormErrors(validateForm(formData, passwords, value));
                   }
                 }}
                 placeholder="Enter company name"
@@ -289,6 +310,7 @@ const SettingsPage = () => {
             <label>Current Password</label>
             <div className="settings-password-field">
               <input
+                ref={currentPasswordRef}
                 type={showPasswords.current ? 'text' : 'password'}
                 placeholder="Enter your password"
                 name="cleaner-current-password"
@@ -296,6 +318,7 @@ const SettingsPage = () => {
                 data-1p-ignore="true"
                 data-lpignore="true"
                 value={passwords.current}
+                onFocus={(event) => handlePasswordFocus('current', event)}
                 onChange={(event) => {
                   const value = event.target.value;
                   setPasswords((prev) => ({ ...prev, current: value }));
@@ -322,6 +345,7 @@ const SettingsPage = () => {
             <label>New Password</label>
             <div className="settings-password-field">
               <input
+                ref={newPasswordRef}
                 type={showPasswords.next ? 'text' : 'password'}
                 placeholder="Enter your password"
                 name="cleaner-new-password"
@@ -329,6 +353,7 @@ const SettingsPage = () => {
                 data-1p-ignore="true"
                 data-lpignore="true"
                 value={passwords.next}
+                onFocus={(event) => handlePasswordFocus('next', event)}
                 onChange={(event) => {
                   const value = event.target.value;
                   setPasswords((prev) => ({ ...prev, next: value }));

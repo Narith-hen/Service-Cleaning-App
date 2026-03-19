@@ -52,7 +52,7 @@
   border-radius: 14px;
   background: #fff;
   overflow: hidden;
-  min-height: 720px;
+  height: 720px;
   display: flex;
   flex-direction: column;
 }
@@ -69,11 +69,36 @@
 }
 
 .customer-messages-thread-list {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #9fd7ab #f1f5f9;
+}
+
+.customer-messages-thread-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.customer-messages-thread-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.customer-messages-thread-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #32c753 0%, #23a455 100%);
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+}
+
+.customer-messages-thread-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #28b64a 0%, #1f8f4b 100%);
 }
 
 .customer-messages-thread {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -110,6 +135,14 @@
   font-size: 16px;
   font-weight: 700;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.thread-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .thread-meta {
@@ -165,6 +198,12 @@
   min-width: 0;
 }
 
+@media (max-width: 980px) {
+  .customer-messages-content {
+    scroll-margin-top: 16px;
+  }
+}
+
 .customer-messages-page .my-jobs-message-view {
   height: 720px;
 }
@@ -206,7 +245,12 @@
   }
 
   .customer-messages-list {
-    min-height: unset;
+    height: auto;
+    max-height: 520px;
+  }
+
+  .customer-messages-thread-list {
+    min-height: 0;
   }
 
   .customer-messages-page .my-jobs-message-view {

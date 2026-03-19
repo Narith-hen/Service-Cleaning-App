@@ -249,14 +249,14 @@ const BookingMatchPage = () => {
 
   return (
     <div className="booking-match-page">
-      <div className="progress-steps" aria-hidden>
+      <div className="progress-steps" aria-hidden data-customer-reveal>
         <span className="active" />
         <span className="active" />
         <span className="pulsing" />
         <span />
       </div>
 
-      <section className="match-card">
+      <section className="match-card" data-customer-reveal data-customer-panel style={{ '--customer-reveal-delay': 1 }}>
         <div className="match-glow" aria-hidden />
 
         <div className="icon-wrap" aria-hidden>
@@ -307,13 +307,14 @@ const BookingMatchPage = () => {
         </div>
 
         <div className="match-actions">
-          <button type="button" onClick={() => navigate('/customer/dashboard')}>
+          <button type="button" onClick={() => navigate('/customer/dashboard')} data-customer-button>
             Cancel Matching
           </button>
           <button
             type="button"
             className="skip-btn"
             onClick={() => navigate('/customer/bookings/quotes')}
+            data-customer-button
           >
             Skip Matching
           </button>
@@ -324,10 +325,13 @@ const BookingMatchPage = () => {
             aria-disabled={progress < 95}
             title={progress < 95 ? 'Matching in progress' : 'Continue to quotes'}
             onClick={() => navigate('/customer/bookings/quotes')}
+            data-customer-button
           >
             Next
           </button>
-        </div>\n</section>\n</div>
+        </div>
+      </section>
+    </div>
   );
 };
 

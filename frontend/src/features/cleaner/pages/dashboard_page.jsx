@@ -7,13 +7,14 @@ import {
   DollarOutlined
 } from '@ant-design/icons';
 import '../../../styles/cleaner/dashboard.scss';
+import { cleanerEarningsSummary, formatMoney } from '../data/earnings_data';
 
 const CleanerDashboardPage = () => {
   const stats = [
     {
       key: 'earnings',
       title: 'Total Earnings',
-      value: '$2,450.00',
+      value: formatMoney(cleanerEarningsSummary.total),
       note: '+12% vs last month',
       icon: <DollarCircleOutlined />,
       tone: 'success'

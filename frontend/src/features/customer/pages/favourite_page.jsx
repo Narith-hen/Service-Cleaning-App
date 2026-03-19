@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { 
   StarOutlined, 
   EnvironmentOutlined, 
-  UserOutlined,
   DeleteOutlined,
-  HeartOutlined,
-  HeartFilled
+  HeartOutlined
 } from '@ant-design/icons';
 import '../../../styles/customer/favourite.scss';
 
@@ -79,28 +77,31 @@ const FavouritePage = () => {
 
   return (
     <div className="favourite-page">
-      <div className="page-header">
+      <div className="page-header" data-customer-reveal>
         <h1>My Favorites</h1>
         <p>You have {favorites.length} saved items</p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="filter-tabs">
+      <div className="filter-tabs" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
         <button 
           className={`tab-btn ${filter === 'all' ? 'active' : ''}`}
           onClick={() => setFilter('all')}
+          data-customer-button
         >
           All ({favorites.length})
         </button>
         <button 
           className={`tab-btn ${filter === 'cleaners' ? 'active' : ''}`}
           onClick={() => setFilter('cleaners')}
+          data-customer-button
         >
           Cleaners ({favorites.filter(f => f.type === 'cleaner').length})
         </button>
         <button 
           className={`tab-btn ${filter === 'services' ? 'active' : ''}`}
           onClick={() => setFilter('services')}
+          data-customer-button
         >
           Services ({favorites.filter(f => f.type === 'service').length})
         </button>
@@ -116,11 +117,18 @@ const FavouritePage = () => {
             <button className="browse-btn">Browse Services</button>
           </div>
         ) : (
-          filteredFavorites.map(item => (
-            <div key={item.id} className="favorite-card">
+          filteredFavorites.map((item, index) => (
+            <div
+              key={item.id}
+              className="favorite-card"
+              data-customer-reveal
+              data-customer-card
+              style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
+            >
               <button 
                 className="remove-btn"
                 onClick={() => handleRemoveFavorite(item.id)}
+                data-customer-button
               >
                 <DeleteOutlined />
               </button>
@@ -147,7 +155,7 @@ const FavouritePage = () => {
                       <EnvironmentOutlined /> {item.location}
                     </p>
                   </div>
-                  <button className="view-profile-btn">View Profile</button>
+                  <button className="view-profile-btn" data-customer-button>View Profile</button>
                 </div>
               ) : (
                 // Service Card
@@ -158,7 +166,7 @@ const FavouritePage = () => {
                     <span className="service-price">${item.price}</span>
                     <span className="service-duration">{item.duration}</span>
                   </div>
-                  <button className="book-now-btn">Book Now</button>
+                  <button className="book-now-btn" data-customer-button>Book Now</button>
                 </div>
               )}
             </div>
@@ -168,18 +176,18 @@ const FavouritePage = () => {
 
       {/* Recently Viewed Section */}
       {favorites.length > 0 && (
-        <div className="recently-viewed">
+        <div className="recently-viewed" data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
           <h2>Recently Viewed</h2>
           <div className="recent-grid">
-            <div className="recent-item">
+            <div className="recent-item" data-customer-card>
               <p>Carpet Cleaning</p>
               <small>Viewed 2 days ago</small>
             </div>
-            <div className="recent-item">
+            <div className="recent-item" data-customer-card>
               <p>John's Cleaning</p>
               <small>Viewed 3 days ago</small>
             </div>
-            <div className="recent-item">
+            <div className="recent-item" data-customer-card>
               <p>Move-Out Service</p>
               <small>Viewed 5 days ago</small>
             </div>
