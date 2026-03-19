@@ -8,7 +8,6 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
-import { correctBorderRadius } from 'framer-motion';
 
 const ProfilePage = () => {
   const { user, updateUser, uploadAvatar } = useAuth();
@@ -165,20 +164,21 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-[#edf2f2] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto mb-3 flex max-w-5xl">
+      <div className="mx-auto mb-3 flex max-w-5xl" data-customer-reveal>
         <button
           type="button"
           onClick={handleGoBack}
           className="inline-flex items-center gap-2 rounded border border-[#008000] bg-white px-4 py-2 text-sm font-semibold text-[#008000] transition hover:bg-[#f2fff2]"
+          data-customer-button
         >
           <LeftOutlined />
           Back
         </button>
       </div>
 
-      <div className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-md">
+      <div className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-md" data-customer-reveal data-customer-panel style={{ '--customer-reveal-delay': 1 }}>
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-          <aside className="border-b border-slate-200 p-6 lg:border-b-0 lg:border-r">
+          <aside className="border-b border-slate-200 p-6 lg:border-b-0 lg:border-r" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
             <div className="mx-auto relative w-fit">
               <div className="h-40 w-40 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-100">
                 {draft.avatar ? (
@@ -195,6 +195,7 @@ const ProfilePage = () => {
                 disabled={uploading || saving}
                 className="absolute bottom-1 right-1 rounded bg-slate-800 px-3 py-2 text-white transition hover:bg-slate-700 disabled:opacity-60"
                 title="Update"
+                data-customer-button
               >
                 <CameraOutlined />
               </button>
@@ -208,18 +209,18 @@ const ProfilePage = () => {
             </div>
 
             <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-customer-card>
                 <span className="text-xs uppercase tracking-wide text-slate-500">Total Booking</span>
                 <strong className="text-lg text-slate-900">{profile.totalBookings}</strong>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-customer-card>
                 <span className="text-xs uppercase tracking-wide text-slate-500">Total Spend</span>
                 <strong className="text-lg text-slate-900">${profile.totalSpent}</strong>
               </div>
             </div>
           </aside>
 
-          <main>
+          <main data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
             <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-4xl font-semibold text-slate-900">
@@ -235,6 +236,7 @@ const ProfilePage = () => {
                 <button
                   onClick={startEditing}
                   className="inline-flex items-center gap-2 rounded bg-[#008000] px-5 py-2.5 font-semibold text-white hover:bg-[#006d00] " style={{borderRadius: '24px'}}
+                  data-customer-button
                 >
                   <EditOutlined /> EDIT
                 </button>
@@ -243,6 +245,7 @@ const ProfilePage = () => {
                   <button
                     onClick={cancelEdit}
                     className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                    data-customer-button
                   >
                     <CloseOutlined /> Cancel
                   </button>
@@ -250,6 +253,7 @@ const ProfilePage = () => {
                     onClick={saveChanges}
                     disabled={saving}
                     className="inline-flex items-center gap-2 rounded bg-[#008000] px-4 py-2 font-medium text-white hover:bg-[#006d00] disabled:opacity-60"
+                    data-customer-button
                   >
                     <SaveOutlined /> {saving ? 'Saving...' : 'Save'}
                   </button>
@@ -286,6 +290,8 @@ const ProfilePage = () => {
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
                 : 'border-rose-200 bg-rose-50 text-rose-800'
             }`}
+            data-customer-reveal
+            style={{ '--customer-reveal-delay': 2 }}
           >
             {message}
           </div>

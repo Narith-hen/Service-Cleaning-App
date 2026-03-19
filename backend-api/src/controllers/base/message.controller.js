@@ -1,7 +1,13 @@
 const db = require('../../config/db');
 const promiseDb = db.promise();
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');
+const {
+  publishMessageCreated,
+  publishMessageRead
+} = require('../../services/message-realtime.service');
 
 const getMessageTableColumns = async () => {
   const [columns] = await promiseDb.query('SHOW COLUMNS FROM messages');
@@ -41,13 +47,163 @@ const serializeMessage = (message) => {
   };
 };
 
-const assertBookingAccess = async (bookingId, userId) => {
+const getUserTableColumns = async () => {
+  const [columns] = await promiseDb.query('SHOW COLUMNS FROM users');
+  return new Set((columns || []).map((column) => column.Field));
+};
+
+const getUniqueIndexColumns = async (tableName, columnNames) => {
+  const wanted = new Set((columnNames || []).map((name) => String(name).toLowerCase()));
+  if (!wanted.size) return new Set();
+
+  const [rows] = await promiseDb.query(`SHOW INDEX FROM \`${tableName}\` WHERE Non_unique = 0`);
+  const uniqueColumns = new Set();
+
+  for (const row of rows || []) {
+    const col = String(row?.Column_name || '').toLowerCase();
+    if (wanted.has(col)) uniqueColumns.add(col);
+  }
+
+  return uniqueColumns;
+};
+
+const slugify = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const resolveMessagingUserId = async (user) => {
+  const rawUserId = Number(user?.user_id);
+  if (!Number.isInteger(rawUserId) || rawUserId <= 0) {
+    throw new AppError('Unauthorized', 401);
+  }
+
+  const accountSource = String(user?.account_source || '').trim().toLowerCase();
+  if (accountSource !== 'cleaner_profile' && accountSource !== 'cleaner') {
+    return rawUserId;
+  }
+
+  const [existingById] = await promiseDb.query(
+    'SELECT user_id FROM users WHERE user_id = ? LIMIT 1',
+    [rawUserId]
+  );
+  if (existingById?.[0]?.user_id) {
+    return rawUserId;
+  }
+
+  const [profileRows] = await promiseDb.query(
+    `
+      SELECT cleaner_id, company_email, company_name, phone_number, role_id
+      FROM cleaner_profile
+      WHERE cleaner_id = ?
+      LIMIT 1
+    `,
+    [rawUserId]
+  );
+  const profile = profileRows?.[0];
+  if (!profile) {
+    throw new AppError('Cleaner profile not found', 404);
+  }
+
+  const email = String(profile.company_email || '').trim();
+  if (email) {
+    const [existingByEmail] = await promiseDb.query(
+      'SELECT user_id FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+    if (existingByEmail?.[0]?.user_id) {
+      return Number(existingByEmail[0].user_id);
+    }
+  }
+
+  const userColumns = await getUserTableColumns();
+  const hasUsername = userColumns.has('username');
+  const uniqueNameColumns = (userColumns.has('first_name') || userColumns.has('last_name'))
+    ? await getUniqueIndexColumns('users', ['first_name', 'last_name'])
+    : new Set();
+  const isFirstNameUnique = uniqueNameColumns.has('first_name');
+  const isLastNameUnique = uniqueNameColumns.has('last_name');
+
+  const companyName = String(profile.company_name || '').trim();
+  const displayName = companyName || (email ? email.split('@')[0] : '') || `cleaner-${rawUserId}`;
+
+  let username = null;
+  if (hasUsername) {
+    const baseUsername = slugify(companyName) || (email ? slugify(email.split('@')[0]) : '') || `cleaner-${rawUserId}`;
+    username = baseUsername.slice(0, 60);
+
+    const [usernameRows] = await promiseDb.query(
+      'SELECT user_id FROM users WHERE username = ? LIMIT 1',
+      [username]
+    );
+    if (usernameRows?.length) {
+      username = `${username}-${rawUserId}`.slice(0, 90);
+    }
+  }
+
+  const insertColumns = ['user_id'];
+  const insertValues = [rawUserId];
+
+  if (hasUsername) {
+    insertColumns.push('username');
+    insertValues.push(username);
+  }
+
+  if (userColumns.has('user_code')) {
+    insertColumns.push('user_code');
+    insertValues.push(`CLN${String(rawUserId).padStart(3, '0')}`);
+  }
+
+  if (userColumns.has('first_name')) {
+    insertColumns.push('first_name');
+    const firstName = isFirstNameUnique ? `${displayName}-${rawUserId}` : displayName;
+    insertValues.push(String(firstName).slice(0, 100));
+  }
+
+  if (userColumns.has('last_name')) {
+    insertColumns.push('last_name');
+    const lastName = isLastNameUnique ? `cleaner-${rawUserId}` : '';
+    insertValues.push(String(lastName).slice(0, 100));
+  }
+
+  insertColumns.push('email');
+  insertValues.push(email || `cleaner-${rawUserId}@local.invalid`);
+
+  if (userColumns.has('phone_number')) {
+    insertColumns.push('phone_number');
+    insertValues.push(String(profile.phone_number || '').trim() || 'N/A');
+  }
+
+  if (userColumns.has('password')) {
+    const passwordPlain = crypto.randomBytes(18).toString('hex');
+    const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
+    const passwordHash = await bcrypt.hash(passwordPlain, saltRounds);
+    insertColumns.push('password');
+    insertValues.push(passwordHash);
+  }
+
+  insertColumns.push('role_id');
+  insertValues.push(Number(profile.role_id || 2) || 2);
+
+  const placeholders = insertColumns.map(() => '?').join(', ');
+  const columnsSql = insertColumns.map((column) => `\`${column}\``).join(', ');
+  await promiseDb.query(
+    `INSERT INTO users (${columnsSql}) VALUES (${placeholders})`,
+    insertValues
+  );
+
+  return rawUserId;
+};
+
+const assertBookingAccess = async (bookingId, user) => {
   const [bookings] = await promiseDb.query(`SELECT * FROM bookings WHERE booking_id = ?`, [bookingId]);
   if (!bookings.length) {
     throw new AppError('Booking not found', 404);
   }
   const booking = bookings[0];
-  const normalizedUserId = Number(userId);
+  const normalizedUserId = await resolveMessagingUserId(user);
   const isCustomer = booking.user_id === normalizedUserId;
   const isCleaner = booking.cleaner_id === normalizedUserId;
 
@@ -66,7 +222,7 @@ const getMessagesByBooking = async (req, res, next) => {
       return next(new AppError('Invalid booking id', 400));
     }
 
-    await assertBookingAccess(bookingIdValue, req.user.user_id);
+    await assertBookingAccess(bookingIdValue, req.user);
 
     const [messages] = await promiseDb.query(`
       SELECT m.*, 
@@ -109,13 +265,13 @@ const createMessage = async (req, res, next) => {
       return next(new AppError('Message text or file is required', 400));
     }
 
-    const { booking, isCustomer } = await assertBookingAccess(bookingIdValue, req.user.user_id);
+    const { booking, isCustomer } = await assertBookingAccess(bookingIdValue, req.user);
 
     if (!booking.cleaner_id) {
       return next(new AppError('Cleaner has not been assigned to this booking yet', 400));
     }
 
-    const senderUserId = Number(req.user.user_id);
+    const senderUserId = await resolveMessagingUserId(req.user);
     const receiverUserId = isCustomer ? booking.cleaner_id : booking.user_id;
 
     const [accs] = await promiseDb.query(`SELECT user_id, acc_id FROM acc WHERE user_id IN (?, ?)`, [senderUserId, receiverUserId]);
@@ -186,10 +342,19 @@ const createMessage = async (req, res, next) => {
       WHERE m.${messageIdColumn || 'message_id'} = ?
     `, [insertResult.insertId]);
 
+    const serializedMessage = serializeMessage(newMessage[0]);
+
+    await publishMessageCreated({
+      bookingId: bookingIdValue,
+      senderUserId,
+      receiverUserId,
+      message: serializedMessage
+    });
+
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
-      data: serializeMessage(newMessage[0])
+      data: serializedMessage
     });
   } catch (error) {
     next(error);
@@ -205,9 +370,10 @@ const markMessagesRead = async (req, res, next) => {
       return next(new AppError('Invalid booking id', 400));
     }
 
-    await assertBookingAccess(bookingIdValue, req.user.user_id);
+    const normalizedReaderUserId = await resolveMessagingUserId(req.user);
+    await assertBookingAccess(bookingIdValue, req.user);
     
-    const [accs] = await promiseDb.query(`SELECT acc_id FROM acc WHERE user_id = ?`, [req.user.user_id]);
+    const [accs] = await promiseDb.query(`SELECT acc_id FROM acc WHERE user_id = ?`, [normalizedReaderUserId]);
     if (!accs.length) {
        return res.status(200).json({ success: true, message: 'No messages to mark', data: { updated: 0 } });
     }
@@ -218,6 +384,37 @@ const markMessagesRead = async (req, res, next) => {
       SET is_read = 1, seen_at = NOW() 
       WHERE booking_id = ? AND receiver_id = ? AND is_read = 0
     `, [bookingIdValue, receiverAccId]);
+
+    let latestSeenMessageId = null;
+    if (updated.affectedRows > 0) {
+      const messageColumns = await getMessageTableColumns();
+      const messageIdColumn = messageColumns.has('message_id')
+        ? 'message_id'
+        : messageColumns.has('id')
+          ? 'id'
+          : null;
+
+      if (messageIdColumn) {
+      const [latestSeenRows] = await promiseDb.query(`
+        SELECT ${messageIdColumn} AS message_id
+        FROM messages
+        WHERE booking_id = ? AND receiver_id = ?
+        ORDER BY COALESCE(seen_at, updated_at, created_at) DESC
+        LIMIT 1
+      `, [bookingIdValue, receiverAccId]);
+
+        if (latestSeenRows.length) {
+          latestSeenMessageId = latestSeenRows[0].message_id ?? null;
+        }
+      }
+    }
+
+    await publishMessageRead({
+      bookingId: bookingIdValue,
+      readerUserId: normalizedReaderUserId,
+      messageId: latestSeenMessageId,
+      updatedCount: updated.affectedRows
+    });
 
     res.status(200).json({
       success: true,

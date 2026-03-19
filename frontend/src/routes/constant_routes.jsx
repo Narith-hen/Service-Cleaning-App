@@ -19,6 +19,7 @@ export const ROUTES = {
   CUSTOMER: {
     DASHBOARD: '/customer/dashboard',
     BOOKINGS: '/customer/bookings',
+    HISTORY: '/customer/history',
     BOOKING_DETAILS: (id) => `/customer/bookings/${id}`,
     PROFILE: '/customer/profile',
     PAYMENT_METHODS: '/customer/payment-methods',

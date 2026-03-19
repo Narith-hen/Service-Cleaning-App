@@ -30,21 +30,33 @@ const persistUser = (nextUser) => {
 
 const normalizeAvatarUrl = (avatar) => {
   if (!avatar) return null;
-  if (/^https?:\/\//i.test(avatar)) return avatar;
-  if (avatar.startsWith('/')) return `${API_BASE_URL}${avatar}`;
-  return avatar;
+  const cleaned = String(avatar).replace(/\\/g, '/').trim();
+  if (!cleaned) return null;
+  if (/^data:/i.test(cleaned)) return cleaned;
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  if (cleaned.startsWith('/')) return `${API_BASE_URL}${cleaned}`;
+  if (cleaned.startsWith('uploads/') || cleaned.startsWith('public/')) {
+    return `${API_BASE_URL}/${cleaned}`;
+  }
+  return cleaned;
 };
 
 const normalizeUserData = (payload = {}, previous = null) => {
   const firstName = payload.first_name ?? previous?.first_name ?? '';
   const lastName = payload.last_name ?? previous?.last_name ?? '';
   const roleId = payload.role_id ?? previous?.role_id ?? 2;
-  const mergedName = payload.name || [firstName, lastName].filter(Boolean).join(' ').trim();
+  const companyName = payload.company_name ?? payload.companyName ?? previous?.company_name ?? '';
+  const shouldPreferCompanyName = Boolean(companyName) && !payload.company_name && !payload.companyName;
+  const mergedName =
+    (shouldPreferCompanyName ? '' : payload.name) ||
+    companyName ||
+    [firstName, lastName].filter(Boolean).join(' ').trim();
 
   return {
     id: payload.user_id ?? previous?.id ?? previous?.user_id ?? payload.id,
     user_id: payload.user_id ?? previous?.user_id ?? payload.id,
     user_code: payload.user_code ?? previous?.user_code ?? null,
+    company_name: companyName || previous?.company_name || '',
     name: mergedName || previous?.name || 'Customer',
     first_name: firstName,
     last_name: lastName,
@@ -64,11 +76,12 @@ const normalizeUserData = (payload = {}, previous = null) => {
     totalSpent: payload.totalSpent ?? previous?.totalSpent ?? 0,
     role_id: roleId,
     token: payload.token ?? previous?.token ?? null,
+    account_source: payload.account_source ?? previous?.account_source ?? 'users',
     role: (
       payload.role ||
       payload.role_name ||
       previous?.role ||
-      (payload.role_id === 1 ? 'admin' : payload.role_id === 3 ? 'cleaner' : 'customer')
+      (roleId === 1 ? 'admin' : roleId === 2 ? 'cleaner' : 'customer')
     ).toLowerCase(),
   };
 };
@@ -320,7 +333,7 @@ export const useAuth = () => {
         throw new Error(result?.message || 'Failed to update profile');
       }
 
-      const updatedUser = normalizeUserData(result.data || {}, user);
+      const updatedUser = normalizeUserData({ ...userData, ...(result.data || {}) }, user);
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));

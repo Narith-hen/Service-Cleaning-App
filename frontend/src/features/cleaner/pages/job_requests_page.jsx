@@ -13,6 +13,7 @@ import '../../../styles/cleaner/job_requests.scss';
 import '../../../styles/cleaner/my_jobs.scss';
 import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/bookingSync';
 import api from '../../../services/api';
+import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
 
@@ -40,6 +41,7 @@ const mapBookingToRequest = (booking) => {
   return {
     id: booking.booking_id,
     service: booking.service_name || booking.service?.name || 'Cleaning',
+    serviceImage: booking.service_image || booking.service?.image || '',
     serviceTone: deriveServiceTone(booking.service_name || booking.service?.name || ''),
     customer:
       booking.customer_name ||
@@ -113,6 +115,7 @@ const JobRequestsPage = () => {
       customerAvatar: request.customerAvatar || '',
       customerPhone: request.customerPhone || '',
       customerEmail: request.customerEmail || '',
+      serviceImage: request.serviceImage || '',
       bedrooms: '3 Bedrooms',
       floors: '2 Floors'
     };
@@ -131,8 +134,10 @@ const JobRequestsPage = () => {
       const existingThreads = chatRaw ? JSON.parse(chatRaw) : {};
       existingThreads[request.id] = []; // Initialize empty messages for this thread
       localStorage.setItem(CLEANER_CHAT_STORAGE_KEY, JSON.stringify(existingThreads));
+      dispatchCleanerNotificationsUpdated();
     } catch {
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
+      dispatchCleanerNotificationsUpdated();
     }
   };
 
@@ -246,6 +251,7 @@ const JobRequestsPage = () => {
         setStatusMessage('Booking declined and customer notified.');
         try {
           localStorage.setItem(CANCELLED_BOOKING_KEY, String(id));
+          dispatchCleanerNotificationsUpdated();
         } catch {
           /* ignore */
         }
@@ -301,6 +307,7 @@ const JobRequestsPage = () => {
         // flag for customer side to pick up and jump to chat
         try {
           localStorage.setItem(ACCEPTED_BOOKING_KEY, String(request.id));
+          dispatchCleanerNotificationsUpdated();
         } catch {
           /* ignore storage errors */
         }

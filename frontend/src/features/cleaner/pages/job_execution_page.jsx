@@ -10,6 +10,7 @@ import {
   DeleteOutlined
 } from '@ant-design/icons';
 import '../../../styles/cleaner/job_execution.scss';
+import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 
@@ -134,6 +135,7 @@ const JobExecutionPage = () => {
           : job
       );
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+      dispatchCleanerNotificationsUpdated();
     } catch {
       // Non-blocking. We still navigate back.
     }

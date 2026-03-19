@@ -45,7 +45,10 @@ export const loadCustomerNotifications = (fallback = []) => {
 export const saveCustomerNotifications = (notifications = []) => {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(CUSTOMER_NOTIFICATIONS_KEY, JSON.stringify(notifications));
+    const sanitized = Array.isArray(notifications)
+      ? notifications.map(({ icon, ...notification }) => notification)
+      : [];
+    localStorage.setItem(CUSTOMER_NOTIFICATIONS_KEY, JSON.stringify(sanitized));
     window.dispatchEvent(new Event('booking-storage-updated'));
   } catch {
     /* ignore persistence issues */

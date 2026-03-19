@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import { useAuth } from '../../../hooks/useAuth';
+import { loadCustomerNotifications } from '../../../utils/bookingSync';
 
 const { Text } = Typography;
 const TARGET_SCREEN_BREAKPOINT = 1280;
@@ -27,6 +28,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const [breakpoint, setBreakpoint] = useState('lg');
 
   const isCustomerArea = location.pathname.startsWith('/customer');
+  const isCustomerMessagesPage = location.pathname.startsWith('/customer/messages');
+  const isCustomerHistoryPage = location.pathname.startsWith('/customer/history');
+  const isCustomerNotificationsPage = location.pathname.startsWith('/customer/notifications');
   const isCustomerUser = user?.role === 'customer' || isCustomerArea;
   const showCustomerProfileMenu = isCustomerArea && isCustomerUser;
   const displayName = user?.name || user?.first_name || 'Customer';
@@ -34,6 +38,10 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
   const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
   const fallbackInitials = (firstInitial + lastInitial) || String(displayName).trim().charAt(0).toUpperCase() || 'C';
+  const [notificationCount, setNotificationCount] = useState(() => {
+    const list = loadCustomerNotifications([]);
+    return list.filter((item) => !item.read).length;
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -48,6 +56,21 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const syncNotifications = () => {
+      const list = loadCustomerNotifications([]);
+      setNotificationCount(list.filter((item) => !item.read).length);
+    };
+
+    syncNotifications();
+    window.addEventListener('storage', syncNotifications);
+    window.addEventListener('booking-storage-updated', syncNotifications);
+    return () => {
+      window.removeEventListener('storage', syncNotifications);
+      window.removeEventListener('booking-storage-updated', syncNotifications);
+    };
   }, []);
 
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
@@ -66,7 +89,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
     ? [
       { key: 'home', label: 'My Home', path: '/customer/dashboard' },
       { key: 'services', label: 'Service', path: '/customer/services' },
-      { key: 'messages', label: 'About', path: '/customer/messages' },
+      { key: 'about', label: 'About', path: '/customer/about' },
       { key: 'contact', label: 'Contact', path: '/customer/contact' }
     ]
     : [
@@ -225,13 +248,18 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   shape="circle"
                   icon={<MessageOutlined />}
                   title="Messages"
-                  onClick={() => navigate('/customer/chat')}
+                  onClick={() => handleNavigation('/customer/messages')}
                   style={{
                     width: 38,
                     height: 38,
                     borderRadius: 999,
-                    background: darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
-                    color: darkMode ? '#e5e7eb' : '#0f172a'
+                    background: isCustomerMessagesPage
+                      ? 'rgba(0, 128, 0, 0.14)'
+                      : darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+                    color: isCustomerMessagesPage
+                      ? '#008000'
+                      : darkMode ? '#e5e7eb' : '#0f172a',
+                    border: isCustomerMessagesPage ? '1px solid rgba(0, 128, 0, 0.22)' : '1px solid transparent'
                   }}
                 />
                 <Button
@@ -239,27 +267,64 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   shape="circle"
                   icon={<HistoryOutlined />}
                   title="History"
+                  onClick={() => handleNavigation('/customer/history')}
                   style={{
                     width: 38,
                     height: 38,
                     borderRadius: 999,
-                    background: darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
-                    color: darkMode ? '#e5e7eb' : '#0f172a'
+                    background: isCustomerHistoryPage
+                      ? 'rgba(0, 128, 0, 0.14)'
+                      : darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+                    color: isCustomerHistoryPage
+                      ? '#008000'
+                      : darkMode ? '#e5e7eb' : '#0f172a',
+                    border: isCustomerHistoryPage ? '1px solid rgba(0, 128, 0, 0.22)' : '1px solid transparent'
                   }}
                 />
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={<BellOutlined />}
-                  title="Notifications"
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 999,
-                    background: darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
-                    color: darkMode ? '#e5e7eb' : '#0f172a'
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <Button
+                    type="text"
+                    shape="circle"
+                    icon={<BellOutlined />}
+                    title="Notifications"
+                    onClick={() => handleNavigation('/customer/notifications')}
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 999,
+                      background: isCustomerNotificationsPage
+                        ? 'rgba(0, 128, 0, 0.14)'
+                        : darkMode ? 'rgba(148, 163, 184, 0.15)' : '#f1f5f9',
+                      color: isCustomerNotificationsPage
+                        ? '#008000'
+                        : darkMode ? '#e5e7eb' : '#0f172a',
+                      border: isCustomerNotificationsPage ? '1px solid rgba(0, 128, 0, 0.22)' : '1px solid transparent'
+                    }}
+                  />
+                  {notificationCount > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -1,
+                        minWidth: 18,
+                        height: 18,
+                        padding: '0 5px',
+                        borderRadius: 999,
+                        background: '#ef4444',
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 0 0 2px #fff'
+                      }}
+                    >
+                      {notificationCount > 9 ? '9+' : notificationCount}
+                    </span>
+                  )}
+                </div>
               </Space>
             </Col>
           )}
@@ -275,7 +340,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
             >
               {showDarkModeToggle && (
                 <Col>
-                  <Button
+                  {/* <Button
                     type="text"
                     shape="circle"
                     onClick={() => setDarkMode(!darkMode)}
@@ -283,14 +348,14 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     style={{
                       color: darkMode ? '#fbbf24' : '#0f766e'
                     }}
-                  />
+                  /> */}
                 </Col>
               )}
               
               <Col>
                 {showCustomerProfileMenu ? (
                   <Space size={8} align="center">
-                    <Button
+                    {/* <Button
                       type="text"
                       shape="circle"
                       onClick={() => navigate('/customer/messages')}
@@ -300,7 +365,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         background: darkMode ? 'rgba(148, 163, 184, 0.16)' : '#f0fdf4'
                       }}
                       aria-label="Open messages"
-                    />
+                    /> */}
                   <Dropdown menu={profileMenu} placement="bottomRight">
                     <Button
                       type="text"

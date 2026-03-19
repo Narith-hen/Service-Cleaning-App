@@ -2,47 +2,33 @@ import React, { useEffect, useRef, useState } from 'react';
 import '../../../styles/cleaner/settings.scss';
 import profileImage from '../../../assets/narith.png';
 import { useAuth } from '../../../hooks/useAuth';
-import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
+import { CameraOutlined, EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 
 const SettingsPage = () => {
   const { user, uploadAvatar, updateUser } = useAuth();
   const fileInputRef = useRef(null);
+  const currentPasswordRef = useRef(null);
+  const newPasswordRef = useRef(null);
   const [preview, setPreview] = useState(user?.avatar || profileImage);
-  const [fileName, setFileName] = useState('Profile-pic.jpg');
   const [message, setMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
-    next: false,
-    confirm: false
+    next: false
   });
   const [passwords, setPasswords] = useState({
-    current: 'password123',
-    next: 'password123',
-    confirm: 'password123'
+    current: '',
+    next: ''
   });
   const [formData, setFormData] = useState({
-    cleanerCode: '',
     companyEmail: '',
     phoneNumber: '',
-    teamMembers: '',
-    latitude: '',
-    longitude: '',
     accountStatus: 'active',
-    address: '',
-    locLatitude: '',
-    locLongitude: ''
+    address: ''
   });
   const [formErrors, setFormErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
 
-  const passwordRule = 'The password must be 9 characters.';
-
-  const meetsPasswordRule = (value) => {
-    if (!value) return false;
-    const hasMinLength = value.length >= 9;
-    return hasMinLength;
-  };
   const [companyName, setCompanyName] = useState('Sparkle Cleaning');
 
   const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -71,20 +57,32 @@ const SettingsPage = () => {
     setCompanyName((prev) => user.name || prev);
     setFormData((prev) => ({
       ...prev,
-      cleanerCode: user.user_code || prev.cleanerCode,
       companyEmail: user.email || prev.companyEmail,
       phoneNumber: user.phone_number || user.phone || prev.phoneNumber,
-      address: user.address || prev.address,
-      latitude: user.latitude || prev.latitude,
-      longitude: user.longitude || prev.longitude,
-      locLatitude: user.latitude || prev.locLatitude,
-      locLongitude: user.longitude || prev.locLongitude,
       accountStatus: user.account_status || prev.accountStatus
     }));
     if (user.avatar) {
       setPreview(normalizeAvatarUrl(user.avatar, profileImage));
     }
   }, [user]);
+
+  useEffect(() => {
+    const clearAutofill = () => {
+      if (currentPasswordRef.current) currentPasswordRef.current.value = '';
+      if (newPasswordRef.current) newPasswordRef.current.value = '';
+      setPasswords({ current: '', next: '' });
+    };
+
+    clearAutofill();
+    const timer = setTimeout(clearAutofill, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handlePasswordFocus = (key, event) => {
+    if (!passwords[key] && event.currentTarget.value) {
+      event.currentTarget.value = '';
+    }
+  };
 
   const handlePickImage = () => {
     fileInputRef.current?.click();
@@ -130,7 +128,6 @@ const SettingsPage = () => {
       return;
     }
 
-    setFileName(file.name || 'Profile-pic.jpg');
     const reader = new FileReader();
     reader.onload = () => {
       const previewUrl = String(reader.result);
@@ -140,32 +137,15 @@ const SettingsPage = () => {
     reader.readAsDataURL(file);
   };
 
-  const validateForm = (nextData, nextPasswords) => {
+  const validateForm = (nextData, nextPasswords, nextCompanyName = companyName) => {
     const errors = {};
-    if (!nextData.cleanerCode.trim()) errors.cleanerCode = 'Required';
-    if (!companyName.trim()) errors.companyName = 'Required';
+    if (!String(nextCompanyName || '').trim()) errors.companyName = 'Required';
     if (!nextData.companyEmail.trim()) errors.companyEmail = 'Required';
     if (!/^\S+@\S+\.\S+$/.test(nextData.companyEmail)) errors.companyEmail = 'Invalid email';
     if (!nextData.phoneNumber.trim()) errors.phoneNumber = 'Required';
-    if (!nextData.teamMembers.trim()) errors.teamMembers = 'Required';
-    if (!nextData.latitude.trim()) errors.latitude = 'Required';
-    if (!nextData.longitude.trim()) errors.longitude = 'Required';
     if (!nextData.accountStatus) errors.accountStatus = 'Required';
-    if (!nextData.address.trim()) errors.address = 'Required';
-    if (!nextData.locLatitude.trim()) errors.locLatitude = 'Required';
-    if (!nextData.locLongitude.trim()) errors.locLongitude = 'Required';
-
-    if (!nextPasswords.current.trim()) errors.currentPassword = 'Required';
-    if (!nextPasswords.next.trim()) errors.newPassword = 'Required';
-    if (!nextPasswords.confirm.trim()) errors.confirmPassword = 'Required';
-    if (nextPasswords.next && !meetsPasswordRule(nextPasswords.next)) {
-      errors.newPassword = passwordRule;
-    }
-    if (nextPasswords.confirm && !meetsPasswordRule(nextPasswords.confirm)) {
-      errors.confirmPassword = passwordRule;
-    }
-    if (nextPasswords.next && nextPasswords.confirm && nextPasswords.next !== nextPasswords.confirm) {
-      errors.confirmPassword = 'Passwords do not match';
+    if (nextPasswords.next && !nextPasswords.current) {
+      errors.currentPassword = 'Current password is required';
     }
     return errors;
   };
@@ -185,21 +165,24 @@ const SettingsPage = () => {
     if (Object.keys(errors).length > 0) return;
 
     const payload = {
-      cleaner_code: formData.cleanerCode,
       company_name: companyName,
+      name: companyName,
       company_email: formData.companyEmail,
       phone_number: formData.phoneNumber,
-      address: formData.address,
-      latitude: formData.locLatitude || formData.latitude,
-      longitude: formData.locLongitude || formData.longitude,
       account_status: formData.accountStatus,
     };
+
+    if (passwords.current && passwords.next) {
+      payload.current_password = passwords.current;
+      payload.new_password = passwords.next;
+    }
 
     console.debug('[SettingsPage] updateUser payload', payload);
     const result = await updateUser(payload);
     console.debug('[SettingsPage] updateUser result', result);
     if (result?.success) {
       setMessage('Information updated successfully.');
+      setPasswords({ current: '', next: '' });
       window.dispatchEvent(
         new CustomEvent('cleaner:navbar-message', {
           detail: { type: 'success', text: 'Information updated successfully.' }
@@ -210,11 +193,6 @@ const SettingsPage = () => {
     const errorText = result?.error || 'Failed to update information.';
     console.error('[SettingsPage] updateUser failed', errorText, result);
     setMessage(errorText);
-    window.dispatchEvent(
-      new CustomEvent('cleaner:navbar-message', {
-        detail: { type: 'error', text: errorText }
-      })
-    );
   };
 
   return (
@@ -223,7 +201,13 @@ const SettingsPage = () => {
         <section className="settings-hero-card">
           <div className="settings-hero-left">
             <div className="settings-hero-media">
-              <div className="settings-hero-avatar">
+              <button
+                type="button"
+                className="settings-hero-avatar"
+                onClick={handlePickImage}
+                disabled={isSaving}
+                aria-label="Change profile photo"
+              >
                 <img
                   src={preview || profileImage}
                   alt="Cleaner profile"
@@ -232,21 +216,23 @@ const SettingsPage = () => {
                     event.currentTarget.src = profileImage;
                   }}
                 />
-              </div>
+                <span className="settings-hero-avatar-edit">
+                  <CameraOutlined />
+                </span>
+              </button>
             </div>
             <div className="settings-hero-text">
               <h2>{companyName || 'Company Name'}</h2>
-              <p>Upload a New Photo</p>
+              <button
+                type="button"
+                className="settings-hero-link"
+                onClick={handlePickImage}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Updating photo...' : 'Upload a New Photo'}
+              </button>
             </div>
           </div>
-          <button
-            className="settings-ghost-button"
-            type="button"
-            onClick={handlePickImage}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Updating...' : 'Update'}
-          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -260,19 +246,6 @@ const SettingsPage = () => {
         <section className="settings-panel">
           <h3>Profile</h3>
 
-          <div className="settings-field">
-            <label>Cleaner Code</label>
-            <input
-              type="text"
-              value={formData.cleanerCode}
-              onChange={(event) => handleFieldChange('cleanerCode', event.target.value)}
-              className={showErrors && formErrors.cleanerCode ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.cleanerCode && (
-              <span className="field-error">{formErrors.cleanerCode}</span>
-            )}
-          </div>
-
           <div className="settings-section-title">Company Info</div>
 
           <div className="settings-grid-2">
@@ -282,17 +255,15 @@ const SettingsPage = () => {
                 type="text"
                 value={companyName}
                 onChange={(event) => {
-                  setCompanyName(event.target.value);
+                  const value = event.target.value;
+                  setCompanyName(value);
                   if (showErrors) {
-                    setFormErrors(validateForm(formData, passwords));
+                    setFormErrors(validateForm(formData, passwords, value));
                   }
                 }}
                 placeholder="Enter company name"
                 className={showErrors && formErrors.companyName ? 'input-error' : ''}
               />
-              {showErrors && formErrors.companyName && (
-                <span className="field-error">{formErrors.companyName}</span>
-              )}
             </div>
             <div className="settings-field">
               <label>Company Email</label>
@@ -302,9 +273,6 @@ const SettingsPage = () => {
                 onChange={(event) => handleFieldChange('companyEmail', event.target.value)}
                 className={showErrors && formErrors.companyEmail ? 'input-error' : ''}
               />
-              {showErrors && formErrors.companyEmail && (
-                <span className="field-error">{formErrors.companyEmail}</span>
-              )}
             </div>
           </div>
 
@@ -316,49 +284,6 @@ const SettingsPage = () => {
               onChange={(event) => handleFieldChange('phoneNumber', event.target.value)}
               className={showErrors && formErrors.phoneNumber ? 'input-error' : ''}
             />
-            {showErrors && formErrors.phoneNumber && (
-              <span className="field-error">{formErrors.phoneNumber}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Team Members</label>
-            <input
-              type="text"
-              value={formData.teamMembers}
-              onChange={(event) => handleFieldChange('teamMembers', event.target.value)}
-              className={showErrors && formErrors.teamMembers ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.teamMembers && (
-              <span className="field-error">{formErrors.teamMembers}</span>
-            )}
-          </div>
-
-          <div className="settings-grid-2">
-            <div className="settings-field">
-              <label>Latitude</label>
-              <input
-                type="text"
-                value={formData.latitude}
-                onChange={(event) => handleFieldChange('latitude', event.target.value)}
-                className={showErrors && formErrors.latitude ? 'input-error' : ''}
-              />
-              {showErrors && formErrors.latitude && (
-                <span className="field-error">{formErrors.latitude}</span>
-              )}
-            </div>
-            <div className="settings-field">
-              <label>Longitude</label>
-              <input
-                type="text"
-                value={formData.longitude}
-                onChange={(event) => handleFieldChange('longitude', event.target.value)}
-                className={showErrors && formErrors.longitude ? 'input-error' : ''}
-              />
-              {showErrors && formErrors.longitude && (
-                <span className="field-error">{formErrors.longitude}</span>
-              )}
-            </div>
           </div>
 
           <div className="settings-field">
@@ -371,63 +296,25 @@ const SettingsPage = () => {
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            {showErrors && formErrors.accountStatus && (
-              <span className="field-error">{formErrors.accountStatus}</span>
-            )}
           </div>
         </section>
 
         <section className="settings-panel">
-          <h3>Location</h3>
-
-          <div className="settings-field">
-            <label>Address</label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(event) => handleFieldChange('address', event.target.value)}
-              className={showErrors && formErrors.address ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.address && (
-              <span className="field-error">{formErrors.address}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Latitude</label>
-            <input
-              type="text"
-              value={formData.locLatitude}
-              onChange={(event) => handleFieldChange('locLatitude', event.target.value)}
-              className={showErrors && formErrors.locLatitude ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.locLatitude && (
-              <span className="field-error">{formErrors.locLatitude}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Longitude</label>
-            <input
-              type="text"
-              value={formData.locLongitude}
-              onChange={(event) => handleFieldChange('locLongitude', event.target.value)}
-              className={showErrors && formErrors.locLongitude ? 'input-error' : ''}
-            />
-            {showErrors && formErrors.locLongitude && (
-              <span className="field-error">{formErrors.locLongitude}</span>
-            )}
-          </div>
-
           <div className="settings-section-title">Security</div>
 
           <div className="settings-field">
             <label>Current Password</label>
             <div className="settings-password-field">
               <input
+                ref={currentPasswordRef}
                 type={showPasswords.current ? 'text' : 'password'}
                 placeholder="Enter your password"
+                name="cleaner-current-password"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
                 value={passwords.current}
+                onFocus={(event) => handlePasswordFocus('current', event)}
                 onChange={(event) => {
                   const value = event.target.value;
                   setPasswords((prev) => ({ ...prev, current: value }));
@@ -448,18 +335,21 @@ const SettingsPage = () => {
                 {showPasswords.current ? <EyeInvisibleOutlined /> : <EyeOutlined />}
               </button>
             </div>
-            {showErrors && formErrors.currentPassword && (
-              <span className="field-error">{formErrors.currentPassword}</span>
-            )}
           </div>
 
           <div className="settings-field">
             <label>New Password</label>
             <div className="settings-password-field">
               <input
+                ref={newPasswordRef}
                 type={showPasswords.next ? 'text' : 'password'}
                 placeholder="Enter your password"
+                name="cleaner-new-password"
+                autoComplete="new-password"
+                data-1p-ignore="true"
+                data-lpignore="true"
                 value={passwords.next}
+                onFocus={(event) => handlePasswordFocus('next', event)}
                 onChange={(event) => {
                   const value = event.target.value;
                   setPasswords((prev) => ({ ...prev, next: value }));
@@ -480,59 +370,6 @@ const SettingsPage = () => {
                 {showPasswords.next ? <EyeInvisibleOutlined /> : <EyeOutlined />}
               </button>
             </div>
-            {passwords.next && (
-              <p
-                className={`password-rule ${
-                  meetsPasswordRule(passwords.next) ? 'is-valid' : 'is-invalid'
-                }`}
-              >
-                {passwordRule}
-              </p>
-            )}
-            {showErrors && formErrors.newPassword && (
-              <span className="field-error">{formErrors.newPassword}</span>
-            )}
-          </div>
-
-          <div className="settings-field">
-            <label>Confirm Password</label>
-            <div className="settings-password-field">
-              <input
-                type={showPasswords.confirm ? 'text' : 'password'}
-                placeholder="Enter your password"
-                value={passwords.confirm}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setPasswords((prev) => ({ ...prev, confirm: value }));
-                  if (showErrors) {
-                    setFormErrors(validateForm(formData, { ...passwords, confirm: value }));
-                  }
-                }}
-                className={showErrors && formErrors.confirmPassword ? 'input-error' : ''}
-              />
-              <button
-                type="button"
-                className="settings-eye-btn icon inside"
-                onClick={() =>
-                  setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))
-                }
-                aria-label={showPasswords.confirm ? 'Hide password' : 'Show password'}
-              >
-                {showPasswords.confirm ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              </button>
-            </div>
-            {passwords.confirm && (
-              <p
-                className={`password-rule ${
-                  meetsPasswordRule(passwords.confirm) ? 'is-valid' : 'is-invalid'
-                }`}
-              >
-                {passwordRule}
-              </p>
-            )}
-            {showErrors && formErrors.confirmPassword && (
-              <span className="field-error">{formErrors.confirmPassword}</span>
-            )}
           </div>
 
           <button className="settings-primary-button" type="button" onClick={handleSubmit}>

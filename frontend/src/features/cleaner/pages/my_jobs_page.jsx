@@ -5,7 +5,6 @@ import {
   UserOutlined,
   HomeOutlined,
   AppstoreOutlined,
-  CompassOutlined,
   MessageOutlined,
   PlayCircleOutlined,
   CalendarOutlined,
@@ -18,14 +17,25 @@ import homeImage from '../../../assets/home.png';
 import windowImage from '../../../assets/window.png';
 import constructionImage from '../../../assets/Construction Cleaning.png';
 import customerHomeImage from '../../../assets/customer_home.png';
+import carpetImage from '../../../assets/Carpet.png';
+import floorBuffingImage from '../../../assets/Floor Buffing.png';
+import deepCleaningImage from '../../../assets/Deep.png';
+import homesServiceImage from '../../../assets/Homes .png';
+import airConditioningImage from '../../../assets/co.png';
+import moveImage from '../../../assets/move.png';
+import shopImage from '../../../assets/shop.png';
+import proImage from '../../../assets/pro.png';
 import customerAvatar1 from '../../../assets/larryta.png';
 import customerAvatar2 from '../../../assets/mey.JPG';
 import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
+import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
@@ -36,19 +46,32 @@ const saveChatThreads = (threads) => {
   }
 };
 
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
+
 const pickJobImage = (job) => {
-  // Apply real service images based on job type/service
-  const title = String(job?.title || '').toLowerCase();
-  const serviceType = String(job?.serviceType || job?.image || '').toLowerCase();
+  const apiImage = toAbsoluteImageUrl(job?.serviceImage || job?.imageUrl || '');
+  if (apiImage) return apiImage;
+
+  const title = String(job?.title || job?.serviceName || '').toLowerCase();
+  const serviceType = String(job?.serviceType || '').toLowerCase();
   
-  // Check title first, then service type
+  if (title.includes('carpet') || serviceType.includes('carpet')) return carpetImage;
+  if (title.includes('floor buff') || title.includes('pressure wash') || serviceType.includes('floor')) return floorBuffingImage;
+  if (title.includes('air') || title.includes('conditioning') || serviceType.includes('air')) return airConditioningImage;
+  if (title.includes('deep')) return deepCleaningImage;
+  if (title.includes('move')) return moveImage;
+  if (title.includes('shop')) return shopImage;
+  if (title.includes('pro')) return proImage;
+  if (title.includes('homes & offices') || title.includes('home') || title.includes('house') || serviceType.includes('home')) return homesServiceImage;
   if (title.includes('office') || serviceType.includes('office')) return officeImage;
   if (title.includes('window') || serviceType.includes('window')) return windowImage;
   if (title.includes('construction') || serviceType.includes('construction')) return constructionImage;
-  if (title.includes('home') || title.includes('house') || title.includes('deep') || serviceType.includes('home')) return homeImage;
   if (title.includes('customer') || serviceType.includes('customer')) return customerHomeImage;
   
-  // Default to home image for cleaning services
   return homeImage;
 };
 
@@ -161,6 +184,7 @@ const MyJobsPage = () => {
           bedrooms: job.bedrooms || '3 Bedrooms',
           floors: job.floors || '2 Floors',
           serviceType: job.serviceType || 'home',
+          serviceImage: job.serviceImage || '',
           image: pickJobImage(job)
         }));
 
@@ -213,6 +237,7 @@ const MyJobsPage = () => {
                 : job
             );
             localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+            dispatchCleanerNotificationsUpdated();
           }
         }
       } catch {
@@ -223,7 +248,7 @@ const MyJobsPage = () => {
     navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
-  const handleCheckMyJob = (jobId) => {
+  const handleOpenJobDetails = (jobId) => {
     navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
@@ -314,7 +339,19 @@ const MyJobsPage = () => {
                 : 'idle');
 
           return (
-            <article key={job.id} className={`my-job-card-v2 ${job.status === 'completed' ? 'completed' : ''}`}>
+            <article
+              key={job.id}
+              className={`my-job-card-v2 ${job.status === 'completed' ? 'completed' : ''}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleOpenJobDetails(job.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleOpenJobDetails(job.id);
+                }
+              }}
+            >
             <aside
               className="my-job-date-v2"
               style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
@@ -361,7 +398,10 @@ const MyJobsPage = () => {
                   <button
                     type="button"
                     className="start-btn"
-                    onClick={() => handleStartJob(job.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleStartJob(job.id);
+                    }}
                   >
                     <PlayCircleOutlined /> Start Job
                   </button>
@@ -385,23 +425,9 @@ const MyJobsPage = () => {
 
                 <button
                   type="button"
-                  className="ghost-btn"
-                  onClick={() => handleCheckMyJob(job.id)}
-                >
-                  <CheckCircleOutlined /> Check My Job
-                </button>
-
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  onClick={() => handleCheckMyJob(job.id)}
-                >
-                  <CompassOutlined /> Navigate to Location
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  onClick={() => {
+                  className="ghost-btn message-btn"
+                  onClick={(event) => {
+                    event.stopPropagation();
                     // Save job to chat threads for history
                     const threadData = {
                       id: job.id,
@@ -422,6 +448,7 @@ const MyJobsPage = () => {
                       bedrooms: job.bedrooms,
                       floors: job.floors,
                       image: job.image,
+                      serviceImage: job.serviceImage || '',
                       serviceType: job.serviceType
                     };
                     

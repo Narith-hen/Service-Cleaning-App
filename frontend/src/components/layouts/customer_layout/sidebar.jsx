@@ -5,9 +5,11 @@ import {
   InfoCircleOutlined, 
   AppstoreOutlined, 
   CalendarOutlined,
+  BellOutlined,
   PhoneOutlined,
   CloseOutlined,
   FacebookOutlined,
+  HistoryOutlined,
   MessageOutlined,
   InstagramOutlined,
   YoutubeOutlined,
@@ -44,6 +46,34 @@ const Sidebar = ({
         icon: <AppstoreOutlined />,
         path: '/customer/services',
         description: 'Customer services'
+      },
+      {
+        key: 'about',
+        label: 'About Us',
+        icon: <InfoCircleOutlined />,
+        path: '/customer/about',
+        description: 'Learn about Somaet'
+      },
+      {
+        key: 'messages',
+        label: 'Messages',
+        icon: <MessageOutlined />,
+        path: '/customer/messages',
+        description: 'Open your conversations'
+      },
+      {
+        key: 'history',
+        label: 'History',
+        icon: <HistoryOutlined />,
+        path: '/customer/history',
+        description: 'See past cleaner bookings'
+      },
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        icon: <BellOutlined />,
+        path: '/customer/notifications',
+        description: 'View booking alerts'
       },
       {
         key: 'booking',
@@ -178,7 +208,7 @@ const Sidebar = ({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                សម្អាត
+                Somaet
               </Text>
             </div>
           </Space>
@@ -418,184 +448,6 @@ const Sidebar = ({
           </div>
         </div>
 
-        {/* Contact Information */}
-        {/* <div style={{ padding: '0 24px 20px', width: '100%', boxSizing: 'border-box' }}>
-          <Text strong style={{ 
-            fontSize: 11,
-            color: 'green',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            marginBottom: 16,
-            display: 'block',
-            fontWeight: 700
-          }}>
-            Contact Info
-          </Text>
-          
-          {contactInfo.map((item, index) => (
-            <div
-              key={index}
-              onClick={() => {
-                if (item.type === 'phone') window.open(`tel:${item.text.replace(/\s/g, '')}`);
-                if (item.type === 'email') window.open(`mailto:${item.text}`);
-              }}
-              style={{
-                padding: '12px 14px',
-                marginBottom: 8,
-                borderRadius: 3,
-                background: '#ffffff',
-                border: '1px solid #f1f5f9',
-                cursor: item.type === 'phone' || item.type === 'email' ? 'pointer' : 'default',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
-                width: '100%',
-                boxSizing: 'border-box',
-                overflow: 'hidden',
-                ':hover': item.type === 'phone' || item.type === 'email' ? {
-                  background: '#f8fafc',
-                  borderColor: '#e2e8f0',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
-                  transform: 'translateX(2px)'
-                } : {}
-              }}
-            >
-              <Space size={12} align="center" style={{ width: '100%' }}>
-                <div style={{
-                  padding: '6px',
-                  background: item.color,
-                  borderRadius: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: `0 2px 8px ${item.color}30`,
-                  flexShrink: 0
-                }}>
-                  {React.cloneElement(item.icon, {
-                    style: {
-                      fontSize: 14,
-                      color: '#ffffff'
-                    }
-                  })}
-                </div>
-                <div style={{ 
-                  flex: 1,
-                  minWidth: 0,
-                  overflow: 'hidden'
-                }}>
-                  <Text style={{ 
-                    fontSize: 13,
-                    color: '#374151',
-                    fontWeight: 500,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {item.text}
-                  </Text>
-                </div>
-                {item.type === 'phone' || item.type === 'email' ? (
-                  <div style={{ marginLeft: 'auto', opacity: 0.6, flexShrink: 0 }}>
-                    <Text style={{ fontSize: 10, color: '#64748b' }}>
-                      Tap to {item.type}
-                    </Text>
-                  </div>
-                ) : null}
-              </Space>
-            </div>
-          ))}
-        </div> */}
-
-        <Divider style={{ 
-          margin: '16px 24px',
-          borderColor: '#f1f5f9'
-        }} />
-
-        {/* Social Media */}
-        {/* <div style={{ padding: '0 24px 20px', width: '100%', boxSizing: 'border-box' }}>
-          <Text strong style={{ 
-            fontSize: 11,
-            color: 'green',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            marginBottom: 16,
-            display: 'block',
-            fontWeight: 700
-          }}>
-            Connect With Us
-          </Text>
-          
-          <div style={{ 
-            display: 'flex', 
-            gap: 12, 
-            flexWrap: 'wrap',
-            justifyContent: 'flex-start',
-            width: '100%'
-          }}>
-            {socialLinks.map((social, index) => (
-              <Button
-                key={index}
-                type="text"
-                icon={React.cloneElement(social.icon, { style: { fontSize: 18 } })}
-                onClick={() => handleSocialClick(social.url)}
-                style={{
-                  width: 48,
-                  height: 48,
-                  minWidth: 48,
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#ffffff',
-                  border: `1px solid ${social.color}20`,
-                  borderRadius: 3,
-                  color: social.color,
-                  transition: 'all 0.2s ease',
-                  boxShadow: `0 3px 10px ${social.color}15`,
-                  flexShrink: 0,
-                  ':hover': {
-                    background: `${social.color}08`,
-                    borderColor: `${social.color}40`,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 6px 16px ${social.color}20`
-                  }
-                }}
-              />
-            ))}
-          </div>
-        </div> */}
-      </div>
-
-      {/* Call to Action Footer */}
-      <div style={{ 
-        padding: '20px 24px',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-        borderTop: '1px solid #f1f5f9',
-        flexShrink: 0,
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
-        {/* <Button
-          type="primary"
-          icon={<PhoneOutlined />}
-          onClick={handleCallClick}
-          style={{
-            width: '100%',
-            height: 48,
-            background: 'linear-gradient(135deg, green 0%, green 100%)',
-            border: 'none',
-            borderRadius: 3,
-            fontSize: 15,
-            fontWeight: 600,
-            boxShadow: '0 4px 16px rgba(15, 118, 110, 0.3)',
-            transition: 'all 0.3s ease',
-            ':hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 6px 20px rgba(15, 118, 110, 0.4)'
-            }
-          }}
-        >
-          Call Now
-        </Button> */}
         
         <Text style={{ 
           fontSize: 11,

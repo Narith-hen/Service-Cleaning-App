@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { 
+import {
   BellOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  CalendarOutlined,
-  StarOutlined,
   DollarOutlined,
   MessageOutlined,
   DeleteOutlined,
-  SettingOutlined
+  StarOutlined
 } from '@ant-design/icons';
 import '../../../styles/customer/notification.scss';
 import {
@@ -25,7 +23,6 @@ const seedNotifications = [
     message: 'Your regular cleaning booking for Oct 24 at 2:00 PM has been confirmed.',
     createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     read: false,
-    icon: <CheckCircleOutlined />,
     color: '#10b981'
   },
   {
@@ -35,13 +32,15 @@ const seedNotifications = [
     message: 'You have a deep cleaning appointment tomorrow at 10:00 AM.',
     createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     read: false,
-    icon: <ClockCircleOutlined />,
     color: '#f59e0b'
   }
 ];
 
+const areNotificationsEqual = (left = [], right = []) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
 const NotificationPage = () => {
-  const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
+  const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState(() =>
     loadCustomerNotifications(seedNotifications)
   );
@@ -51,7 +50,13 @@ const NotificationPage = () => {
   }, [notifications]);
 
   useEffect(() => {
-    const sync = () => setNotifications(loadCustomerNotifications(seedNotifications));
+    const sync = () => {
+      const nextNotifications = loadCustomerNotifications(seedNotifications);
+      setNotifications((prev) =>
+        areNotificationsEqual(prev, nextNotifications) ? prev : nextNotifications
+      );
+    };
+
     window.addEventListener('storage', sync);
     window.addEventListener('booking-storage-updated', sync);
     return () => {
@@ -85,157 +90,107 @@ const NotificationPage = () => {
 
   return (
     <div className="notification-page">
-      <div className="page-header">
-        <div className="header-title">
-          <h1>Notifications</h1>
-          {unreadCount > 0 && (
-            <span className="unread-badge">{unreadCount} unread</span>
-          )}
-        </div>
-        
-        <div className="header-actions">
-          <button 
-            className="mark-all-btn"
-            onClick={handleMarkAllAsRead}
-            disabled={unreadCount === 0}
-          >
-            Mark all as read
-          </button>
-          <button className="settings-btn">
-            <SettingOutlined />
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="filter-tabs">
-        <button 
-          className={`tab-btn ${filter === 'all' ? 'active' : ''}`}
-          onClick={() => setFilter('all')}
-        >
-          All ({notifications.length})
-        </button>
-        <button 
-          className={`tab-btn ${filter === 'unread' ? 'active' : ''}`}
-          onClick={() => setFilter('unread')}
-        >
-          Unread ({unreadCount})
-        </button>
-        <button 
-          className={`tab-btn ${filter === 'read' ? 'active' : ''}`}
-          onClick={() => setFilter('read')}
-        >
-          Read ({notifications.length - unreadCount})
-        </button>
-      </div>
-
-      {/* Notifications List */}
-      <div className="notifications-list">
-        {filteredNotifications.length === 0 ? (
-          <div className="empty-state">
-            <BellOutlined className="empty-icon" />
-            <h3>No notifications</h3>
-            <p>You're all caught up! Check back later for updates.</p>
+      <section className="notification-hero" data-customer-reveal>
+        <div>
+          <div className="header-title">
+            <h1>Notifications</h1>
+            {unreadCount > 0 && <span className="unread-badge">{unreadCount} unread</span>}
           </div>
-        ) : (
-          filteredNotifications.map((notification) => {
-            const derivedIcon = notification.icon
-              || (notification.type === 'booking' ? <CheckCircleOutlined />
-                : notification.type === 'reminder' ? <ClockCircleOutlined />
-                : notification.type === 'review' ? <StarOutlined />
-                : notification.type === 'payment' ? <DollarOutlined />
-                : <MessageOutlined />);
-            const derivedColor = notification.color || '#3b82f6';
-            return (
-              <div 
-                key={notification.id} 
-                className={`notification-item ${!notification.read ? 'unread' : ''}`}
-                onClick={() => handleMarkAsRead(notification.id)}
+          <p className="notification-subtitle">
+            Stay on top of booking approvals, cleaner updates, reminders, and service follow-ups.
+          </p>
+        </div>
+      </section>
+
+      <section className="notification-shell notification-shell--single" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
+        <div className="notification-main-card" data-customer-panel>
+          <div className="page-header">
+            <div className="header-actions">
+              <button
+                className="mark-all-btn"
+                onClick={handleMarkAllAsRead}
+                disabled={unreadCount === 0}
+                data-customer-button
               >
-                <div 
-                  className="notification-icon"
-                  style={{ backgroundColor: `${derivedColor}20`, color: derivedColor }}
-                >
-                  {derivedIcon}
-                </div>
-                
-                <div className="notification-content">
-                  <div className="notification-header">
-                    <h3>{notification.title}</h3>
-                    <span className="notification-time">
-                      {notification.createdAt ? timeAgo(notification.createdAt) : ''}
-                    </span>
-                  </div>
-                  <p className="notification-message">{notification.message}</p>
-                </div>
+                Mark all as read
+              </button>
+            </div>
+          </div>
 
-                <button 
-                  className="delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(notification.id);
-                  }}
-                >
-                  <DeleteOutlined />
-                </button>
+          <div className="filter-tabs">
+            <button className={`tab-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')} data-customer-button>
+              All ({notifications.length})
+            </button>
+            <button className={`tab-btn ${filter === 'unread' ? 'active' : ''}`} onClick={() => setFilter('unread')} data-customer-button>
+              Unread ({unreadCount})
+            </button>
+            <button className={`tab-btn ${filter === 'read' ? 'active' : ''}`} onClick={() => setFilter('read')} data-customer-button>
+              Read ({notifications.length - unreadCount})
+            </button>
+          </div>
+
+          <div className="notifications-list">
+            {filteredNotifications.length === 0 ? (
+              <div className="empty-state">
+                <BellOutlined className="empty-icon" />
+                <h3>No notifications</h3>
+                <p>You're all caught up! Check back later for updates.</p>
               </div>
-            );
-          })
-        )}
-      </div>
+            ) : (
+              filteredNotifications.map((notification, index) => {
+                const derivedIcon =
+                  notification.type === 'booking' ? <CheckCircleOutlined />
+                    : notification.type === 'reminder' ? <ClockCircleOutlined />
+                    : notification.type === 'review' ? <StarOutlined />
+                    : notification.type === 'payment' ? <DollarOutlined />
+                    : <MessageOutlined />;
+                const derivedColor = notification.color || '#3b82f6';
 
-      {/* Notification Settings Preview */}
-      <div className="settings-preview">
-        <h3>Notification Settings</h3>
-        <div className="setting-options">
-          <div className="setting-option">
-            <div className="setting-info">
-              <h4>Booking Updates</h4>
-              <p>Get notified about booking confirmations and changes</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" defaultChecked />
-              <span className="slider"></span>
-            </label>
-          </div>
+                return (
+                  <div
+                    key={notification.id}
+                    className={`notification-item ${!notification.read ? 'unread' : ''}`}
+                    onClick={() => handleMarkAsRead(notification.id)}
+                    data-customer-reveal
+                    data-customer-card
+                    style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
+                  >
+                    <div
+                      className="notification-icon"
+                      style={{ backgroundColor: `${derivedColor}20`, color: derivedColor }}
+                    >
+                      {derivedIcon}
+                    </div>
 
-          <div className="setting-option">
-            <div className="setting-info">
-              <h4>Promotions & Offers</h4>
-              <p>Receive special offers and discounts</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" defaultChecked />
-              <span className="slider"></span>
-            </label>
-          </div>
+                    <div className="notification-content">
+                      <div className="notification-header">
+                        <h3>{notification.title}</h3>
+                        <span className="notification-time">
+                          {notification.createdAt ? timeAgo(notification.createdAt) : ''}
+                        </span>
+                      </div>
+                      <p className="notification-message">{notification.message}</p>
+                    </div>
 
-          <div className="setting-option">
-            <div className="setting-info">
-              <h4>Review Reminders</h4>
-              <p>Get reminded to leave reviews after cleanings</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" defaultChecked />
-              <span className="slider"></span>
-            </label>
-          </div>
-
-          <div className="setting-option">
-            <div className="setting-info">
-              <h4>Payment Notifications</h4>
-              <p>Get updates about payments and invoices</p>
-            </div>
-            <label className="switch">
-              <input type="checkbox" defaultChecked />
-              <span className="slider"></span>
-            </label>
+                    <button
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(notification.id);
+                      }}
+                      data-customer-button
+                    >
+                      <DeleteOutlined />
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
-        <button className="manage-settings-btn">Manage All Settings</button>
-      </div>
+      </section>
     </div>
   );
 };
 
-export default NotificationPage; // <-- THIS IS CRITICAL!
+export default NotificationPage;
