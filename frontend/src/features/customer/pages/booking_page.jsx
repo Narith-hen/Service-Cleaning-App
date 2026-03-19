@@ -556,6 +556,7 @@ const BookingPage = () => {
         } catch {
           /* ignore */
         }
+
         // upload images if any
         if (files.length) {
           const toBase64 = (file) =>

@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import '../../../styles/cleaner/job_execution.scss';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
+import api from '../../../services/api';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 
@@ -38,6 +39,31 @@ const defaultChecklist = [
 
 const generateId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+const getBookingIdFromJob = (job) => {
+  const rawId = job?.sourceRequestId || job?.bookingId || job?.id || '';
+  const normalized = String(rawId);
+  if (!normalized) return null;
+  if (normalized.startsWith('confirmed-')) {
+    return normalized.replace('confirmed-', '');
+  }
+  return normalized;
+};
+
+const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
+  const bookingId = getBookingIdFromJob(job);
+  if (!bookingId) return false;
+  try {
+    await api.patch(`/bookings/${bookingId}/status`, {
+      ...(bookingStatus ? { booking_status: bookingStatus } : {}),
+      ...(serviceStatus ? { service_status: serviceStatus } : {})
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to update booking status', error);
+    return false;
+  }
+};
+
 const normalizeConfirmedJob = (job) => ({
   id: job.id || job.sourceRequestId || 'default-1',
   sourceRequestId: job.sourceRequestId || job.id || 'default-1',
@@ -47,7 +73,8 @@ const normalizeConfirmedJob = (job) => ({
   price: job.price || fallbackJob.price,
   timeRange: job.timeRange || fallbackJob.timeRange,
   location: job.location || fallbackJob.location,
-  customer: job.customer || fallbackJob.customer
+  customer: job.customer || fallbackJob.customer,
+  serviceStatus: job.serviceStatus || 'started'
 });
 
 const JobExecutionPage = () => {
@@ -75,11 +102,9 @@ const JobExecutionPage = () => {
 
   const [checklist, setChecklist] = useState(defaultChecklist);
   const [newChecklistItem, setNewChecklistItem] = useState('');
-
   const completedCount = checklist.filter((item) => item.done).length;
   const priceValue = Number(String(currentJob.price || '$0').replace(/[^0-9.]/g, '')) || 0;
-  const materialsFee = 15.5;
-  const totalEarning = priceValue + materialsFee;
+  const totalEarning = priceValue;
 
   const toggleChecklistItem = (id) => {
     setChecklist((prev) =>
@@ -115,8 +140,12 @@ const JobExecutionPage = () => {
     }
   };
 
-  const handleFinishJob = () => {
+  const handleFinishJob = async () => {
     try {
+      await updateJobStatusOnServer(currentJob, {
+        bookingStatus: 'completed',
+        serviceStatus: 'completed'
+      });
       const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
       if (!raw) {
         navigate('/cleaner/my-jobs');
@@ -131,7 +160,7 @@ const JobExecutionPage = () => {
 
       const updated = parsed.map((job) =>
         (job.id === currentJob.id || job.sourceRequestId === currentJob.sourceRequestId)
-          ? { ...job, status: 'completed' }
+          ? { ...job, status: 'completed', serviceStatus: 'completed' }
           : job
       );
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
@@ -254,10 +283,6 @@ const JobExecutionPage = () => {
             <div className="summary-row">
               <span>Service Fee</span>
               <strong>${priceValue.toFixed(2)}</strong>
-            </div>
-            <div className="summary-row">
-              <span>Materials Used</span>
-              <strong>${materialsFee.toFixed(2)}</strong>
             </div>
             <div className="summary-row total">
               <span>Total Earning</span>
