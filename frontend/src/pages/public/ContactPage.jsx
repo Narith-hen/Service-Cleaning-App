@@ -20,12 +20,13 @@ export default function ContactPage({ embedded = false, darkMode = false }) {
             ? "bg-gradient-to-b from-[#10233c] via-[#111b2f] to-[#0b1220]"
             : "bg-gradient-to-b from-[#32c753]/15 via-white to-white"
         }`}
+        data-customer-reveal={embedded ? '' : undefined}
       >
         <div className="absolute -left-16 top-20 h-52 w-52 rounded-full bg-[#32c753]/15 blur-3xl" />
         <div className="absolute -right-16 bottom-10 h-52 w-52 rounded-full bg-emerald-200/40 blur-3xl" />
 
         <div className="relative mx-auto max-w-6xl px-6">
-          <div className="mb-12 text-center">
+          <div className="mb-12 text-center" data-customer-reveal={embedded ? '' : undefined} style={embedded ? { '--customer-reveal-delay': 1 } : undefined}>
             <p className="inline-block rounded-full bg-[#32c753]/10 px-4 py-1 text-sm font-semibold text-[#2dae48]">
               Contact Somaet
             </p>
@@ -40,12 +41,15 @@ export default function ContactPage({ embedded = false, darkMode = false }) {
 
           <div className="grid gap-8 lg:grid-cols-5">
             <div className="space-y-4 lg:col-span-2">
-              {contactItems.map((item) => (
+              {contactItems.map((item, index) => (
                 <div
                   key={item.label}
                   className={`rounded-2xl border p-5 shadow-sm ${
                     darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
                   }`}
+                  data-customer-reveal={embedded ? '' : undefined}
+                  data-customer-card={embedded ? '' : undefined}
+                  style={embedded ? { '--customer-reveal-delay': Math.min(index % 3, 2) } : undefined}
                 >
                   <p className="text-sm font-bold uppercase tracking-wide text-[#2dae48]">
                     {item.label}
@@ -70,7 +74,7 @@ export default function ContactPage({ embedded = false, darkMode = false }) {
             <div className="lg:col-span-3">
               <div className={`relative overflow-hidden rounded-3xl border p-6 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.45)] md:p-8 ${
                 darkMode ? "border-slate-700 bg-slate-900" : "border-emerald-100 bg-white"
-              }`}>
+              }`} data-customer-reveal={embedded ? '' : undefined} data-customer-panel={embedded ? '' : undefined} style={embedded ? { '--customer-reveal-delay': 2 } : undefined}>
                 <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#32c753]/10 blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-14 -left-10 h-44 w-44 rounded-full bg-emerald-200/40 blur-3xl" />
                 <h3 className={`relative text-2xl font-extrabold md:text-3xl ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
@@ -125,7 +129,7 @@ export default function ContactPage({ embedded = false, darkMode = false }) {
                       }`}
                     ></textarea>
 
-                    <button className="w-full mt-4 rounded-xl bg-gradient-to-r from-[#32c753] to-[#2dae48] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                    <button className="w-full mt-4 rounded-xl bg-gradient-to-r from-[#32c753] to-[#2dae48] py-3 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl" data-customer-button={embedded ? '' : undefined}>
                       Send Message
                     </button>
 

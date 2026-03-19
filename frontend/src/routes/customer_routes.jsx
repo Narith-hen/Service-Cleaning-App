@@ -10,13 +10,18 @@ import CustomerProfile from '../features/customer/pages/profile_page';
 import CustomerPaymentMethods from '../features/customer/pages/payment_method_page';
 import CustomerFavorites from '../features/customer/pages/favourite_page';
 import CustomerNotifications from '../features/customer/pages/notification_page';
+import CustomerHistoryPage from '../features/customer/pages/history_page';
 import WriteReviewPage from '../features/customer/pages/write_review_page';
 import SettingsPage from '../features/customer/pages/setting_page';
 import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
 import CustomerChatPage from '../features/customer/pages/chat_page';
 import CustomerMessagesPage from '../features/customer/pages/messages_page';
+<<<<<<< HEAD
 import CustomerAboutPage from '../features/public/pages/about_page';
+=======
+import CustomerAboutPage from '../features/customer/pages/about_page';
+>>>>>>> develop
 import CustomerServicesPage from '../features/public/pages/services_page';
 import CustomerContactPage from '../features/public/pages/contact_page';
 import ErrorBoundary from '../components/common/error_boundary';
@@ -44,6 +49,10 @@ export const customerRoutes = {
     {
       path: 'services',
       element: <CustomerServicesPage />
+    },
+    {
+      path: 'about',
+      element: <CustomerAboutPage />
     },
     {
       path: 'bookings',
@@ -84,6 +93,13 @@ export const customerRoutes = {
     {
       path: 'messages',
       element: <CustomerMessagesPage />
+<<<<<<< HEAD
+=======
+    },
+    {
+      path: 'history',
+      element: <CustomerHistoryPage />
+>>>>>>> develop
     },
     {
       path: 'profile',
