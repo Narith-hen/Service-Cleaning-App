@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import {
   CalendarOutlined,
@@ -19,6 +19,7 @@ import {
   formatMoney,
   parseMoneyAmount
 } from '../data/earnings_data';
+import { fetchCleanerEarnings, fetchCleanerEarningsSummary } from '../services/earningsService';
 
 const EarningsPage = () => {
   const [sortBy, setSortBy] = useState('most_recent');
@@ -32,9 +33,48 @@ const EarningsPage = () => {
     dateTo: ''
   });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [earningsSummary, setEarningsSummary] = useState(cleanerEarningsSummary);
+  const [monthlyEarnings, setMonthlyEarnings] = useState(cleanerMonthlyEarningsData);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEarnings = async () => {
+      try {
+        const [earningsData, monthlyData] = await Promise.all([
+          fetchCleanerEarnings(),
+          fetchCleanerEarningsSummary()
+        ]);
+
+        if (!isMounted) return;
+
+        setEarningsSummary((prev) => ({
+          ...prev,
+          total: Number(earningsData.total_earnings) || 0
+        }));
+
+        if (Array.isArray(monthlyData) && monthlyData.length > 0) {
+          setMonthlyEarnings(
+            monthlyData.map((item) => ({
+              month: item.month ? dayjs(`${item.month}-01`).format('MMM') : '',
+              earnings: Number(item.total) || 0
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Failed to fetch cleaner earnings page data:', error);
+      }
+    };
+
+    loadEarnings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const chartConfig = {
-    data: cleanerMonthlyEarningsData,
+    data: monthlyEarnings,
     xField: 'month',
     yField: 'earnings',
     smooth: true,
@@ -136,17 +176,17 @@ const EarningsPage = () => {
       <section className="earnings-stats-panel">
         <div className="earnings-total-card">
           <span className="earnings-total-label">Total Earnings</span>
-          <span className="earnings-total-value">{formatMoney(cleanerEarningsSummary.total)}</span>
+          <span className="earnings-total-value">{formatMoney(earningsSummary.total)}</span>
           <span className="earnings-total-note">This month</span>
         </div>
         <div className="earnings-stat-cards">
           <div className="earnings-stat-card completed">
             <span className="stat-label">Completed</span>
-            <span className="stat-value">{formatMoney(cleanerEarningsSummary.completed)}</span>
+            <span className="stat-value">{formatMoney(earningsSummary.completed)}</span>
           </div>
           <div className="earnings-stat-card pending">
             <span className="stat-label">Pending</span>
-            <span className="stat-value">{formatMoney(cleanerEarningsSummary.pending)}</span>
+            <span className="stat-value">{formatMoney(earningsSummary.pending)}</span>
           </div>
         </div>
       </section>

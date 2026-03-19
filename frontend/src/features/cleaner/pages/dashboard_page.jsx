@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   DollarCircleOutlined,
   SyncOutlined,
@@ -8,13 +8,83 @@ import {
 } from '@ant-design/icons';
 import '../../../styles/cleaner/dashboard.scss';
 import { cleanerEarningsSummary, formatMoney } from '../data/earnings_data';
+import { fetchCleanerEarnings } from '../services/earningsService';
+
+const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const FALLBACK_COMPLETED_JOBS = 2;
+const FALLBACK_PENDING_REQUESTS = 1;
 
 const CleanerDashboardPage = () => {
+  const [totalEarnings, setTotalEarnings] = useState(cleanerEarningsSummary.total);
+  const [completedJobs, setCompletedJobs] = useState(FALLBACK_COMPLETED_JOBS);
+  const [pendingRequests, setPendingRequests] = useState(FALLBACK_PENDING_REQUESTS);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEarnings = async () => {
+      try {
+        const data = await fetchCleanerEarnings();
+        if (!isMounted) return;
+        setTotalEarnings(Number(data.total_earnings) || 0);
+      } catch (error) {
+        console.error('Failed to fetch cleaner earnings for dashboard:', error);
+      }
+    };
+
+    loadEarnings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncCompletedJobs = () => {
+      try {
+        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        if (!raw) {
+          setCompletedJobs(FALLBACK_COMPLETED_JOBS);
+          setPendingRequests(FALLBACK_PENDING_REQUESTS);
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          setCompletedJobs(FALLBACK_COMPLETED_JOBS);
+          setPendingRequests(FALLBACK_PENDING_REQUESTS);
+          return;
+        }
+
+        const nextCompletedCount = parsed.filter((job) => job?.status === 'completed').length;
+        const nextPendingCount = parsed.filter(
+          (job) => !job?.status || job.status === 'upcoming' || job.status === 'pending'
+        ).length;
+        setCompletedJobs(nextCompletedCount);
+        setPendingRequests(nextPendingCount);
+      } catch (error) {
+        console.error('Failed to read completed jobs from My Jobs storage:', error);
+        setCompletedJobs(FALLBACK_COMPLETED_JOBS);
+        setPendingRequests(FALLBACK_PENDING_REQUESTS);
+      }
+    };
+
+    syncCompletedJobs();
+
+    window.addEventListener('storage', syncCompletedJobs);
+    window.addEventListener('focus', syncCompletedJobs);
+
+    return () => {
+      window.removeEventListener('storage', syncCompletedJobs);
+      window.removeEventListener('focus', syncCompletedJobs);
+    };
+  }, []);
+
   const stats = [
     {
       key: 'earnings',
       title: 'Total Earnings',
-      value: formatMoney(cleanerEarningsSummary.total),
+      value: formatMoney(totalEarnings),
       note: '+12% vs last month',
       icon: <DollarCircleOutlined />,
       tone: 'success'
@@ -22,7 +92,7 @@ const CleanerDashboardPage = () => {
     {
       key: 'completed',
       title: 'Jobs Completed',
-      value: '128',
+      value: String(completedJobs),
       note: '+5 new today',
       icon: <SyncOutlined />,
       tone: 'success'
@@ -30,7 +100,7 @@ const CleanerDashboardPage = () => {
     {
       key: 'pending',
       title: 'Pending Requests',
-      value: '14',
+      value: String(pendingRequests),
       note: 'Action required',
       icon: <ClockCircleOutlined />,
       tone: 'warning'
