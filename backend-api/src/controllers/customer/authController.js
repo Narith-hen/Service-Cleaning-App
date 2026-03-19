@@ -473,6 +473,7 @@ exports.updateProfile = async (req, res) => {
 
     if (accountSource === 'cleaner_profile') {
       const cleanerColumns = await getCleanerProfileColumns();
+      const promiseDb = db.promise();
       const updates = [];
       const values = [];
       const pushUpdate = (column, value) => {
@@ -486,11 +487,50 @@ exports.updateProfile = async (req, res) => {
       const cleanerPhone = toNullableString(req.body.phone_number ?? req.body.phone);
       const cleanerAvatar = req.body.avatar === undefined ? undefined : toNullableString(req.body.avatar);
       const cleanerStatus = req.body.account_status ?? req.body.status;
+      const currentPassword = toNullableString(req.body.current_password ?? req.body.currentPassword);
+      const newPassword = toNullableString(req.body.new_password ?? req.body.newPassword);
 
       pushUpdate('company_name', cleanerName);
       pushUpdate('company_email', cleanerEmail);
       pushUpdate('phone_number', cleanerPhone);
       pushUpdate('profile_image', cleanerAvatar);
+
+      if (newPassword !== undefined) {
+        if (!currentPassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'Current password is required to change password',
+          });
+        }
+
+        const [passwordRows] = await promiseDb.query(
+          'SELECT password FROM cleaner_profile WHERE cleaner_id = ? LIMIT 1',
+          [userId]
+        );
+        const storedPassword = String(passwordRows?.[0]?.password || '');
+        if (!storedPassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'Password is not available for this account',
+          });
+        }
+
+        const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedPassword);
+        const currentPasswordMatches = isBcryptHash
+          ? await bcrypt.compare(currentPassword, storedPassword)
+          : currentPassword === storedPassword;
+
+        if (!currentPasswordMatches) {
+          return res.status(400).json({
+            success: false,
+            message: 'Current password is incorrect',
+          });
+        }
+
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+        pushUpdate('password', hashedPassword);
+      }
 
       if (cleanerStatus !== undefined && cleanerColumns.has('status')) {
         const allowedStatuses = await getCleanerStatusEnumValues();
@@ -506,7 +546,7 @@ exports.updateProfile = async (req, res) => {
 
       if (updates.length > 0) {
         values.push(userId);
-        await db.promise().query(
+        await promiseDb.query(
           `UPDATE cleaner_profile SET ${updates.join(', ')} WHERE cleaner_id = ?`,
           values
         );

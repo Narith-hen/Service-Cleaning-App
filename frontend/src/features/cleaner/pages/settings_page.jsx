@@ -29,13 +29,6 @@ const SettingsPage = () => {
   const [formErrors, setFormErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
 
-  const passwordRule = 'The password must be 9 characters.';
-
-  const meetsPasswordRule = (value) => {
-    if (!value) return false;
-    const hasMinLength = value.length >= 9;
-    return hasMinLength;
-  };
   const [companyName, setCompanyName] = useState('Sparkle Cleaning');
 
   const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -151,10 +144,8 @@ const SettingsPage = () => {
     if (!/^\S+@\S+\.\S+$/.test(nextData.companyEmail)) errors.companyEmail = 'Invalid email';
     if (!nextData.phoneNumber.trim()) errors.phoneNumber = 'Required';
     if (!nextData.accountStatus) errors.accountStatus = 'Required';
-
-    
-    if (nextPasswords.next && !meetsPasswordRule(nextPasswords.next)) {
-      errors.newPassword = passwordRule;
+    if (nextPasswords.next && !nextPasswords.current) {
+      errors.currentPassword = 'Current password is required';
     }
     return errors;
   };
@@ -180,6 +171,11 @@ const SettingsPage = () => {
       phone_number: formData.phoneNumber,
       account_status: formData.accountStatus,
     };
+
+    if (passwords.current && passwords.next) {
+      payload.current_password = passwords.current;
+      payload.new_password = passwords.next;
+    }
 
     console.debug('[SettingsPage] updateUser payload', payload);
     const result = await updateUser(payload);
@@ -374,15 +370,6 @@ const SettingsPage = () => {
                 {showPasswords.next ? <EyeInvisibleOutlined /> : <EyeOutlined />}
               </button>
             </div>
-            {passwords.next && (
-              <p
-                className={`password-rule ${
-                  meetsPasswordRule(passwords.next) ? 'is-valid' : 'is-invalid'
-                }`}
-              >
-                {passwordRule}
-              </p>
-            )}
           </div>
 
           <button className="settings-primary-button" type="button" onClick={handleSubmit}>
