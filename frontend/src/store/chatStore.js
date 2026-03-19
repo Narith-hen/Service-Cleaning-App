@@ -12,6 +12,14 @@ const readSoundPreference = () => {
   }
 };
 
+const notifyCleanerNotificationSync = () => {
+  try {
+    window.dispatchEvent(new Event('cleaner-notifications-updated'));
+  } catch {
+    // Ignore non-browser environments.
+  }
+};
+
 export const useChatStore = create((set, get) => ({
   soundEnabled: readSoundPreference(),
   onlineUsers: {},
@@ -27,11 +35,13 @@ export const useChatStore = create((set, get) => ({
   incrementUnread: (threadId) => set((state) => {
     const key = String(threadId);
     const current = state.unreadByThread[key] || 0;
+    notifyCleanerNotificationSync();
     return { unreadByThread: { ...state.unreadByThread, [key]: current + 1 } };
   }),
   clearUnread: (threadId) => set((state) => {
     const next = { ...state.unreadByThread };
     delete next[String(threadId)];
+    notifyCleanerNotificationSync();
     return { unreadByThread: next };
   }),
   toggleSound: () => {

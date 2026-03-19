@@ -129,6 +129,7 @@ const CustomerHomePage = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [motionEnabled, setMotionEnabled] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -148,6 +149,41 @@ const CustomerHomePage = () => {
     fetchServices();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return undefined;
+
+    const elements = document.querySelectorAll('.customer-home-landing .reveal');
+    if (!elements.length) return undefined;
+
+    setMotionEnabled(true);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        threshold: 0.18,
+        rootMargin: '0px 0px -10% 0px'
+      }
+    );
+
+    const frame = window.requestAnimationFrame(() => {
+      elements.forEach((element) => observer.observe(element));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [loadingServices, services.length]);
+
   const handleBookService = (service) => {
     navigate('/customer/bookings', {
       state: {
@@ -164,7 +200,7 @@ const CustomerHomePage = () => {
   };
 
   return (
-    <div className="customer-home-landing">
+    <div className={`customer-home-landing ${motionEnabled ? 'motion-enhanced' : ''}`}>
       <section className="editorial-hero reveal">
         <div className="hero-copy">
           <h1>
@@ -190,15 +226,14 @@ const CustomerHomePage = () => {
       <section className="how-it-works reveal reveal-delay-1">
         <header className="how-head">
           <p className="how-kicker">HOW IT WORKS</p>
-          {/* <h2>How It Works</h2> */}
           <p className="how-summary">
             Explain the simple process so customers understand how to book.
           </p>
         </header>
 
         <div className="how-flow">
-          {howItWorksSteps.map((item) => (
-            <article key={item.step} className="how-step">
+          {howItWorksSteps.map((item, index) => (
+            <article key={item.step} className={`how-step reveal stagger-${Math.min(index + 1, 4)}`}>
               <div className="how-icon" aria-hidden="true">
                 <span>{item.step}</span>
               </div>
@@ -223,7 +258,7 @@ const CustomerHomePage = () => {
             <div className="services-loading">Loading services...</div>
           ) : services.length > 0 ? (
             services.slice(0, 4).map((service, index) => (
-              <article key={service.id} className="service-highlight-item">
+              <article key={service.id} className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}>
                 <img src={service.image} alt={service.title} />
                 <div className="service-highlight-body">
                   <span className="service-index">{index + 1}</span>
@@ -236,7 +271,19 @@ const CustomerHomePage = () => {
               </article>
             ))
           ) : (
-            <div className="services-empty">No services available</div>
+            serviceHighlights.map((service, index) => (
+              <article key={service.id} className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}>
+                <img src={service.image} alt={service.title} />
+                <div className="service-highlight-body">
+                  <span className="service-index">{index + 1}</span>
+                  <h3>{service.title}</h3>
+                  <p>{truncateWords(service.description, 25)}</p>
+                  <button type="button" className="service-card-btn" onClick={() => handleBookService(service)}>
+                    {service.cta}
+                  </button>
+                </div>
+              </article>
+            ))
           )}
         </div>
 
@@ -250,20 +297,19 @@ const CustomerHomePage = () => {
       <section className="top-cleaners reveal reveal-delay-2">
         <header className="cleaners-head">
           <p className="cleaners-kicker">TOP RATED CLEANERS</p>
-          {/* <h2>Top Rated Cleaners</h2> */}
           <p className="cleaners-summary">
             Show some top cleaners or companies from your platform.
           </p>
         </header>
 
         <div className="cleaners-grid">
-          {featuredCleaners.map((cleaner) => (
-            <article key={cleaner.id} className="cleaner-card">
+          {featuredCleaners.map((cleaner, index) => (
+            <article key={cleaner.id} className={`cleaner-card reveal stagger-${Math.min(index + 1, 3)}`}>
               <div className="cleaner-photo-wrap">
                 <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
               </div>
               <h3>{cleaner.company}</h3>
-              <p className="cleaner-rating">{'⭐'.repeat(cleaner.rating)}</p>
+              <p className="cleaner-rating">{'\u2605'.repeat(cleaner.rating)}</p>
               <p className="cleaner-reviews">{cleaner.reviews} total reviews</p>
               <button
                 type="button"
@@ -286,8 +332,8 @@ const CustomerHomePage = () => {
         </header>
 
         <div className="why-list">
-          {whyChoosePoints.map((point) => (
-            <div key={point} className="why-item">
+          {whyChoosePoints.map((point, index) => (
+            <div key={point} className={`why-item reveal stagger-${(index % 4) + 1}`}>
               <span className="why-icon" aria-hidden="true">
                 {'\u2713'}
               </span>
@@ -314,7 +360,6 @@ const CustomerHomePage = () => {
         </div>
       </section>
     </div>
-    
   );
 };
 

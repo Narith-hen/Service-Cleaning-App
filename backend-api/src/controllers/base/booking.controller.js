@@ -866,6 +866,16 @@ const getAvailableBookings = async (req, res, next) => {
         `SELECT 
             b.*,
             s.name AS service_name,
+            COALESCE(
+              (
+                SELECT si.image_url
+                FROM service_images si
+                WHERE si.service_id = s.service_id
+                ORDER BY si.id DESC
+                LIMIT 1
+              ),
+              s.image
+            ) AS service_image,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_name,
             u.phone_number,
             u.avatar AS customer_avatar

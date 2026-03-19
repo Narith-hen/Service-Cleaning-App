@@ -35,6 +35,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   // Edit state
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState('');
+  const [avatarFailed, setAvatarFailed] = useState(false);
   // Context menu state: { id, x, y } or null
   const [contextMenu, setContextMenu] = useState(null);
   const editInputRef = useRef(null);
@@ -48,6 +49,10 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     // Only scroll when message count changes (new msg) or attachment is added, not on every status update
   }, [messages.length, pendingAttachment]);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [cleanerAvatar]);
 
   // Emit message:read (and persist) when chat is viewed or when a new incoming message arrives.
   useEffect(() => {
@@ -174,8 +179,13 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
         <div className="my-jobs-chat-customer">
           <div className="my-jobs-chat-avatar-wrap">
             <div className="my-jobs-chat-avatar">
-              {cleanerAvatar ? (
-                <img src={cleanerAvatar} alt={cleanerName} className="my-jobs-chat-avatar-image" />
+              {cleanerAvatar && !avatarFailed ? (
+                <img
+                  src={cleanerAvatar}
+                  alt={cleanerName}
+                  className="my-jobs-chat-avatar-image"
+                  onError={() => setAvatarFailed(true)}
+                />
               ) : (
                 cleanerName.charAt(0)
               )}
@@ -219,8 +229,13 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
                 <div key={message.id} className={`my-jobs-chat-row ${isCustomer ? 'right' : 'left'}`}>
                   {!isCustomer && (
                     <div className="my-jobs-chat-mini-avatar">
-                      {cleanerAvatar ? (
-                        <img src={cleanerAvatar} alt={cleanerName} className="my-jobs-chat-mini-avatar-image" />
+                      {cleanerAvatar && !avatarFailed ? (
+                        <img
+                          src={cleanerAvatar}
+                          alt={cleanerName}
+                          className="my-jobs-chat-mini-avatar-image"
+                          onError={() => setAvatarFailed(true)}
+                        />
                       ) : (
                         cleanerName.charAt(0)
                       )}
@@ -308,8 +323,13 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
             {isCleanerTyping && (
               <div className="my-jobs-chat-row left">
                 <div className="my-jobs-chat-mini-avatar">
-                  {cleanerAvatar ? (
-                    <img src={cleanerAvatar} alt={cleanerName} className="my-jobs-chat-mini-avatar-image" />
+                  {cleanerAvatar && !avatarFailed ? (
+                    <img
+                      src={cleanerAvatar}
+                      alt={cleanerName}
+                      className="my-jobs-chat-mini-avatar-image"
+                      onError={() => setAvatarFailed(true)}
+                    />
                   ) : (
                     cleanerName.charAt(0)
                   )}

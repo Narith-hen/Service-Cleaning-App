@@ -28,9 +28,9 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
     <div className={`${darkMode ? "bg-[#0b1220] text-slate-100" : "bg-slate-50 text-slate-800"} font-sans`}>
       {!embedded && <Navbar />}
 
-      <section className={`${darkMode ? "bg-[#111b2f]" : "bg-white"} py-20 md:py-24`}>
+      <section className={`${darkMode ? "bg-[#111b2f]" : "bg-white"} py-20 md:py-24`} data-customer-reveal={embedded ? '' : undefined}>
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 md:grid-cols-2 md:gap-14 md:px-8">
-          <div className="relative">
+          <div className="relative" data-customer-reveal={embedded ? '' : undefined} style={embedded ? { '--customer-reveal-delay': 1 } : undefined}>
             <div className="absolute -left-4 -top-4 h-20 w-20 rounded-2xl bg-emerald-100 blur-2xl" />
             <img
               src="https://images.unsplash.com/photo-1603712725038-e9334ae8f39f?auto=format&fit=crop&q=80&w=1000"
@@ -42,7 +42,7 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
             </div>
           </div>
 
-          <div>
+          <div data-customer-reveal={embedded ? '' : undefined} style={embedded ? { '--customer-reveal-delay': 2 } : undefined}>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
               About Company
             </p>
@@ -84,7 +84,7 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
               </li>
             </ul>
 
-            <button className="mt-8 rounded-full bg-emerald-500 px-8 py-3 font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:bg-emerald-600">
+            <button className="mt-8 rounded-full bg-emerald-500 px-8 py-3 font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:bg-emerald-600" data-customer-button={embedded ? '' : undefined}>
               Learn More
             </button>
           </div>
@@ -97,9 +97,10 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
             ? "bg-gradient-to-br from-[#0b1220] via-[#111b2f] to-[#0f2036]"
             : "bg-gradient-to-br from-emerald-50 via-white to-slate-100"
         }`}
+        data-customer-reveal={embedded ? '' : undefined}
       >
         <div className="mx-auto max-w-6xl px-6 md:px-8">
-          <div className={`overflow-hidden rounded-3xl border shadow-2xl ${darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`}>
+          <div className={`overflow-hidden rounded-3xl border shadow-2xl ${darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"}`} data-customer-panel={embedded ? '' : undefined}>
             <div className="relative flex h-28 w-full items-end bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-6 pb-4 md:h-32">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/90">
                 Our Partnerships
@@ -125,6 +126,9 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
                         ? "border-slate-700 bg-slate-800 shadow-[0_8px_18px_rgba(2,6,23,0.4)] hover:shadow-[0_16px_30px_rgba(2,6,23,0.6)]"
                         : "border-slate-200 bg-gradient-to-b from-white to-slate-50 shadow-[0_8px_18px_rgba(15,23,42,0.08)] hover:shadow-[0_16px_30px_rgba(15,23,42,0.14)]"
                     }`}
+                    data-customer-reveal={embedded ? '' : undefined}
+                    data-customer-card={embedded ? '' : undefined}
+                    style={embedded ? { '--customer-reveal-delay': Math.min(index % 5, 4) } : undefined}
                   >
                     <div className="flex h-[98px] items-center justify-center rounded-xl bg-white md:h-[110px]">
                       <img

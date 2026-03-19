@@ -1,4 +1,4 @@
-import { Link, useLocation, useOutletContext } from 'react-router-dom';
+import { useLocation, useOutletContext } from 'react-router-dom';
 import ServicesContent from '../../../pages/public/ServicesPage';
 import homeImage from '../../../assets/image.png';
 import welcomeServiceImage from '../../../assets/WelcomeService.png';
@@ -13,6 +13,7 @@ const ServicesPage = () => {
       {isCustomerArea ? (
         <section
           className="relative isolate overflow-hidden py-16 md:py-24"
+          data-customer-reveal={isCustomerArea ? '' : undefined}
           style={{
             backgroundImage: `url(${welcomeServiceImage}), url(${homeImage})`,
             backgroundSize: 'cover',
@@ -31,7 +32,7 @@ const ServicesPage = () => {
           <div className="absolute bottom-10 right-20 h-36 w-36 rounded-full bg-[#22c55e33] blur-3xl" />
 
           <div className="relative mx-auto max-w-7xl px-6 md:px-10">
-            <div className="mx-auto max-w-3xl p-7 text-center md:p-10">
+            <div className="mx-auto max-w-3xl p-7 text-center md:p-10" data-customer-reveal={isCustomerArea ? '' : undefined} style={isCustomerArea ? { '--customer-reveal-delay': 1 } : undefined}>
               <h1 className="mt-3 mb-3 text-4xl font-black leading-tight text-white md:text-5xl" style={{ fontSize: '48px', height: '50px' }}>
                 Explore Our <span className="text-[#32c753]">Cleaning Services</span>
               </h1>

@@ -13,6 +13,42 @@ import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const fallbackBookings = [];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+const getFullImageUrl = (fileUrl) => {
+  if (!fileUrl) return '';
+  if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+    return fileUrl;
+  }
+  if (fileUrl.startsWith('/uploads/')) {
+    const cleanPath = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+    return `${API_BASE_URL}/${cleanPath}`;
+  }
+  return fileUrl;
+};
+
+const buildCleanerPayload = (booking) => {
+  const directCleaner = booking?.cleaner && typeof booking.cleaner === 'object' ? booking.cleaner : {};
+  const cleanerName =
+    directCleaner.username ||
+    directCleaner.name ||
+    booking?.cleaner_display_name ||
+    booking?.cleaner_name ||
+    booking?.cleaner_username ||
+    booking?.cleaner_full_name ||
+    [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim() ||
+    booking?.cleaner_company ||
+    'Cleaner';
+
+  return {
+    ...directCleaner,
+    id: directCleaner.id || booking?.cleaner_id || null,
+    username: cleanerName,
+    avatar: getFullImageUrl(directCleaner.avatar || booking?.cleaner_avatar || ''),
+    phone: directCleaner.phone || booking?.cleaner_phone || '',
+    email: directCleaner.email || booking?.cleaner_email || ''
+  };
+};
 
 const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
   booking_id: String(booking?.booking_id ?? booking?.id ?? bookingIdFallback ?? 'unknown'),
@@ -28,13 +64,7 @@ const normalizeTrackedBooking = (booking, bookingIdFallback) => ({
     || booking?.service_address
     || 'Location not provided',
   service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || booking?.title || 'Cleaning Service' },
-  cleaner: booking?.cleaner || {
-    username:
-      booking?.cleaner_name
-      || [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim()
-      || booking?.cleaner_username
-      || 'Cleaner'
-  }
+  cleaner: buildCleanerPayload(booking)
 });
 
 const formatMoney = (value) => {
@@ -145,6 +175,7 @@ const CustomerChatPage = () => {
 
   // Get cleaner name from the booking
   const cleanerName = activeBooking.cleaner?.username || 'Cleaner';
+  const cleanerAvatar = activeBooking.cleaner?.avatar || '';
   const cleanerId = activeBooking.cleaner?.id || '11';
   const serviceName = activeBooking.service?.name || 'Cleaning Service';
   const jobId = `#SOMA-${activeBooking.booking_id}`;
@@ -164,24 +195,25 @@ const CustomerChatPage = () => {
 
   return (
     <div className="cleaner-my-jobs-v2">
-      <div className="my-jobs-message-breadcrumb">
-        <button type="button" onClick={() => navigate('/customer/bookings')}>My Bookings</button>
+      <div className="my-jobs-message-breadcrumb" data-customer-reveal>
+        <button type="button" onClick={() => navigate('/customer/bookings')} data-customer-button>My Bookings</button>
         <span>&gt;</span>
         <strong>Chat</strong>
       </div>
 
-      <div className="my-jobs-message-view">
+      <div className="my-jobs-message-view" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
         <CustomerMessagePanel
           threadId={String(activeBooking.booking_id)}
           cleanerName={cleanerName}
+          cleanerAvatar={cleanerAvatar}
           cleanerId={cleanerId}
           subtitle={`${serviceName} Job - ${jobId}`}
         />
 
-        <aside className="my-jobs-details-panel">
+        <aside className="my-jobs-details-panel" data-customer-panel>
           <h5>JOB DETAILS</h5>
 
-          <div className="my-jobs-details-card">
+          <div className="my-jobs-details-card" data-customer-card>
             <div className="my-jobs-detail-row">
               <span className="my-jobs-detail-icon"><CalendarOutlined /></span>
               <div>
@@ -199,7 +231,7 @@ const CustomerChatPage = () => {
             </div>
           </div>
 
-          <div className="my-jobs-details-card my-jobs-details-card--service">
+          <div className="my-jobs-details-card my-jobs-details-card--service" data-customer-card>
             <div className="my-jobs-detail-row">
               <span className="my-jobs-detail-icon"><FileTextOutlined /></span>
               <div>
@@ -209,7 +241,7 @@ const CustomerChatPage = () => {
             </div>
           </div>
 
-          <div className="my-jobs-checklist-card">
+          <div className="my-jobs-checklist-card" data-customer-card>
             <h6>Checklist Preview</h6>
             <ul>
               <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
@@ -218,12 +250,12 @@ const CustomerChatPage = () => {
             </ul>
           </div>
 
-          <button type="button" className="my-jobs-contract-btn">
+          <button type="button" className="my-jobs-contract-btn" data-customer-button>
             <FileTextOutlined /> View Full Job Contract
           </button>
 
           {negotiatedPrice && (
-            <div className="my-jobs-price-card">
+            <div className="my-jobs-price-card" data-customer-card>
               <div className="my-jobs-price-header">
                 <div>
                   <small>NEGOTIATED PRICE</small>
