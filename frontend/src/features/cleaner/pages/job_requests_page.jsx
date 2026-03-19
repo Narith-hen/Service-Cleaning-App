@@ -49,6 +49,7 @@ const mapBookingToRequest = (booking) => {
       booking.user?.username ||
       'Customer',
     customerAvatar: booking.customer_avatar || booking.user?.avatar || '',
+    customerPhone: booking.phone_number || '',
     address: booking.address || 'Address shared after accept',
     timeRange: startTime,
     amount: toMoney(booking.total_price || 0),
@@ -519,21 +520,33 @@ const JobRequestsPage = () => {
               </button>
             </div>
 
-            <div className="request-detail-grid">
-              <div className="request-detail-item">
-                <small>Customer</small>
-                <strong>{detailRequest.customer}</strong>
+            <div className="request-detail-customer-profile">
+              <div className="customer-avatar-section">
+                {detailRequest.customerAvatar ? (
+                  <img src={detailRequest.customerAvatar} alt={detailRequest.customer} className="customer-avatar" />
+                ) : (
+                  <div className="customer-avatar-placeholder">{detailRequest.customer.charAt(0).toUpperCase()}</div>
+                )}
               </div>
-              <div className="request-detail-item">
-                <small>Status</small>
-                <strong>
+              <div className="customer-info-section">
+                <h4>{detailRequest.customer}</h4>
+                {detailRequest.customerPhone && (
+                  <p className="customer-phone">
+                    <strong>Phone:</strong> {detailRequest.customerPhone}
+                  </p>
+                )}
+                <p className="customer-status">
+                  <strong>Status:</strong>{' '}
                   {detailRequest.status === 'accepted'
                     ? 'Accepted'
                     : detailRequest.status === 'cancelled'
                       ? 'Cancelled'
                       : 'Pending'}
-                </strong>
+                </p>
               </div>
+            </div>
+
+            <div className="request-detail-grid">
               <div className="request-detail-item">
                 <small>Address</small>
                 <strong>{detailRequest.address}</strong>
