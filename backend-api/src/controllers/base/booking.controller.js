@@ -44,6 +44,35 @@ const ensureBookingServiceStatusColumn = async (promiseDb) => {
   );
 };
 
+const ensureBookingImagesTable = async (promiseDb) => {
+  await promiseDb.query(`
+    CREATE TABLE IF NOT EXISTS booking_images (
+      id INT NOT NULL AUTO_INCREMENT,
+      booking_id INT NOT NULL,
+      image_url LONGTEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_booking_images_booking_id (booking_id)
+    )
+  `);
+};
+
+const insertBookingImagesInChunks = async (promiseDb, bookingId, images, chunkSize = 3) => {
+  for (let index = 0; index < images.length; index += chunkSize) {
+    const batch = images.slice(index, index + chunkSize);
+    await promiseDb.query(
+      'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
+      [batch.map((url) => [bookingId, url, new Date()])]
+    );
+  }
+};
+
+const getStoredBookingImageUrls = (files = []) => (
+  (Array.isArray(files) ? files : [])
+    .map((file) => file?.filename ? `/uploads/bookings/${file.filename}` : '')
+    .filter(Boolean)
+);
+
 const resolveCustomerBookingUserIds = async (promiseDb, user) => {
   const ids = new Set();
   const numericUserId = Number(user?.user_id);
@@ -613,6 +642,19 @@ const updateBookingStatus = async (req, res, next) => {
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    if (roleName !== 'admin') {
+      const accountSource = String(req.user?.account_source || '').toLowerCase();
+      const rawCleanerId = req.user?.user_id;
+      const cleanerId = accountSource === 'cleaner_profile'
+        ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+        : rawCleanerId;
+      if (!cleanerId) return next(new AppError('Unauthorized', 401));
+      if (!booking.cleaner_id || Number(booking.cleaner_id) !== Number(cleanerId)) {
+        return next(new AppError('Not authorized for this booking', 403));
+      }
+    }
+
     const bookingColumns = await getBookingTableColumns(promiseDb);
     const updates = [];
     const params = [];
@@ -792,18 +834,34 @@ const cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
+    const promiseDb = db.promise();
+    await ensureBookingServiceStatusColumn(promiseDb);
 
-    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
-    await db
-      .promise()
-      .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', ['cancelled', id]);
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    if (roleName !== 'admin' && Number(booking.user_id) !== Number(req.user?.user_id)) {
+      return next(new AppError('Not authorized for this booking', 403));
+    }
+
+    const bookingColumns = await getBookingTableColumns(promiseDb);
+    const updates = ['booking_status = ?'];
+    const params = ['cancelled'];
+
+    if (bookingColumns.has('service_status')) {
+      updates.push('service_status = ?');
+      params.push('cancelled');
+    }
+
+    await promiseDb.query(
+      `UPDATE bookings SET ${updates.join(', ')} WHERE booking_id = ?`,
+      [...params, id]
+    );
 
     // Notify customer (best-effort)
-    await db
-      .promise()
+    await promiseDb
       .query(
         'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [
@@ -819,7 +877,12 @@ const cancelBooking = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Booking cancelled successfully',
-      data: { booking_id: id, booking_status: 'cancelled' }
+      data: {
+        booking_id: id,
+        booking_status: 'cancelled',
+        service_status: 'cancelled',
+        ...getBookingTrackingMeta('cancelled')
+      }
     });
   } catch (error) {
     next(error);
@@ -968,16 +1031,36 @@ const getBookingsByCleaner = async (req, res, next) => {
     const { cleanerId } = req.params;
     const { page = 1, limit = 10 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
+    const promiseDb = db.promise();
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
 
-    const [rows] = await db
-      .promise()
+    if (roleName !== 'admin') {
+      const accountSource = String(req.user?.account_source || '').toLowerCase();
+      const rawCleanerId = req.user?.user_id;
+      const authorizedCleanerId = accountSource === 'cleaner_profile'
+        ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+        : rawCleanerId;
+
+      if (!authorizedCleanerId) {
+        return next(new AppError('Unauthorized', 401));
+      }
+
+      if (Number(authorizedCleanerId) !== Number(cleanerId)) {
+        return next(new AppError('Not authorized to view these bookings', 403));
+      }
+    }
+
+    const [rows] = await promiseDb
       .query(
         `SELECT 
             b.*,
             s.name AS service_name,
             ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
+            u.user_id AS customer_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.phone_number AS customer_phone,
+            u.email AS customer_email,
+            u.avatar AS customer_avatar,
             cp.company_name AS cleaner_company,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
             COALESCE(
@@ -996,8 +1079,7 @@ const getBookingsByCleaner = async (req, res, next) => {
         [cleanerId, parseInt(limit), offset]
       );
 
-    const [countRows] = await db
-      .promise()
+    const [countRows] = await promiseDb
       .query('SELECT COUNT(*) AS total FROM bookings WHERE cleaner_id = ?', [cleanerId]);
 
     const total = countRows?.[0]?.total || 0;
@@ -1259,7 +1341,10 @@ const addBookingImages = async (req, res, next) => {
       return next(new AppError('Invalid booking id', 400));
     }
 
-    if (!Array.isArray(images) || images.length === 0) {
+    const uploadedFileUrls = getStoredBookingImageUrls(req.files);
+    const bodyImages = Array.isArray(images) ? images : [];
+
+    if (uploadedFileUrls.length === 0 && bodyImages.length === 0) {
       return next(new AppError('No images provided', 400));
     }
 
@@ -1273,7 +1358,7 @@ const addBookingImages = async (req, res, next) => {
       return next(new AppError('Booking not found', 404));
     }
 
-    const normalizedImages = images
+    const normalizedImages = [...uploadedFileUrls, ...bodyImages]
       .map((url) => String(url || '').trim())
       .filter(Boolean);
 
@@ -1281,16 +1366,19 @@ const addBookingImages = async (req, res, next) => {
       return next(new AppError('No valid images provided', 400));
     }
 
-    await promiseDb.query(
-      'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
-      [normalizedImages.map((url) => [bookingId, url, new Date()])]
-    );
+    await insertBookingImagesInChunks(promiseDb, bookingId, normalizedImages);
 
     res.status(201).json({
       success: true,
       message: 'Images saved'
     });
   } catch (error) {
+    if (error?.code === 'ECONNRESET') {
+      return next(new AppError(
+        'Image upload failed because the database connection was reset. Try fewer or smaller images.',
+        413
+      ));
+    }
     next(error);
   }
 };

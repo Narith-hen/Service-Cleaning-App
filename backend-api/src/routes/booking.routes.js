@@ -21,8 +21,10 @@ const {
 } = require('../controllers'); // Import from index.js
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
+const { upload } = require('../middlewares/upload.middleware');
 
 const router = express.Router();
+const MAX_BOOKING_IMAGES = 10;
 
 // All routes require authentication
 router.use(authenticate);
@@ -118,10 +120,15 @@ router.get('/history/:id', [
 ], validate, getBookingHistory);
 
 // Booking images
-router.post('/:id/images', [
-  param('id').isInt(),
-  body('images').isArray({ min: 1 })
-], validate, addBookingImages);
+router.post(
+  '/:id/images',
+  upload.array('images', MAX_BOOKING_IMAGES),
+  [
+    param('id').isInt()
+  ],
+  validate,
+  addBookingImages
+);
 
 // Single booking operations
 router.get('/:id', [

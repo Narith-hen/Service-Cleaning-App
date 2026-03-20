@@ -551,8 +551,79 @@ const updateCleaner = async (req, res, next) => {
   }
 };
 
+const deleteCleaner = async (req, res, next) => {
+  const cleanerIdentifier = String(req.params.id || '').trim();
+  if (!cleanerIdentifier) {
+    return next(new AppError('Cleaner id is required', 400));
+  }
+
+  const pool = db.promise();
+  let connection;
+
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const cleanerId = await getCleanerIdByIdentifier(connection, cleanerIdentifier);
+    if (!cleanerId) {
+      await connection.rollback();
+      connection.release();
+      return next(new AppError('Cleaner not found', 404));
+    }
+
+    // Remove references before deleting the cleaner account rows.
+    // In this DB, reviews.cleaner_id is NOT NULL and FK-linked to users.user_id,
+    // so reviews must be deleted rather than reassigned to NULL.
+    await connection.query('DELETE FROM reviews WHERE cleaner_id = ?', [cleanerId]);
+    await connection.query('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?', [cleanerId]);
+    await connection.query('DELETE FROM notifications WHERE user_id = ?', [cleanerId]).catch(() => {});
+    await connection.query('DELETE FROM settings WHERE user_id = ?', [cleanerId]).catch(() => {});
+    await connection.query('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', [cleanerId, cleanerId]).catch(() => {});
+
+    const [userDeleteResult] = await connection.query(
+      'DELETE FROM users WHERE user_id = ?',
+      [cleanerId]
+    ).catch((error) => {
+      if (error?.code === 'ER_ROW_IS_REFERENCED_2') {
+        return [{ affectedRows: 0 }];
+      }
+      throw error;
+    });
+
+    const [profileDeleteResult] = await connection.query(
+      'DELETE FROM cleaner_profile WHERE cleaner_id = ?',
+      [cleanerId]
+    );
+
+    if (!profileDeleteResult?.affectedRows && !userDeleteResult?.affectedRows) {
+      await connection.rollback();
+      connection.release();
+      return next(new AppError('Cleaner not found', 404));
+    }
+
+    await connection.commit();
+    connection.release();
+
+    res.status(200).json({
+      success: true,
+      message: 'Cleaner deleted successfully',
+    });
+  } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (_) {
+        // Ignore rollback failures.
+      }
+      connection.release();
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   getAllCleaners,
   createCleaner,
   updateCleaner,
+  deleteCleaner,
 };

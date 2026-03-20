@@ -207,6 +207,7 @@ module.exports = {
     getAllCleaners: adminCleanersController.getAllCleaners,
     createCleaner: adminCleanersController.createCleaner,
     updateCleaner: adminCleanersController.updateCleaner,
+    deleteCleaner: adminCleanersController.deleteCleaner,
     
     getAllServices: adminServicesController.getAllServices,
     getServiceById: adminServicesController.getServiceById,
