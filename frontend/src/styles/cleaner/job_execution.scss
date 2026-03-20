@@ -370,13 +370,13 @@
   font-size: 20px;
 }
 
+.progress-stage-btn,
 .finish-job-btn {
   margin-top: 14px;
   width: 100%;
   height: 44px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(180deg, #3569ea, #2e59d7);
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -385,6 +385,16 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
+}
+
+.progress-stage-btn {
+  background: linear-gradient(180deg, #16a34a, #15803d);
+}
+
+.finish-job-btn {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #3569ea, #2e59d7);
 }
 
 .job-summary-panel p {

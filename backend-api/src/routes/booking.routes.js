@@ -10,6 +10,7 @@ const {
   assignCleaner,
   cancelBooking,
   getBookingsByUser,
+  getMyBookingHistory,
   getBookingsByCleaner,
   getBookingHistory,
   trackBooking,
@@ -45,7 +46,14 @@ const updateBookingValidation = [
 
 const statusUpdateValidation = [
   param('id').isInt(),
-  body('booking_status').isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+  body('booking_status').optional().isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+  body('service_status').optional().isIn(['booked', 'started', 'in_progress', 'completed', 'cancelled']),
+  body().custom((value) => {
+    if (!value?.booking_status && !value?.service_status) {
+      throw new Error('booking_status or service_status is required');
+    }
+    return true;
+  }),
   body('reason').optional().isString()
 ];
 
@@ -75,6 +83,12 @@ router.get('/', [
 router.get('/track/:id', [
   param('id').isInt()
 ], validate, trackBooking);
+
+// Logged-in customer booking history
+router.get('/my-history', authorize('customer', 'admin'), [
+  query('page').optional().isInt(),
+  query('limit').optional().isInt()
+], validate, getMyBookingHistory);
 
 // Get user bookings
 router.get('/user/:userId', authorize('admin', 'customer'), [
