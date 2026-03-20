@@ -122,21 +122,6 @@ const CleanersPage = () => {
   const [form] = Form.useForm();
   const nameValue = Form.useWatch('companyName', form);
   const profileFileInputRef = useRef(null);
-  const deleteTimeoutsRef = useRef(new Map());
-  const deleteIntervalsRef = useRef(new Map());
-  const deletedCleanersRef = useRef(new Map());
-  const dismissedUndoRef = useRef(new Set());
-
-  useEffect(() => {
-    return () => {
-      deleteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-      deleteIntervalsRef.current.forEach((intervalId) => clearInterval(intervalId));
-      deleteTimeoutsRef.current.clear();
-      deleteIntervalsRef.current.clear();
-      deletedCleanersRef.current.clear();
-      dismissedUndoRef.current.clear();
-    };
-  }, []);
 
   const fetchCleaners = useCallback(async ({ silent = false, clearOnError = true } = {}) => {
     setCleanersLoading(true);
@@ -371,122 +356,25 @@ const CleanersPage = () => {
       content: 'This action cannot be undone.',
       okText: 'Delete',
       okButtonProps: { danger: true },
-      onOk: () => {
-        setCleaners((prev) => {
-          const index = prev.findIndex((item) => item.id === cleaner.id);
-          if (index >= 0) {
-            deletedCleanersRef.current.set(cleaner.id, { cleaner, index });
-          }
-          return prev.filter((item) => item.id !== cleaner.id);
-        });
-
-        const existingTimeout = deleteTimeoutsRef.current.get(cleaner.id);
-        const existingInterval = deleteIntervalsRef.current.get(cleaner.id);
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
-        if (existingInterval) {
-          clearInterval(existingInterval);
-        }
-
-        const messageKey = `delete-${cleaner.id}`;
-        let secondsLeft = 20;
-        dismissedUndoRef.current.delete(cleaner.id);
-
-        const showUndoMessage = () => {
-          if (dismissedUndoRef.current.has(cleaner.id)) return;
-
-          notificationApi.open({
-            key: messageKey,
-            message: 'Cleaner deleted',
+      onOk: async () => {
+        try {
+          await cleanerService.deleteCleaner(cleaner.id);
+          setCleaners((prev) => prev.filter((item) => item.id !== cleaner.id));
+          notificationApi.success({
             placement: 'bottomRight',
-            duration: 0,
-            onClose: () => {
-              if (deletedCleanersRef.current.has(cleaner.id)) {
-                dismissedUndoRef.current.add(cleaner.id);
-                const pendingInterval = deleteIntervalsRef.current.get(cleaner.id);
-                if (pendingInterval) {
-                  clearInterval(pendingInterval);
-                  deleteIntervalsRef.current.delete(cleaner.id);
-                }
-              }
-            },
-            description: (
-              <span>
-                Status: <strong>{cleaner.status}</strong>. Undo in {secondsLeft}s.
-              </span>
-            ),
-            btn: (
-              <Button
-                type="link"
-                size="small"
-                style={{ paddingInline: 0 }}
-                onClick={() => {
-                  const deletedEntry = deletedCleanersRef.current.get(cleaner.id);
-                  if (!deletedEntry) return;
-
-                  const pendingTimeout = deleteTimeoutsRef.current.get(cleaner.id);
-                  const pendingInterval = deleteIntervalsRef.current.get(cleaner.id);
-                  if (pendingTimeout) {
-                    clearTimeout(pendingTimeout);
-                    deleteTimeoutsRef.current.delete(cleaner.id);
-                  }
-                  if (pendingInterval) {
-                    clearInterval(pendingInterval);
-                    deleteIntervalsRef.current.delete(cleaner.id);
-                  }
-
-                  setCleaners((prev) => {
-                    if (prev.some((item) => item.id === deletedEntry.cleaner.id)) {
-                      return prev;
-                    }
-                    const next = [...prev];
-                    const insertIndex = Math.min(deletedEntry.index, next.length);
-                    next.splice(insertIndex, 0, deletedEntry.cleaner);
-                    return next;
-                  });
-
-                  deletedCleanersRef.current.delete(cleaner.id);
-                  dismissedUndoRef.current.delete(cleaner.id);
-                  notificationApi.destroy(messageKey);
-                  notificationApi.success({
-                    placement: 'bottomRight',
-                    message: `${cleaner.name} restored`,
-                    duration: 2,
-                  });
-                }}
-              >
-                Undo
-              </Button>
-            ),
+            message: 'Cleaner deleted',
+            description: `${cleaner.name} was removed successfully.`,
+            duration: 2,
           });
-        };
-
-        const timeoutId = setTimeout(() => {
-          deletedCleanersRef.current.delete(cleaner.id);
-          dismissedUndoRef.current.delete(cleaner.id);
-          deleteTimeoutsRef.current.delete(cleaner.id);
-          const intervalId = deleteIntervalsRef.current.get(cleaner.id);
-          if (intervalId) {
-            clearInterval(intervalId);
-            deleteIntervalsRef.current.delete(cleaner.id);
-          }
-          notificationApi.destroy(messageKey);
-        }, 20000);
-
-        const intervalId = setInterval(() => {
-          secondsLeft -= 1;
-          if (secondsLeft <= 0) {
-            clearInterval(intervalId);
-            deleteIntervalsRef.current.delete(cleaner.id);
-            return;
-          }
-          showUndoMessage();
-        }, 1000);
-
-        deleteTimeoutsRef.current.set(cleaner.id, timeoutId);
-        deleteIntervalsRef.current.set(cleaner.id, intervalId);
-        showUndoMessage();
+        } catch (error) {
+          notificationApi.error({
+            placement: 'bottomRight',
+            message: 'Failed to delete cleaner',
+            description: error?.response?.data?.message || 'Could not delete cleaner from database.',
+            duration: 3,
+          });
+          throw error;
+        }
       },
     });
   };

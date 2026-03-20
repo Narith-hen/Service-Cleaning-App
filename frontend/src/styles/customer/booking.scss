@@ -120,6 +120,30 @@
   object-fit: cover;
 }
 
+.uploaded-thumb-remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.uploaded-thumb-remove-btn:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
 .thumb-selected-badge {
   position: absolute;
   bottom: 2px;

@@ -1,94 +1,123 @@
+import { Link } from 'react-router-dom';
 import {
-  FacebookFilled,
-  InstagramFilled,
-  TwitterCircleFilled,
-  GithubFilled,
+  ArrowRightOutlined,
+  EnvironmentOutlined,
+  GlobalOutlined,
   MailOutlined,
-  PhoneOutlined,
-  EnvironmentOutlined
+  MessageOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons';
-import logo from '../../../assets/Logo_somaet.png';
+import logoSomaet from '../../../assets/Logo_somaet.png';
 import '../../../styles/customer/footer.scss';
+
+const serviceLinks = [
+  { label: 'Residential Clean', path: '/customer/services' },
+  { label: 'Commercial Mgmt', path: '/customer/services' },
+  { label: 'HVAC Maintenance', path: '/customer/services' },
+  { label: 'Sanitization Pro', path: '/customer/services' },
+];
+
+const quickLinks = [
+  { label: 'My Home', path: '/customer/dashboard' },
+  { label: 'Service', path: '/customer/services' },
+  { label: 'About', path: '/customer/about' },
+  { label: 'Contact', path: '/customer/contact' },
+];
 
 const Footer = () => {
   return (
     <footer className="customer-footer">
-      <div className="footer-inner">
-        <div className="footer-hero">
-          
-          <h3>Somaet</h3>
-          <p>
-            Professional home, office, and shop cleaning services. We make your space fresh, clean,
-            and healthy.
-          </p>
-        </div>
-
-        
-
-
-        <div className="footer-col">
-          <h4>Services</h4>
-          <ul>
-            <li>Home Cleaning</li>
-            <li>Office Cleaning</li>
-            <li>Window Cleaning</li>
-            <li>Deep Cleaning</li>
-          </ul>
-        </div>
-
-        
-
-        <div className="footer-col">
-          <h4>Quick Links</h4>
-          <ul>
-            <li>About Us</li>
-            <li>Our Services</li>
-            <li>Contact</li>
-            <li>Privacy Policy</li>
-          </ul>
-        </div>
-
-        <div className="footer-col">
-          <h4>Contact</h4>
-          <ul className="contact-list">
-            <li>
-              <span className="contact-icon" aria-hidden="true">
-                <MailOutlined />
+      <div className="footer-shell">
+        <div className="footer-main">
+          <section className="footer-brand-panel">
+            <div className="footer-brand-row">
+              <span className="footer-brand-mark" aria-hidden="true">
+                <img src={logoSomaet} alt="Somaet logo" />
               </span>
-              info@somaet.com
-            </li>
-            <li>
-              <span className="contact-icon" aria-hidden="true">
-                <PhoneOutlined />
-              </span>
-              +855 97 298 6450
-            </li>
-            <li>
-              <span className="contact-icon" aria-hidden="true">
-                <EnvironmentOutlined />
-              </span>
-              39b Street 371, Phnom Penh
-            </li>
-          </ul>
+              <h3>Somaet</h3>
+            </div>
+
+            <p>
+              The ultimate operational ecosystem for high-end maintenance and premium cleaning
+              management. Engineered cleanliness for the spaces that matter most.
+            </p>
+
+            <div className="footer-socials">
+              <button type="button" aria-label="Website">
+                <GlobalOutlined />
+              </button>
+              <button type="button" aria-label="Messages">
+                <MessageOutlined />
+              </button>
+              <button type="button" aria-label="Share">
+                <ShareAltOutlined />
+              </button>
+            </div>
+          </section>
+
+          <nav className="footer-column">
+            <h4>Services</h4>
+            <ul>
+              {serviceLinks.map((item) => (
+                <li key={item.label}>
+                  <Link to={item.path} className="footer-link">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav className="footer-column">
+            <h4>Quick Links</h4>
+            <ul>
+              {quickLinks.map((item) => (
+                <li key={item.label}>
+                  <Link to={item.path} className="footer-link">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <section className="footer-column footer-contact-column">
+            <h4>Global HQ</h4>
+            <ul className="footer-contact-list">
+              <li>
+                <span className="footer-icon" aria-hidden="true">
+                  <EnvironmentOutlined />
+                </span>
+                <span>39b Street 371, Phnom Penh</span>
+              </li>
+              <li>
+                <span className="footer-icon" aria-hidden="true">
+                  <MailOutlined />
+                </span>
+                <a href="mailto:info@somaet.com" className="footer-link">
+                  info@somaet.com
+                </a>
+              </li>
+            </ul>
+
+            <div className="footer-subscribe">
+              <h5>Subscribe To Updates</h5>
+              <div className="footer-subscribe-row">
+                <input type="email" placeholder="Email address" aria-label="Email address" />
+                <button type="button" aria-label="Subscribe">
+                  <ArrowRightOutlined />
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
 
-        
-
-        
-      </div>
-
-      <div className="footer-bottom">
-        <div className="footer-bottom-inner">
+        <div className="footer-bottom-bar">
           <span>&copy; 2026 Somaet. All rights reserved.</span>
-          <div className="footer-links">
-            <button type="button">Privacy Policy</button>
-            <button type="button">Terms of Service</button>
-            <button type="button">Cookie Policy</button>
-            <button type="button">Security</button>
-          </div>
-          <div className="footer-badges">
-            <span className="badge-pill">GDPR</span>
-            <span className="badge-pill">ISO 27001</span>
+          <div className="footer-meta">
+            <span>ISO 9001 Certified</span>
+            <span>HIPAA Compliant</span>
+            <span>Status: Systems Operational</span>
           </div>
         </div>
       </div>
