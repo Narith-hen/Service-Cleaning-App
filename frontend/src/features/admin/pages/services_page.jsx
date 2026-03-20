@@ -21,7 +21,8 @@ const toAbsoluteImageUrl = (imageUrl) => {
 
 const mapServiceFromApi = (item) => ({
   id: item.service_id,
-  title: item.name || 'Untitled service',
+  // Normalize known naming slip so it renders correctly in the admin list.
+  title: item.name === 'Floor Professional Buffing' ? 'Professional Floor Buffing' : item.name || 'Untitled service',
   description: item.description || '',
   status: String(item.status || 'active').toLowerCase() === 'inactive' ? 'Inactive' : 'Active',
   image: toAbsoluteImageUrl(item.images?.[0]?.image_url)

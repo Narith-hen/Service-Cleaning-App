@@ -94,14 +94,14 @@ const DashboardPage = () => {
     {
       name: 'Monica Geller',
       time: '2 hours ago',
-      text: 'The team did an absolutely amazing job with our kitchen. It has never looked this clean. Highly recommended.',
+      text: 'The team did an absolutely amazing job with our kitchen. It has never looked this clean. Highly recommended!',
       rating: 5,
       tone: 'teal',
     },
     {
       name: 'Chandler Bing',
       time: '5 hours ago',
-      text: 'Professional service and very punctual. Only minor issue was a missed spot behind the sofa, but otherwise great.',
+      text: 'Professional service and very punctual. Only minor issue was a missed spot behind the couch, but otherwise great',
       rating: 4,
       tone: 'gold',
     },
