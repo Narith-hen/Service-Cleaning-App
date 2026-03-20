@@ -78,6 +78,7 @@ const buildCleanerPayload = (booking) => {
 
 const normalizeBooking = (booking) => ({
   booking_id: String(booking?.booking_id || booking?.id || 'unknown'),
+  booking_status: String(booking?.booking_status || booking?.status || '').toLowerCase(),
   booking_date: booking?.booking_date || new Date().toISOString(),
   booking_time: booking?.booking_time || '09:00 AM',
   address:
@@ -452,7 +453,6 @@ const CustomerMessagesPage = () => {
     const activeId = String(activeThreadId || '');
     return visibleBookings.find((b) => b.booking_id === activeId) || visibleBookings[0];
   }, [visibleBookings, activeThreadId]);
-
   const handleSelectThread = (booking) => {
     const nextId = String(booking.booking_id);
     const params = new URLSearchParams(searchParams);

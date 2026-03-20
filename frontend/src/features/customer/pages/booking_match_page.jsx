@@ -19,6 +19,21 @@ const getSocket = () => {
   return socketInstance;
 };
 
+const getRealtimeAuth = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('user') || 'null');
+    return {
+      token: stored?.token || localStorage.getItem('token') || null,
+      userId: stored?.id || stored?.user_id || null
+    };
+  } catch {
+    return {
+      token: localStorage.getItem('token') || null,
+      userId: null
+    };
+  }
+};
+
 const statusUpdates = [
   {
     title: 'Searching for Pros',
@@ -82,6 +97,11 @@ const BookingMatchPage = () => {
     }
   })();
 
+  const openAcceptedChat = (acceptedId) => {
+    if (!acceptedId) return;
+    navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedId))}`);
+  };
+
   useEffect(() => {
     const finalBookingId = bookingId || 'demo-1';
     const socket = getSocket();
@@ -110,7 +130,7 @@ const BookingMatchPage = () => {
 
         // Navigate to chat after a short delay
         setTimeout(() => {
-          navigate(`/customer/chat?booking=${finalBookingId}`);
+          openAcceptedChat(finalBookingId);
         }, 2000);
       }
     };
@@ -147,8 +167,16 @@ const BookingMatchPage = () => {
     }
 
     if (!socket.connected) {
-      const token = localStorage.getItem('token') || 'demo-customer-token';
-      const userId = 'hen-narith'; // Hardcoded for demo
+      const { token, userId } = getRealtimeAuth();
+      if (!token) {
+        return () => {
+          clearInterval(progressInterval);
+          clearInterval(statusTimer);
+          socket.off('connect', onConnect);
+          socket.off('job:matched', onJobMatched);
+          socket.emit('booking:leave', finalBookingId);
+        };
+      }
       socket.auth = { token, userId };
       socket.connect();
     } else {
@@ -179,7 +207,7 @@ const BookingMatchPage = () => {
           } catch {
             /* ignore */
           }
-          navigate(`/customer/chat?booking=${encodeURIComponent(String(stored))}`);
+          openAcceptedChat(stored);
           localStorage.removeItem(ACCEPTED_BOOKING_KEY);
         }
         const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
@@ -229,7 +257,7 @@ const BookingMatchPage = () => {
           } catch {
             /* ignore */
           }
-          navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedBookingId))}`);
+          openAcceptedChat(acceptedBookingId);
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
           setProgress(100);
@@ -313,7 +341,7 @@ const BookingMatchPage = () => {
           <button
             type="button"
             className="skip-btn"
-            onClick={() => navigate('/customer/bookings/quotes')}
+            onClick={() => navigate(`/customer/bookings/quotes${bookingId ? `?booking=${encodeURIComponent(String(bookingId))}` : ''}`)}
             data-customer-button
           >
             Skip Matching
@@ -324,7 +352,7 @@ const BookingMatchPage = () => {
             disabled={progress < 95}
             aria-disabled={progress < 95}
             title={progress < 95 ? 'Matching in progress' : 'Continue to quotes'}
-            onClick={() => navigate('/customer/bookings/quotes')}
+            onClick={() => navigate(`/customer/bookings/quotes${bookingId ? `?booking=${encodeURIComponent(String(bookingId))}` : ''}`)}
             data-customer-button
           >
             Next
@@ -336,5 +364,3 @@ const BookingMatchPage = () => {
 };
 
 export default BookingMatchPage;
-
-
