@@ -37,6 +37,18 @@ const CleanerHeader = () => {
   }, [user, fetchNotifications]);
 
   useEffect(() => {
+    if (!user) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      fetchNotifications(true);
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [user, fetchNotifications]);
+
+  useEffect(() => {
     const syncNotifications = () => {
       fetchNotifications(true);
     };

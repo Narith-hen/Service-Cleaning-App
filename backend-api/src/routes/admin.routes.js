@@ -98,6 +98,10 @@ router.put('/cleaners/:id',
   body('password').optional().isLength({ min: 6 }),
 ], validate, admin.updateCleaner);
 
+router.delete('/cleaners/:id', [
+  param('id').notEmpty()
+], validate, admin.deleteCleaner);
+
 // Booking management
 router.get('/bookings', [
   query('page').optional().isInt(),

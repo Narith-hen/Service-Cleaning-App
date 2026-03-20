@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "seed:dev-users": "node scripts/seed-dev-users.js",
-    "db:fix-user-name-indexes": "node scripts/fix-users-name-unique-indexes.js"
+    "db:fix-user-name-indexes": "node scripts/fix-users-name-unique-indexes.js",
+    "db:sync-cleaner-review-stats": "node scripts/sync-cleaner-review-stats.js"
   },
   "keywords": [],
   "author": "",

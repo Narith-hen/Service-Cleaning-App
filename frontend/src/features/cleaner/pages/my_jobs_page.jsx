@@ -5,12 +5,14 @@ import {
   UserOutlined,
   HomeOutlined,
   AppstoreOutlined,
+  DollarOutlined,
   MessageOutlined,
   PlayCircleOutlined,
   CalendarOutlined,
   FileTextOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import officeImage from '../../../assets/office.png';
 import homeImage from '../../../assets/home.png';
@@ -101,6 +103,36 @@ const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) =>
   }
 };
 
+const isPaymentReviewStatus = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  return normalized === 'payment-required'
+    || normalized === 'payment_required'
+    || normalized === 'awaiting_receipt'
+    || normalized === 'receipt_submitted';
+};
+
+const getPaymentBadge = (paymentStatus) => {
+  const normalized = String(paymentStatus || '').toLowerCase();
+
+  if (normalized === 'completed' || normalized === 'paid') {
+    return {
+      tone: 'paid',
+      icon: <DollarOutlined />,
+      label: 'Paid'
+    };
+  }
+
+  if (normalized === 'receipt_submitted') {
+    return {
+      tone: 'payment-submitted',
+      icon: <ClockCircleOutlined />,
+      label: 'Payment Submitted'
+    };
+  }
+
+  return null;
+};
+
 const fallbackJobs = [
   {
     id: 'default-1',
@@ -171,6 +203,7 @@ const tabs = [
   { key: 'all', label: 'All Jobs' },
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'in-progress', label: 'In-Progress' },
+  { key: 'payment', label: 'Payment Review' },
   { key: 'completed', label: 'Completed' }
 ];
 
@@ -180,6 +213,8 @@ const MyJobsPage = () => {
   const [jobs, setJobs] = useState(fallbackJobs);
   const [activeMessageJobId, setActiveMessageJobId] = useState(null);
   const [jobActionStateById, setJobActionStateById] = useState({});
+  const [paymentWorkflowByBooking, setPaymentWorkflowByBooking] = useState({});
+  const [paymentActionByBooking, setPaymentActionByBooking] = useState({});
 
   useEffect(() => {
     try {
@@ -210,6 +245,7 @@ const MyJobsPage = () => {
           bedrooms: job.bedrooms || '3 Bedrooms',
           floors: job.floors || '2 Floors',
           serviceStatus: job.serviceStatus || 'booked',
+          paymentStatus: String(job.paymentStatus || '').toLowerCase(),
           serviceType: job.serviceType || 'home',
           serviceImage: job.serviceImage || '',
           image: pickJobImage(job)
@@ -221,10 +257,52 @@ const MyJobsPage = () => {
     }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPaymentWorkflows = async () => {
+      const entries = await Promise.all(
+        jobs.map(async (job) => {
+          const bookingId = getBookingIdFromJob(job);
+          if (!bookingId || !/^\d+$/.test(String(bookingId))) return null;
+          try {
+            const response = await api.get(`/payments/booking/${bookingId}/finalization`);
+            const payload = response?.data?.data;
+            if (!payload) return null;
+            return [String(bookingId), payload];
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        const next = Object.fromEntries(entries.filter(Boolean));
+        setPaymentWorkflowByBooking(next);
+      }
+    };
+
+    loadPaymentWorkflows();
+    const intervalId = window.setInterval(loadPaymentWorkflows, 15000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [jobs]);
+
   const visibleJobs = useMemo(() => {
     if (activeTab === 'all') return jobs;
+    if (activeTab === 'payment') {
+      return jobs.filter((job) => {
+        const bookingId = getBookingIdFromJob(job);
+        const paymentFlow = bookingId ? paymentWorkflowByBooking[String(bookingId)] : null;
+        const paymentStatus = String(paymentFlow?.payment_status || job.paymentStatus || '').toLowerCase();
+        return isPaymentReviewStatus(job.status) || isPaymentReviewStatus(paymentStatus);
+      });
+    }
     return jobs.filter((job) => job.status === activeTab);
-  }, [jobs, activeTab]);
+  }, [jobs, activeTab, paymentWorkflowByBooking]);
 
   const activeMessageJob = useMemo(
     () => jobs.find((job) => job.id === activeMessageJobId) || null,
@@ -256,7 +334,7 @@ const MyJobsPage = () => {
       try {
         await updateJobStatusOnServer(selectedJob, {
           bookingStatus: 'in_progress',
-          serviceStatus: 'started'
+          serviceStatus: 'in_progress'
         });
         const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
         if (raw) {
@@ -264,7 +342,7 @@ const MyJobsPage = () => {
           if (Array.isArray(parsed)) {
             const updated = parsed.map((job) =>
               (job.id === selectedJob.id || job.sourceRequestId === selectedJob.sourceRequestId)
-                ? { ...job, status: 'in-progress', serviceStatus: 'started' }
+                ? { ...job, status: 'in-progress', serviceStatus: 'in_progress' }
                 : job
             );
             localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
@@ -281,6 +359,67 @@ const MyJobsPage = () => {
 
   const handleOpenJobDetails = (jobId) => {
     navigate('/cleaner/job-execution', { state: { jobId } });
+  };
+
+  const handleViewReceipt = (job) => {
+    const bookingId = getBookingIdFromJob(job);
+    if (!bookingId) return;
+    const paymentFlow = paymentWorkflowByBooking[String(bookingId)];
+    const receiptPath = paymentFlow?.receipt_image_url;
+    if (!receiptPath) return;
+    const receiptUrl = toAbsoluteImageUrl(receiptPath);
+    if (!receiptUrl) return;
+    window.open(receiptUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleConfirmReceipt = async (job) => {
+    const bookingId = getBookingIdFromJob(job);
+    if (!bookingId) return;
+
+    const bookingKey = String(bookingId);
+    setPaymentActionByBooking((prev) => ({ ...prev, [bookingKey]: 'confirming' }));
+    try {
+      await api.post(`/payments/booking/${bookingKey}/confirm-receipt`);
+
+      setJobs((prev) =>
+        prev.map((item) =>
+          (item.id === job.id || item.sourceRequestId === job.sourceRequestId)
+            ? { ...item, status: 'completed', serviceStatus: 'completed', paymentStatus: 'completed' }
+            : item
+        )
+      );
+
+      setPaymentWorkflowByBooking((prev) => ({
+        ...prev,
+        [bookingKey]: {
+          ...(prev[bookingKey] || {}),
+          payment_status: 'completed',
+          booking_status: 'completed',
+          service_status: 'completed',
+          cleaner_confirmed_at: new Date().toISOString(),
+        },
+      }));
+
+      try {
+        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed)) {
+          const updated = parsed.map((item) =>
+            (item.id === job.id || item.sourceRequestId === job.sourceRequestId)
+              ? { ...item, status: 'completed', serviceStatus: 'completed', paymentStatus: 'completed' }
+              : item
+          );
+          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+          dispatchCleanerNotificationsUpdated();
+        }
+      } catch {
+        // Ignore local storage errors.
+      }
+    } catch (error) {
+      console.error('Failed to confirm receipt', error);
+    } finally {
+      setPaymentActionByBooking((prev) => ({ ...prev, [bookingKey]: '' }));
+    }
   };
 
   if (activeMessageJob) {
@@ -362,17 +501,25 @@ const MyJobsPage = () => {
 
       <div className="my-jobs-list-v2">
         {visibleJobs.map((job) => {
+          const bookingId = getBookingIdFromJob(job);
+          const paymentFlow = bookingId ? paymentWorkflowByBooking[String(bookingId)] : null;
+          const paymentStatus = String(paymentFlow?.payment_status || job.paymentStatus || '').toLowerCase();
+          const paymentBadge = getPaymentBadge(paymentStatus);
+          const needsPaymentReview = isPaymentReviewStatus(job.status) || isPaymentReviewStatus(paymentStatus);
+          const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
           const actionState = jobActionStateById[job.id]
-            || (job.status === 'completed'
+            || (job.status === 'completed' || isPaymentConfirmed
               ? 'completed'
-              : job.status === 'in-progress'
-                ? 'in-progress'
-                : 'idle');
+              : needsPaymentReview
+                ? 'payment-required'
+                : job.status === 'in-progress'
+                  ? 'in-progress'
+                  : 'idle');
 
           return (
             <article
               key={job.id}
-              className={`my-job-card-v2 ${job.status === 'completed' ? 'completed' : ''}`}
+              className={`my-job-card-v2 ${actionState === 'completed' ? 'completed' : ''}`}
               role="button"
               tabIndex={0}
               onClick={() => handleOpenJobDetails(job.id)}
@@ -387,8 +534,14 @@ const MyJobsPage = () => {
               className="my-job-date-v2"
               style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
             >
-              <span className={`status-pill ${job.status}`}>
-                {job.status === 'completed' ? 'COMPLETED' : job.status === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE NOW'}
+              <span className={`status-pill ${actionState === 'payment-required' ? 'in-progress' : job.status}`}>
+                {actionState === 'completed'
+                  ? 'COMPLETED'
+                  : actionState === 'payment-required'
+                    ? 'PAYMENT REVIEW'
+                    : job.status === 'in-progress'
+                      ? 'IN PROGRESS'
+                      : 'ACTIVE NOW'}
               </span>
               <div className="day-value">{job.day}</div>
               <div className="month-value">{job.monthYear}</div>
@@ -454,6 +607,47 @@ const MyJobsPage = () => {
                   </button>
                 )}
 
+                {paymentBadge && (
+                  <span className={`job-payment-badge ${paymentBadge.tone}`}>
+                    {paymentBadge.icon}
+                    {paymentBadge.label}
+                  </span>
+                )}
+
+                {actionState === 'payment-required' && (
+                  <>
+                    {paymentStatus === 'receipt_submitted' && paymentFlow?.receipt_image_url ? (
+                      <>
+                        <button
+                          type="button"
+                          className="start-btn"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleConfirmReceipt(job);
+                          }}
+                          disabled={paymentActionByBooking[String(bookingId)] === 'confirming'}
+                        >
+                          <CheckCircleOutlined /> {paymentActionByBooking[String(bookingId)] === 'confirming' ? 'Confirming...' : 'Confirm Receipt'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleViewReceipt(job);
+                          }}
+                        >
+                          <EyeOutlined /> View Receipt
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" className="progress-btn" disabled>
+                        <ClockCircleOutlined /> Waiting customer receipt
+                      </button>
+                    )}
+                  </>
+                )}
+
                 <button
                   type="button"
                   className="ghost-btn message-btn"
@@ -480,7 +674,8 @@ const MyJobsPage = () => {
                       floors: job.floors,
                       image: job.image,
                       serviceImage: job.serviceImage || '',
-                      serviceType: job.serviceType
+                      serviceType: job.serviceType,
+                      paymentStatus
                     };
                     
                     try {

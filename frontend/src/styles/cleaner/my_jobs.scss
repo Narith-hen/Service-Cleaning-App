@@ -247,6 +247,32 @@
   cursor: pointer;
 }
 
+.job-payment-badge {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.job-payment-badge.paid {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.job-payment-badge.payment-submitted {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .start-btn {
   min-width: 145px;
   color: #fff;

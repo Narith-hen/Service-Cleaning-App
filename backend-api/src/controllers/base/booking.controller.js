@@ -93,6 +93,8 @@ const getBookingTrackingMeta = (statusValue) => {
     case 'cancelled':
     case 'rejected':
       return { service_tracking_status: 'cancelled', service_tracking_label: 'Service Cancelled' };
+    case 'payment_required':
+      return { service_tracking_status: 'payment_required', service_tracking_label: 'Awaiting Payment Confirmation' };
     case 'booked':
       return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
     default:
@@ -304,6 +306,26 @@ const createBooking = async (req, res, next) => {
     }
 
     const promiseDb = db.promise();
+    const [pendingPaymentRows] = await promiseDb.query(
+      `
+        SELECT booking_id
+        FROM bookings
+        WHERE user_id = ?
+          AND LOWER(COALESCE(booking_status, '')) = 'payment_required'
+          AND LOWER(COALESCE(payment_status, 'pending')) NOT IN ('paid', 'completed')
+        LIMIT 1
+      `,
+      [user_id]
+    );
+    if (pendingPaymentRows?.[0]?.booking_id) {
+      return next(
+        new AppError(
+          `Please complete payment for booking #${pendingPaymentRows[0].booking_id} before creating a new booking`,
+          403
+        )
+      );
+    }
+
     const [serviceRows] = await promiseDb.query(
       'SELECT * FROM services WHERE service_id = ?',
       [service_id]
@@ -598,8 +620,8 @@ const updateBookingStatus = async (req, res, next) => {
     }
     const normalizedBookingStatus = rawBookingStatus ? String(rawBookingStatus).trim().toLowerCase() : null;
     const normalizedServiceStatus = rawServiceStatus ? String(rawServiceStatus).trim().toLowerCase() : null;
-    const allowedBookingStatuses = new Set(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']);
-    const allowedServiceStatuses = new Set(['booked', 'started', 'in_progress', 'completed', 'cancelled']);
+    const allowedBookingStatuses = new Set(['pending', 'confirmed', 'in_progress', 'payment_required', 'completed', 'cancelled']);
+    const allowedServiceStatuses = new Set(['pending', 'booked', 'started', 'in_progress', 'completed', 'cancelled']);
     if (normalizedBookingStatus && !allowedBookingStatuses.has(normalizedBookingStatus)) {
       return next(new AppError('Invalid booking status', 400));
     }
@@ -612,6 +634,15 @@ const updateBookingStatus = async (req, res, next) => {
     const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
+
+    // Enforce payment-first completion. A booking can only be fully completed
+    // after payment has been confirmed by cleaner/admin.
+    if (normalizedBookingStatus === 'completed') {
+      const paymentStatus = String(booking.payment_status || '').trim().toLowerCase();
+      if (!['paid', 'completed'].includes(paymentStatus)) {
+        return next(new AppError('Payment must be confirmed before completing service', 400));
+      }
+    }
 
     const bookingColumns = await getBookingTableColumns(promiseDb);
     const updates = [];
@@ -1031,7 +1062,13 @@ const getBookingHistory = async (req, res, next) => {
             ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.phone_number AS customer_phone,
+            cp.company_name AS cleaner_company,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
             c.phone_number AS cleaner_phone,
             p.payment_status,
             p.amount,
@@ -1042,6 +1079,7 @@ const getBookingHistory = async (req, res, next) => {
          LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          LEFT JOIN payments p ON p.booking_id = b.booking_id
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          WHERE b.booking_id = ?`,
