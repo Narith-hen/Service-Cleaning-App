@@ -110,10 +110,11 @@ const MessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [threads, setThreads] = useState([]);
-  const [activeThreadId, setActiveThreadId] = useState(
+const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
   const [threadPreviews, setThreadPreviews] = useState({});
+  const [threadContextMenu, setThreadContextMenu] = useState(null);
   const [priceInput, setPriceInput] = useState('');
   const [priceStatus, setPriceStatus] = useState('');
   const unreadByThread = useChatStore((state) => state.unreadByThread);
