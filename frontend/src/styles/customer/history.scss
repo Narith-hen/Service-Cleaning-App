@@ -243,7 +243,9 @@
   padding-top: 14px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .customer-history-status {
@@ -301,28 +303,71 @@
   color: #b91c1c;
 }
 
-.customer-history-status.paid {
-  border-color: #86efac;
-  background: #dcfce7;
-  color: #15803d;
+.customer-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.customer-history-status.payment-submitted {
-  border-color: #93c5fd;
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.customer-history-status.reviewed {
-  border-color: #fcd34d;
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.customer-history-action-button {
+.customer-history-action-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid #2563eb;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.customer-history-action-btn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.customer-history-action-btn--secondary {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+}
+
+.customer-history-action-btn--secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.customer-history-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: 44px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #b91c1c;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.customer-history-cancel-btn:hover:not(:disabled) {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.customer-history-cancel-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .customer-history-empty {

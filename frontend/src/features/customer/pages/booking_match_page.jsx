@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Clock3, Home, SearchCheck } from 'lucide-react';
+import { ClockCircleOutlined, HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import '../../../styles/customer/booking_match.scss';
@@ -289,7 +289,7 @@ const BookingMatchPage = () => {
 
         <div className="icon-wrap" aria-hidden>
           <div className="loading-pulse">
-            <SearchCheck size={30} />
+            <SearchOutlined />
           </div>
         </div>
 
@@ -324,12 +324,12 @@ const BookingMatchPage = () => {
 
         <div className="service-meta">
           <p>
-            <Home size={12} />
+            <HomeOutlined />
             {serviceTitle || 'Residential'}
           </p>
           <span>|</span>
           <p>
-            <Clock3 size={12} />
+            <ClockCircleOutlined />
             {startTime || '10:00 AM'}
           </p>
         </div>

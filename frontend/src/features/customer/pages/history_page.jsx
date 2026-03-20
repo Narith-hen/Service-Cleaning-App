@@ -4,6 +4,7 @@ import {
   AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  CloseOutlined,
   ClockCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
@@ -256,6 +257,18 @@ const toReviewNavigationBooking = (booking) => ({
   rating: booking?.reviewRating || 0
 });
 
+const canCancelHistoryBooking = (item) => {
+  const rawStatus = String(item?.rawStatus || '').toLowerCase();
+  const bookingStatus = String(item?.bookingStatus || '').toLowerCase();
+
+  if (['completed', 'cancelled', 'rejected'].includes(rawStatus)) {
+    return false;
+  }
+
+  return ['pending', 'matching', 'booked', 'confirmed', 'accepted', 'started', 'in_progress', 'in-progress'].includes(rawStatus)
+    || ['pending', 'confirmed', 'in_progress'].includes(bookingStatus);
+};
+
 const CustomerHistoryPage = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
@@ -468,36 +481,20 @@ const CustomerHistoryPage = () => {
                         {statusButton.icon}
                         {statusButton.label}
                       </span>
-                      {paymentBadge && (
-                        <span className={`customer-history-status ${paymentBadge.tone}`}>
-                          {paymentBadge.icon}
-                          {paymentBadge.label}
-                        </span>
-                      )}
-                      {reviewBadge && (
-                        <span className={`customer-history-status ${reviewBadge.tone}`}>
-                          {reviewBadge.icon}
-                          {reviewBadge.label}
-                        </span>
-                      )}
-                      {canRateService && (
+                      {canCancelHistoryBooking(item) && (
                         <button
                           type="button"
-                          className="customer-primary-button customer-history-action-button"
-                          onClick={() => openRatingPage(item)}
+                          className="customer-history-cancel-btn"
+                          onClick={() => navigate(`/customer/cancel-work/${encodeURIComponent(String(item.id))}`, {
+                            state: {
+                              bookingId: item.id,
+                              serviceName: item.serviceName
+                            }
+                          })}
                           data-customer-button
                         >
-                          <StarFilled /> Rate Service
-                        </button>
-                      )}
-                      {needsPayment && !paymentConfirmed && (
-                        <button
-                          type="button"
-                          className="customer-secondary-button customer-history-action-button"
-                          onClick={() => navigate(`/customer/payment-methods?bookingId=${item.id}`)}
-                          data-customer-button
-                        >
-                          Pay Now
+                          <CloseOutlined />
+                          Cancel Booking
                         </button>
                       )}
                     </div>

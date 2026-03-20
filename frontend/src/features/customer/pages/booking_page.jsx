@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Image as ImageIcon,
-  MapPin,
-  Search,
-  UploadCloud,
-  X
-} from 'lucide-react';
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  CheckOutlined,
+  PictureOutlined,
+  EnvironmentOutlined,
+  SearchOutlined,
+  CloudUploadOutlined,
+  CloseOutlined
+} from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import summaryImage from '../../../assets/image.png';
 import '../../../styles/customer/booking.scss';
@@ -558,16 +558,21 @@ const BookingPage = () => {
         }
 
         // upload images if any
-        if (files.length) {
-          const toBase64 = (file) =>
-            new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(file);
-            });
-          const encoded = await Promise.all(files.map((f) => toBase64(f)));
-          await api.post(`/bookings/${bookingId}/images`, { images: encoded });
+        if (bookingId && files.length) {
+          const formData = new FormData();
+          const filesToUpload = selectedImages.length
+            ? selectedImages.map((index) => files[index]).filter(Boolean)
+            : files;
+
+          filesToUpload.forEach((file) => {
+            formData.append('images', file);
+          });
+
+          await api.post(`/bookings/${bookingId}/images`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
         }
       }
 
@@ -630,7 +635,7 @@ const BookingPage = () => {
                     <img src={preview} alt={`Uploaded ${index + 1}`} />
                     {selectedImages.includes(index) && (
                       <div className="thumb-selected-badge">
-                        <Check size={12} />
+                        <CheckOutlined />
                       </div>
                     )}
                   </div>
@@ -666,7 +671,7 @@ const BookingPage = () => {
             </select>
           </div>
           <div className="input-shell">
-            <Search size={16} />
+            <SearchOutlined />
             <input
               type="text"
               placeholder="123 Harmony Lane, Bright City"
@@ -703,7 +708,7 @@ const BookingPage = () => {
             )}
             {isAddressVerified && (
               <div className="map-badge">
-                <MapPin size={12} />
+                <EnvironmentOutlined />
                 Address Verified
               </div>
             )}
@@ -730,20 +735,20 @@ const BookingPage = () => {
             tabIndex={0}
           >
             <div className="upload-icon" aria-hidden>
-              <UploadCloud size={18} />
+              <CloudUploadOutlined />
             </div>
             <h4>Upload cleaning</h4>
             <p>Drag and drop images here, or click to browse files (up to 30)</p>
             {previewUrls.length === 0 ? (
               <div className="upload-previews" aria-hidden>
                 <span>
-                  <ImageIcon size={14} />
+                  <PictureOutlined />
                 </span>
                 <span>
-                  <ImageIcon size={14} />
+                  <PictureOutlined />
                 </span>
                 <span>
-                  <ImageIcon size={14} />
+                  <PictureOutlined />
                 </span>
               </div>
             ) : (
@@ -785,7 +790,7 @@ const BookingPage = () => {
                     <img src={preview} alt={`Upload ${index + 1}`} />
                     <div className="image-overlay">
                       {selectedImages.includes(index) ? (
-                        <Check size={20} className="check-icon" />
+                        <CheckOutlined className="check-icon" />
                       ) : (
                         <span className="select-hint">Click to select</span>
                       )}
@@ -798,7 +803,7 @@ const BookingPage = () => {
                         handleRemoveImage(index);
                       }}
                     >
-                      <X size={14} />
+                      <CloseOutlined />
                     </button>
                   </div>
                 ))}
@@ -885,10 +890,10 @@ const BookingPage = () => {
 
         <footer className="booking-actions" data-customer-reveal style={{ '--customer-reveal-delay': 4 }}>
           <button type="button" className="back-btn" onClick={() => navigate('/customer/dashboard')} data-customer-button>
-            <ArrowLeft size={16} /> Back to Service
+            <ArrowLeftOutlined /> Back to Service
           </button>
           <button type="button" className="next-btn" onClick={handleConfirmBooking} disabled={submitting} data-customer-button>
-            {submitting ? 'Submitting...' : 'Confirm Booking'} <ArrowRight size={16} />
+            {submitting ? 'Submitting...' : 'Confirm Booking'} <ArrowRightOutlined />
           </button>
         </footer>
       </div>

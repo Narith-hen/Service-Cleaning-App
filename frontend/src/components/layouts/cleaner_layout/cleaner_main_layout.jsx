@@ -57,6 +57,6 @@ const AdminMainLayout = () => {
   );
 };
 
-export default AdminMainLayout;
+export default CleanerMainLayout;
 
 
