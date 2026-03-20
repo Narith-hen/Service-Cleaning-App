@@ -1,4 +1,12 @@
-import { CalendarDays, CircleFadingArrowUp, Filter, MapPin, MessageSquare, Ruler, Star } from 'lucide-react';
+import {
+  CalendarOutlined,
+  ArrowUpOutlined,
+  FilterOutlined,
+  EnvironmentOutlined,
+  MessageOutlined,
+  ColumnWidthOutlined,
+  StarFilled
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import deepCleanImage from '../../../assets/image.png';
 import homeImage from '../../../assets/home.png';
@@ -62,7 +70,7 @@ const WriteReviewPage = () => {
           <p className="meta">ID: #44291 • Posted 2h ago</p>
 
           <div className="detail-row">
-            <Ruler size={16} />
+            <ColumnWidthOutlined />
             <div>
               <small>Space Size</small>
               <strong>850 sq ft (2BR / 1BA)</strong>
@@ -70,7 +78,7 @@ const WriteReviewPage = () => {
           </div>
 
           <div className="detail-row">
-            <CalendarDays size={16} />
+            <CalendarOutlined />
             <div>
               <small>Preferred Date</small>
               <strong>Oct 24, 2023 • 10:00 AM</strong>
@@ -78,7 +86,7 @@ const WriteReviewPage = () => {
           </div>
 
           <div className="detail-row">
-            <MapPin size={16} />
+            <EnvironmentOutlined />
             <div>
               <small>Location</small>
               <strong>Downtown, Seattle</strong>
@@ -106,7 +114,7 @@ const WriteReviewPage = () => {
             </div>
             <div className="head-actions">
               <button type="button" data-customer-button>
-                <Filter size={14} /> Filter
+                <FilterOutlined /> Filter
               </button>
               <button type="button" data-customer-button>Price: Low to High</button>
             </div>
@@ -128,12 +136,12 @@ const WriteReviewPage = () => {
                     {item.team && <span className="team-tag">TEAM</span>}
                   </h3>
                   <p className="rating">
-                    <Star size={14} /> {item.rating} • {item.jobs} Cleanings completed
+                    <StarFilled /> {item.rating} • {item.jobs} Cleanings completed
                   </p>
                   <p className="message">"{item.message}"</p>
                   <div className="quote-actions">
                     <button type="button" className="chat-btn" onClick={() => navigate('/customer/notifications')} data-customer-button>
-                      <MessageSquare size={14} /> Chat to Negotiate
+                      <MessageOutlined /> Chat to Negotiate
                     </button>
                     <button type="button" className="profile-btn" onClick={() => navigate('/customer/profile')} data-customer-button>
                       View Full Profile
@@ -153,7 +161,7 @@ const WriteReviewPage = () => {
       </section>
 
       <div className="tip-box" data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
-        <CircleFadingArrowUp size={16} />
+        <ArrowUpOutlined />
         <p>
           <strong>Safe Negotiation Tip:</strong> Use the built-in chat to discuss specific tasks or
           adjust the price. Once you agree, the cleaner will send an updated official offer for you

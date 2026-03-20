@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { MessageSquare, Star } from 'lucide-react';
+import { MessageOutlined, StarFilled } from '@ant-design/icons';
 import '../../../styles/customer/write_review.scss';
 
 const BookingQuotesPage = () => {
@@ -48,12 +48,12 @@ const BookingQuotesPage = () => {
             <div className="quote-main">
               <h3>Elena Rodriguez</h3>
               <p className="rating">
-                <Star size={14} /> 4.9 • 124 Cleanings completed
+                <StarFilled /> 4.9 • 124 Cleanings completed
               </p>
               <p className="message">"I specialize in deep cleaning and can start tomorrow. Happy to discuss details!"</p>
               <div className="quote-actions">
                 <button type="button" className="chat-btn" onClick={handleAcceptQuote}>
-                  <MessageSquare size={14} /> Chat to Negotiate
+                  <MessageOutlined /> Chat to Negotiate
                 </button>
               </div>
             </div>

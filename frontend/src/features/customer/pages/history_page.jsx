@@ -3,6 +3,7 @@ import {
   AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  CloseOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
   HomeOutlined,
@@ -10,6 +11,7 @@ import {
   SearchOutlined,
   UserOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import '../../../styles/customer/history.scss';
 import officeImage from '../../../assets/office.png';
@@ -172,7 +174,20 @@ const fetchCustomerHistoryRows = async () => {
   return Array.isArray(rows) ? rows.slice(0, 5) : [];
 };
 
+const canCancelHistoryBooking = (item) => {
+  const rawStatus = String(item?.rawStatus || '').toLowerCase();
+  const bookingStatus = String(item?.bookingStatus || '').toLowerCase();
+
+  if (['completed', 'cancelled', 'rejected'].includes(rawStatus)) {
+    return false;
+  }
+
+  return ['pending', 'matching', 'booked', 'confirmed', 'accepted', 'started', 'in_progress', 'in-progress'].includes(rawStatus)
+    || ['pending', 'confirmed', 'in_progress'].includes(bookingStatus);
+};
+
 const CustomerHistoryPage = () => {
+  const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -364,6 +379,22 @@ const CustomerHistoryPage = () => {
                         {statusButton.icon}
                         {statusButton.label}
                       </span>
+                      {canCancelHistoryBooking(item) && (
+                        <button
+                          type="button"
+                          className="customer-history-cancel-btn"
+                          onClick={() => navigate(`/customer/cancel-work/${encodeURIComponent(String(item.id))}`, {
+                            state: {
+                              bookingId: item.id,
+                              serviceName: item.serviceName
+                            }
+                          })}
+                          data-customer-button
+                        >
+                          <CloseOutlined />
+                          Cancel Booking
+                        </button>
+                      )}
                     </div>
                   </section>
                 </div>
