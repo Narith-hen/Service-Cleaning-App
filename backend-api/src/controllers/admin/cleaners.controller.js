@@ -175,6 +175,15 @@ const getCleanerRowById = async (promiseDb, cleanerId, cleanerProfileColumns) =>
   return rows?.[0] || null;
 };
 
+const getTableColumns = async (executor, tableName) => {
+  try {
+    const [columns] = await executor.query(`SHOW COLUMNS FROM \`${tableName}\``);
+    return new Set((columns || []).map((column) => column.Field));
+  } catch (_) {
+    return null;
+  }
+};
+
 const mapCleanerRow = (row) => {
   const status = normalizeStatus(row);
   const cleanerId = Number(row.cleaner_id);
@@ -552,6 +561,7 @@ const updateCleaner = async (req, res, next) => {
 };
 
 const deleteCleaner = async (req, res, next) => {
+<<<<<<< HEAD
   const cleanerIdentifier = String(req.params.id || '').trim();
   if (!cleanerIdentifier) {
     return next(new AppError('Cleaner id is required', 400));
@@ -591,14 +601,114 @@ const deleteCleaner = async (req, res, next) => {
     });
 
     const [profileDeleteResult] = await connection.query(
+=======
+  let connection;
+  try {
+    const cleanerIdentifier = String(req.params.id || '').trim();
+    if (!cleanerIdentifier) {
+      return next(new AppError('Cleaner id is required', 400));
+    }
+
+    const promiseDb = db.promise();
+    const cleanerId = await getCleanerIdByIdentifier(promiseDb, cleanerIdentifier);
+
+    if (!cleanerId) {
+      return next(new AppError('Cleaner not found', 404));
+    }
+
+    const [bookingCountRows] = await promiseDb.query(
+      'SELECT COUNT(*) AS total FROM bookings WHERE cleaner_id = ?',
+      [cleanerId]
+    );
+    const bookingCount = Number(bookingCountRows?.[0]?.total || 0);
+    if (bookingCount > 0) {
+      return next(new AppError('Cannot delete cleaner with existing bookings. Remove or reassign those bookings first.', 409));
+    }
+
+    connection = await promiseDb.getConnection();
+    await connection.beginTransaction();
+
+    const reviewsColumns = await getTableColumns(connection, 'reviews');
+    if (reviewsColumns?.has('cleaner_id')) {
+      await connection.query('DELETE FROM reviews WHERE cleaner_id = ?', [cleanerId]);
+    }
+
+    const notificationsColumns = await getTableColumns(connection, 'notifications');
+    if (notificationsColumns?.has('user_id')) {
+      await connection.query('DELETE FROM notifications WHERE user_id = ?', [cleanerId]);
+    }
+
+    const settingsColumns = await getTableColumns(connection, 'settings');
+    if (settingsColumns?.has('user_id')) {
+      await connection.query('DELETE FROM settings WHERE user_id = ?', [cleanerId]);
+    }
+
+    const accColumns = await getTableColumns(connection, 'acc');
+    const messagesColumns = await getTableColumns(connection, 'messages');
+    if (accColumns) {
+      const accountFilters = [];
+      const accountParams = [];
+
+      if (accColumns.has('user_id')) {
+        accountFilters.push('user_id = ?');
+        accountParams.push(cleanerId);
+      }
+      if (accColumns.has('cleaner_id')) {
+        accountFilters.push('cleaner_id = ?');
+        accountParams.push(cleanerId);
+      }
+
+      if (accountFilters.length > 0) {
+        const [accountRows] = await connection.query(
+          `SELECT acc_id FROM acc WHERE ${accountFilters.join(' OR ')}`,
+          accountParams
+        );
+        const accountIds = accountRows.map((row) => Number(row.acc_id)).filter(Boolean);
+
+        if (accountIds.length > 0 && messagesColumns) {
+          const hasSenderId = messagesColumns.has('sender_id');
+          const hasReceiverId = messagesColumns.has('receiver_id');
+
+          if (hasSenderId && hasReceiverId) {
+            await connection.query(
+              'DELETE FROM messages WHERE sender_id IN (?) OR receiver_id IN (?)',
+              [accountIds, accountIds]
+            );
+          } else if (hasSenderId) {
+            await connection.query(
+              'DELETE FROM messages WHERE sender_id IN (?)',
+              [accountIds]
+            );
+          } else if (hasReceiverId) {
+            await connection.query(
+              'DELETE FROM messages WHERE receiver_id IN (?)',
+              [accountIds]
+            );
+          }
+        }
+
+        await connection.query(
+          `DELETE FROM acc WHERE ${accountFilters.join(' OR ')}`,
+          accountParams
+        );
+      }
+    }
+
+    const [deleteResult] = await connection.query(
+>>>>>>> develop
       'DELETE FROM cleaner_profile WHERE cleaner_id = ?',
       [cleanerId]
     );
 
+<<<<<<< HEAD
     if (!profileDeleteResult?.affectedRows && !userDeleteResult?.affectedRows) {
       await connection.rollback();
       connection.release();
       return next(new AppError('Cleaner not found', 404));
+=======
+    if (!deleteResult?.affectedRows) {
+      throw new AppError('Cleaner not found', 404);
+>>>>>>> develop
     }
 
     await connection.commit();
@@ -613,7 +723,11 @@ const deleteCleaner = async (req, res, next) => {
       try {
         await connection.rollback();
       } catch (_) {
+<<<<<<< HEAD
         // Ignore rollback failures.
+=======
+        // Ignore rollback errors from failed transactions.
+>>>>>>> develop
       }
       connection.release();
     }

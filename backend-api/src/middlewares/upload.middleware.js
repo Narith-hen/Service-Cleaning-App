@@ -48,15 +48,25 @@ const storage = multer.diskStorage({
 
 // File filter
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp|heic|heif/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const extension = path.extname(file.originalname).toLowerCase();
+  const mimeType = String(file.mimetype || '').toLowerCase();
+  const imageExtensions = new Set(['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif']);
+  const imageMimePrefix = 'image/';
 
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed'));
+  if (file.fieldname === 'receipt') {
+    const isPdf = extension === '.pdf' && mimeType === 'application/pdf';
+    const isImage = imageExtensions.has(extension) && mimeType.startsWith(imageMimePrefix);
+    if (isPdf || isImage) {
+      return cb(null, true);
+    }
+    return cb(new Error('Receipt must be an image or PDF'));
   }
+
+  const isImage = imageExtensions.has(extension) && mimeType.startsWith(imageMimePrefix);
+  if (isImage) {
+    return cb(null, true);
+  }
+  return cb(new Error('Only image files are allowed'));
 };
 
 // Create multer instance

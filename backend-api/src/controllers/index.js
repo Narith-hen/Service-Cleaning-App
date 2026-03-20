@@ -142,9 +142,7 @@ module.exports = {
   reportReview: (req, res, next) => {
     res.status(200).json({ message: 'Report review endpoint - to be implemented' });
   },
-  getReviewStats: (req, res, next) => {
-    res.status(200).json({ message: 'Get review stats endpoint - to be implemented' });
-  },
+  getReviewStats: reviewController.getReviewStats,
   
   // Additional payment functions
   getPayments: paymentController.getPayments,

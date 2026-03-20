@@ -113,7 +113,7 @@ const initializeSocket = (server) => {
       }
       
       // Broadcast the new message to others in the booking room
-      socket.to(`booking:${bookingId}`).emit('message:new', message);
+      // socket.to(`booking:${bookingId}`).emit('message:new', message);
       
       // Confirm the message was sent to the sender
       socket.emit('message:sent', { id: message.id });
@@ -189,8 +189,10 @@ const initializeSocket = (server) => {
   subscriber.subscribe('booking:updates', 'notification:new', 'user:status', 'message:created', 'message:read');
 
   subscriber.on('message', (channel, message) => {
+    console.log(`[Redis] Received message on channel: ${channel}`);
     try {
       const data = JSON.parse(message);
+      console.log(`[Redis] Data:`, JSON.stringify(data).substring(0, 200));
       
       switch (channel) {
         case 'booking:updates':

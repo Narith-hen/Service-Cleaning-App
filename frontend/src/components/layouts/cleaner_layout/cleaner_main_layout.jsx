@@ -8,7 +8,7 @@ import Footer from '../admin_layout/admin_footer';
 
 const TARGET_SCREEN_BREAKPOINT = 1280;
 
-const AdminMainLayout = () => {
+const CleanerMainLayout = () => {
   const { darkMode } = useTheme();
   const location = useLocation();
   const [isCompactLayout, setIsCompactLayout] = useState(window.innerWidth <= TARGET_SCREEN_BREAKPOINT);
@@ -57,6 +57,6 @@ const AdminMainLayout = () => {
   );
 };
 
-export default AdminMainLayout;
+export default CleanerMainLayout;
 
 

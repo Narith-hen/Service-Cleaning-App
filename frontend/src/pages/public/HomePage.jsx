@@ -24,7 +24,7 @@ export default function HomePage() {
       role: "Homeowner in Seattle",
       image: narithImage,
       quote:
-        '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."'
+        '"Somaet saved my weekend! I was overwhelmed with work and my apartment was a mess."'
     },
 
 
@@ -276,7 +276,7 @@ export default function HomePage() {
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="mx-auto mt-14 max-w-5xl rounded-[28px] bg-gradient-to-r from-[#146f27] via-[#128227] to-[#0b1f3c] px-8 py-12 text-center text-white shadow-2xl"
           >
-            <h3 className="text-4xl font-black">Ready to Come Home to Clean?</h3>
+            <h3 className="text-4xl font-black">Ready to Come Home to a Clean House?</h3>
             <p className="mt-3 text-sm text-emerald-100">
               Join thousands of happy customers and book your first cleaning today.
             </p>

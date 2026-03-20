@@ -21,6 +21,15 @@ export default function PublicHomePage() {
       return undefined;
     }
 
+    // Immediately reveal elements that are already in the initial viewport
+    const initialVisibleRect = window.innerHeight * 0.5; // Check first 50% of viewport
+    elements.forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      if (rect.top < initialVisibleRect && rect.bottom > 0) {
+        element.classList.add('is-visible');
+      }
+    });
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -30,12 +39,17 @@ export default function PublicHomePage() {
         });
       },
       {
-        threshold: 0.18,
-        rootMargin: '0px 0px -8% 0px'
+        threshold: 0.1,
+        rootMargin: '0px 0px 0px 0px'
       }
     );
 
-    elements.forEach((element) => observer.observe(element));
+    elements.forEach((element) => {
+      // Only observe elements that aren't already visible
+      if (!element.classList.contains('is-visible')) {
+        observer.observe(element);
+      }
+    });
 
     return () => observer.disconnect();
   }, []);
@@ -43,7 +57,7 @@ export default function PublicHomePage() {
   const testimonials = [
     {
       quote:
-        '"PureClean saved my weekend! I was overwhelmed with work and my apartment was a mess."',
+        '"Somaet saved my weekend! I was overwhelmed with work and my apartment was a mess."',
       name: 'Hen Narith',
       role: 'Homeowner in Seattle',
       date: 'Feb 20, 2026',
@@ -79,7 +93,7 @@ export default function PublicHomePage() {
     {
       number: '2',
       title: 'We Clean',
-      description: 'Our certified professional arrives and makes your home sparkle.'
+      description: 'Our certified professionals arrive and make your home sparkle.'
     },
     {
       number: '3',
@@ -111,7 +125,7 @@ export default function PublicHomePage() {
                 className="public-home-primary-link rounded-xl bg-[#32c753] px-4 py-3 text-sm font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:bg-[#2dae48]"
                 style={{ borderRadius: '24px' }}
               >
-                Booking Now!
+                Book Now
               </Link>
             </div>
 
@@ -244,7 +258,7 @@ export default function PublicHomePage() {
             }}
           >
             <h3 className="text-4xl font-extrabold tracking-tight drop-shadow-lg md:text-5xl">
-              Ready to Come Home to Clean?
+              Ready to Come Home to a Clean House?
             </h3>
 
             <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-emerald-100 md:text-xl">

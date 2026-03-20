@@ -1,17 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   CloseOutlined,
   ClockCircleOutlined,
+  DollarOutlined,
   EnvironmentOutlined,
   HomeOutlined,
   HistoryOutlined,
   SearchOutlined,
+  StarFilled,
   UserOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import '../../../styles/customer/history.scss';
 import officeImage from '../../../assets/office.png';
@@ -35,6 +37,7 @@ const STATUS_META = {
   confirmed: { label: 'Confirmed', tone: 'confirmed', icon: <CheckCircleOutlined /> },
   accepted: { label: 'Accepted', tone: 'confirmed', icon: <CheckCircleOutlined /> },
   pending: { label: 'Pending', tone: 'pending', icon: <ClockCircleOutlined /> },
+  payment_required: { label: 'Awaiting Payment', tone: 'pending', icon: <ClockCircleOutlined /> },
   matching: { label: 'Matching', tone: 'pending', icon: <ClockCircleOutlined /> },
   completed: { label: 'Completed', tone: 'completed', icon: <CheckCircleOutlined /> },
   cancelled: { label: 'Cancelled', tone: 'cancelled', icon: <HistoryOutlined /> },
@@ -128,9 +131,15 @@ const normalizeHistoryBooking = (booking, index = 0) => {
     totalPrice: booking?.negotiated_price ?? booking?.total_price ?? booking?.price ?? null,
     bedrooms: booking?.bedrooms || booking?.bedroom_count || booking?.room_count || '3 Bedrooms',
     floors: booking?.floors || booking?.floor_count || '2 Floors',
+    cleanerId: booking?.cleaner_id || booking?.cleaner?.user_id || null,
+    cleanerAvatar: toAbsoluteImageUrl(booking?.cleaner_avatar || booking?.cleaner?.avatar || ''),
     status,
     rawStatus: String(rawStatus).toLowerCase(),
-    bookingStatus: String(booking?.booking_status || booking?.status || 'pending').toLowerCase()
+    bookingStatus: String(booking?.booking_status || booking?.status || 'pending').toLowerCase(),
+    paymentStatus: String(booking?.payment_status || booking?.payment?.payment_status || '').toLowerCase(),
+    reviewId: booking?.review_id ? Number(booking.review_id) : null,
+    reviewRating: booking?.rating ? Number(booking.rating) : 0,
+    reviewComment: booking?.review_comment || ''
   };
 };
 
@@ -161,10 +170,52 @@ const getHistoryStatusButton = (rawStatus, status) => {
     };
   }
 
+  if (normalized === 'payment_required') {
+    return {
+      tone: 'pending',
+      icon: <ClockCircleOutlined />,
+      label: 'Awaiting Payment'
+    };
+  }
+
   return {
     tone: status?.tone || 'pending',
     icon: status?.icon || <ClockCircleOutlined />,
     label: 'Service Booked'
+  };
+};
+
+const getPaymentStatusBadge = (paymentStatus) => {
+  const normalized = String(paymentStatus || '').toLowerCase();
+
+  if (normalized === 'completed' || normalized === 'paid') {
+    return {
+      tone: 'paid',
+      icon: <DollarOutlined />,
+      label: 'Paid'
+    };
+  }
+
+  if (normalized === 'receipt_submitted') {
+    return {
+      tone: 'payment-submitted',
+      icon: <ClockCircleOutlined />,
+      label: 'Payment Submitted'
+    };
+  }
+
+  return null;
+};
+
+const getReviewStatusBadge = (reviewId, reviewRating) => {
+  if (!reviewId) return null;
+  const normalizedRating = Number(reviewRating);
+  return {
+    tone: 'reviewed',
+    icon: <StarFilled />,
+    label: Number.isFinite(normalizedRating) && normalizedRating > 0
+      ? `Rated ${normalizedRating.toFixed(1)}/5`
+      : 'Reviewed'
   };
 };
 
@@ -173,6 +224,38 @@ const fetchCustomerHistoryRows = async () => {
   const rows = response?.data?.data;
   return Array.isArray(rows) ? rows.slice(0, 5) : [];
 };
+
+const toReviewNavigationBooking = (booking) => ({
+  id: booking?.id || '',
+  booking_id: booking?.id || '',
+  serviceName: booking?.serviceName || 'Cleaning Service',
+  service_name: booking?.serviceName || 'Cleaning Service',
+  bookingDate: booking?.bookingDate || '',
+  booking_date: booking?.bookingDate || '',
+  bookingTime: booking?.bookingTime || '',
+  booking_time: booking?.bookingTime || '',
+  serviceImage: booking?.serviceImage || '',
+  service_image: booking?.serviceImage || '',
+  cleanerName: booking?.cleanerName || 'Assigned cleaner',
+  cleaner_name: booking?.cleanerName || 'Assigned cleaner',
+  location: booking?.location || 'Location unavailable',
+  address: booking?.location || 'Location unavailable',
+  totalPrice: booking?.totalPrice ?? null,
+  total_price: booking?.totalPrice ?? null,
+  bedrooms: booking?.bedrooms || '3 Bedrooms',
+  floors: booking?.floors || '2 Floors',
+  cleanerId: booking?.cleanerId || null,
+  cleaner_id: booking?.cleanerId || null,
+  cleanerAvatar: booking?.cleanerAvatar || '',
+  cleaner_avatar: booking?.cleanerAvatar || '',
+  rawStatus: booking?.rawStatus || 'completed',
+  paymentStatus: booking?.paymentStatus || '',
+  payment_status: booking?.paymentStatus || '',
+  reviewComment: booking?.reviewComment || '',
+  review_comment: booking?.reviewComment || '',
+  reviewRating: booking?.reviewRating || 0,
+  rating: booking?.reviewRating || 0
+});
 
 const canCancelHistoryBooking = (item) => {
   const rawStatus = String(item?.rawStatus || '').toLowerCase();
@@ -193,6 +276,15 @@ const CustomerHistoryPage = () => {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const hasLoadedRef = useRef(false);
+
+  const openRatingPage = (booking) => {
+    navigate(`/customer/write-review/${booking.id}`, {
+      state: {
+        booking: toReviewNavigationBooking(booking),
+        from: '/customer/history'
+      }
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -236,7 +328,7 @@ const CustomerHistoryPage = () => {
         filter === 'all'
           ? true
           : filter === 'active'
-            ? ['confirmed', 'accepted', 'pending', 'matching', 'started', 'in_progress', 'in-progress', 'booked'].includes(item.rawStatus)
+            ? ['confirmed', 'accepted', 'pending', 'matching', 'started', 'in_progress', 'in-progress', 'booked', 'payment_required'].includes(item.rawStatus)
             : filter === 'completed'
               ? ['completed'].includes(item.rawStatus)
               : ['cancelled', 'rejected'].includes(item.rawStatus);
@@ -318,6 +410,16 @@ const CustomerHistoryPage = () => {
               year: 'numeric'
             });
             const statusButton = getHistoryStatusButton(item.rawStatus, item.status);
+            const paymentBadge = getPaymentStatusBadge(item.paymentStatus);
+            const reviewBadge = getReviewStatusBadge(item.reviewId, item.reviewRating);
+            const needsPayment =
+              item.bookingStatus === 'payment_required'
+              || item.paymentStatus === 'awaiting_receipt'
+              || item.paymentStatus === 'receipt_submitted';
+            const paymentConfirmed =
+              item.paymentStatus === 'completed'
+              || item.paymentStatus === 'paid';
+            const canRateService = paymentConfirmed && !item.reviewId;
 
             return (
               <article

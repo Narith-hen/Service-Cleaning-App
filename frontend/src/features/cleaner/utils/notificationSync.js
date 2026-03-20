@@ -24,6 +24,18 @@ const titleCaseStatus = (status) => {
   return text.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+const toNotificationLink = (notification) => {
+  const bookingId = Number(notification?.booking_id || notification?.booking?.booking_id || 0);
+  const title = String(notification?.title || '').toLowerCase();
+  const message = String(notification?.message || '').toLowerCase();
+
+  if (title.includes('receipt') || title.includes('payment') || message.includes('payment')) {
+    return bookingId > 0 ? `/cleaner/my-jobs?bookingId=${bookingId}` : '/cleaner/my-jobs';
+  }
+
+  return bookingId > 0 ? `/cleaner/my-jobs?bookingId=${bookingId}` : '/cleaner/notifications';
+};
+
 const createNotification = ({
   id,
   type,
@@ -32,7 +44,9 @@ const createNotification = ({
   createdAt,
   read = false,
   color,
-  link
+  link,
+  source = 'local',
+  backendId = null
 }) => ({
   id,
   type,
@@ -41,8 +55,40 @@ const createNotification = ({
   created_at: createdAt,
   is_read: read,
   color,
-  link
+  link,
+  source,
+  backendId
 });
+
+const buildBackendNotifications = async () => {
+  try {
+    const response = await api.get('/notifications', { params: { limit: 50 } });
+    const rows = ensureArray(response?.data?.data);
+
+    return rows.map((notification) => {
+      const backendId = Number(notification?.notification_id || 0) || null;
+      const title = String(notification?.title || 'Notification');
+      const type = title.toLowerCase().includes('payment') || title.toLowerCase().includes('receipt')
+        ? 'payment'
+        : notification?.type_notification || 'booking';
+
+      return createNotification({
+        id: backendId ? `backend-${backendId}` : `backend-${title}-${notification?.created_at || Date.now()}`,
+        backendId,
+        type,
+        title,
+        message: notification?.message || 'Open to review this update.',
+        createdAt: notification?.created_at || new Date().toISOString(),
+        read: Boolean(notification?.is_read),
+        color: type === 'payment' ? '#16a34a' : '#0f766e',
+        link: toNotificationLink(notification),
+        source: 'backend'
+      });
+    });
+  } catch {
+    return [];
+  }
+};
 
 const buildRequestNotifications = async () => {
   try {
@@ -147,11 +193,13 @@ export const saveCleanerNotifications = (notifications = []) => {
 export const buildCleanerNotifications = async () => {
   const previous = loadCleanerNotifications();
   const previousById = new Map(previous.map((item) => [String(item.id), item]));
-  const [requestNotifications] = await Promise.all([
-    buildRequestNotifications()
+  const [requestNotifications, backendNotifications] = await Promise.all([
+    buildRequestNotifications(),
+    buildBackendNotifications()
   ]);
 
   const derived = [
+    ...backendNotifications,
     ...buildChatNotifications(),
     ...requestNotifications,
     ...buildJobStatusNotifications()
@@ -163,6 +211,12 @@ export const buildCleanerNotifications = async () => {
       if (!existing) return item;
       if (existing.dismissed) {
         return { ...item, dismissed: true, is_read: true };
+      }
+      if (item.source === 'backend') {
+        return {
+          ...item,
+          dismissed: false
+        };
       }
       return {
         ...item,

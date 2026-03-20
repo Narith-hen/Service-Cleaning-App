@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import api from '../../../services/api';
 import {
     buildCleanerNotifications,
     loadCleanerNotifications,
@@ -49,8 +50,18 @@ export const useNotificationStore = create(
             },
 
             // Mark single notification as read
-            markAsRead: (notificationId) => {
+            markAsRead: async (notificationId) => {
                 const { notifications } = get();
+                const target = notifications.find((entry) => entry.id === notificationId);
+
+                if (target?.source === 'backend' && target.backendId) {
+                    try {
+                        await api.patch(`/notifications/${target.backendId}/read`);
+                    } catch {
+                        // Keep local UI responsive even if backend sync fails.
+                    }
+                }
+
                 const nextNotifications = notifications.map(n =>
                     n.id === notificationId ? { ...n, is_read: true } : n
                 );
@@ -63,8 +74,18 @@ export const useNotificationStore = create(
             },
 
             // Mark all as read
-            markAllAsRead: () => {
+            markAllAsRead: async () => {
                 const { notifications } = get();
+                const hasBackendUnread = notifications.some((entry) => entry.source === 'backend' && !entry.is_read);
+
+                if (hasBackendUnread) {
+                    try {
+                        await api.post('/notifications/read-all');
+                    } catch {
+                        // Keep local UI responsive even if backend sync fails.
+                    }
+                }
+
                 const nextNotifications = notifications.map(n => ({ ...n, is_read: true }));
                 
                 set({

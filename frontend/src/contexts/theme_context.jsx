@@ -36,7 +36,7 @@ export const ThemeProvider = ({ children }) => {
 
   // Set specific theme
   const setLightMode = () => setTheme('light');
-  const setDarkMode2 = () => setTheme('dark');
+  const enableDarkMode = () => setTheme('dark');
 
   return (
     <ThemeContext.Provider value={{
@@ -44,7 +44,7 @@ export const ThemeProvider = ({ children }) => {
       darkMode,
       toggleTheme,
       setLightMode,
-      setDarkMode: setDarkMode2
+      setDarkMode: enableDarkMode
     }}>
       {children}
     </ThemeContext.Provider>

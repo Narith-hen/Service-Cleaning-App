@@ -1,3 +1,4 @@
+import React from 'react';
 import { publicRoutes } from './public_routes';
 import { customerRoutes } from './customer_routes';
 import { cleanerRoutes } from './cleaner_routes';
