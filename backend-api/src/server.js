@@ -116,7 +116,7 @@ app.get("/uploads/services/:file", (req, res, next) => {
   return next();
 });
 
-const authRoutes = require("./routes/authRoutes");
+const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
 const serviceRoutes = require("./routes/service.routes");
 const bookingRoutes = require("./routes/booking.routes");

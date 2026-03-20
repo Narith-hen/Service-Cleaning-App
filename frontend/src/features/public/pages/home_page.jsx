@@ -21,6 +21,15 @@ export default function PublicHomePage() {
       return undefined;
     }
 
+    // Immediately reveal elements that are already in the initial viewport
+    const initialVisibleRect = window.innerHeight * 0.5; // Check first 50% of viewport
+    elements.forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      if (rect.top < initialVisibleRect && rect.bottom > 0) {
+        element.classList.add('is-visible');
+      }
+    });
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -30,12 +39,17 @@ export default function PublicHomePage() {
         });
       },
       {
-        threshold: 0.18,
-        rootMargin: '0px 0px -8% 0px'
+        threshold: 0.1,
+        rootMargin: '0px 0px 0px 0px'
       }
     );
 
-    elements.forEach((element) => observer.observe(element));
+    elements.forEach((element) => {
+      // Only observe elements that aren't already visible
+      if (!element.classList.contains('is-visible')) {
+        observer.observe(element);
+      }
+    });
 
     return () => observer.disconnect();
   }, []);
