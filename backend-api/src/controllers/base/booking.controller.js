@@ -3,6 +3,52 @@ const AppError = require('../../utils/error.util');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
+const SERVICE_IMAGE_SELECT_SQL = '(SELECT image_url FROM service_images si WHERE si.service_id = s.service_id LIMIT 1)';
+
+// Add booking tracking metadata for UI progress display
+const withBookingTrackingMeta = (booking) => {
+  if (!booking) return null;
+
+  const status = String(booking.booking_status || '').toLowerCase();
+  const serviceStatus = String(booking.service_status || '').toLowerCase();
+
+  // Define tracking steps
+  const steps = [
+    { key: 'pending', label: 'Pending', completed: status !== 'pending' && status !== 'cancelled' },
+    { key: 'confirmed', label: 'Confirmed', completed: status === 'confirmed' || status === 'in_progress' || status === 'completed' },
+    { key: 'in_progress', label: 'In Progress', completed: status === 'in_progress' || status === 'completed' },
+    { key: 'completed', label: 'Completed', completed: status === 'completed' }
+  ];
+
+  // Calculate progress percentage
+  let progress = 0;
+  if (status === 'pending') progress = 0;
+  else if (status === 'confirmed') progress = 25;
+  else if (status === 'in_progress') progress = 60;
+  else if (status === 'completed') progress = 100;
+  else if (status === 'cancelled') progress = 0;
+
+  // Status color for UI
+  let statusColor = '#6b7280'; // gray
+  if (status === 'pending') statusColor = '#f59e0b'; // amber
+  else if (status === 'confirmed') statusColor = '#3b82f6'; // blue
+  else if (status === 'in_progress') statusColor = '#8b5cf6'; // purple
+  else if (status === 'completed') statusColor = '#10b981'; // green
+  else if (status === 'cancelled') statusColor = '#ef4444'; // red
+
+  return {
+    ...booking,
+    tracking: {
+      steps,
+      progress,
+      statusColor,
+      currentStep: steps.findIndex(s => !s.completed) >= 0 ? steps.findIndex(s => !s.completed) : steps.length - 1,
+      isActive: status !== 'completed' && status !== 'cancelled',
+      canCancel: status === 'pending' || status === 'confirmed'
+    }
+  };
+};
+
 const getBookingTableColumns = async (promiseDb) => {
   const [columns] = await promiseDb.query('SHOW COLUMNS FROM bookings');
   return new Set((columns || []).map((column) => column.Field));

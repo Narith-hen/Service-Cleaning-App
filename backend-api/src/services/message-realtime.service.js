@@ -2,9 +2,11 @@ const redis = require('../config/redis');
 
 const publishRedisEvent = async (channel, payload) => {
   try {
+    console.log(`[Redis Publish] Channel: ${channel}, Payload:`, JSON.stringify(payload).substring(0, 200));
     await redis.publish(channel, JSON.stringify(payload));
+    console.log(`[Redis Publish] Successfully published to ${channel}`);
   } catch (error) {
-    console.error(`Failed to publish ${channel}:`, error);
+    console.error(`[Redis Publish] Failed to publish ${channel}:`, error);
   }
 };
 
