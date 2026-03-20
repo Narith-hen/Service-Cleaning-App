@@ -31,6 +31,7 @@ import customerAvatar2 from '../../../assets/mey.JPG';
 import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
+import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
@@ -74,6 +75,31 @@ const pickJobImage = (job) => {
   if (title.includes('customer') || serviceType.includes('customer')) return customerHomeImage;
   
   return homeImage;
+};
+
+const getBookingIdFromJob = (job) => {
+  const rawId = job?.sourceRequestId || job?.bookingId || job?.id || '';
+  const normalized = String(rawId);
+  if (!normalized) return null;
+  if (normalized.startsWith('confirmed-')) {
+    return normalized.replace('confirmed-', '');
+  }
+  return normalized;
+};
+
+const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
+  const bookingId = getBookingIdFromJob(job);
+  if (!bookingId) return false;
+  try {
+    await api.patch(`/bookings/${bookingId}/status`, {
+      ...(bookingStatus ? { booking_status: bookingStatus } : {}),
+      ...(serviceStatus ? { service_status: serviceStatus } : {})
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to update booking status', error);
+    return false;
+  }
 };
 
 const fallbackJobs = [
@@ -186,6 +212,7 @@ const MyJobsPage = () => {
           customerAvatar: job.customerAvatar || '',
           bedrooms: job.bedrooms || '3 Bedrooms',
           floors: job.floors || '2 Floors',
+          serviceStatus: job.serviceStatus || 'booked',
           serviceType: job.serviceType || 'home',
           serviceImage: job.serviceImage || '',
           image: pickJobImage(job)
@@ -230,19 +257,23 @@ const MyJobsPage = () => {
     });
   };
 
-  const handleStartJob = (jobId) => {
+  const handleStartJob = async (jobId) => {
     handlePrimaryJobAction(jobId);
     const selectedJob = jobs.find((job) => job.id === jobId) || null;
 
     if (selectedJob) {
       try {
+        await updateJobStatusOnServer(selectedJob, {
+          bookingStatus: 'in_progress',
+          serviceStatus: 'started'
+        });
         const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             const updated = parsed.map((job) =>
               (job.id === selectedJob.id || job.sourceRequestId === selectedJob.sourceRequestId)
-                ? { ...job, status: 'in-progress' }
+                ? { ...job, status: 'in-progress', serviceStatus: 'started' }
                 : job
             );
             localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));

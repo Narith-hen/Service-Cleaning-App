@@ -14,6 +14,7 @@ import CleanerReviews from '../features/cleaner/pages/review_page';
 import CleanerNotifications from '../features/cleaner/pages/notification_page';
 import CleanerMessages from '../features/cleaner/pages/messages_page';
 import SettingsPage from '../features/cleaner/pages/settings_page';
+import CleanerProfilePage from '../features/cleaner/pages/profile_page';
 import HelpPage from '../features/cleaner/pages/help_page';
 import JobExecutionPage from '../features/cleaner/pages/job_execution_page';
 import CancelDuringWorkPage from '../features/cleaner/pages/Cancel-during-work';
@@ -116,11 +117,11 @@ export const cleanerRoutes = {
     },
     {
       path: 'profile',
-      element: <Navigate to="/cleaner/settings" replace />
+      element: <CleanerProfilePage />
     },
     {
       path: 'profile/edit',
-      element: <Navigate to="/cleaner/settings" replace />
+      element: <CleanerProfilePage />
     },
     {
       path: 'profile/documents',

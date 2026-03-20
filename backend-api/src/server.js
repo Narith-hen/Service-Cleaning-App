@@ -122,9 +122,11 @@ const serviceRoutes = require("./routes/service.routes");
 const bookingRoutes = require("./routes/booking.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const messageRoutes = require("./routes/message.routes");
+const userRoutes = require("./routes/user.routes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/notifications", notificationRoutes);
