@@ -819,6 +819,13 @@ const trackBooking = async (req, res, next) => {
     const { id } = req.params;
     const promiseDb = db.promise();
     await ensureBookingNegotiatedPriceColumn(promiseDb);
+    const bookingColumns = await getBookingTableColumns(promiseDb);
+    const bookingTimeSelect = bookingColumns.has('booking_time')
+      ? 'b.booking_time'
+      : "DATE_FORMAT(b.booking_date, '%h:%i %p') AS booking_time";
+    const addressSelect = bookingColumns.has('address')
+      ? 'b.address'
+      : 'NULL AS address';
 
     const [rows] = await promiseDb
       .query(
@@ -826,9 +833,10 @@ const trackBooking = async (req, res, next) => {
             b.booking_id,
             b.booking_status,
             b.booking_date,
-            b.booking_time,
+            ${bookingTimeSelect},
             b.total_price,
             b.negotiated_price,
+            ${addressSelect},
             b.cleaner_id,
             cp.company_name AS cleaner_company,
             COALESCE(cp.company_name, TRIM(CONCAT_WS(' ', c.first_name, c.last_name))) AS cleaner_display_name,
