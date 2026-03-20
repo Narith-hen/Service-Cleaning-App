@@ -3,52 +3,6 @@ const AppError = require('../../utils/error.util');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const SERVICE_IMAGE_SELECT_SQL = '(SELECT image_url FROM service_images si WHERE si.service_id = s.service_id LIMIT 1)';
-
-// Add booking tracking metadata for UI progress display
-const withBookingTrackingMeta = (booking) => {
-  if (!booking) return null;
-
-  const status = String(booking.booking_status || '').toLowerCase();
-  const serviceStatus = String(booking.service_status || '').toLowerCase();
-
-  // Define tracking steps
-  const steps = [
-    { key: 'pending', label: 'Pending', completed: status !== 'pending' && status !== 'cancelled' },
-    { key: 'confirmed', label: 'Confirmed', completed: status === 'confirmed' || status === 'in_progress' || status === 'completed' },
-    { key: 'in_progress', label: 'In Progress', completed: status === 'in_progress' || status === 'completed' },
-    { key: 'completed', label: 'Completed', completed: status === 'completed' }
-  ];
-
-  // Calculate progress percentage
-  let progress = 0;
-  if (status === 'pending') progress = 0;
-  else if (status === 'confirmed') progress = 25;
-  else if (status === 'in_progress') progress = 60;
-  else if (status === 'completed') progress = 100;
-  else if (status === 'cancelled') progress = 0;
-
-  // Status color for UI
-  let statusColor = '#6b7280'; // gray
-  if (status === 'pending') statusColor = '#f59e0b'; // amber
-  else if (status === 'confirmed') statusColor = '#3b82f6'; // blue
-  else if (status === 'in_progress') statusColor = '#8b5cf6'; // purple
-  else if (status === 'completed') statusColor = '#10b981'; // green
-  else if (status === 'cancelled') statusColor = '#ef4444'; // red
-
-  return {
-    ...booking,
-    tracking: {
-      steps,
-      progress,
-      statusColor,
-      currentStep: steps.findIndex(s => !s.completed) >= 0 ? steps.findIndex(s => !s.completed) : steps.length - 1,
-      isActive: status !== 'completed' && status !== 'cancelled',
-      canCancel: status === 'pending' || status === 'confirmed'
-    }
-  };
-};
-
 const getBookingTableColumns = async (promiseDb) => {
   const [columns] = await promiseDb.query('SHOW COLUMNS FROM bookings');
   return new Set((columns || []).map((column) => column.Field));
@@ -82,18 +36,127 @@ const ensureBookingNegotiatedPriceColumn = async (promiseDb) => {
   );
 };
 
-const ensureBookingImagesTable = async (promiseDb) => {
-  await promiseDb.query(`
-    CREATE TABLE IF NOT EXISTS booking_images (
-      id INT NOT NULL AUTO_INCREMENT,
-      booking_id INT NOT NULL,
-      image_url LONGTEXT NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      KEY idx_booking_images_booking_id (booking_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
+const ensureBookingServiceStatusColumn = async (promiseDb) => {
+  const [rows] = await promiseDb.query("SHOW COLUMNS FROM bookings LIKE 'service_status'");
+  if (rows && rows.length > 0) return;
+  await promiseDb.query(
+    "ALTER TABLE bookings ADD COLUMN service_status VARCHAR(50) NULL AFTER booking_status"
+  );
 };
+
+const resolveCustomerBookingUserIds = async (promiseDb, user) => {
+  const ids = new Set();
+  const numericUserId = Number(user?.user_id);
+  const normalizedEmail = String(user?.email || '').trim().toLowerCase();
+
+  if (Number.isInteger(numericUserId) && numericUserId > 0) {
+    ids.add(numericUserId);
+  }
+
+  if (normalizedEmail) {
+    const [emailRows] = await promiseDb.query(
+      `
+        SELECT u.user_id
+        FROM users u
+        LEFT JOIN roles r ON r.role_id = u.role_id
+        WHERE LOWER(u.email) = ?
+          AND LOWER(COALESCE(r.role_name, 'customer')) IN ('customer', 'admin')
+      `,
+      [normalizedEmail]
+    );
+
+    for (const row of emailRows || []) {
+      const rowId = Number(row?.user_id);
+      if (Number.isInteger(rowId) && rowId > 0) {
+        ids.add(rowId);
+      }
+    }
+  }
+
+  return Array.from(ids);
+};
+
+const getBookingTrackingMeta = (statusValue) => {
+  const status = String(statusValue || 'pending').trim().toLowerCase();
+
+  switch (status) {
+    case 'completed':
+      return { service_tracking_status: 'completed', service_tracking_label: 'Service Completed' };
+    case 'in_progress':
+    case 'in-progress':
+      return { service_tracking_status: 'in_progress', service_tracking_label: 'Service In Progress' };
+    case 'started':
+      return { service_tracking_status: 'started', service_tracking_label: 'Service Started' };
+    case 'confirmed':
+    case 'accepted':
+      return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
+    case 'cancelled':
+    case 'rejected':
+      return { service_tracking_status: 'cancelled', service_tracking_label: 'Service Cancelled' };
+    case 'payment_required':
+      return { service_tracking_status: 'payment_required', service_tracking_label: 'Awaiting Payment Confirmation' };
+    case 'booked':
+      return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
+    default:
+      return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
+  }
+};
+
+const SERVICE_IMAGE_SELECT_SQL = `COALESCE(
+              (
+                SELECT si.image_url
+                FROM service_images si
+                WHERE si.service_id = s.service_id
+                ORDER BY si.id DESC
+                LIMIT 1
+              ),
+              s.image
+            )`;
+
+
+const withBookingServiceMeta = (booking) => {
+  const existingService = booking?.service && typeof booking.service === 'object'
+    ? booking.service
+    : null;
+  const serviceId =
+    existingService?.service_id ??
+    existingService?.id ??
+    booking?.service_id ??
+    null;
+  const serviceName =
+    existingService?.name ||
+    booking?.service_name ||
+    booking?.serviceTitle ||
+    booking?.title ||
+    null;
+  const serviceImage =
+    existingService?.image ||
+    booking?.service_image ||
+    booking?.image ||
+    null;
+
+  const service = existingService || serviceId || serviceName || serviceImage
+    ? {
+        ...(existingService || {}),
+        service_id: existingService?.service_id ?? existingService?.id ?? serviceId,
+        id: existingService?.id ?? existingService?.service_id ?? serviceId,
+        name: existingService?.name || serviceName,
+        image: existingService?.image || serviceImage
+      }
+    : null;
+
+  return {
+    ...booking,
+    service_name: serviceName,
+    service_image: serviceImage,
+    service
+  };
+};
+
+const withBookingTrackingMeta = (booking) => ({
+  ...withBookingServiceMeta(booking),
+  ...getBookingTrackingMeta(booking?.service_status || booking?.booking_status)
+});
 
 const slugify = (value) =>
   String(value || '')
@@ -179,6 +242,7 @@ const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
     roleId = Number(roleRows?.[0]?.role_id || 0) || 2;
   }
 
+
   const phoneNumber = String(profile.phone_number || '').trim() || 'N/A';
   const insertColumns = [];
   const insertValues = [];
@@ -244,6 +308,26 @@ const createBooking = async (req, res, next) => {
     }
 
     const promiseDb = db.promise();
+    const [pendingPaymentRows] = await promiseDb.query(
+      `
+        SELECT booking_id
+        FROM bookings
+        WHERE user_id = ?
+          AND LOWER(COALESCE(booking_status, '')) = 'payment_required'
+          AND LOWER(COALESCE(payment_status, 'pending')) NOT IN ('paid', 'completed')
+        LIMIT 1
+      `,
+      [user_id]
+    );
+    if (pendingPaymentRows?.[0]?.booking_id) {
+      return next(
+        new AppError(
+          `Please complete payment for booking #${pendingPaymentRows[0].booking_id} before creating a new booking`,
+          403
+        )
+      );
+    }
+
     const [serviceRows] = await promiseDb.query(
       'SELECT * FROM services WHERE service_id = ?',
       [service_id]
@@ -271,6 +355,7 @@ const createBooking = async (req, res, next) => {
         throw new AppError(`Missing required bookings column: ${column}`, 500);
       }
     };
+
 
     appendBookingField('booking_reference', booking_reference, true);
     appendBookingField('booking_date', new Date(booking_date), true);
@@ -396,6 +481,7 @@ const getBookings = async (req, res, next) => {
 const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
+
 
     const [rows] = await db
       .promise()
@@ -526,6 +612,7 @@ const deleteBooking = async (req, res, next) => {
   }
 };
 
+
 // Update booking status
 const updateBookingStatus = async (req, res, next) => {
   try {
@@ -538,8 +625,8 @@ const updateBookingStatus = async (req, res, next) => {
     }
     const normalizedBookingStatus = rawBookingStatus ? String(rawBookingStatus).trim().toLowerCase() : null;
     const normalizedServiceStatus = rawServiceStatus ? String(rawServiceStatus).trim().toLowerCase() : null;
-    const allowedBookingStatuses = new Set(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']);
-    const allowedServiceStatuses = new Set(['booked', 'started', 'in_progress', 'completed', 'cancelled']);
+    const allowedBookingStatuses = new Set(['pending', 'confirmed', 'in_progress', 'payment_required', 'completed', 'cancelled']);
+    const allowedServiceStatuses = new Set(['pending', 'booked', 'started', 'in_progress', 'completed', 'cancelled']);
     if (normalizedBookingStatus && !allowedBookingStatuses.has(normalizedBookingStatus)) {
       return next(new AppError('Invalid booking status', 400));
     }
@@ -552,6 +639,15 @@ const updateBookingStatus = async (req, res, next) => {
     const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
+
+    // Enforce payment-first completion. A booking can only be fully completed
+    // after payment has been confirmed by cleaner/admin.
+    if (normalizedBookingStatus === 'completed') {
+      const paymentStatus = String(booking.payment_status || '').trim().toLowerCase();
+      if (!['paid', 'completed'].includes(paymentStatus)) {
+        return next(new AppError('Payment must be confirmed before completing service', 400));
+      }
+    }
 
     const bookingColumns = await getBookingTableColumns(promiseDb);
     const updates = [];
@@ -615,6 +711,7 @@ const updateNegotiatedPrice = async (req, res, next) => {
 
     const promiseDb = db.promise();
     await ensureBookingNegotiatedPriceColumn(promiseDb);
+
 
     const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
@@ -737,6 +834,7 @@ const cancelBooking = async (req, res, next) => {
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
+
     await db
       .promise()
       .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', ['cancelled', id]);
@@ -847,6 +945,7 @@ const getMyBookingHistory = async (req, res, next) => {
         }
       });
     }
+
 
     const [rows] = await promiseDb.query(
       `SELECT 
@@ -962,6 +1061,7 @@ const getBookingHistory = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+
     const [rows] = await db
       .promise()
       .query(
@@ -971,7 +1071,13 @@ const getBookingHistory = async (req, res, next) => {
             ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.phone_number AS customer_phone,
+            cp.company_name AS cleaner_company,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
             c.phone_number AS cleaner_phone,
             p.payment_status,
             p.amount,
@@ -982,6 +1088,7 @@ const getBookingHistory = async (req, res, next) => {
          LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          LEFT JOIN payments p ON p.booking_id = b.booking_id
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          WHERE b.booking_id = ?`,
@@ -1007,13 +1114,6 @@ const trackBooking = async (req, res, next) => {
     const { id } = req.params;
     const promiseDb = db.promise();
     await ensureBookingNegotiatedPriceColumn(promiseDb);
-    const bookingColumns = await getBookingTableColumns(promiseDb);
-    const bookingTimeSelect = bookingColumns.has('booking_time')
-      ? 'b.booking_time'
-      : "DATE_FORMAT(b.booking_date, '%h:%i %p') AS booking_time";
-    const addressSelect = bookingColumns.has('address')
-      ? 'b.address'
-      : 'NULL AS address';
 
     const [rows] = await promiseDb
       .query(
@@ -1021,10 +1121,9 @@ const trackBooking = async (req, res, next) => {
             b.booking_id,
             b.booking_status,
             b.booking_date,
-            ${bookingTimeSelect},
+            b.booking_time,
             b.total_price,
             b.negotiated_price,
-            ${addressSelect},
             b.cleaner_id,
             cp.company_name AS cleaner_company,
             COALESCE(cp.company_name, TRIM(CONCAT_WS(' ', c.first_name, c.last_name))) AS cleaner_display_name,
@@ -1069,6 +1168,7 @@ const getAvailableBookings = async (req, res, next) => {
     const page = parseInt(req.query.page || 1, 10);
     const limit = parseInt(req.query.limit || 10, 10);
     const offset = (page - 1) * limit;
+
 
     const [rows] = await db
       .promise()
@@ -1192,39 +1292,19 @@ const addBookingImages = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { images } = req.body;
-    const bookingId = Number.parseInt(id, 10);
-    const promiseDb = db.promise();
-
-    if (!Number.isInteger(bookingId) || bookingId <= 0) {
-      return next(new AppError('Invalid booking id', 400));
-    }
 
     if (!Array.isArray(images) || images.length === 0) {
       return next(new AppError('No images provided', 400));
     }
 
-    await ensureBookingImagesTable(promiseDb);
 
-    const [bookingRows] = await promiseDb.query(
-      'SELECT booking_id FROM bookings WHERE booking_id = ? LIMIT 1',
-      [bookingId]
-    );
-    if (!bookingRows?.length) {
-      return next(new AppError('Booking not found', 404));
-    }
-
-    const normalizedImages = images
-      .map((url) => String(url || '').trim())
-      .filter(Boolean);
-
-    if (!normalizedImages.length) {
-      return next(new AppError('No valid images provided', 400));
-    }
-
-    await promiseDb.query(
-      'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
-      [normalizedImages.map((url) => [bookingId, url, new Date()])]
-    );
+    const values = images.map((url) => [id, url]);
+    await db
+      .promise()
+      .query(
+        'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
+        [values.map(([bid, url]) => [bid, url, new Date()])]
+      );
 
     res.status(201).json({
       success: true,
@@ -1236,4 +1316,3 @@ const addBookingImages = async (req, res, next) => {
 };
 
 module.exports.addBookingImages = addBookingImages;
-

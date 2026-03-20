@@ -22,6 +22,15 @@ import '../../../styles/cleaner/messages.scss';
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
 const fallbackThreads = [];
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const normalizeAssetUrl = (value) => {
+  if (!value) return '';
+  if (/^https?:\/\//i.test(String(value))) return String(value);
+  if (String(value).startsWith('/')) return `${API_BASE_URL}${value}`;
+  return String(value);
+};
 
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
@@ -60,7 +69,7 @@ const normalizeThread = (job, index) => ({
   location: job?.location || 'Phnom Penh, Cambodia',
   customer: job?.customer || 'Customer',
   customerId: job?.customerId || job?.customer_id || '3',
-  customerAvatar: job?.customerAvatar || job?.customer_avatar || '',
+  customerAvatar: normalizeAssetUrl(job?.customerAvatar || job?.customer_avatar || ''),
   customerPhone: job?.customerPhone || job?.customer_phone || '',
   customerEmail: job?.customerEmail || job?.customer_email || '',
   customerAddress: job?.customerAddress || job?.customer_address || job?.location || '',
@@ -104,6 +113,38 @@ const extractRealtimeMessage = (payload) => {
     bookingId: String(payload?.bookingId || payload?.booking_id || payload?.booking_id || ''),
     message: payload
   };
+};
+
+const mergeThreadWithBooking = (thread, bookingData = {}) => {
+  const customerName = bookingData.customer_full_name || bookingData.customer_name || thread.customer;
+  const dateValue = bookingData.booking_date ? new Date(bookingData.booking_date) : null;
+  const formattedDay = dateValue && !Number.isNaN(dateValue.getTime())
+    ? String(dateValue.getDate()).padStart(2, '0')
+    : thread.day;
+  const formattedMonthYear = dateValue && !Number.isNaN(dateValue.getTime())
+    ? dateValue.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : thread.monthYear;
+
+  return normalizeThread({
+    ...thread,
+    sourceRequestId: thread.sourceRequestId,
+    id: thread.id,
+    title: bookingData.service_name || thread.title,
+    jobId: bookingData.booking_id ? `#SOMA-${String(bookingData.booking_id).padStart(5, '0')}` : thread.jobId,
+    price: bookingData.negotiated_price || bookingData.total_price
+      ? `$${Number(bookingData.negotiated_price || bookingData.total_price || 0).toFixed(2)}`
+      : thread.price,
+    day: formattedDay,
+    monthYear: formattedMonthYear,
+    timeRange: thread.timeRange,
+    location: bookingData.address || thread.location,
+    customer: customerName || 'Customer',
+    customerId: bookingData.user_id || thread.customerId,
+    customerAvatar: bookingData.customer_avatar || thread.customerAvatar,
+    customerPhone: bookingData.customer_phone || thread.customerPhone,
+    customerEmail: bookingData.customer_email || thread.customerEmail,
+    customerAddress: bookingData.address || thread.customerAddress || thread.location
+  });
 };
 
 const MessagesPage = () => {
@@ -202,6 +243,46 @@ const MessagesPage = () => {
     };
 
     loadPreviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [threads]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const enrichThreadsFromBookings = async () => {
+      if (!threads.length || !getAuthToken()) return;
+
+      try {
+        const enriched = await Promise.all(
+          threads.map(async (thread) => {
+            const threadId = String(thread.sourceRequestId || thread.id);
+            try {
+              const response = await api.get(`/bookings/${threadId}`);
+              const bookingData = response?.data?.data || {};
+              return mergeThreadWithBooking(thread, bookingData);
+            } catch {
+              return normalizeThread(thread);
+            }
+          })
+        );
+
+        if (!cancelled) {
+          const prevSignature = JSON.stringify(threads);
+          const nextSignature = JSON.stringify(enriched);
+          if (prevSignature !== nextSignature) {
+            saveChatThreads(enriched);
+            setThreads(enriched);
+          }
+        }
+      } catch {
+        // Ignore enrichment errors and keep existing thread data.
+      }
+    };
+
+    enrichThreadsFromBookings();
 
     return () => {
       cancelled = true;

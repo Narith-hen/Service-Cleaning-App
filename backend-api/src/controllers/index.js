@@ -142,9 +142,7 @@ module.exports = {
   reportReview: (req, res, next) => {
     res.status(200).json({ message: 'Report review endpoint - to be implemented' });
   },
-  getReviewStats: (req, res, next) => {
-    res.status(200).json({ message: 'Get review stats endpoint - to be implemented' });
-  },
+  getReviewStats: reviewController.getReviewStats,
   
   // Additional payment functions
   getPayments: paymentController.getPayments,
@@ -207,6 +205,7 @@ module.exports = {
     getAllCleaners: adminCleanersController.getAllCleaners,
     createCleaner: adminCleanersController.createCleaner,
     updateCleaner: adminCleanersController.updateCleaner,
+    deleteCleaner: adminCleanersController.deleteCleaner,
     
     getAllServices: adminServicesController.getAllServices,
     getServiceById: adminServicesController.getServiceById,

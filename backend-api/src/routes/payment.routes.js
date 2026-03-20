@@ -12,10 +12,15 @@ const {
   addPaymentMethod,
   removePaymentMethod,
   setDefaultPaymentMethod,
-  getPaymentHistory
+  getPaymentHistory,
+  getPaymentFinalization,
+  requestFinalPayment,
+  submitPaymentReceipt,
+  confirmPaymentReceipt
 } = require('../controllers'); // Import from index.js
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
+const { upload } = require('../middlewares/upload.middleware');
 
 const router = express.Router();
 
@@ -26,7 +31,7 @@ router.use(authenticate);
 router.post('/', [
   body('booking_id').isInt().withMessage('Booking ID required'),
   body('amount').isFloat({ min: 0 }).withMessage('Valid amount required'),
-  body('payment_method').isIn(['cash', 'card', 'transfer', 'wallet']).withMessage('Invalid payment method')
+  body('payment_method').isIn(['cash', 'card', 'transfer', 'wallet', 'qr']).withMessage('Invalid payment method')
 ], validate, createPayment);
 
 // Payment methods management
@@ -44,6 +49,23 @@ router.delete('/methods/:methodId', [
 router.patch('/methods/:methodId/default', [
   param('methodId').isInt()
 ], validate, setDefaultPaymentMethod);
+
+// Finalization flow (cleaner -> customer receipt -> cleaner confirm)
+router.get('/booking/:bookingId/finalization', [
+  param('bookingId').isInt()
+], validate, getPaymentFinalization);
+
+router.post('/booking/:bookingId/request-finalization', authorize('cleaner', 'admin'), [
+  param('bookingId').isInt()
+], validate, requestFinalPayment);
+
+router.post('/booking/:bookingId/submit-receipt', authorize('customer', 'admin'), [
+  param('bookingId').isInt()
+], validate, upload.single('receipt'), submitPaymentReceipt);
+
+router.post('/booking/:bookingId/confirm-receipt', authorize('cleaner', 'admin'), [
+  param('bookingId').isInt()
+], validate, confirmPaymentReceipt);
 
 // Payment processing
 router.post('/:id/process', [

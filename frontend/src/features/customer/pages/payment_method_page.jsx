@@ -1,172 +1,282 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { CloudUploadOutlined } from '@ant-design/icons';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import api from '../../../services/api';
+import '../../../styles/customer/payment_method.scss';
+import localQrImage from '../../../images/QR.png';
 
-const qrCodePlaceholder = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SEVANOW-PAYMENT-12345';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const formatUsd = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '$0.00';
+  return `$${amount.toFixed(2)}`;
+};
+
+const formatPaymentDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date);
+};
+
+const toAbsoluteFileUrl = (url) => {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url;
+  return `${apiHost}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 const PaymentMethodPage = () => {
-  const [showQR, setShowQR] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState(50);
-  const [paymentMethods, setPaymentMethods] = useState([
-    { id: 1, type: 'Visa', cardNumber: '**** **** **** 4242', expiry: '12/25', default: true },
-    { id: 2, type: 'Mastercard', cardNumber: '**** **** **** 8888', expiry: '08/24', default: false },
-    { id: 3, type: 'ABA', account: '123 456 789', name: 'SEVANOW Co.', default: false }
-  ]);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const bookingId = searchParams.get('bookingId');
+  const fileInputRef = useRef(null);
 
-  const referenceCode = useMemo(() => `SEVANOW-${selectedAmount}-2026`, [selectedAmount]);
+  const [loadingFinalization, setLoadingFinalization] = useState(false);
+  const [finalization, setFinalization] = useState(null);
+  const [statusText, setStatusText] = useState('');
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
-  const deleteMethod = (id) => {
-    setPaymentMethods((prev) => prev.filter((method) => method.id !== id));
+  const amountDue = Number(finalization?.amount_due || 186.5);
+  const paymentStatus = String(finalization?.payment_status || '').toLowerCase();
+  const isReceiptSubmitted = paymentStatus === 'receipt_submitted';
+  const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
+  const canSubmitReceipt = !isReceiptSubmitted && !isPaymentConfirmed;
+  const isPdfReceipt = receiptFile?.type === 'application/pdf';
+
+  const invoiceNumber = useMemo(() => {
+    if (finalization?.qr_reference) return finalization.qr_reference;
+    if (bookingId) return `INV-${String(bookingId).padStart(4, '0')}`;
+    return 'INV-2023-0892';
+  }, [bookingId, finalization?.qr_reference]);
+
+  const summaryRows = useMemo(() => {
+    if (!bookingId) {
+      return [
+        { label: 'Deep Home Cleaning', value: amountDue }
+      ];
+    }
+
+    return [
+      { label: finalization?.service_name || 'Cleaning Service', value: amountDue }
+    ];
+  }, [bookingId, amountDue, finalization?.service_name]);
+
+  const currentDateLabel = useMemo(
+    () => formatPaymentDate(new Date().toISOString()),
+    []
+  );
+
+  const paymentDateLabel = useMemo(() => {
+    if (!bookingId) return currentDateLabel;
+    return formatPaymentDate(finalization?.receipt_uploaded_at) || currentDateLabel;
+  }, [bookingId, currentDateLabel, finalization?.receipt_uploaded_at]);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    let cancelled = false;
+
+    const loadFinalization = async () => {
+      setLoadingFinalization(true);
+      try {
+        const response = await api.get(`/payments/booking/${bookingId}/finalization`);
+        if (!cancelled) {
+          const payload = response?.data?.data || null;
+          setFinalization(payload);
+          setStatusText('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStatusText(error?.response?.data?.message || 'Could not load payment details.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingFinalization(false);
+        }
+      }
+    };
+
+    loadFinalization();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (!receiptFile || !String(receiptFile.type || '').startsWith('image/')) {
+      setReceiptPreviewUrl('');
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(receiptFile);
+    setReceiptPreviewUrl(previewUrl);
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [receiptFile]);
+
+  const handleOpenFileDialog = () => {
+    if (isPaymentConfirmed) return;
+    fileInputRef.current?.click();
   };
 
-  const setDefault = (id) => {
-    setPaymentMethods((prev) =>
-      prev.map((method) => ({
-        ...method,
-        default: method.id === id
-      }))
-    );
+  const handleSubmitReceipt = async () => {
+    if (!bookingId) {
+      setStatusText('Demo mode: open this page with bookingId to submit a real receipt.');
+      return;
+    }
+    if (!canSubmitReceipt) return;
+    if (!receiptFile) {
+      setStatusText('Please select your payment receipt first.');
+      return;
+    }
+
+    setUploadingReceipt(true);
+    setStatusText('Uploading receipt...');
+    try {
+      const formData = new FormData();
+      formData.append('receipt', receiptFile);
+      const response = await api.post(`/payments/booking/${bookingId}/submit-receipt`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const payload = response?.data?.data || null;
+      setFinalization(payload);
+      setStatusText('Receipt submitted successfully. Waiting for cleaner confirmation.');
+      setReceiptFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      setStatusText(error?.response?.data?.message || 'Failed to submit receipt.');
+    } finally {
+      setUploadingReceipt(false);
+    }
   };
 
   return (
-    <div className="customer-simple-page">
-      <section className="customer-simple-page__hero" data-customer-reveal>
-        <span className="customer-simple-page__eyebrow">Billing Center</span>
-        <h1>Payment Methods</h1>
-        <p>
-          Manage your saved cards and bank options, then use a quick QR flow whenever you need
-          to top up or complete a payment.
-        </p>
-      </section>
+    <div className="final-payment-page">
+      <div className="final-payment-card">
+        <header className="final-payment-header">
+          <h1>Final Payment</h1>
+          <p>Invoice # {invoiceNumber}</p>
+        </header>
 
-      <div className="customer-simple-grid customer-simple-grid--two">
-        <section
-          className="customer-simple-card customer-simple-stack"
-          data-customer-reveal
-          data-customer-panel
-          style={{ '--customer-reveal-delay': 1 }}
-        >
-          <div className="customer-simple-toolbar">
-            <div>
-              <h2>Saved Payment Methods</h2>
-              <p className="customer-note">Choose a default payment source for faster checkout.</p>
-            </div>
-          </div>
-
-          <div className="customer-list">
-            {paymentMethods.map((method, index) => (
-              <article
-                key={method.id}
-                className="customer-list-item"
-                data-customer-reveal
-                data-customer-card
-                style={{ '--customer-reveal-delay': Math.min(index % 3, 2) }}
-              >
-                <div className="customer-list-item__meta">
-                  <strong>{method.type}</strong>
-                  {method.cardNumber && <span>{method.cardNumber} | Exp: {method.expiry}</span>}
-                  {method.account && <span>Account: {method.account} | {method.name}</span>}
-                  {method.default && <small>Default payment method</small>}
+        {loadingFinalization ? (
+          <div className="final-payment-loading">Loading payment details...</div>
+        ) : (
+          <>
+            <section className="final-payment-grid">
+              <article className="payment-summary-box">
+                <h3>Service Summary</h3>
+                <div className="summary-list">
+                  {summaryRows.map((row, index) => (
+                    <div className="summary-row" key={`${row.label}-${index}`}>
+                      <span>{row.label}</span>
+                      <strong>{formatUsd(row.value)}</strong>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="customer-inline-actions">
-                  {!method.default && (
-                    <button
-                      type="button"
-                      className="customer-secondary-button"
-                      onClick={() => setDefault(method.id)}
-                      data-customer-button
-                    >
-                      Set Default
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="customer-danger-button"
-                    onClick={() => deleteMethod(method.id)}
-                    data-customer-button
-                  >
-                    Delete
-                  </button>
+                {paymentDateLabel && (
+                  <div className="payment-date-row">
+                    <span>Payment Date</span>
+                    <strong>{paymentDateLabel}</strong>
+                  </div>
+                )}
+                <div className="total-row">
+                  <span>Total Due</span>
+                  <strong>{formatUsd(amountDue)}</strong>
                 </div>
               </article>
-            ))}
-          </div>
-        </section>
 
-        <section
-          className="customer-simple-card customer-simple-stack"
-          data-customer-reveal
-          data-customer-panel
-          style={{ '--customer-reveal-delay': 2 }}
-        >
-          <div>
-            <h2>Add New Method</h2>
-            <p className="customer-note">Switch between card, QR, and ABA payment options.</p>
-          </div>
+              <article className="payment-qr-box">
+                <h3>ABA&apos; PAY</h3>
+                <div className="qr-frame">
+                  <img src={localQrImage} alt="ABA QR Payment" />
+                </div>
+                <p>Scan QR with ABA Mobile</p>
+                <p>or any Banking App</p>
+                <button type="button" className="aba-chip">
+                  ABA BANK
+                </button>
+              </article>
+            </section>
 
-          <div className="customer-chip-row">
-            <button type="button" className="customer-chip-button active" data-customer-button>
-              Credit Card
-            </button>
+            <section className="receipt-upload-section">
+              <h3>Upload Payment Receipt</h3>
+              <button
+                type="button"
+                className={`receipt-dropzone ${isPaymentConfirmed ? 'disabled' : ''} ${receiptPreviewUrl ? 'has-preview' : ''}`}
+                onClick={handleOpenFileDialog}
+                disabled={isPaymentConfirmed}
+              >
+                {receiptPreviewUrl ? (
+                  <img className="receipt-preview-image" src={receiptPreviewUrl} alt="Receipt preview" />
+                ) : (
+                  <>
+                    <span className="upload-icon"><CloudUploadOutlined /></span>
+                    <strong>Click to upload receipt</strong>
+                    <small>PNG, JPG, PDF</small>
+                    {isPdfReceipt && <span className="receipt-pdf-tag">PDF selected</span>}
+                  </>
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,application/pdf"
+                className="hidden-receipt-input"
+                onChange={(event) => setReceiptFile(event.target.files?.[0] || null)}
+                disabled={isPaymentConfirmed}
+              />
+
+              {receiptFile && !receiptPreviewUrl && (
+                <p className="receipt-selected">Selected file: {receiptFile.name}</p>
+              )}
+
+              {finalization?.receipt_image_url && (
+                <a
+                  className="receipt-link"
+                  href={toAbsoluteFileUrl(finalization.receipt_image_url)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View uploaded receipt
+                </a>
+              )}
+            </section>
+
             <button
               type="button"
-              className={`customer-chip-button ${showQR ? 'active' : ''}`}
-              onClick={() => setShowQR((prev) => !prev)}
-              data-customer-button
+              className="submit-payment-button"
+              onClick={handleSubmitReceipt}
+              disabled={!canSubmitReceipt || uploadingReceipt}
             >
-              QR Code
+              {uploadingReceipt ? 'Submitting...' : isPaymentConfirmed ? 'Payment Confirmed' : 'Submit'}
             </button>
-            <button type="button" className="customer-chip-button" data-customer-button>
-              ABA
+
+            <button
+              type="button"
+              className="back-history-button"
+              onClick={() => navigate('/customer/history')}
+            >
+              Back To History
             </button>
-          </div>
 
-          {showQR && (
-            <div className="customer-qr-box" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
-              <div>
-                <h3>Scan QR Code to Pay</h3>
-                <p className="customer-note">Choose an amount and scan with your banking app.</p>
-              </div>
-
-              <label className="customer-field-group" style={{ width: '100%', maxWidth: '240px' }}>
-                <span>Select Amount</span>
-                <select value={selectedAmount} onChange={(event) => setSelectedAmount(Number(event.target.value))}>
-                  <option value={20}>$20</option>
-                  <option value={50}>$50</option>
-                  <option value={100}>$100</option>
-                  <option value={200}>$200</option>
-                </select>
-              </label>
-
-              <img src={qrCodePlaceholder} alt="Payment QR Code" />
-
-              <div>
-                <p className="customer-note">Scan to pay ${selectedAmount}</p>
-                <p className="customer-note">Reference: {referenceCode}</p>
-              </div>
-
-              <div className="customer-simple-card" style={{ width: '100%', maxWidth: '340px', padding: '14px 16px' }}>
-                <strong style={{ color: '#15803d' }}>Demo payment ready</strong>
-                <p className="customer-note" style={{ marginTop: '6px' }}>
-                  This QR payment area is displayed for demo flow and animation preview.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="customer-inline-actions">
-            <button type="button" className="customer-primary-button" data-customer-button>
-              Add Money
-            </button>
-            <button type="button" className="customer-secondary-button" data-customer-button>
-              Payment History
-            </button>
-          </div>
-        </section>
+            {statusText && <p className="payment-status-text">{statusText}</p>}
+          </>
+        )}
       </div>
-
-      <p className="customer-note" data-customer-reveal style={{ '--customer-reveal-delay': 2, marginTop: '18px' }}>
-        Demo note: QR payment scanning is represented here for interface testing and motion polish.
-      </p>
     </div>
   );
 };

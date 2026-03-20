@@ -301,6 +301,30 @@
   color: #b91c1c;
 }
 
+.customer-history-status.paid {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.customer-history-status.payment-submitted {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.customer-history-status.reviewed {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.customer-history-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .customer-history-empty {
   border: 1px dashed #dbe3ed;
   border-radius: 22px;

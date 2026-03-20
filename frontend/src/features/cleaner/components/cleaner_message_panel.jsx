@@ -54,6 +54,7 @@ const CleanerMessagePanel = ({
   const fileInputRef = useRef(null);
   const chatBodyRef = useRef(null);
   const lastReadReceiptRef = useRef({ threadId: null, messageId: null });
+  const customerInitial = String(customerName || 'C').trim().charAt(0).toUpperCase() || 'C';
 
   useEffect(() => {
     const el = chatBodyRef.current;
@@ -252,7 +253,18 @@ const CleanerMessagePanel = ({
           return (
             <div key={message.id} className={`my-jobs-chat-row ${isCleaner ? 'right' : 'left'}`}>
               {!isCleaner && (
-                <div className="my-jobs-chat-mini-avatar">{customerName.charAt(0)}</div>
+                <div className="my-jobs-chat-mini-avatar">
+                  {customerAvatar && !avatarError ? (
+                    <img
+                      src={customerAvatar}
+                      alt={customerName}
+                      className="my-jobs-chat-avatar-image"
+                      onError={() => setAvatarError(true)}
+                    />
+                  ) : (
+                    customerInitial
+                  )}
+                </div>
               )}
 
               <div className="my-jobs-chat-content">
@@ -335,7 +347,18 @@ const CleanerMessagePanel = ({
 
         {isCustomerTyping && (
           <div className="my-jobs-chat-row left">
-            <div className="my-jobs-chat-mini-avatar">{customerName.charAt(0)}</div>
+            <div className="my-jobs-chat-mini-avatar">
+              {customerAvatar && !avatarError ? (
+                <img
+                  src={customerAvatar}
+                  alt={customerName}
+                  className="my-jobs-chat-avatar-image"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                customerInitial
+              )}
+            </div>
             <div className="my-jobs-chat-content">
               <div className="my-jobs-chat-bubble-wrap">
                 <div className="my-jobs-chat-bubble typing-indicator">

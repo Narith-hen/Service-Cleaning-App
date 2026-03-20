@@ -120,17 +120,21 @@ const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/admin.routes");
 const serviceRoutes = require("./routes/service.routes");
 const bookingRoutes = require("./routes/booking.routes");
+const paymentRoutes = require("./routes/payment.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const messageRoutes = require("./routes/message.routes");
 const userRoutes = require("./routes/user.routes");
+const reviewRoutes = require("./routes/review.routes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);

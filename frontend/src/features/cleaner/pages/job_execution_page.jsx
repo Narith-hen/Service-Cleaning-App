@@ -49,17 +49,14 @@ const getBookingIdFromJob = (job) => {
   return normalized;
 };
 
-const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
+const requestFinalPaymentOnServer = async (job) => {
   const bookingId = getBookingIdFromJob(job);
   if (!bookingId) return false;
   try {
-    await api.patch(`/bookings/${bookingId}/status`, {
-      ...(bookingStatus ? { booking_status: bookingStatus } : {}),
-      ...(serviceStatus ? { service_status: serviceStatus } : {})
-    });
+    await api.post(`/payments/booking/${bookingId}/request-finalization`);
     return true;
   } catch (error) {
-    console.error('Failed to update booking status', error);
+    console.error('Failed to request final payment', error);
     return false;
   }
 };
@@ -102,6 +99,7 @@ const JobExecutionPage = () => {
 
   const [checklist, setChecklist] = useState(defaultChecklist);
   const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [finishStatus, setFinishStatus] = useState('');
   const completedCount = checklist.filter((item) => item.done).length;
   const priceValue = Number(String(currentJob.price || '$0').replace(/[^0-9.]/g, '')) || 0;
   const totalEarning = priceValue;
@@ -141,13 +139,17 @@ const JobExecutionPage = () => {
   };
 
   const handleFinishJob = async () => {
+    setFinishStatus('Sending final payment request...');
     try {
-      await updateJobStatusOnServer(currentJob, {
-        bookingStatus: 'completed',
-        serviceStatus: 'completed'
-      });
+      const ok = await requestFinalPaymentOnServer(currentJob);
+      if (!ok) {
+        setFinishStatus('Could not send final payment request. Please try again.');
+        return;
+      }
+
       const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
       if (!raw) {
+        setFinishStatus('Final payment requested. Waiting for customer receipt.');
         navigate('/cleaner/my-jobs');
         return;
       }
@@ -160,13 +162,15 @@ const JobExecutionPage = () => {
 
       const updated = parsed.map((job) =>
         (job.id === currentJob.id || job.sourceRequestId === currentJob.sourceRequestId)
-          ? { ...job, status: 'completed', serviceStatus: 'completed' }
+          ? { ...job, status: 'payment-required', serviceStatus: 'completed', paymentStatus: 'awaiting_receipt' }
           : job
       );
       localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
       dispatchCleanerNotificationsUpdated();
+      setFinishStatus('Final payment requested. Waiting for customer receipt.');
     } catch {
-      // Non-blocking. We still navigate back.
+      setFinishStatus('Could not send final payment request. Please try again.');
+      return;
     }
 
     navigate('/cleaner/my-jobs');
@@ -293,6 +297,7 @@ const JobExecutionPage = () => {
               <CheckCircleFilled /> Finish Job
             </button>
             <p>Complete all tasks to finish</p>
+            {finishStatus && <p>{finishStatus}</p>}
           </section>
 
           <section className="execution-map-panel">
