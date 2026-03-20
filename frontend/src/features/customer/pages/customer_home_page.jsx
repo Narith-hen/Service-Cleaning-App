@@ -214,7 +214,7 @@ const CustomerHomePage = () => {
 
           <div className="hero-actions">
             <button type="button" className="btn-primary" onClick={() => navigate('/customer/bookings')}>
-              Booking Now!
+              Book Now
             </button>
             <button type="button" className="btn-secondary" onClick={() => navigate('/customer/services')}>
               View Services

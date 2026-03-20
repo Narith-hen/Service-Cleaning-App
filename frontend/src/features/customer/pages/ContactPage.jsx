@@ -80,7 +80,7 @@ export default function ContactPage({ embedded = false }) {
                   Send Us a Message
                 </h3>
                 <p className={`relative mt-2 text-sm ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                  Fill in the form and we will contact you shortly.
+                  Fill out the form and we will contact you shortly.
                 </p>
 
 
