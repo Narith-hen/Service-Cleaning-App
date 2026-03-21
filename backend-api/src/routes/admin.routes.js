@@ -99,7 +99,7 @@ router.put('/cleaners/:id',
 ], validate, admin.updateCleaner);
 
 router.delete('/cleaners/:id', [
-  param('id').notEmpty()
+  param('id').notEmpty(),
 ], validate, admin.deleteCleaner);
 
 // Booking management

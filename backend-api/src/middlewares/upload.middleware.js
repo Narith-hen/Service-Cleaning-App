@@ -9,6 +9,7 @@ const createUploadDirs = () => {
   const dirs = [
     path.join(uploadRoot, 'avatars'),
     path.join(uploadRoot, 'services'),
+    path.join(uploadRoot, 'bookings'),
     path.join(uploadRoot, 'misc')
   ];
   
@@ -28,6 +29,8 @@ const storage = multer.diskStorage({
     
     if (file.fieldname === 'avatar') {
       uploadPath = path.join(uploadPath, 'avatars');
+    } else if (file.fieldname === 'images' && req.originalUrl.includes('/bookings/')) {
+      uploadPath = path.join(uploadPath, 'bookings');
     } else if (file.fieldname === 'images') {
       uploadPath = path.join(uploadPath, 'services');
     } else {

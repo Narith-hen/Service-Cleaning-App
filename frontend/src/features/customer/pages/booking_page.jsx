@@ -17,6 +17,7 @@ import api from '../../../services/api';
 
 const hourOptions = ['08 AM', '09 AM', '10 AM', '11 AM', '12 PM', '01 PM', '02 PM', '03 PM'];
 const minuteOptions = ['00', '15', '30', '45'];
+const MAX_BOOKING_IMAGES = 10;
 const timeOptions = hourOptions.flatMap((hour) => {
   const [clock, meridiem] = hour.split(' ');
   return minuteOptions.map((minute) => `${clock}:${minute} ${meridiem}`);
@@ -139,7 +140,7 @@ const BookingPage = () => {
         unique.push(file);
       });
 
-      return unique.slice(0, 30);
+      return unique.slice(0, MAX_BOOKING_IMAGES);
     });
   };
 
@@ -625,14 +626,21 @@ const BookingPage = () => {
           </div>
           {previewUrls.length > 0 && (
             <div className="uploaded-images-display">
-              <h4>Your Uploaded Photos ({selectedImages.length})</h4>
+              {/* <h4>Your Uploaded Photos ({selectedImages.length})</h4> */}
               <div className="uploaded-images-grid">
                 {previewUrls.map((preview, index) => (
                   <div
                     key={index}
-                    className={`uploaded-image-thumb ${selectedImages.includes(index) ? 'selected' : ''}`}
+            
                   >
-                    <img src={preview} alt={`Uploaded ${index + 1}`} />
+                    <button
+                      type="button"
+                      className="uploaded-thumb-remove-btn"
+                      aria-label={`Remove uploaded photo ${index + 1}`}
+                      onClick={() => handleRemoveImage(index)}
+                    >
+                      <CloseOutlined />
+                    </button>
                     {selectedImages.includes(index) && (
                       <div className="thumb-selected-badge">
                         <CheckOutlined />
@@ -738,7 +746,7 @@ const BookingPage = () => {
               <CloudUploadOutlined />
             </div>
             <h4>Upload cleaning</h4>
-            <p>Drag and drop images here, or click to browse files (up to 30)</p>
+            <p>Drag and drop images here, or click to browse files (up to {MAX_BOOKING_IMAGES})</p>
             {previewUrls.length === 0 ? (
               <div className="upload-previews" aria-hidden>
                 <span>
@@ -773,44 +781,7 @@ const BookingPage = () => {
               <p className="upload-count">
                 {files.length} file{files.length > 1 ? 's' : ''} selected
               </p>
-              <div className="image-previews">
-                {previewUrls.map((preview, index) => (
-                  <div
-                    key={index}
-                    className={`image-preview-item ${selectedImages.includes(index) ? 'selected' : ''}`}
-                    onClick={() => handleImageSelect(index)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        handleImageSelect(index);
-                      }
-                    }}
-                  >
-                    <img src={preview} alt={`Upload ${index + 1}`} />
-                    <div className="image-overlay">
-                      {selectedImages.includes(index) ? (
-                        <CheckOutlined className="check-icon" />
-                      ) : (
-                        <span className="select-hint">Click to select</span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="remove-image-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveImage(index);
-                      }}
-                    >
-                      <CloseOutlined />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="selection-info">
-                {selectedImages.length} of {files.length} images selected
-              </p>
+          
             </>
           )}
         </section>

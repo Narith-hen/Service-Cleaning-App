@@ -4,6 +4,13 @@ const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:500
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const AUTH_USER_UPDATED_EVENT = 'auth-user-updated';
 const ENABLE_MOCK_AUTH = import.meta.env.DEV && String(import.meta.env.VITE_ENABLE_MOCK_AUTH || '').toLowerCase() === 'true';
+const AUTH_INVALIDATION_MESSAGES = new Set([
+  'User not found',
+  'Invalid token',
+  'Token expired',
+  'No token provided',
+  'Unauthorized',
+]);
 
 const readStoredUser = () => {
   const savedUser = localStorage.getItem('user');
@@ -23,9 +30,16 @@ const persistUser = (nextUser) => {
     localStorage.setItem('user', JSON.stringify(nextUser));
   } else {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   }
 
   window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+};
+
+const shouldInvalidateAuth = (error) => {
+  const status = Number(error?.status || 0);
+  const message = String(error?.message || '').trim();
+  return status === 401 || (status === 404 && AUTH_INVALIDATION_MESSAGES.has(message)) || AUTH_INVALIDATION_MESSAGES.has(message);
 };
 
 const normalizeAvatarUrl = (avatar) => {
@@ -95,7 +109,9 @@ const fetchProfileFromApi = async (token) => {
 
   const result = await response.json();
   if (!response.ok || !result?.success) {
-    throw new Error(result?.message || 'Failed to load profile');
+    const error = new Error(result?.message || 'Failed to load profile');
+    error.status = response.status;
+    throw error;
   }
 
   return result.data || {};
@@ -161,6 +177,10 @@ export const useAuth = () => {
           persistUser(normalized);
         } catch (profileError) {
           console.warn('Failed to refresh profile from API:', profileError.message);
+          if (shouldInvalidateAuth(profileError)) {
+            persistUser(null);
+            if (isMounted) setUser(null);
+          }
         }
       }
 
@@ -265,8 +285,7 @@ export const useAuth = () => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
       setUser(null);
-      localStorage.removeItem('user');
-      window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));
+      persistUser(null);
       return { success: true };
     } catch (logoutError) {
       setError(logoutError.message);
