@@ -1,6 +1,6 @@
 const db = require('../../config/db');
 const promiseDb = db.promise();
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');

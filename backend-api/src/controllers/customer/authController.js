@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const { generateToken } = require('../../utils/jwt.util');
 const fs = require("fs");
 const path = require("path");
