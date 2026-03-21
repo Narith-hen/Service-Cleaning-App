@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const AppError = require('../../utils/error.util');
 
 const normalizeStatus = (row) => {
@@ -561,36 +561,33 @@ const updateCleaner = async (req, res, next) => {
 };
 
 const deleteCleaner = async (req, res, next) => {
-<<<<<<< HEAD
+  const cleanerIdentifier = String(req.params.id || '').trim();
+  if (!cleanerIdentifier) {
+    return next(new AppError('Cleaner id is required', 400));
+  }
+
+  const pool = db.promise();
   let connection;
+
   try {
-    const cleanerIdentifier = String(req.params.id || '').trim();
-    if (!cleanerIdentifier) {
-      return next(new AppError('Cleaner id is required', 400));
-    }
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
 
-    const promiseDb = db.promise();
-    const cleanerId = await getCleanerIdByIdentifier(promiseDb, cleanerIdentifier);
-
+    const cleanerId = await getCleanerIdByIdentifier(connection, cleanerIdentifier);
     if (!cleanerId) {
+      await connection.rollback();
+      connection.release();
       return next(new AppError('Cleaner not found', 404));
     }
-
-    const [bookingCountRows] = await promiseDb.query(
-      'SELECT COUNT(*) AS total FROM bookings WHERE cleaner_id = ?',
-      [cleanerId]
-    );
-    const bookingCount = Number(bookingCountRows?.[0]?.total || 0);
-    if (bookingCount > 0) {
-      return next(new AppError('Cannot delete cleaner with existing bookings. Remove or reassign those bookings first.', 409));
-    }
-
-    connection = await promiseDb.getConnection();
-    await connection.beginTransaction();
 
     const reviewsColumns = await getTableColumns(connection, 'reviews');
     if (reviewsColumns?.has('cleaner_id')) {
       await connection.query('DELETE FROM reviews WHERE cleaner_id = ?', [cleanerId]);
+    }
+
+    const bookingsColumns = await getTableColumns(connection, 'bookings');
+    if (bookingsColumns?.has('cleaner_id')) {
+      await connection.query('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?', [cleanerId]);
     }
 
     const notificationsColumns = await getTableColumns(connection, 'notifications');
@@ -654,61 +651,20 @@ const deleteCleaner = async (req, res, next) => {
       }
     }
 
-    const [deleteResult] = await connection.query(
-=======
-  const cleanerIdentifier = String(req.params.id || '').trim();
-  if (!cleanerIdentifier) {
-    return next(new AppError('Cleaner id is required', 400));
-  }
-
-  const pool = db.promise();
-  let connection;
-
-  try {
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    const cleanerId = await getCleanerIdByIdentifier(connection, cleanerIdentifier);
-    if (!cleanerId) {
-      await connection.rollback();
-      connection.release();
-      return next(new AppError('Cleaner not found', 404));
-    }
-
-    // Remove references before deleting the cleaner account rows.
-    // In this DB, reviews.cleaner_id is NOT NULL and FK-linked to users.user_id,
-    // so reviews must be deleted rather than reassigned to NULL.
-    await connection.query('DELETE FROM reviews WHERE cleaner_id = ?', [cleanerId]);
-    await connection.query('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?', [cleanerId]);
-    await connection.query('DELETE FROM notifications WHERE user_id = ?', [cleanerId]).catch(() => {});
-    await connection.query('DELETE FROM settings WHERE user_id = ?', [cleanerId]).catch(() => {});
-    await connection.query('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', [cleanerId, cleanerId]).catch(() => {});
-
     const [userDeleteResult] = await connection.query(
       'DELETE FROM users WHERE user_id = ?',
       [cleanerId]
-    ).catch((error) => {
-      if (error?.code === 'ER_ROW_IS_REFERENCED_2') {
-        return [{ affectedRows: 0 }];
-      }
-      throw error;
-    });
+    );
 
     const [profileDeleteResult] = await connection.query(
->>>>>>> sievmey
       'DELETE FROM cleaner_profile WHERE cleaner_id = ?',
       [cleanerId]
     );
 
-<<<<<<< HEAD
-    if (!deleteResult?.affectedRows) {
-      throw new AppError('Cleaner not found', 404);
-=======
     if (!profileDeleteResult?.affectedRows && !userDeleteResult?.affectedRows) {
       await connection.rollback();
       connection.release();
       return next(new AppError('Cleaner not found', 404));
->>>>>>> sievmey
     }
 
     await connection.commit();
@@ -723,11 +679,7 @@ const deleteCleaner = async (req, res, next) => {
       try {
         await connection.rollback();
       } catch (_) {
-<<<<<<< HEAD
-        // Ignore rollback errors from failed transactions.
-=======
         // Ignore rollback failures.
->>>>>>> sievmey
       }
       connection.release();
     }

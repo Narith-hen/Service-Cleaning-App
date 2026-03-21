@@ -1,6 +1,6 @@
 const db = require('../../config/db');
 const AppError = require('../../utils/error.util');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const getBookingTableColumns = async (promiseDb) => {
@@ -669,14 +669,6 @@ const updateBookingStatus = async (req, res, next) => {
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
-<<<<<<< HEAD
-    // Enforce payment-first completion. A booking can only be fully completed
-    // after payment has been confirmed by cleaner/admin.
-    if (normalizedBookingStatus === 'completed') {
-      const paymentStatus = String(booking.payment_status || '').trim().toLowerCase();
-      if (!['paid', 'completed'].includes(paymentStatus)) {
-        return next(new AppError('Payment must be confirmed before completing service', 400));
-=======
     const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
     if (roleName !== 'admin') {
       const accountSource = String(req.user?.account_source || '').toLowerCase();
@@ -687,7 +679,13 @@ const updateBookingStatus = async (req, res, next) => {
       if (!cleanerId) return next(new AppError('Unauthorized', 401));
       if (!booking.cleaner_id || Number(booking.cleaner_id) !== Number(cleanerId)) {
         return next(new AppError('Not authorized for this booking', 403));
->>>>>>> sievmey
+      }
+    }
+
+    if (normalizedBookingStatus === 'completed') {
+      const paymentStatus = String(booking.payment_status || '').trim().toLowerCase();
+      if (!['paid', 'completed'].includes(paymentStatus)) {
+        return next(new AppError('Payment must be confirmed before completing service', 400));
       }
     }
 
@@ -878,12 +876,6 @@ const cancelBooking = async (req, res, next) => {
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
-<<<<<<< HEAD
-
-    await db
-      .promise()
-      .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', ['cancelled', id]);
-=======
     const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
     if (roleName !== 'admin' && Number(booking.user_id) !== Number(req.user?.user_id)) {
       return next(new AppError('Not authorized for this booking', 403));
@@ -902,7 +894,6 @@ const cancelBooking = async (req, res, next) => {
       `UPDATE bookings SET ${updates.join(', ')} WHERE booking_id = ?`,
       [...params, id]
     );
->>>>>>> sievmey
 
     // Notify customer (best-effort)
     await promiseDb
@@ -1380,6 +1371,11 @@ const addBookingImages = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { images } = req.body;
+    const bookingId = Number.parseInt(id, 10);
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
 
     const uploadedFileUrls = getStoredBookingImageUrls(req.files);
     const bodyImages = Array.isArray(images) ? images : [];
@@ -1388,16 +1384,9 @@ const addBookingImages = async (req, res, next) => {
       return next(new AppError('No images provided', 400));
     }
 
+    const promiseDb = db.promise();
+    await ensureBookingImagesTable(promiseDb);
 
-<<<<<<< HEAD
-    const values = images.map((url) => [id, url]);
-    await db
-      .promise()
-      .query(
-        'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
-        [values.map(([bid, url]) => [bid, url, new Date()])]
-      );
-=======
     const [bookingRows] = await promiseDb.query(
       'SELECT booking_id FROM bookings WHERE booking_id = ? LIMIT 1',
       [bookingId]
@@ -1415,7 +1404,6 @@ const addBookingImages = async (req, res, next) => {
     }
 
     await insertBookingImagesInChunks(promiseDb, bookingId, normalizedImages);
->>>>>>> sievmey
 
     res.status(201).json({
       success: true,
@@ -1433,3 +1421,9 @@ const addBookingImages = async (req, res, next) => {
 };
 
 module.exports.addBookingImages = addBookingImages;
+
+
+
+
+
+
