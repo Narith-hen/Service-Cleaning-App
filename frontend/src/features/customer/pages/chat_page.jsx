@@ -4,16 +4,16 @@ import {
   MessageOutlined,
   CalendarOutlined,
   EnvironmentOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
+import { formatSingleTimeLabel } from '../../../utils/timeFormat';
 import '../../../styles/cleaner/my_jobs.scss';
 
 const fallbackBookings = [];
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const CUSTOMER_HIDDEN_CHAT_STORAGE_KEY = 'customer_hidden_message_threads_v1';
 
 const getFullImageUrl = (fileUrl) => {
   if (!fileUrl) return '';
@@ -73,6 +73,17 @@ const formatMoney = (value) => {
   return `$${numeric.toFixed(2)}`;
 };
 
+const readHiddenThreadIds = () => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_HIDDEN_CHAT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+  } catch {
+    return [];
+  }
+};
+
 const CustomerChatPage = () => {
   const [searchParams] = useSearchParams();
   const { bookingId: pathBookingId } = useParams();
@@ -89,6 +100,7 @@ const CustomerChatPage = () => {
   })();
 
   const [dynamicBookings, setDynamicBookings] = useState(() => fallbackBookings);
+  const [hiddenThreadIds] = useState(() => readHiddenThreadIds());
 
   useEffect(() => {
     const hydrateBookings = async () => {
@@ -133,9 +145,14 @@ const CustomerChatPage = () => {
     }
   }, [dynamicBookings, selectedBooking, bookingId]);
 
+  const visibleBookings = useMemo(() => {
+    const hidden = new Set(hiddenThreadIds.map((id) => String(id)));
+    return dynamicBookings.filter((booking) => !hidden.has(String(booking.booking_id)));
+  }, [dynamicBookings, hiddenThreadIds]);
+
   const activeBooking = useMemo(() => {
-    return dynamicBookings.find((b) => String(b.booking_id) === String(selectedBooking)) || dynamicBookings[0];
-  }, [dynamicBookings, selectedBooking]);
+    return visibleBookings.find((b) => String(b.booking_id) === String(selectedBooking)) || visibleBookings[0];
+  }, [visibleBookings, selectedBooking]);
 
   // Alert the customer when a booking is confirmed (once per booking)
   useEffect(() => {
@@ -159,14 +176,14 @@ const CustomerChatPage = () => {
       <div className="customer-chat-page">
         <div className="customer-chat-empty">
           <MessageOutlined style={{ fontSize: 48, color: '#94a3b8' }} />
-          <h3>No Active Bookings</h3>
-          <p>You don't have any confirmed bookings yet.</p>
+          <h3>No Active Chat</h3>
+          <p>This conversation is no longer available in your customer chat.</p>
           <button 
             type="button" 
             className="back-btn"
-            onClick={() => navigate('/customer/bookings')}
+            onClick={() => navigate('/customer/messages')}
           >
-            Book a Service
+            Back to Messages
           </button>
         </div>
       </div>
@@ -182,7 +199,7 @@ const CustomerChatPage = () => {
   const bookingDate = activeBooking.booking_date
     ? new Date(activeBooking.booking_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : 'TBD';
-  const bookingTime = activeBooking.booking_time || '09:00 AM';
+  const bookingTime = formatSingleTimeLabel(activeBooking.booking_time || '09:00 AM', '09:00 AM');
   const bookingLocation =
     activeBooking.address
     || activeBooking.location
@@ -221,7 +238,6 @@ const CustomerChatPage = () => {
                 <strong>{bookingDate}, {bookingTime}</strong>
               </div>
             </div>
-
             <div className="my-jobs-detail-row">
               <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
               <div>
@@ -229,6 +245,7 @@ const CustomerChatPage = () => {
                 <strong>{bookingLocation}</strong>
               </div>
             </div>
+
           </div>
 
           <div className="my-jobs-details-card my-jobs-details-card--service" data-customer-card>
@@ -239,15 +256,6 @@ const CustomerChatPage = () => {
                 <strong>{serviceName}</strong>
               </div>
             </div>
-          </div>
-
-          <div className="my-jobs-checklist-card" data-customer-card>
-            <h6>Checklist Preview</h6>
-            <ul>
-              <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
-              <li><CheckCircleOutlined /> Bathroom Sanitization</li>
-              <li><ClockCircleOutlined /> Window Cleaning (Pending)</li>
-            </ul>
           </div>
 
           <button type="button" className="my-jobs-contract-btn" data-customer-button>

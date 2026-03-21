@@ -3,8 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
   UserOutlined,
-  HomeOutlined,
-  AppstoreOutlined,
   DollarOutlined,
   MessageOutlined,
   CloseOutlined,
@@ -195,58 +193,130 @@ const getPaymentBadge = (paymentStatus) => {
   return { color: 'default', label: 'Unknown' };
 };
 
-const buildJobRecord = ({
-  id,
-  sourceRequestId,
-  status,
-  title,
-  jobId,
-  price,
-  day,
-  monthYear,
-  timeRange,
-  location,
-  customer,
-  customerId,
-  customerPhone,
-  customerEmail,
-  customerAvatar,
-  bedrooms,
-  floors,
-  serviceStatus,
-  serviceType,
-  serviceImage,
-  bookingDate
-}) => {
-  const nextJob = {
-    id,
-    sourceRequestId,
-    status,
-    title,
-    jobId,
-    price,
-    day,
-    monthYear,
-    timeRange,
-    location,
-    customer,
-    customerId,
-    customerPhone,
-    customerEmail,
-    customerAvatar,
-    bedrooms,
-    floors,
-    serviceStatus,
-    serviceType,
-    serviceImage,
-    bookingDate
+const formatSingleTimeLabel = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return 'Time pending';
+
+  const normalized = text.toUpperCase();
+  if (normalized.includes('AM') || normalized.includes('PM')) {
+    return text;
+  }
+
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return text;
+
+  const hours24 = Number(match[1]);
+  const minutes = match[2];
+  if (!Number.isFinite(hours24)) return text;
+
+  const meridiem = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 || 12;
+  return `${hours12}:${minutes} ${meridiem}`;
+};
+
+const formatJobDateLabel = (job) => {
+  const day = String(job?.day || '').trim();
+  const monthYear = String(job?.monthYear || '').trim();
+
+  if (!day && !monthYear) {
+    return 'Date pending';
+  }
+
+  const monthYearParts = monthYear.split(/\s+/).filter(Boolean);
+  const year = monthYearParts.length ? monthYearParts[monthYearParts.length - 1] : '';
+  const month = monthYearParts.slice(0, -1).join(' ') || monthYear;
+  return month && year ? `${month} ${day}, ${year}` : [day, monthYear].filter(Boolean).join(' ');
+};
+
+const getJobImageDateParts = (job) => {
+  const day = String(job?.day || '').trim();
+  const monthYear = String(job?.monthYear || '').trim();
+
+  return {
+    dayNumber: day ? day.padStart(2, '0') : '--',
+    monthLabel: monthYear || 'Date pending'
   };
+};
+
+const formatJobImageTimeLabel = (job) => {
+  const timeRange = String(job?.timeRange || '').trim();
+  if (!timeRange) return 'Time pending';
+
+  const [startTime] = timeRange.split('-').map((part) => part.trim()).filter(Boolean);
+  return formatSingleTimeLabel(startTime || timeRange);
+};
+
+const fallbackJobs = [
+  {
+    id: 'default-1',
+    sourceRequestId: 'default-1',
+    status: 'upcoming',
+    title: 'Deep House Cleaning',
+    jobId: '#SOMA-48291',
+    price: '$85.00',
+    day: '24',
+    monthYear: 'June 2026',
+    timeRange: '09:00 AM - 12:00 PM',
+    location: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
+    customer: 'Sovan Reach',
+    customerId: '3',
+    customerPhone: '+855 12 345 678',
+    customerEmail: 'sovanreach@email.com',
+    customerAvatar: customerAvatar1,
+    bedrooms: '3 Bedrooms',
+    floors: '2 Floors',
+    image: homeImage,
+    serviceType: 'home'
+  },
+  {
+    id: 'default-2',
+    sourceRequestId: 'default-2',
+    status: 'completed',
+    title: 'Office Deep Cleaning',
+    jobId: '#SOMA-48280',
+    price: '$120.00',
+    day: '20',
+    monthYear: 'June 2026',
+    timeRange: '08:00 AM - 11:00 AM',
+    location: '456 Business Center, Phnom Penh, Cambodia',
+    customer: 'Mey Sotharith',
+    customerId: '4',
+    customerPhone: '+855 10 987 654',
+    customerEmail: 'meysotharith@company.com',
+    customerAvatar: customerAvatar2,
+    bedrooms: '5 Rooms',
+    floors: '1 Floor',
+    image: officeImage,
+    serviceType: 'office'
+  },
+  {
+    id: 'default-3',
+    sourceRequestId: 'default-3',
+    status: 'completed',
+    title: 'Window Cleaning Service',
+    jobId: '#SOMA-48275',
+    price: '$65.00',
+    day: '15',
+    monthYear: 'June 2026',
+    timeRange: '10:00 AM - 01:00 PM',
+    location: '789 Riverside, Phnom Penh, Cambodia',
+    customer: 'Larry Ta',
+    customerId: '5',
+    customerPhone: '+855 98 765 432',
+    customerEmail: 'larryta@email.com',
+    customerAvatar: customerAvatar3,
+    bedrooms: '4 Bedrooms',
+    floors: '2 Floors',
+    image: windowImage,
+    serviceType: 'window'
+  }
+];
 
   return {
     ...nextJob,
     image: pickJobImage(nextJob)
   };
-};
+
 
 const normalizeStoredJob = (job) => {
   const bookingId = getBookingIdFromJob(job);
@@ -661,6 +731,7 @@ const MyJobsPage = () => {
           const bookingId = getBookingIdFromJob(job);
           const paymentFlow = bookingId ? paymentWorkflowByBooking[String(bookingId)] : null;
           const paymentStatus = String(paymentFlow?.payment_status || job.paymentStatus || '').toLowerCase();
+          const { dayNumber, monthLabel } = getJobImageDateParts(job);
           const paymentBadge = getPaymentBadge(paymentStatus);
           const needsPaymentReview = isPaymentReviewStatus(job.status) || isPaymentReviewStatus(paymentStatus);
           const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
@@ -695,29 +766,27 @@ const MyJobsPage = () => {
                   {job.status === 'completed'
                     ? 'COMPLETED'
                     : job.status === 'in-progress'
-                      ? 'IN PROGRESS'
-                      : job.status === 'cancelled'
-                        ? 'CANCELLED'
-                        : 'ACTIVE NOW'}
-                </span>
-                <div className="day-value">{job.day}</div>
-                <div className="month-value">{job.monthYear}</div>
+                    ? 'IN PROGRESS'
+                    : 'ACTIVE NOW'}
+              </span>
 
-                <div className="schedule-label">Scheduled Time</div>
-                <div className="schedule-value">{job.timeRange}</div>
-              </aside>
+              <div className="my-job-image-meta-v2">
+                <div className="my-job-image-date-v2">
+                  <strong>{dayNumber}</strong>
+                  <span>{monthLabel}</span>
+                </div>
 
-              <section className="my-job-main-v2">
-                <div className="job-main-header-v2">
-                  <div>
-                    <h3>{job.title}</h3>
-                    <p>Job ID: {job.jobId}</p>
-                  </div>
+                <div className="my-job-image-time-v2">
+                  <small>Scheduled Time</small>
+                  <strong>{formatJobImageTimeLabel(job)}</strong>
+                </div>
+              </div>
+            </aside>
 
-                  <div className="job-price-v2">
-                    <strong>{job.price}</strong>
-                    <small>Fixed Rate</small>
-                  </div>
+            <section className="my-job-main-v2">
+              <div className="job-main-header-v2">
+                <div>
+                  <h3>{job.title}</h3>
                 </div>
 
                 <p className="job-line-v2">
@@ -734,67 +803,9 @@ const MyJobsPage = () => {
                   <AppstoreOutlined /> {job.floors}
                 </p>
 
-                <div className="job-actions-v2">
-                  {actionState === 'idle' && (
-                    <>
-                      <button
-                        type="button"
-                        className="start-btn"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleStartJob(job.id);
-                        }}
-                      >
-                        <PlayCircleOutlined /> Start Job
-                      </button>
-
-                      <button
-                        type="button"
-                        className="cancel-btn"
-                        disabled
-                        onClick={(event) => {
-                          event.stopPropagation();
-                        }}
-                      >
-                        <CloseOutlined /> Cancel Job
-                      </button>
-                    </>
-                  )}
-
-                  {actionState === 'in-progress' && (
-                    <>
-                      <button
-                        type="button"
-                        className="progress-btn"
-                        disabled
-                      >
-                        <ClockCircleOutlined /> In progress
-                      </button>
-
-                      <button
-                        type="button"
-                        className="cancel-btn"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleCancelJob(job.id);
-                        }}
-                      >
-                        <CloseOutlined /> Cancel Job
-                      </button>
-                    </>
-                  )}
-
-                  {actionState === 'completed' && (
-                    <button type="button" className="completed-btn" disabled>
-                      <CheckCircleOutlined /> Completed
-                    </button>
-                  )}
-
-                  {actionState === 'cancelled' && (
-                    <button type="button" className="cancelled-btn" disabled>
-                      <CloseOutlined /> Cancelled
-                    </button>
-                  )}
+              <p className="job-line-v2">
+                <CalendarOutlined /> {formatJobDateLabel(job)}
+              </p>
 
                   <button
                     type="button"

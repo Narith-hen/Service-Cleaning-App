@@ -24,7 +24,19 @@ const toDataUrl = (file) =>
   });
 
 const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, cleanerId }) => {
-  const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping, otherUserId } = useCustomerChat({ threadId, receiverId: cleanerId });
+  const {
+    messages,
+    sendMessage,
+    editMessage,
+    markAsRead,
+    showLoadingIndicator,
+    isLoading,
+    isCleanerTyping,
+    notifyTyping,
+    otherUserId,
+    accessDenied,
+    chatError
+  } = useCustomerChat({ threadId, receiverId: cleanerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
   const onlineUsers = useChatStore((state) => state.onlineUsers);
@@ -74,6 +86,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   }, [threadId, messages.length, markAsRead]);
 
   const openFilePicker = () => {
+    if (accessDenied) return;
     fileInputRef.current?.click();
   };
 
@@ -82,6 +95,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   };
 
   const handleFiles = async (fileList) => {
+    if (accessDenied) return;
     const file = Array.from(fileList || [])[0];
     if (!file) return;
 
@@ -151,6 +165,10 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   };
 
   const handleSend = async () => {
+    if (accessDenied) {
+      setInputError(chatError || 'Not authorized to access this conversation');
+      return;
+    }
     const textToSend = draftMessage;
     const attachmentToSend = pendingAttachment;
 
@@ -369,7 +387,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           </div>
         )}
 
-        {inputError && <p className="my-jobs-chat-input-error">{inputError}</p>}
+        {(chatError || inputError) && <p className="my-jobs-chat-input-error">{chatError || inputError}</p>}
 
         <div className="my-jobs-chat-input-row">
           <button
@@ -377,20 +395,24 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
             className="my-jobs-input-add-btn"
             aria-label="Attach image"
             onClick={openFilePicker}
+            disabled={accessDenied}
           >
             <PlusCircleOutlined />
           </button>
 
           <input
             type="text"
-            placeholder="Type a message..."
+            placeholder={accessDenied ? 'Chat unavailable' : 'Type a message...'}
             value={draftMessage}
+            disabled={accessDenied}
             onChange={(e) => {
+              if (accessDenied) return;
               setDraftMessage(e.target.value);
               if (inputError) setInputError('');
               notifyTyping();
             }}
             onKeyDown={(e) => {
+              if (accessDenied) return;
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
@@ -403,7 +425,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
             className="my-jobs-input-send-btn"
             aria-label="Send"
             onClick={handleSend}
-            disabled={!draftMessage.trim() && !pendingAttachment}
+            disabled={accessDenied || (!draftMessage.trim() && !pendingAttachment)}
           >
             <SendOutlined />
           </button>
@@ -414,6 +436,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           type="file"
           accept="image/*"
           className="my-jobs-chat-file-input"
+          disabled={accessDenied}
           onChange={async (e) => {
             await handleFiles(e.target.files);
             e.target.value = '';
