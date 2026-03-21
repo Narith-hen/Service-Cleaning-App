@@ -4,6 +4,8 @@ import {
   EnvironmentOutlined,
   UserOutlined,
   DollarOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
   MessageOutlined,
   CloseOutlined,
   PlayCircleOutlined,
@@ -246,6 +248,21 @@ const formatJobImageTimeLabel = (job) => {
   return formatSingleTimeLabel(startTime || timeRange);
 };
 
+const buildJobRecord = (job = {}) => {
+  const nextJob = {
+    ...job,
+    status: normalizeJobStatus(job?.status, job?.serviceStatus, job?.service_status),
+    serviceStatus: job?.serviceStatus || job?.service_status || '',
+    customerAvatar: toDisplayImageUrl(job?.customerAvatar || job?.customer_avatar || ''),
+    serviceImage: job?.serviceImage || job?.service_image || ''
+  };
+
+  return {
+    ...nextJob,
+    image: nextJob.image || pickJobImage(nextJob)
+  };
+};
+
 const fallbackJobs = [
   {
     id: 'default-1',
@@ -262,7 +279,7 @@ const fallbackJobs = [
     customerId: '3',
     customerPhone: '+855 12 345 678',
     customerEmail: 'sovanreach@email.com',
-    customerAvatar: customerAvatar1,
+    customerAvatar: '',
     bedrooms: '3 Bedrooms',
     floors: '2 Floors',
     image: homeImage,
@@ -283,7 +300,7 @@ const fallbackJobs = [
     customerId: '4',
     customerPhone: '+855 10 987 654',
     customerEmail: 'meysotharith@company.com',
-    customerAvatar: customerAvatar2,
+    customerAvatar: '',
     bedrooms: '5 Rooms',
     floors: '1 Floor',
     image: officeImage,
@@ -304,18 +321,13 @@ const fallbackJobs = [
     customerId: '5',
     customerPhone: '+855 98 765 432',
     customerEmail: 'larryta@email.com',
-    customerAvatar: customerAvatar3,
+    customerAvatar: '',
     bedrooms: '4 Bedrooms',
     floors: '2 Floors',
     image: windowImage,
     serviceType: 'window'
   }
 ];
-
-  return {
-    ...nextJob,
-    image: pickJobImage(nextJob)
-  };
 
 
 const normalizeStoredJob = (job) => {
@@ -413,6 +425,7 @@ const MyJobsPage = () => {
   const [jobActionStateById, setJobActionStateById] = useState({});
   const [loading, setLoading] = useState(true);
   const [paymentWorkflowByBooking, setPaymentWorkflowByBooking] = useState({});
+  const [, setPaymentActionByBooking] = useState({});
 
   useEffect(() => {
     let cancelled = false;

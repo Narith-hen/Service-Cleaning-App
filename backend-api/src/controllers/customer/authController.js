@@ -67,25 +67,9 @@ const buildProfileResponse = async (userId) => {
     `
       SELECT
         COUNT(*) AS totalBookings,
-<<<<<<< HEAD
-        COALESCE(
-          SUM(
-            CASE
-              WHEN LOWER(b.booking_status) = 'completed'
-                THEN COALESCE(p.amount, b.negotiated_price, b.total_price, 0)
-              ELSE 0
-            END
-          ),
-          0
-        ) AS totalSpent
-      FROM bookings b
-      LEFT JOIN payments p ON p.booking_id = b.booking_id AND LOWER(p.payment_status) = 'completed'
-      WHERE b.user_id = ?
-=======
         COALESCE(SUM(total_price), 0) AS bookingTotalSpent
       FROM bookings
       WHERE user_id = ?
->>>>>>> rathana
     `,
     [userId]
   );

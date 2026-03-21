@@ -519,7 +519,7 @@ const getBookingById = async (req, res, next) => {
             b.*,
             s.name AS service_name,
             ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
-            s.price AS service_price,
+            b.total_price AS service_price,
             u.user_id AS customer_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.email AS customer_email,
