@@ -11,9 +11,66 @@
   font-family: Manrope, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.dashboard-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.dashboard-toolbar-heading {
+  flex: 0.1;
+  
+}
+
+.dashboard-toolbar-heading h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.dashboard-earnings-select {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dashboard-earnings-select span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.dashboard-earnings-select .ant-select {
+  min-width: 220px;
+}
+
+.dashboard-earnings-select .ant-select-selector {
+  border-radius: 14px !important;
+  min-height: 46px !important;
+  border: 1px solid #d7e2ef !important;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04) !important;
+  padding: 0 14px !important;
+}
+
+.dashboard-earnings-select .ant-select-selection-wrap {
+  align-items: center;
+}
+
+.dashboard-earnings-select .ant-select-selection-item {
+  color: #0f172a;
+  font-weight: 600;
+}
+
 .dashboard-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -29,6 +86,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
@@ -89,6 +147,44 @@
   color: #1f2937;
 }
 
+.dashboard-earnings-panel {
+  margin-bottom: 22px;
+  border: 1px solid #d9e2ef;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  padding: 18px 22px 12px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.dashboard-chart-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dashboard-chart-subtitle {
+  color: #64748b;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.dashboard-chart-shell {
+  min-height: 320px;
+}
+
+.dashboard-chart-shell canvas {
+  border-radius: 16px;
+}
+
 .today-schedule-panel {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -121,6 +217,23 @@
 .schedule-list {
   display: flex;
   flex-direction: column;
+}
+
+.schedule-empty-state {
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.schedule-empty-state h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.schedule-empty-state p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #64748b;
 }
 
 .schedule-row {
@@ -198,27 +311,13 @@
   color: #15803d;
 }
 
-.break-time-btn {
-  margin: 16px;
-  width: calc(100% - 32px);
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid #d5dee8;
-  background: #fff;
-  color: #475569;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.break-time-btn:hover {
-  border-color: var(--main);
-  color: var(--main-dark);
-}
-
 @media (max-width: 1080px) {
   .dashboard-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-chart-header {
+    align-items: center;
   }
 
   .schedule-row {
@@ -232,12 +331,50 @@
 }
 
 @media (max-width: 700px) {
+  .dashboard-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-earnings-select {
+    width: 100%;
+  }
+
+  .dashboard-earnings-select .ant-select {
+    width: 100%;
+    min-width: 0;
+  }
+
   .dashboard-stat-grid {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-earnings-panel {
+    padding: 16px 14px 10px;
+    border-radius: 18px;
+  }
+
+  .dashboard-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .dashboard-chart-subtitle {
+    white-space: normal;
+  }
+
+  .dashboard-chart-shell {
+    min-height: 280px;
+  }
+
   .schedule-head,
   .schedule-row {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .schedule-empty-state {
     padding-left: 14px;
     padding-right: 14px;
   }

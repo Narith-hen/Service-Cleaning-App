@@ -10,8 +10,7 @@ import {
   PlusCircleOutlined,
   SendOutlined,
   PhoneOutlined,
-  MailOutlined,
-  EnvironmentOutlined
+  MailOutlined
 } from '@ant-design/icons';
 import { formatCleanerChatTime, useCleanerChat } from '../hooks/useCleanerChat';
 import { useChatStore } from '../../../store/chatStore';
@@ -33,8 +32,7 @@ const CleanerMessagePanel = ({
   customerId, 
   customerAvatar,
   customerPhone,
-  customerEmail,
-  customerAddress 
+  customerEmail
 }) => {
   const { messages, sendMessage, editMessage, markAsRead, isConnected, isLoading, showLoadingIndicator, isCustomerTyping, notifyTyping, otherUserId } = useCleanerChat({ threadId, receiverId: customerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
@@ -205,16 +203,13 @@ const CleanerMessagePanel = ({
           </div>
           <div className="my-jobs-customer-info">
             <h3>{customerName}</h3>
-            {(customerPhone || customerEmail || customerAddress) && (
+            {(customerPhone || customerEmail) && (
               <div className="my-jobs-customer-details">
                 {customerPhone && (
                   <span><PhoneOutlined /> {customerPhone}</span>
                 )}
                 {customerEmail && (
                   <span><MailOutlined /> {customerEmail}</span>
-                )}
-                {customerAddress && (
-                  <span><EnvironmentOutlined /> {customerAddress}</span>
                 )}
               </div>
             )}

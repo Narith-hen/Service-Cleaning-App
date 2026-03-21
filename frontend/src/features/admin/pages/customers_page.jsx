@@ -161,6 +161,7 @@ const mapCustomerFromApi = (user) => {
     specialNotes: user.notes || '',
     status: isActive ? 'Active' : 'Inactive',
     totalBookings: Number(user?._count?.bookings || 0),
+    totalSpent: Number(user?.totalSpent ?? user?.total_spent ?? 0),
     customerTier: 'Regular',
     joiningDate: formatDate(user.created_at),
     lastBookingDate: '-',

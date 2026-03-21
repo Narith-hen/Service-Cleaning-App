@@ -1,48 +1,170 @@
-const prisma = require('../../config/database');
+const db = require('../../config/db');
+
+const normalizeDate = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const normalizeView = (value) => {
+  const normalized = String(value || 'month').trim().toLowerCase();
+  if (['week', 'month', 'total'].includes(normalized)) return normalized;
+  return 'month';
+};
+
+const buildCleanerEarningsWhere = ({ cleanerId, from, to }) => {
+  const where = [
+    'b.cleaner_id = ?',
+    "LOWER(COALESCE(p.payment_status, '')) IN ('completed', 'paid')"
+  ];
+  const params = [cleanerId];
+
+  if (from) {
+    where.push('b.booking_date >= ?');
+    params.push(from);
+  }
+
+  if (to) {
+    where.push('b.booking_date <= ?');
+    params.push(to);
+  }
+
+  return {
+    whereSql: `WHERE ${where.join(' AND ')}`,
+    params
+  };
+};
+
+const buildSummaryQuery = ({ view }) => {
+  if (view === 'week') {
+    return {
+      dateExpr: 'DATE(COALESCE(b.booking_date, b.created_at))',
+      groupExpr: 'DAYOFWEEK(COALESCE(b.booking_date, b.created_at))',
+      orderExpr: 'DAYOFWEEK(COALESCE(b.booking_date, b.created_at))',
+      startDate: (() => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const day = start.getDay();
+        const offset = day === 0 ? 6 : day - 1;
+        start.setDate(start.getDate() - offset);
+        return start;
+      })()
+    };
+  }
+
+  if (view === 'total') {
+    return {
+      dateExpr: 'COALESCE(b.booking_date, b.created_at)',
+      groupExpr: 'YEAR(COALESCE(b.booking_date, b.created_at))',
+      orderExpr: 'YEAR(COALESCE(b.booking_date, b.created_at))',
+      startDate: (() => {
+        const start = new Date();
+        start.setMonth(0, 1);
+        start.setHours(0, 0, 0, 0);
+        start.setFullYear(start.getFullYear() - 6);
+        return start;
+      })()
+    };
+  }
+
+  return {
+    dateExpr: 'COALESCE(b.booking_date, b.created_at)',
+    groupExpr: 'MONTH(COALESCE(b.booking_date, b.created_at))',
+    orderExpr: 'MONTH(COALESCE(b.booking_date, b.created_at))',
+    startDate: (() => {
+      const start = new Date();
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+      return start;
+    })()
+  };
+};
+
+const mapRecentPaymentRow = (row) => ({
+  payment_id: Number(row?.payment_id || 0),
+  amount: Number(row?.amount || 0),
+  payment_method: row?.payment_method || null,
+  payment_status: row?.payment_status || null,
+  created_at: row?.recorded_at || row?.booking_date || null,
+  booking_id: Number(row?.booking_id || 0),
+  booking: {
+    booking_id: Number(row?.booking_id || 0),
+    booking_date: row?.booking_date || null,
+    total_price: Number(row?.total_price || 0),
+    service: {
+      service_id: Number(row?.service_id || 0),
+      name: row?.service_name || 'Cleaning Service'
+    },
+    user: {
+      user_id: Number(row?.user_id || 0),
+      username: row?.username || `Customer #${row?.user_id || ''}`
+    }
+  }
+});
 
 const getEarnings = async (req, res, next) => {
   try {
-    const { from, to } = req.query;
-    const cleanerId = req.user.user_id;
-
-    const where = {
-      booking: { cleaner_id: cleanerId },
-      payment_status: 'completed'
-    };
-
-    if (from || to) {
-      where.created_at = {};
-      if (from) where.created_at.gte = new Date(from);
-      if (to) where.created_at.lte = new Date(to);
+    const cleanerId = Number(req.user?.user_id || 0);
+    if (!cleanerId) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          total_earnings: 0,
+          total_jobs: 0,
+          recent_payments: []
+        }
+      });
     }
 
-    const [totalEarnings, recentPayments] = await Promise.all([
-      prisma.payment.aggregate({
-        where,
-        _sum: { amount: true },
-        _count: true
-      }),
-      prisma.payment.findMany({
-        where,
-        include: {
-          booking: {
-            include: {
-              service: true,
-              user: { select: { username: true } }
-            }
-          }
-        },
-        orderBy: { created_at: 'desc' },
-        take: 20
-      })
-    ]);
+    const from = normalizeDate(req.query?.from);
+    const to = normalizeDate(req.query?.to);
+    const promiseDb = db.promise();
+    const filters = buildCleanerEarningsWhere({ cleanerId, from, to });
+
+    const [totalRows] = await promiseDb.query(
+      `
+        SELECT
+          COALESCE(SUM(p.amount), 0) AS total_earnings,
+          COUNT(*) AS total_jobs
+        FROM payments p
+        JOIN bookings b ON b.booking_id = p.booking_id
+        ${filters.whereSql}
+      `,
+      filters.params
+    );
+
+    const [recentRows] = await promiseDb.query(
+      `
+        SELECT
+          p.payment_id,
+          p.amount,
+          p.payment_method,
+          p.payment_status,
+          COALESCE(b.booking_date, b.created_at) AS recorded_at,
+          p.booking_id,
+          b.booking_date,
+          b.total_price,
+          u.user_id,
+          u.username,
+          s.service_id,
+          s.name AS service_name
+        FROM payments p
+        JOIN bookings b ON b.booking_id = p.booking_id
+        LEFT JOIN users u ON u.user_id = b.user_id
+        LEFT JOIN services s ON s.service_id = b.service_id
+        ${filters.whereSql}
+        ORDER BY COALESCE(b.booking_date, b.created_at) DESC
+        LIMIT 20
+      `,
+      filters.params
+    );
 
     res.status(200).json({
       success: true,
       data: {
-        total_earnings: totalEarnings._sum.amount || 0,
-        total_jobs: totalEarnings._count,
-        recent_payments: recentPayments
+        total_earnings: Number(totalRows?.[0]?.total_earnings || 0),
+        total_jobs: Number(totalRows?.[0]?.total_jobs || 0),
+        recent_payments: (recentRows || []).map(mapRecentPaymentRow)
       }
     });
   } catch (error) {
@@ -52,28 +174,41 @@ const getEarnings = async (req, res, next) => {
 
 const getEarningsSummary = async (req, res, next) => {
   try {
-    const cleanerId = req.user.user_id;
+    const cleanerId = Number(req.user?.user_id || 0);
+    const view = normalizeView(req.query?.view);
+    if (!cleanerId) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
 
-    // Get earnings by month for the last 6 months
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const promiseDb = db.promise();
+    const summaryConfig = buildSummaryQuery({ view });
 
-    const earnings = await prisma.$queryRaw`
-      SELECT 
-        DATE_FORMAT(created_at, '%Y-%m') as month,
-        SUM(amount) as total
-      FROM Payment
-      WHERE 
-        booking_id IN (SELECT booking_id FROM Booking WHERE cleaner_id = ${cleanerId})
-        AND payment_status = 'completed'
-        AND created_at >= ${sixMonthsAgo}
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-      ORDER BY month ASC
-    `;
+    const [rows] = await promiseDb.query(
+      `
+        SELECT
+          ${summaryConfig.groupExpr} AS bucket,
+          COALESCE(SUM(p.amount), 0) AS total
+        FROM payments p
+        JOIN bookings b ON b.booking_id = p.booking_id
+        WHERE b.cleaner_id = ?
+          AND LOWER(COALESCE(p.payment_status, '')) IN ('completed', 'paid')
+          AND ${summaryConfig.dateExpr} >= ?
+        GROUP BY ${summaryConfig.groupExpr}
+        ORDER BY ${summaryConfig.orderExpr} ASC
+      `,
+      [cleanerId, summaryConfig.startDate]
+    );
 
     res.status(200).json({
       success: true,
-      data: earnings
+      view,
+      data: (rows || []).map((row) => ({
+        bucket: Number(row?.bucket || 0),
+        total: Number(row?.total || 0)
+      }))
     });
   } catch (error) {
     next(error);
