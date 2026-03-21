@@ -1,13 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   UserOutlined,
   EnvironmentOutlined,
   ClockCircleOutlined,
-  CheckOutlined,
   CheckCircleFilled,
-  PlusOutlined,
-  DeleteOutlined
+  PictureOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import '../../../styles/cleaner/job_execution.scss';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
@@ -27,17 +28,15 @@ const fallbackJob = {
   customer: 'Sarah Jenkins'
 };
 
-const defaultChecklist = [
-  { id: 'item-1', label: 'Dusting all ceiling fans and light fixtures', done: true, time: '9:15 AM' },
-  { id: 'item-2', label: 'Wiping down all baseboards and crown molding', done: true, time: '9:45 AM' },
-  { id: 'item-3', label: 'Cleaning interior windows and window sills', done: true, time: '10:10 AM' },
-  { id: 'item-4', label: 'Deep cleaning kitchen appliances (oven, fridge)', done: true, time: '10:24 AM' },
-  { id: 'item-5', label: 'Disinfecting all bathroom surfaces and grout', done: false, time: '' },
-  { id: 'item-6', label: 'Vacuuming and steam cleaning carpets', done: false, time: '' },
-  { id: 'item-7', label: 'Sanitizing high-touch points (doorknobs, switches)', done: false, time: '' }
-];
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 
-const generateId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const toAbsoluteImageUrl = (imageUrl) => {
+  const raw = String(imageUrl || '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+  return `${API_BASE_URL}${raw.startsWith('/') ? '' : '/'}${raw}`;
+};
 
 const getBookingIdFromJob = (job) => {
   const rawId = job?.sourceRequestId || job?.bookingId || job?.id || '';
@@ -97,46 +96,58 @@ const JobExecutionPage = () => {
     }
   }, [selectedJobId]);
 
-  const [checklist, setChecklist] = useState(defaultChecklist);
-  const [newChecklistItem, setNewChecklistItem] = useState('');
   const [finishStatus, setFinishStatus] = useState('');
-  const completedCount = checklist.filter((item) => item.done).length;
+  const [customerImages, setCustomerImages] = useState([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(null);
   const priceValue = Number(String(currentJob.price || '$0').replace(/[^0-9.]/g, '')) || 0;
   const totalEarning = priceValue;
+  const bookingId = getBookingIdFromJob(currentJob);
+  const activeImage = activeImageIndex != null ? customerImages[activeImageIndex] || null : null;
 
-  const toggleChecklistItem = (id) => {
-    setChecklist((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, done: !item.done, time: item.done ? '' : 'Now' }
-          : item
-      )
-    );
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleAddChecklistItem = () => {
-    if (!newChecklistItem.trim()) return;
-    
-    const newItem = {
-      id: generateId(),
-      label: newChecklistItem.trim(),
-      done: false,
-      time: ''
+    const loadBookingImages = async () => {
+      if (!bookingId) {
+        setCustomerImages([]);
+        return;
+      }
+
+      setImagesLoading(true);
+      try {
+        const response = await api.get(`/bookings/${bookingId}`);
+        if (cancelled) return;
+
+        const images = Array.isArray(response?.data?.data?.images) ? response.data.data.images : [];
+        setCustomerImages(
+          images
+            .map((image, index) => ({
+              id: String(image?.id || `booking-image-${index + 1}`),
+              url: toAbsoluteImageUrl(image?.url),
+              createdAt: image?.created_at || null
+            }))
+            .filter((image) => image.url)
+        );
+      } catch {
+        if (!cancelled) {
+          setCustomerImages([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setImagesLoading(false);
+        }
+      }
     };
-    
-    setChecklist((prev) => [...prev, newItem]);
-    setNewChecklistItem('');
-  };
 
-  const handleDeleteChecklistItem = (id) => {
-    setChecklist((prev) => prev.filter((item) => item.id !== id));
-  };
+    loadBookingImages();
+    const refreshInterval = setInterval(loadBookingImages, 3000);
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleAddChecklistItem();
-    }
-  };
+    return () => {
+      cancelled = true;
+      clearInterval(refreshInterval);
+    };
+  }, [bookingId]);
 
   const handleFinishJob = async () => {
     setFinishStatus('Sending final payment request...');
@@ -175,6 +186,41 @@ const JobExecutionPage = () => {
 
     navigate('/cleaner/my-jobs');
   };
+
+  const openImageModal = (index) => {
+    setActiveImageIndex(index);
+  };
+
+  const closeImageModal = () => {
+    setActiveImageIndex(null);
+  };
+
+  const showPreviousImage = () => {
+    setActiveImageIndex((prev) => {
+      if (prev == null || customerImages.length === 0) return prev;
+      return prev === 0 ? customerImages.length - 1 : prev - 1;
+    });
+  };
+
+  const showNextImage = () => {
+    setActiveImageIndex((prev) => {
+      if (prev == null || customerImages.length === 0) return prev;
+      return prev === customerImages.length - 1 ? 0 : prev + 1;
+    });
+  };
+
+  useEffect(() => {
+    if (activeImageIndex == null) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeImageModal();
+      if (event.key === 'ArrowLeft') showPreviousImage();
+      if (event.key === 'ArrowRight') showNextImage();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeImageIndex, customerImages.length]);
 
   return (
     <div className="cleaner-job-execution-page">
@@ -231,54 +277,38 @@ const JobExecutionPage = () => {
       <div className="execution-main-grid">
         <section className="execution-checklist-panel">
           <div className="panel-head">
-            <h2>Service Checklist</h2>
-            <span>{completedCount} / {checklist.length} Completed</span>
+            <h2>Customer Uploaded Images</h2>
+            <span>{customerImages.length} Photo{customerImages.length === 1 ? '' : 's'}</span>
           </div>
 
-          <div className="checklist-items">
-            {checklist.map((item) => (
-              <div
-                key={item.id}
-                className={`checklist-row ${item.done ? 'done' : ''}`}
-              >
-                <button
-                  type="button"
-                  className="check-btn"
-                  onClick={() => toggleChecklistItem(item.id)}
-                >
-                  <span className="check-icon">{item.done ? <CheckOutlined /> : null}</span>
-                </button>
-                <span className="check-label">{item.label}</span>
-                <span className="check-time">{item.time}</span>
-                <button
-                  type="button"
-                  className="delete-btn"
-                  onClick={() => handleDeleteChecklistItem(item.id)}
-                >
-                  <DeleteOutlined />
-                </button>
-              </div>
-            ))}
-            
-            <div className="add-checklist-row">
-              <input
-                type="text"
-                placeholder="Add new checklist item..."
-                value={newChecklistItem}
-                onChange={(e) => setNewChecklistItem(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="checklist-input"
-              />
-              <button
-                type="button"
-                className="add-btn"
-                onClick={handleAddChecklistItem}
-                disabled={!newChecklistItem.trim()}
-              >
-                <PlusOutlined /> Add
-              </button>
+          {imagesLoading ? (
+            <div className="booking-images-empty">
+              <PictureOutlined />
+              <p>Loading customer photos...</p>
             </div>
-          </div>
+          ) : customerImages.length ? (
+            <div className="booking-images-grid">
+              {customerImages.map((image, index) => (
+                <button
+                  key={image.id}
+                  type="button"
+                  className="booking-image-card"
+                  onClick={() => openImageModal(index)}
+                >
+                  <img
+                    src={image.url}
+                    alt={`Customer upload ${index + 1}`}
+                    className="booking-image-preview"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="booking-images-empty">
+              <PictureOutlined />
+              <p>No customer images were uploaded for this booking.</p>
+            </div>
+          )}
         </section>
 
         <aside className="execution-side-column">
@@ -312,6 +342,38 @@ const JobExecutionPage = () => {
           </section>
         </aside>
       </div>
+
+      {activeImage && (
+        <div className="booking-image-lightbox" onClick={closeImageModal}>
+          <div className="booking-image-lightbox-dialog" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="lightbox-close-btn" onClick={closeImageModal} aria-label="Close image preview">
+              <CloseOutlined />
+            </button>
+
+            {customerImages.length > 1 && (
+              <button type="button" className="lightbox-nav-btn prev" onClick={showPreviousImage} aria-label="Previous image">
+                <LeftOutlined />
+              </button>
+            )}
+
+            <img
+              src={activeImage.url}
+              alt={`Customer upload ${activeImageIndex + 1}`}
+              className="lightbox-image"
+            />
+
+            {customerImages.length > 1 && (
+              <button type="button" className="lightbox-nav-btn next" onClick={showNextImage} aria-label="Next image">
+                <RightOutlined />
+              </button>
+            )}
+
+            <div className="lightbox-footer">
+              <span>{activeImageIndex + 1} / {customerImages.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -283,33 +283,6 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           </div>
         </div>
         <div className="my-jobs-chat-header-actions">
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label={soundEnabled ? 'Mute chat sounds' : 'Enable chat sounds'}
-            onClick={toggleSound}
-          >
-            {soundEnabled ? <SoundOutlined /> : <AudioMutedOutlined />}
-          </button>
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label={iBlocked ? 'Unblock chat' : 'Block chat'}
-            onClick={handleToggleBlock}
-            loading={blockLoading}
-            style={{ color: iBlocked ? '#ff4d4f' : undefined }}
-          >
-            {iBlocked ? <UnlockOutlined /> : <LockOutlined />}
-          </button>
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label="Delete chat"
-            onClick={handleDeleteChat}
-            style={{ color: '#ff4d4f' }}
-          >
-            <DeleteOutlined />
-          </button>
           <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
             <InfoCircleOutlined />
           </button>

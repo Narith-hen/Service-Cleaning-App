@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const redis = require('../../config/redis');
 const AppError = require('../../utils/error.util');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
@@ -418,11 +419,15 @@ const createBooking = async (req, res, next) => {
       [booking_id]
     );
 
+    const createdBooking = withBookingTrackingMeta(createdRows[0]);
+
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
-      data: withBookingTrackingMeta(createdRows[0])
+      data: createdBooking
     });
+
+    publishJobCreated(createdBooking);
   } catch (error) {
     next(error);
   }
@@ -510,16 +515,21 @@ const getBookings = async (req, res, next) => {
 const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const bookingId = Number.parseInt(id, 10);
 
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
 
-    const [rows] = await db
-      .promise()
+    const promiseDb = db.promise();
+    await ensureBookingImagesTable(promiseDb);
+
+    const [rows] = await promiseDb
       .query(
         `SELECT 
             b.*,
             s.name AS service_name,
             ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
-            s.price AS service_price,
             u.user_id AS customer_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.email AS customer_email,
@@ -540,7 +550,7 @@ const getBookingById = async (req, res, next) => {
             p.amount,
             r.review_id,
             r.rating,
-            r.command AS review_comment,
+            r.comment AS review_comment,
             promo.promotion_id,
             promo.discount_price,
             promo.start_date,
@@ -554,19 +564,50 @@ const getBookingById = async (req, res, next) => {
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          LEFT JOIN promotions promo ON promo.promotion_id = b.promotion_id
          WHERE b.booking_id = ?`,
-        [id]
+        [bookingId]
       );
 
     if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
+    const [imageRows] = await promiseDb.query(
+      `SELECT image_id, image_url, created_at
+       FROM booking_images
+       WHERE booking_id = ?
+       ORDER BY created_at ASC, image_id ASC`,
+      [bookingId]
+    );
+
+    const booking = withBookingTrackingMeta(rows[0]);
+    booking.images = (imageRows || []).map((imageRow) => ({
+      id: imageRow.image_id,
+      url: imageRow.image_url,
+      created_at: imageRow.created_at
+    }));
+
     res.status(200).json({
       success: true,
-      data: withBookingTrackingMeta(rows[0])
+      data: booking
     });
   } catch (error) {
     next(error);
+  }
+};
+
+const publishJobCreated = async (booking) => {
+  try {
+    if (!booking?.booking_id) return;
+
+    const startTime = String(booking?.booking_time || '').split('-')[0].trim() || 'TBD';
+    await redis.publish('job:created', JSON.stringify({
+      bookingId: String(booking.booking_id),
+      serviceTitle: booking.service_name || 'Cleaning',
+      startTime,
+      bookingData: booking
+    }));
+  } catch (error) {
+    console.error('Failed to publish job:created event:', error);
   }
 };
 
@@ -1155,7 +1196,7 @@ const getBookingHistory = async (req, res, next) => {
             p.amount,
             r.rating,
             r.review_id,
-            r.command AS review_comment
+            r.comment AS review_comment
          FROM bookings b
          LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id

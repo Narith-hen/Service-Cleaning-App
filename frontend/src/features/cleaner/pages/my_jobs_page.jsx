@@ -277,8 +277,16 @@ const MyJobsPage = () => {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed) || parsed.length === 0) return;
 
+      const seenJobKeys = new Set();
       const normalized = parsed
         .filter(Boolean)
+        .filter((job) => {
+          const uniqueKey = String(job.sourceRequestId || job.id || '');
+          if (!uniqueKey) return true;
+          if (seenJobKeys.has(uniqueKey)) return false;
+          seenJobKeys.add(uniqueKey);
+          return true;
+        })
         .map((job) => ({
           id: job.id || `confirmed-${job.sourceRequestId || Date.now()}`,
           sourceRequestId: job.sourceRequestId || job.id,

@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 import '../../../styles/customer/booking_match.scss';
 import api from '../../../services/api';
 
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Create a shared socket instance
 let socketInstance = null;

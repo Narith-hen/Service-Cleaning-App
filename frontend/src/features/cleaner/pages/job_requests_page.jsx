@@ -15,7 +15,7 @@ import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/book
 import api from '../../../services/api';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Create a shared socket instance
 let socketInstance = null;
@@ -57,6 +57,22 @@ const mapBookingToRequest = (booking) => {
     day,
     bookingDate: booking?.booking_date || null,
     status: booking.booking_status || 'pending'
+  };
+};
+
+const mapRealtimeJobToRequest = (jobDetails) => {
+  const bookingData = jobDetails?.bookingData || jobDetails || {};
+  const mapped = mapBookingToRequest({
+    ...bookingData,
+    booking_id: bookingData.booking_id || jobDetails?.bookingId,
+    service_name: bookingData.service_name || jobDetails?.serviceTitle,
+    booking_time: bookingData.booking_time || jobDetails?.startTime,
+    booking_status: bookingData.booking_status || 'pending'
+  });
+
+  return {
+    ...mapped,
+    id: mapped.id || jobDetails?.bookingId
   };
 };
 
@@ -165,9 +181,29 @@ const JobRequestsPage = () => {
 
     const onConnect = () => {
       console.log('[JobRequests] Socket connected');
+      socket.emit('join:cleaners');
+    };
+
+    const onJobAvailable = (jobDetails) => {
+      const mapped = mapRealtimeJobToRequest(jobDetails);
+      if (!mapped?.id) return;
+
+      setRequests((prev) => {
+        if (prev.some((request) => String(request.id) === String(mapped.id))) {
+          return prev;
+        }
+        return [mapped, ...prev];
+      });
+    };
+
+    const onJobRemoved = ({ bookingId }) => {
+      if (!bookingId) return;
+      setRequests((prev) => prev.filter((request) => String(request.id) !== String(bookingId)));
     };
 
     socket.on('connect', onConnect);
+    socket.on('job:available', onJobAvailable);
+    socket.on('job:removed', onJobRemoved);
 
     if (!socket.connected) {
       const token = (() => {
@@ -195,6 +231,8 @@ const JobRequestsPage = () => {
 
     return () => {
       socket.off('connect', onConnect);
+      socket.off('job:available', onJobAvailable);
+      socket.off('job:removed', onJobRemoved);
     };
   }, []);
 

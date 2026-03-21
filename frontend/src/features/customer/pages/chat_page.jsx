@@ -102,14 +102,17 @@ const CustomerChatPage = () => {
   const [dynamicBookings, setDynamicBookings] = useState(() => fallbackBookings);
   const [hiddenThreadIds] = useState(() => readHiddenThreadIds());
 
+  // Poll for booking updates to get cleaner info when booking is confirmed
   useEffect(() => {
+    let cancelled = false;
+    const targetId = bookingId || fallbackBookingId;
+    
     const hydrateBookings = async () => {
-      const targetId = bookingId || fallbackBookingId;
       if (targetId) {
         try {
           const resp = await api.get(`/bookings/track/${targetId}`);
           const data = resp?.data?.data;
-          if (data) {
+          if (data && !cancelled) {
             setDynamicBookings([normalizeTrackedBooking(data, targetId)]);
             return;
           }
@@ -118,17 +121,40 @@ const CustomerChatPage = () => {
         }
       }
 
-      try {
-        const listResp = await api.get('/bookings', { params: { page: 1, limit: 20 } });
-        const bookings = Array.isArray(listResp?.data?.data) ? listResp.data.data : [];
-        const normalized = bookings.map((b) => normalizeTrackedBooking(b, b?.booking_id));
-        setDynamicBookings(normalized);
-      } catch {
-        setDynamicBookings([]);
+      if (!cancelled) {
+        try {
+          const listResp = await api.get('/bookings', { params: { page: 1, limit: 20 } });
+          const bookings = Array.isArray(listResp?.data?.data) ? listResp.data.data : [];
+          const normalized = bookings.map((b) => normalizeTrackedBooking(b, b?.booking_id));
+          setDynamicBookings(normalized);
+        } catch {
+          setDynamicBookings([]);
+        }
       }
     };
 
+    // Initial fetch
     hydrateBookings();
+    
+    // Poll for updates every 3 seconds to get cleaner info when booking is confirmed
+    const pollInterval = setInterval(() => {
+      const targetId = bookingId || fallbackBookingId;
+      if (targetId) {
+        api.get(`/bookings/track/${targetId}`)
+          .then((resp) => {
+            const data = resp?.data?.data;
+            if (data && !cancelled) {
+              setDynamicBookings([normalizeTrackedBooking(data, targetId)]);
+            }
+          })
+          .catch(() => {}); // Ignore polling errors
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
   }, [bookingId, fallbackBookingId]);
 
   const [selectedBooking, setSelectedBooking] = useState(

@@ -3,14 +3,18 @@ import {
   CheckOutlined,
   ClockCircleOutlined,
   CloseOutlined,
+  DeleteOutlined,
   EditOutlined,
+  ExclamationCircleOutlined,
   InfoCircleOutlined,
+  LockOutlined,
   SoundOutlined,
   AudioMutedOutlined,
   PlusCircleOutlined,
   SendOutlined,
   PhoneOutlined,
-  MailOutlined
+  MailOutlined,
+  UnlockOutlined
 } from '@ant-design/icons';
 import { Modal, message } from 'antd';
 import { formatCleanerChatTime, useCleanerChat } from '../hooks/useCleanerChat';
@@ -281,33 +285,6 @@ const CleanerMessagePanel = ({
         </div>
 
         <div className="my-jobs-chat-header-actions">
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label={soundEnabled ? 'Mute chat sounds' : 'Enable chat sounds'}
-            onClick={toggleSound}
-          >
-            {soundEnabled ? <SoundOutlined /> : <AudioMutedOutlined />}
-          </button>
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label={iBlocked ? 'Unblock chat' : 'Block chat'}
-            onClick={handleToggleBlock}
-            loading={blockLoading}
-            style={{ color: iBlocked ? '#ff4d4f' : undefined }}
-          >
-            {iBlocked ? <UnlockOutlined /> : <LockOutlined />}
-          </button>
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label="Delete chat"
-            onClick={handleDeleteChat}
-            style={{ color: '#ff4d4f' }}
-          >
-            <DeleteOutlined />
-          </button>
           <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
             <InfoCircleOutlined />
           </button>
