@@ -65,6 +65,7 @@
   padding: 18px 22px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   min-height: 250px;
   position: relative;
   overflow: hidden;
@@ -105,12 +106,51 @@
   color: #fff;
   font-size: 12px;
   font-weight: 700;
-  border-radius: 999px;
+  border-radius: 24px;
   padding: 4px 12px;
 }
 
+.my-job-image-meta-v2 {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 36px;
+  text-align: center;
+  padding: 32px 0 8px;
+}
+
+.my-job-image-date-v2 strong {
+  display: block;
+  font-size: 72px;
+  line-height: 0.9;
+  color: #2442a1;
+}
+
+.my-job-image-date-v2 span {
+  display: block;
+  margin-top: 8px;
+  font-size: 16px;
+  color: #3b82f6;
+}
+
+.my-job-image-time-v2 small {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.my-job-image-time-v2 strong {
+  font-size: 16px;
+  color: #111827;
+}
+
 .status-pill.completed {
-  background: #64748b;
+  border: 1px solid #78e8a1;
+  background: #9bf0bc;
+  color: #1bb45a;
 }
 
 .status-pill.in-progress {
@@ -129,38 +169,6 @@
     rgba(211, 219, 229, 0.6) 72%,
     rgba(211, 219, 229, 0.8) 100%
   );
-}
-
-.day-value {
-  margin-top: 12px;
-  font-size: 54px;
-  line-height: 1;
-  font-weight: 700;
-  color: #1e3a8a;
-  text-align: start;
-}
-
-.month-value {
-  margin-top: 2px;
-  font-size: 16px;
-  color: #2563eb;
-  text-align: start;
-}
-
-.schedule-label {
-  margin-top: auto;
-  font-size: 12px;
-  color: #64748b;
-  text-align: start;
-}
-
-.schedule-value {
-  margin-top: 2px;
-  font-size: 16px;
-  line-height: 1.1;
-  font-weight: 700;
-  color: #1f2937;
-  text-align: start;
 }
 
 .my-job-main-v2 {
@@ -235,7 +243,7 @@
 .progress-btn,
 .completed-btn {
   height: 44px;
-  border-radius: 12px;
+  border-radius: 24px;
   border: 1px solid #cfd8e5;
   font-size: 14px;
   font-weight: 700;
@@ -249,7 +257,7 @@
 
 .job-payment-badge {
   height: 44px;
-  border-radius: 12px;
+  border-radius: 24px;
   border: 1px solid transparent;
   font-size: 14px;
   font-weight: 700;
@@ -926,6 +934,11 @@
   gap: 10px;
 }
 
+.my-jobs-detail-row > div {
+  min-width: 0;
+  flex: 1;
+}
+
 .my-jobs-detail-row + .my-jobs-detail-row {
   margin-top: 12px;
 }
@@ -952,6 +965,8 @@
   display: block;
   color: #1f2937;
   font-size: 14px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .my-jobs-checklist-card {
@@ -1135,11 +1150,7 @@
   }
 
   .my-job-date-v2 {
-    min-height: unset;
-  }
-
-  .schedule-label {
-    margin-top: 12px;
+    min-height: 230px;
   }
 
   .my-jobs-message-view {
@@ -1160,6 +1171,23 @@
 
   .job-main-header-v2 {
     flex-direction: column;
+  }
+
+  .my-job-date-v2 {
+    padding: 16px 18px;
+  }
+
+  .my-job-image-meta-v2 {
+    gap: 28px;
+    padding-top: 24px;
+  }
+
+  .my-job-image-date-v2 strong {
+    font-size: 58px;
+  }
+
+  .my-job-image-date-v2 span {
+    font-size: 15px;
   }
 
   .job-price-v2 {

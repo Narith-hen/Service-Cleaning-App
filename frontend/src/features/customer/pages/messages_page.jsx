@@ -5,12 +5,12 @@ import {
   CalendarOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined
+  DeleteOutlined
 } from '@ant-design/icons';
 import CustomerMessagePanel from '../components/customer_message_panel';
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
+import { formatSingleTimeLabel } from '../../../utils/timeFormat';
 import {
   ensureRealtimeSocketConnected,
   getRealtimeSocket
@@ -19,6 +19,7 @@ import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/customer/messages.scss';
 
 const CUSTOMER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
+const CUSTOMER_HIDDEN_CHAT_STORAGE_KEY = 'customer_hidden_message_threads_v1';
 
 // Backend API URL for serving uploaded files
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -111,6 +112,44 @@ const readStoredThreadIds = () => {
   }
 };
 
+const readStoredThreads = () => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_CHAT_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeStoredThreads = (threads) => {
+  try {
+    localStorage.setItem(CUSTOMER_CHAT_STORAGE_KEY, JSON.stringify(threads));
+  } catch {
+    // Ignore storage failures for thread cleanup.
+  }
+};
+
+const readHiddenThreadIds = () => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_HIDDEN_CHAT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeHiddenThreadIds = (threadIds) => {
+  try {
+    localStorage.setItem(CUSTOMER_HIDDEN_CHAT_STORAGE_KEY, JSON.stringify(threadIds));
+  } catch {
+    // Ignore storage failures for thread visibility state.
+  }
+};
+
 const extractRealtimeMessage = (payload) => {
   if (payload?.message && typeof payload.message === 'object') {
     return {
@@ -133,6 +172,7 @@ const CustomerMessagesPage = () => {
   const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
+  const [hiddenThreadIds, setHiddenThreadIds] = useState(() => readHiddenThreadIds());
   const contentRef = useRef(null);
   const unreadByThread = useChatStore((state) => state.unreadByThread);
   const incrementUnread = useChatStore((state) => state.incrementUnread);
@@ -150,13 +190,16 @@ const CustomerMessagesPage = () => {
   };
 
   const visibleBookings = useMemo(() => {
+    const hidden = new Set(hiddenThreadIds.map((id) => String(id)));
     if (bookings.length > 0) {
-      return bookings;
+      return bookings.filter((booking) => !hidden.has(String(booking.booking_id)));
     }
 
     const storedThreadIds = readStoredThreadIds();
     if (storedThreadIds.length > 0) {
-      return storedThreadIds.map((id) =>
+      return storedThreadIds
+        .filter((id) => !hidden.has(String(id)))
+        .map((id) =>
         normalizeBooking({
           booking_id: String(id),
           booking_date: new Date().toISOString(),
@@ -165,11 +208,15 @@ const CustomerMessagesPage = () => {
           service: { name: 'Cleaning Service' },
           cleaner: { id: '11', username: 'Cleaner' }
         })
-      );
+        );
     }
 
     return [];
-  }, [bookings]);
+  }, [bookings, hiddenThreadIds]);
+
+  useEffect(() => {
+    writeHiddenThreadIds(hiddenThreadIds);
+  }, [hiddenThreadIds]);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -372,6 +419,8 @@ const CustomerMessagesPage = () => {
       const { bookingId, message } = extractRealtimeMessage(payload);
       if (!bookingId || !message) return;
 
+      setHiddenThreadIds((prev) => prev.filter((id) => String(id) !== String(bookingId)));
+
       setThreadPreviews((prev) => ({
         ...prev,
         [bookingId]: getPreviewText([message])
@@ -467,6 +516,52 @@ const CustomerMessagesPage = () => {
     }
   };
 
+  const handleDeleteThread = (booking, event) => {
+    event.stopPropagation();
+    const threadId = String(booking.booking_id);
+    const cleanerLabel = booking.cleaner?.username || 'this cleaner';
+    const confirmed = window.confirm(`Delete this chat with ${cleanerLabel}?`);
+    if (!confirmed) return;
+
+    setHiddenThreadIds((prev) => {
+      const next = prev.includes(threadId) ? prev : [...prev, threadId];
+      return next;
+    });
+
+    setBookings((prev) => prev.filter((item) => String(item.booking_id) !== threadId));
+    setThreadPreviews((prev) => {
+      const next = { ...prev };
+      delete next[threadId];
+      return next;
+    });
+
+    const storedThreads = readStoredThreads();
+    if (storedThreads[threadId]) {
+      const nextStoredThreads = { ...storedThreads };
+      delete nextStoredThreads[threadId];
+      writeStoredThreads(nextStoredThreads);
+    }
+
+    useChatStore.getState().clearUnread(threadId);
+
+    if (String(activeThreadId || '') === threadId) {
+      const remaining = visibleBookings.filter((item) => String(item.booking_id) !== threadId);
+      const params = new URLSearchParams(searchParams);
+      if (remaining.length > 0) {
+        const nextId = String(remaining[0].booking_id);
+        params.set('thread', nextId);
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(nextId);
+      } else {
+        params.delete('thread');
+        params.delete('booking');
+        params.delete('cleaner');
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(null);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
@@ -501,9 +596,13 @@ const CustomerMessagesPage = () => {
       year: 'numeric'
     })
     : '';
-  const bookingTime = activeBooking?.booking_time || '09:00 AM';
-  const bookingLocation = activeBooking?.address || 'Location not provided';
-
+  const bookingTime = formatSingleTimeLabel(activeBooking?.booking_time || '09:00 AM', '09:00 AM');
+  const bookingLocation =
+    activeBooking?.address
+    || activeBooking?.location
+    || activeBooking?.service_location
+    || activeBooking?.service?.location
+    || 'Location not provided';
   return (
     <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
       <div className="customer-messages-header" data-customer-reveal>
@@ -532,32 +631,44 @@ const CustomerMessagesPage = () => {
               const preview = threadPreviews[threadId] || emptyPreviewText;
               const unreadCount = unreadByThread[threadId] || 0;
               return (
-                <button
+                <div
                   key={threadId}
-                  type="button"
-                  className={`customer-messages-thread ${isActive ? 'active' : ''}`}
-                  onClick={() => handleSelectThread(booking)}
-                  data-customer-button
+                  className={`customer-messages-thread-row ${isActive ? 'active' : ''}`}
                   style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
                 >
-                  <div className="thread-avatar">
-                    {booking.cleaner?.avatar ? (
-                      <img src={booking.cleaner.avatar} alt={booking.cleaner?.username || 'Cleaner'} className="thread-avatar-image" />
-                    ) : (
-                      (booking.cleaner?.username || 'C').charAt(0)
-                    )}
-                  </div>
-                  <div className="thread-meta">
-                    <strong>{booking.cleaner?.username || 'Cleaner'}</strong>
-                    <span>{preview}</span>
-                  </div>
-                  <div className="thread-meta-right">
-                    <span className="thread-time">{booking.booking_time || '09:00 AM'}</span>
-                    {unreadCount > 0 && (
-                      <span className="thread-unread">{unreadCount}</span>
-                    )}
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    className={`customer-messages-thread ${isActive ? 'active' : ''}`}
+                    onClick={() => handleSelectThread(booking)}
+                    data-customer-button
+                  >
+                    <div className="thread-avatar">
+                      {booking.cleaner?.avatar ? (
+                        <img src={booking.cleaner.avatar} alt={booking.cleaner?.username || 'Cleaner'} className="thread-avatar-image" />
+                      ) : (
+                        (booking.cleaner?.username || 'C').charAt(0)
+                      )}
+                    </div>
+                    <div className="thread-meta">
+                      <strong>{booking.cleaner?.username || 'Cleaner'}</strong>
+                      <span>{preview}</span>
+                    </div>
+                    <div className="thread-meta-right">
+                      {unreadCount > 0 && (
+                        <span className="thread-unread">{unreadCount}</span>
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="customer-messages-thread-delete"
+                    onClick={(event) => handleDeleteThread(booking, event)}
+                    aria-label={`Delete chat with ${booking.cleaner?.username || 'Cleaner'}`}
+                    title="Delete chat"
+                  >
+                    <DeleteOutlined />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -586,7 +697,6 @@ const CustomerMessagesPage = () => {
                       <strong>{bookingDate}, {bookingTime}</strong>
                     </div>
                   </div>
-
                   <div className="my-jobs-detail-row">
                     <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
                     <div>
@@ -594,15 +704,17 @@ const CustomerMessagesPage = () => {
                       <strong>{bookingLocation}</strong>
                     </div>
                   </div>
+
                 </div>
 
-                <div className="my-jobs-checklist-card">
-                  <h6>Checklist Preview</h6>
-                  <ul>
-                    <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
-                    <li><CheckCircleOutlined /> Bathroom Sanitization</li>
-                    <li><ClockCircleOutlined /> Window Cleaning (Pending)</li>
-                  </ul>
+                <div className="my-jobs-details-card my-jobs-details-card--service">
+                  <div className="my-jobs-detail-row">
+                    <span className="my-jobs-detail-icon"><FileTextOutlined /></span>
+                    <div>
+                      <small>Service</small>
+                      <strong>{serviceName}</strong>
+                    </div>
+                  </div>
                 </div>
 
                 <button type="button" className="my-jobs-contract-btn">
@@ -620,3 +732,8 @@ const CustomerMessagesPage = () => {
 };
 
 export default CustomerMessagesPage;
+
+
+
+
+

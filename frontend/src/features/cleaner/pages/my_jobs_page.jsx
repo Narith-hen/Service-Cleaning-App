@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
   UserOutlined,
-  HomeOutlined,
-  AppstoreOutlined,
   DollarOutlined,
   MessageOutlined,
   PlayCircleOutlined,
@@ -131,6 +129,59 @@ const getPaymentBadge = (paymentStatus) => {
   }
 
   return null;
+};
+
+const formatSingleTimeLabel = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return 'Time pending';
+
+  const normalized = text.toUpperCase();
+  if (normalized.includes('AM') || normalized.includes('PM')) {
+    return text;
+  }
+
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return text;
+
+  const hours24 = Number(match[1]);
+  const minutes = match[2];
+  if (!Number.isFinite(hours24)) return text;
+
+  const meridiem = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 || 12;
+  return `${hours12}:${minutes} ${meridiem}`;
+};
+
+const formatJobDateLabel = (job) => {
+  const day = String(job?.day || '').trim();
+  const monthYear = String(job?.monthYear || '').trim();
+
+  if (!day && !monthYear) {
+    return 'Date pending';
+  }
+
+  const monthYearParts = monthYear.split(/\s+/).filter(Boolean);
+  const year = monthYearParts.length ? monthYearParts[monthYearParts.length - 1] : '';
+  const month = monthYearParts.slice(0, -1).join(' ') || monthYear;
+  return month && year ? `${month} ${day}, ${year}` : [day, monthYear].filter(Boolean).join(' ');
+};
+
+const getJobImageDateParts = (job) => {
+  const day = String(job?.day || '').trim();
+  const monthYear = String(job?.monthYear || '').trim();
+
+  return {
+    dayNumber: day ? day.padStart(2, '0') : '--',
+    monthLabel: monthYear || 'Date pending'
+  };
+};
+
+const formatJobImageTimeLabel = (job) => {
+  const timeRange = String(job?.timeRange || '').trim();
+  if (!timeRange) return 'Time pending';
+
+  const [startTime] = timeRange.split('-').map((part) => part.trim()).filter(Boolean);
+  return formatSingleTimeLabel(startTime || timeRange);
 };
 
 const fallbackJobs = [
@@ -504,6 +555,7 @@ const MyJobsPage = () => {
           const bookingId = getBookingIdFromJob(job);
           const paymentFlow = bookingId ? paymentWorkflowByBooking[String(bookingId)] : null;
           const paymentStatus = String(paymentFlow?.payment_status || job.paymentStatus || '').toLowerCase();
+          const { dayNumber, monthLabel } = getJobImageDateParts(job);
           const paymentBadge = getPaymentBadge(paymentStatus);
           const needsPaymentReview = isPaymentReviewStatus(job.status) || isPaymentReviewStatus(paymentStatus);
           const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
@@ -540,21 +592,27 @@ const MyJobsPage = () => {
                   : actionState === 'payment-required'
                     ? 'PAYMENT REVIEW'
                     : job.status === 'in-progress'
-                      ? 'IN PROGRESS'
-                      : 'ACTIVE NOW'}
+                    ? 'IN PROGRESS'
+                    : 'ACTIVE NOW'}
               </span>
-              <div className="day-value">{job.day}</div>
-              <div className="month-value">{job.monthYear}</div>
 
-              <div className="schedule-label">Scheduled Time</div>
-              <div className="schedule-value">{job.timeRange}</div>
+              <div className="my-job-image-meta-v2">
+                <div className="my-job-image-date-v2">
+                  <strong>{dayNumber}</strong>
+                  <span>{monthLabel}</span>
+                </div>
+
+                <div className="my-job-image-time-v2">
+                  <small>Scheduled Time</small>
+                  <strong>{formatJobImageTimeLabel(job)}</strong>
+                </div>
+              </div>
             </aside>
 
             <section className="my-job-main-v2">
               <div className="job-main-header-v2">
                 <div>
                   <h3>{job.title}</h3>
-                  <p>Job ID: {job.jobId}</p>
                 </div>
 
                 <div className="job-price-v2">
@@ -572,9 +630,7 @@ const MyJobsPage = () => {
               </p>
 
               <p className="job-line-v2">
-                <HomeOutlined /> {job.bedrooms}
-                <span className="dot">•</span>
-                <AppstoreOutlined /> {job.floors}
+                <CalendarOutlined /> {formatJobDateLabel(job)}
               </p>
 
               <div className="job-actions-v2">

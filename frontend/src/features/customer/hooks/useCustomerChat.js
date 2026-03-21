@@ -167,6 +167,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
   const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
   const [isCleanerTyping, setIsCleanerTyping] = useState(false);
   const [otherUserId, setOtherUserId] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [chatError, setChatError] = useState('');
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const setUserOnline = useChatStore((state) => state.setUserOnline);
   const setUserOffline = useChatStore((state) => state.setUserOffline);
@@ -362,6 +364,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     let cancelled = false;
     activeThreadRef.current = normalizedThreadId;
     setIsLoading(true);
+    setAccessDenied(false);
+    setChatError('');
 
     const loadFromApi = async () => {
       if (!getAuthToken()) {
@@ -379,6 +383,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
         const currentUserId = getStoredUserId();
         const mapped = payload.map((message) => mapApiMessage(message, currentUserId));
         if (!cancelled) {
+          setAccessDenied(false);
+          setChatError('');
           setMessages(mapped.length ? mapped : []);
           if (currentUserId && payload.length) {
             const first = payload.find((message) => message?.sender_id && message?.receiver_id);
@@ -390,10 +396,19 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
             }
           }
         }
-      } catch {
-        const fallback = loadMessages(normalizedThreadId);
+      } catch (error) {
+        const statusCode = Number(error?.response?.status || 0);
+        const errorMessage = error?.response?.data?.message || 'Unable to load this conversation.';
+
         if (!cancelled) {
-          setMessages(fallback);
+          if (statusCode === 401 || statusCode === 403) {
+            setAccessDenied(true);
+            setChatError(errorMessage);
+            setMessages([]);
+          } else {
+            const fallback = loadMessages(normalizedThreadId);
+            setMessages(fallback);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -470,6 +485,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
   }, [normalizedThreadId, clearUnread]);
 
   const notifyTyping = useCallback(() => {
+    if (accessDenied) return;
     const socket = socketRef.current;
     if (socket && socket.connected) {
       socket.emit('typing', {
@@ -488,7 +504,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
         });
       }, 3000); // Stop typing after 3 seconds of inactivity
     }
-  }, [normalizedThreadId]);
+  }, [normalizedThreadId, accessDenied]);
 
   const sendMessage = async ({ text, attachment }) => {
     const trimmedText = String(text || '').trim();
@@ -496,6 +512,13 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     const imageName = attachment?.name || '';
     const imageFile = attachment?.file || null;
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    if (accessDenied) {
+      return {
+        success: false,
+        error: chatError || 'Not authorized to access this conversation'
+      };
+    }
 
     if (!trimmedText && !imageUrl) {
       return { success: false, error: 'Type a message or attach an image.' };
@@ -573,9 +596,15 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       console.error('[useCustomerChat] Send message error:', error);
       // Remove the optimistic message from the UI on failure
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      const statusCode = Number(error?.response?.status || 0);
+      const errorMessage = error?.response?.data?.message || 'Failed to send message. Check server connection.';
+      if (statusCode === 401 || statusCode === 403) {
+        setAccessDenied(true);
+        setChatError(errorMessage);
+      }
       return {
         success: false,
-        error: error?.response?.data?.message || 'Failed to send message. Check server connection.'
+        error: errorMessage
       };
     }
   };
@@ -598,6 +627,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     showLoadingIndicator,
     isCleanerTyping,
     notifyTyping,
-    otherUserId
+    otherUserId,
+    accessDenied,
+    chatError
   };
 };

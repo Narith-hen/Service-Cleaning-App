@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  AppstoreOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
-  HomeOutlined,
   HistoryOutlined,
   SearchOutlined,
   StarFilled,
@@ -47,6 +45,27 @@ const formatMoney = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 'Price pending';
   return `$${numeric.toFixed(2)}`;
+};
+
+const formatBookingTimeLabel = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return 'Time pending';
+
+  const normalized = text.toUpperCase();
+  if (normalized.includes('AM') || normalized.includes('PM')) {
+    return text;
+  }
+
+  const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return text;
+
+  const hours24 = Number(match[1]);
+  const minutes = match[2];
+  if (!Number.isFinite(hours24)) return text;
+
+  const meridiem = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 || 12;
+  return `${hours12}:${minutes} ${meridiem}`;
 };
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -111,7 +130,7 @@ const normalizeHistoryBooking = (booking, index = 0) => {
       booking?.title ||
       'Cleaning Service',
     bookingDate: booking?.booking_date || booking?.date || new Date().toISOString(),
-    bookingTime: booking?.booking_time || booking?.time || '09:00 AM',
+    bookingTime: formatBookingTimeLabel(booking?.booking_time || booking?.time || '09:00 AM'),
     serviceImage: pickHistoryImage(booking),
     cleanerName:
       booking?.cleaner_display_name ||
@@ -184,8 +203,9 @@ const getHistoryStatusButton = (rawStatus, status) => {
   };
 };
 
-const getPaymentStatusBadge = (paymentStatus) => {
+const getPaymentStatusBadge = (paymentStatus, bookingStatus) => {
   const normalized = String(paymentStatus || '').toLowerCase();
+  const normalizedBookingStatus = String(bookingStatus || '').toLowerCase();
 
   if (normalized === 'completed' || normalized === 'paid') {
     return {
@@ -200,6 +220,20 @@ const getPaymentStatusBadge = (paymentStatus) => {
       tone: 'payment-submitted',
       icon: <ClockCircleOutlined />,
       label: 'Payment Submitted'
+    };
+  }
+
+  if (
+    normalized === 'awaiting_receipt'
+    || normalized === 'payment_required'
+    || normalized === 'pending'
+    || normalized === 'unpaid'
+    || (!normalized && normalizedBookingStatus === 'payment_required')
+  ) {
+    return {
+      tone: 'pending',
+      icon: <DollarOutlined />,
+      label: 'Awaiting Payment'
     };
   }
 
@@ -397,7 +431,7 @@ const CustomerHistoryPage = () => {
               year: 'numeric'
             });
             const statusButton = getHistoryStatusButton(item.rawStatus, item.status);
-            const paymentBadge = getPaymentStatusBadge(item.paymentStatus);
+            const paymentBadge = getPaymentStatusBadge(item.paymentStatus, item.bookingStatus);
             const reviewBadge = getReviewStatusBadge(item.reviewId, item.reviewRating);
             const needsPayment =
               item.bookingStatus === 'payment_required'
@@ -444,7 +478,6 @@ const CustomerHistoryPage = () => {
                     <div className="customer-history-card-top">
                       <div>
                         <h2>{item.serviceName}</h2>
-                        <p className="customer-history-card-id">Job ID: #{item.id}</p>
                       </div>
                       <div className="customer-history-price">
                         <strong>{formatMoney(item.totalPrice)}</strong>
@@ -455,11 +488,6 @@ const CustomerHistoryPage = () => {
                     <div className="customer-history-summary">
                       <p><EnvironmentOutlined /> {item.location}</p>
                       <p><UserOutlined /> Cleaner: {item.cleanerName}</p>
-                      <p>
-                        <HomeOutlined /> {item.bedrooms}
-                        <span className="dot">•</span>
-                        <AppstoreOutlined /> {item.floors}
-                      </p>
                       <p><CalendarOutlined /> {dateLabel}</p>
                     </div>
 
@@ -493,7 +521,7 @@ const CustomerHistoryPage = () => {
                       {needsPayment && !paymentConfirmed && (
                         <button
                           type="button"
-                          className="customer-secondary-button customer-history-action-button"
+                          className="customer-secondary-button customer-history-action-button customer-history-payment-button"
                           onClick={() => navigate(`/customer/payment-methods?bookingId=${item.id}`)}
                           data-customer-button
                         >
@@ -513,3 +541,4 @@ const CustomerHistoryPage = () => {
 };
 
 export default CustomerHistoryPage;
+

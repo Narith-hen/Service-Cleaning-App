@@ -29,6 +29,18 @@ router.get('/', [
   query('is_read').optional().isBoolean()
 ], validate, getNotifications);
 
+// Notification settings
+router.get('/settings', getNotificationSettings);
+router.put('/settings', [
+  body('email_notifications').optional().isBoolean(),
+  body('push_notifications').optional().isBoolean(),
+  body('sms_notifications').optional().isBoolean(),
+  body('booking_updates').optional().isBoolean(),
+  body('promotions').optional().isBoolean(),
+  body('quiet_hours_start').optional().isString(),
+  body('quiet_hours_end').optional().isString()
+], validate, updateNotificationSettings);
+
 router.get('/unread/count', getUnreadCount);
 router.get('/:id', [
   param('id').isInt()
@@ -42,18 +54,6 @@ router.post('/read-all', markAllAsRead);
 router.delete('/:id', [
   param('id').isInt()
 ], validate, deleteNotification);
-
-// Notification settings
-router.get('/settings', getNotificationSettings);
-router.put('/settings', [
-  body('email_notifications').optional().isBoolean(),
-  body('push_notifications').optional().isBoolean(),
-  body('sms_notifications').optional().isBoolean(),
-  body('booking_updates').optional().isBoolean(),
-  body('promotions').optional().isBoolean(),
-  body('quiet_hours_start').optional().isString(),
-  body('quiet_hours_end').optional().isString()
-], validate, updateNotificationSettings);
 
 // Subscription management
 router.post('/subscribe', [

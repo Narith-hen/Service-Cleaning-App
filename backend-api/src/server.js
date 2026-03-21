@@ -122,6 +122,7 @@ const notificationRoutes = require("./routes/notification.routes");
 const messageRoutes = require("./routes/message.routes");
 const userRoutes = require("./routes/user.routes");
 const reviewRoutes = require("./routes/review.routes");
+const dashboardRoutes = require("./routes/dashboard.routes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
@@ -132,6 +133,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
