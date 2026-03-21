@@ -682,13 +682,6 @@ const updateBookingStatus = async (req, res, next) => {
       }
     }
 
-    if (normalizedBookingStatus === 'completed') {
-      const paymentStatus = String(booking.payment_status || '').trim().toLowerCase();
-      if (!['paid', 'completed'].includes(paymentStatus)) {
-        return next(new AppError('Payment must be confirmed before completing service', 400));
-      }
-    }
-
     const bookingColumns = await getBookingTableColumns(promiseDb);
     const updates = [];
     const params = [];

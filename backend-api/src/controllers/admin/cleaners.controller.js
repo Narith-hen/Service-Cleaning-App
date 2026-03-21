@@ -580,76 +580,14 @@ const deleteCleaner = async (req, res, next) => {
       return next(new AppError('Cleaner not found', 404));
     }
 
-    const reviewsColumns = await getTableColumns(connection, 'reviews');
-    if (reviewsColumns?.has('cleaner_id')) {
-      await connection.query('DELETE FROM reviews WHERE cleaner_id = ?', [cleanerId]);
-    }
-
-    const bookingsColumns = await getTableColumns(connection, 'bookings');
-    if (bookingsColumns?.has('cleaner_id')) {
-      await connection.query('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?', [cleanerId]);
-    }
-
-    const notificationsColumns = await getTableColumns(connection, 'notifications');
-    if (notificationsColumns?.has('user_id')) {
-      await connection.query('DELETE FROM notifications WHERE user_id = ?', [cleanerId]);
-    }
-
-    const settingsColumns = await getTableColumns(connection, 'settings');
-    if (settingsColumns?.has('user_id')) {
-      await connection.query('DELETE FROM settings WHERE user_id = ?', [cleanerId]);
-    }
-
-    const accColumns = await getTableColumns(connection, 'acc');
-    const messagesColumns = await getTableColumns(connection, 'messages');
-    if (accColumns) {
-      const accountFilters = [];
-      const accountParams = [];
-
-      if (accColumns.has('user_id')) {
-        accountFilters.push('user_id = ?');
-        accountParams.push(cleanerId);
-      }
-      if (accColumns.has('cleaner_id')) {
-        accountFilters.push('cleaner_id = ?');
-        accountParams.push(cleanerId);
-      }
-
-      if (accountFilters.length > 0) {
-        const [accountRows] = await connection.query(
-          `SELECT acc_id FROM acc WHERE ${accountFilters.join(' OR ')}`,
-          accountParams
-        );
-        const accountIds = accountRows.map((row) => Number(row.acc_id)).filter(Boolean);
-
-        if (accountIds.length > 0 && messagesColumns) {
-          const hasSenderId = messagesColumns.has('sender_id');
-          const hasReceiverId = messagesColumns.has('receiver_id');
-
-          if (hasSenderId && hasReceiverId) {
-            await connection.query(
-              'DELETE FROM messages WHERE sender_id IN (?) OR receiver_id IN (?)',
-              [accountIds, accountIds]
-            );
-          } else if (hasSenderId) {
-            await connection.query(
-              'DELETE FROM messages WHERE sender_id IN (?)',
-              [accountIds]
-            );
-          } else if (hasReceiverId) {
-            await connection.query(
-              'DELETE FROM messages WHERE receiver_id IN (?)',
-              [accountIds]
-            );
-          }
-        }
-
-        await connection.query(
-          `DELETE FROM acc WHERE ${accountFilters.join(' OR ')}`,
-          accountParams
-        );
-      }
-    }
+    // Remove references before deleting the cleaner account rows.
+    // In this DB, reviews.cleaner_id is NOT NULL and FK-linked to users.user_id,
+    // so reviews must be deleted rather than reassigned to NULL.
+    await connection.query('DELETE FROM reviews WHERE cleaner_id = ?', [cleanerId]);
+    await connection.query('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?', [cleanerId]);
+    await connection.query('DELETE FROM notifications WHERE user_id = ?', [cleanerId]).catch(() => {});
+    await connection.query('DELETE FROM settings WHERE user_id = ?', [cleanerId]).catch(() => {});
+    await connection.query('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', [cleanerId, cleanerId]).catch(() => {});
 
     const [userDeleteResult] = await connection.query(
       'DELETE FROM users WHERE user_id = ?',
