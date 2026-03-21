@@ -180,6 +180,21 @@ const normalizeJobStatus = (...values) => {
   return 'upcoming';
 };
 
+const isPaymentReviewStatus = (status) => {
+  const normalized = String(status || '').toLowerCase();
+  return normalized === 'payment_review' || normalized === 'pending_payment' || normalized === 'awaiting_payment';
+};
+
+const getPaymentBadge = (paymentStatus) => {
+  const normalized = String(paymentStatus || '').toLowerCase();
+  if (normalized === 'completed' || normalized === 'paid') return { color: 'green', label: 'Paid' };
+  if (normalized === 'payment_review' || normalized === 'pending_payment' || normalized === 'awaiting_payment') {
+    return { color: 'orange', label: 'Payment Review' };
+  }
+  if (normalized === 'failed' || normalized === 'error') return { color: 'red', label: 'Payment Failed' };
+  return { color: 'default', label: 'Unknown' };
+};
+
 const buildJobRecord = ({
   id,
   sourceRequestId,
@@ -327,6 +342,7 @@ const MyJobsPage = () => {
   const [activeMessageJobId, setActiveMessageJobId] = useState(null);
   const [jobActionStateById, setJobActionStateById] = useState({});
   const [loading, setLoading] = useState(true);
+  const [paymentWorkflowByBooking, setPaymentWorkflowByBooking] = useState({});
 
   useEffect(() => {
     let cancelled = false;
