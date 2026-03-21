@@ -352,29 +352,32 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-<<<<<<< HEAD
-  min-height: 44px;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  background: #fff1f2;
-  color: #b91c1c;
-  padding: 10px 18px;
+  border-radius: 24px;
+}
+
+.customer-history-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 24px;
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+  padding: 10px 20px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.customer-history-cancel-btn:hover:not(:disabled) {
-  background: #ffe4e6;
-  border-color: #fda4af;
+.customer-history-chat-btn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
-.customer-history-cancel-btn:disabled {
-  cursor: wait;
-  opacity: 0.7;
-=======
-  border-radius: 24px;
+.customer-history-chat-btn .anticon {
+  font-size: 16px;
 }
 
 .customer-history-payment-button {
@@ -382,7 +385,6 @@
   color: #fff;
   border-color: #f59e0b;
   box-shadow: 0 12px 24px rgba(245, 158, 11, 0.22);
->>>>>>> rathana
 }
 
 .customer-history-empty {

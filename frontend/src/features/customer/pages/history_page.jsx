@@ -8,6 +8,7 @@ import {
   DollarOutlined,
   EnvironmentOutlined,
   HistoryOutlined,
+  MessageOutlined,
   SearchOutlined,
   StarFilled,
   UserOutlined
@@ -303,6 +304,12 @@ const canCancelHistoryBooking = (item) => {
     || ['pending', 'confirmed', 'in_progress'].includes(bookingStatus);
 };
 
+const hasAssignedCleaner = (item) => {
+  // Check if the cleaner name is not the default placeholder
+  const cleanerName = String(item?.cleanerName || '').toLowerCase();
+  return item?.cleanerId && cleanerName && cleanerName !== 'cleaner pending' && cleanerName !== 'assigned cleaner';
+};
+
 const CustomerHistoryPage = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
@@ -318,6 +325,10 @@ const CustomerHistoryPage = () => {
         from: '/customer/history'
       }
     });
+  };
+
+  const openChatPage = (booking) => {
+    navigate(`/customer/chat?booking=${encodeURIComponent(String(booking.id))}`);
   };
 
   useEffect(() => {
@@ -509,6 +520,17 @@ const CustomerHistoryPage = () => {
                         {statusButton.icon}
                         {statusButton.label}
                       </span>
+                      {hasAssignedCleaner(item) && (
+                        <button
+                          type="button"
+                          className="customer-history-chat-btn"
+                          onClick={() => openChatPage(item)}
+                          data-customer-button
+                        >
+                          <MessageOutlined />
+                          Chat
+                        </button>
+                      )}
                       {canCancelHistoryBooking(item) && (
                         <button
                           type="button"
@@ -521,11 +543,8 @@ const CustomerHistoryPage = () => {
                           })}
                           data-customer-button
                         >
-<<<<<<< HEAD
                           <CloseOutlined />
                           Cancel Booking
-=======
-                          <StarFilled /> Rate Service
                         </button>
                       )}
                       {needsPayment && !paymentConfirmed && (
@@ -536,7 +555,6 @@ const CustomerHistoryPage = () => {
                           data-customer-button
                         >
                           Pay Now
->>>>>>> rathana
                         </button>
                       )}
                     </div>

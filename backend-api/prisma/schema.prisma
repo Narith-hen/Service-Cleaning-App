@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -75,6 +74,10 @@ model Booking {
   cleaner_id     Int?
   service_id     Int
   promotion_id   Int?
+  // Chat blocking fields
+  customer_blocked Boolean @default(false)
+  cleaner_blocked  Boolean @default(false)
+  blocked_at      DateTime?
 
   user      User       @relation(fields: [user_id], references: [user_id])
   cleaner   User?      @relation("cleaner_bookings", fields: [cleaner_id], references: [user_id])

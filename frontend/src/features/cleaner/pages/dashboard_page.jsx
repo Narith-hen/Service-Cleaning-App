@@ -1,11 +1,7 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-=======
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Line } from '@ant-design/charts';
 import { Select } from 'antd';
->>>>>>> rathana
 import {
   DollarCircleOutlined,
   SyncOutlined,
@@ -22,114 +18,11 @@ const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const FALLBACK_COMPLETED_JOBS = 2;
 const FALLBACK_PENDING_REQUESTS = 1;
 
-<<<<<<< HEAD
-const CleanerDashboardPage = () => {
-  const [totalEarnings, setTotalEarnings] = useState(cleanerEarningsSummary.total);
-  const [completedJobs, setCompletedJobs] = useState(FALLBACK_COMPLETED_JOBS);
-  const [pendingRequests, setPendingRequests] = useState(FALLBACK_PENDING_REQUESTS);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadEarnings = async () => {
-      try {
-        const data = await fetchCleanerEarnings();
-        if (!isMounted) return;
-        setTotalEarnings(Number(data.total_earnings) || 0);
-      } catch (error) {
-        console.error('Failed to fetch cleaner earnings for dashboard:', error);
-      }
-    };
-
-    loadEarnings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const syncCompletedJobs = () => {
-      try {
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-        if (!raw) {
-          setCompletedJobs(FALLBACK_COMPLETED_JOBS);
-          setPendingRequests(FALLBACK_PENDING_REQUESTS);
-          return;
-        }
-
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          setCompletedJobs(FALLBACK_COMPLETED_JOBS);
-          setPendingRequests(FALLBACK_PENDING_REQUESTS);
-          return;
-        }
-
-        const nextCompletedCount = parsed.filter((job) => job?.status === 'completed').length;
-        const nextPendingCount = parsed.filter(
-          (job) => !job?.status || job.status === 'upcoming' || job.status === 'pending'
-        ).length;
-        setCompletedJobs(nextCompletedCount);
-        setPendingRequests(nextPendingCount);
-      } catch (error) {
-        console.error('Failed to read completed jobs from My Jobs storage:', error);
-        setCompletedJobs(FALLBACK_COMPLETED_JOBS);
-        setPendingRequests(FALLBACK_PENDING_REQUESTS);
-      }
-    };
-
-    syncCompletedJobs();
-
-    window.addEventListener('storage', syncCompletedJobs);
-    window.addEventListener('focus', syncCompletedJobs);
-
-    return () => {
-      window.removeEventListener('storage', syncCompletedJobs);
-      window.removeEventListener('focus', syncCompletedJobs);
-    };
-  }, []);
-
-  const stats = [
-    {
-      key: 'earnings',
-      title: 'Total Earnings',
-      value: formatMoney(totalEarnings),
-      note: '+12% vs last month',
-      icon: <DollarCircleOutlined />,
-      tone: 'success'
-    },
-    {
-      key: 'completed',
-      title: 'Jobs Completed',
-      value: String(completedJobs),
-      note: '+5 new today',
-      icon: <SyncOutlined />,
-      tone: 'success'
-    },
-    {
-      key: 'pending',
-      title: 'Pending Requests',
-      value: String(pendingRequests),
-      note: 'Action required',
-      icon: <ClockCircleOutlined />,
-      tone: 'warning'
-    },
-    {
-      key: 'rating',
-      title: 'Average Rating',
-      value: '4.9 / 5.0',
-      note: '',
-      icon: <StarOutlined />,
-      tone: 'rating'
-    }
-  ];
-=======
 const earningsViewOptions = [
   { value: 'week', label: 'Weekly Earnings', note: 'This week' },
   { value: 'month', label: 'Monthly Earnings', note: 'This month' },
   { value: 'total', label: 'Total Earnings', note: 'All time' }
 ];
->>>>>>> rathana
 
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

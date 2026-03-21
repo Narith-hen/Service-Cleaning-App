@@ -193,7 +193,7 @@ const CustomerChatPage = () => {
   // Get cleaner name from the booking
   const cleanerName = activeBooking.cleaner?.username || 'Cleaner';
   const cleanerAvatar = activeBooking.cleaner?.avatar || '';
-  const cleanerId = activeBooking.cleaner?.id || '11';
+  const cleanerId = activeBooking.cleaner?.id || activeBooking.cleaner_id || '';
   const serviceName = activeBooking.service?.name || 'Cleaning Service';
   const jobId = `#SOMA-${activeBooking.booking_id}`;
   const bookingDate = activeBooking.booking_date
