@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import '../../../styles/cleaner/review.scss'; // Re-use styles for now
 
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Create a shared socket instance
 let socketInstance = null;

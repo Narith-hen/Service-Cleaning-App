@@ -156,12 +156,8 @@ module.exports = {
   getPaymentHistory: paymentController.getPaymentHistory,
   
   // Additional notification functions
-  getNotificationById: (req, res, next) => {
-    res.status(200).json({ message: 'Get notification by ID endpoint - to be implemented' });
-  },
-  deleteNotification: (req, res, next) => {
-    res.status(200).json({ message: 'Delete notification endpoint - to be implemented' });
-  },
+  getNotificationById: notificationController.getNotificationById,
+  deleteNotification: notificationController.deleteNotification,
   getNotificationSettings: (req, res, next) => {
     res.status(200).json({ message: 'Get notification settings endpoint - to be implemented' });
   },

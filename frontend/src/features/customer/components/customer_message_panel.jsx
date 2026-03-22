@@ -8,10 +8,16 @@ import {
   SoundOutlined,
   AudioMutedOutlined,
   PlusCircleOutlined,
-  SendOutlined
+  SendOutlined,
+  DeleteOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
+import { Modal, message } from 'antd';
 import { formatCustomerChatTime, useCustomerChat } from '../hooks/useCustomerChat';
 import { useChatStore } from '../../../store/chatStore';
+import api from '../../../services/api';
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 
@@ -24,7 +30,19 @@ const toDataUrl = (file) =>
   });
 
 const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, cleanerId }) => {
-  const { messages, sendMessage, editMessage, markAsRead, showLoadingIndicator, isLoading, isCleanerTyping, notifyTyping, otherUserId } = useCustomerChat({ threadId, receiverId: cleanerId });
+  const {
+    messages,
+    sendMessage,
+    editMessage,
+    markAsRead,
+    showLoadingIndicator,
+    isLoading,
+    isCleanerTyping,
+    notifyTyping,
+    otherUserId,
+    accessDenied,
+    chatError
+  } = useCustomerChat({ threadId, receiverId: cleanerId });
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const toggleSound = useChatStore((state) => state.toggleSound);
   const onlineUsers = useChatStore((state) => state.onlineUsers);
@@ -38,10 +56,72 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   const [avatarFailed, setAvatarFailed] = useState(false);
   // Context menu state: { id, x, y } or null
   const [contextMenu, setContextMenu] = useState(null);
+  // Block/Delete state
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [iBlocked, setIBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
   const editInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatBodyRef = useRef(null);
   const lastReadReceiptRef = useRef({ threadId: null, messageId: null });
+
+  // Fetch block status on mount
+  useEffect(() => {
+    const fetchBlockStatus = async () => {
+      try {
+        const response = await api.get(`/messages/booking/${threadId}/block-status`);
+        if (response.data?.success) {
+          setIsBlocked(response.data.data.is_blocked);
+          setIBlocked(response.data.data.customer_blocked);
+        }
+      } catch (error) {
+        console.error('Failed to fetch block status:', error);
+      }
+    };
+    if (threadId) {
+      fetchBlockStatus();
+    }
+  }, [threadId]);
+
+  // Handle block/unblock chat
+  const handleToggleBlock = async () => {
+    try {
+      setBlockLoading(true);
+      const response = await api.patch(`/messages/booking/${threadId}/block`);
+      if (response.data?.success) {
+        setIBlocked(response.data.data.blocked);
+        message.success(response.data.message);
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Failed to update block status');
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  // Handle delete chat
+  const handleDeleteChat = () => {
+    Modal.confirm({
+      title: 'Delete Chat',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Are you sure you want to delete all messages in this conversation? This action cannot be undone.',
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          const response = await api.delete(`/messages/booking/${threadId}`);
+          if (response.data?.success) {
+            message.success('Chat deleted successfully');
+            // Reload the page or trigger a refresh
+            window.location.reload();
+          }
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Failed to delete chat');
+        }
+      }
+    });
+  };
 
   useEffect(() => {
     const el = chatBodyRef.current;
@@ -74,6 +154,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   }, [threadId, messages.length, markAsRead]);
 
   const openFilePicker = () => {
+    if (accessDenied) return;
     fileInputRef.current?.click();
   };
 
@@ -82,6 +163,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   };
 
   const handleFiles = async (fileList) => {
+    if (accessDenied) return;
     const file = Array.from(fileList || [])[0];
     if (!file) return;
 
@@ -151,6 +233,10 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
   };
 
   const handleSend = async () => {
+    if (accessDenied) {
+      setInputError(chatError || 'Not authorized to access this conversation');
+      return;
+    }
     const textToSend = draftMessage;
     const attachmentToSend = pendingAttachment;
 
@@ -197,14 +283,6 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           </div>
         </div>
         <div className="my-jobs-chat-header-actions">
-          <button
-            type="button"
-            className="my-jobs-chat-sound-btn"
-            aria-label={soundEnabled ? 'Mute chat sounds' : 'Enable chat sounds'}
-            onClick={toggleSound}
-          >
-            {soundEnabled ? <SoundOutlined /> : <AudioMutedOutlined />}
-          </button>
           <button type="button" className="my-jobs-chat-info-btn" aria-label="Job info">
             <InfoCircleOutlined />
           </button>
@@ -219,6 +297,12 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           </div>
         ) : (
           <>
+            {isBlocked && (
+              <div className="my-jobs-chat-blocked-banner">
+                <LockOutlined />
+                <span>This chat is blocked. You cannot send or receive messages.</span>
+              </div>
+            )}
             <div className="my-jobs-chat-day-pill">TODAY</div>
 
             {messages.map((message) => {
@@ -369,7 +453,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           </div>
         )}
 
-        {inputError && <p className="my-jobs-chat-input-error">{inputError}</p>}
+        {(chatError || inputError) && <p className="my-jobs-chat-input-error">{chatError || inputError}</p>}
 
         <div className="my-jobs-chat-input-row">
           <button
@@ -377,20 +461,24 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
             className="my-jobs-input-add-btn"
             aria-label="Attach image"
             onClick={openFilePicker}
+            disabled={accessDenied}
           >
             <PlusCircleOutlined />
           </button>
 
           <input
             type="text"
-            placeholder="Type a message..."
+            placeholder={accessDenied ? 'Chat unavailable' : 'Type a message...'}
             value={draftMessage}
+            disabled={accessDenied}
             onChange={(e) => {
+              if (accessDenied) return;
               setDraftMessage(e.target.value);
               if (inputError) setInputError('');
               notifyTyping();
             }}
             onKeyDown={(e) => {
+              if (accessDenied) return;
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
@@ -403,7 +491,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
             className="my-jobs-input-send-btn"
             aria-label="Send"
             onClick={handleSend}
-            disabled={!draftMessage.trim() && !pendingAttachment}
+            disabled={accessDenied || (!draftMessage.trim() && !pendingAttachment)}
           >
             <SendOutlined />
           </button>
@@ -414,6 +502,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
           type="file"
           accept="image/*"
           className="my-jobs-chat-file-input"
+          disabled={accessDenied}
           onChange={async (e) => {
             await handleFiles(e.target.files);
             e.target.value = '';

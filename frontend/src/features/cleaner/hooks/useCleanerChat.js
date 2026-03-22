@@ -7,7 +7,7 @@ import { playChatSound } from '../../../utils/chatSound';
 const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
 // Socket.io server URL - configure based on environment
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Backend API URL for serving uploaded images
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -136,6 +136,58 @@ const unwrapRealtimeMessagePayload = (payload) => {
   };
 };
 
+const dedupeMessagesById = (messages) => {
+  const seenIds = new Set();
+
+  return (messages || []).filter((message) => {
+    const messageId = String(message?.id || '');
+    if (!messageId) return true;
+    if (seenIds.has(messageId)) return false;
+    seenIds.add(messageId);
+    return true;
+  });
+};
+
+const mergeIncomingMessage = (prevMessages, incomingMessage, currentUserId, ownSender) => {
+  const nextMessage = {
+    ...incomingMessage,
+    id: String(incomingMessage?.id || `message-${Date.now()}`),
+    status: incomingMessage?.status || 'received'
+  };
+
+  const existingIndex = prevMessages.findIndex((message) => String(message?.id || '') === nextMessage.id);
+  if (existingIndex >= 0) {
+    const updated = [...prevMessages];
+    updated[existingIndex] = { ...updated[existingIndex], ...nextMessage };
+    return dedupeMessagesById(updated);
+  }
+
+  const normalizedCurrentUserId = String(currentUserId || '');
+  const senderId = String(nextMessage.senderId || nextMessage.sender_id || '');
+  const isOwnMessage = normalizedCurrentUserId && senderId && normalizedCurrentUserId === senderId;
+
+  if (isOwnMessage) {
+    const optimisticIndex = prevMessages.findIndex((message) => (
+      String(message?.id || '').startsWith('temp-')
+      && message?.sender === ownSender
+      && String(message?.text || '') === String(nextMessage.text || '')
+      && String(message?.imageUrl || '') === String(nextMessage.imageUrl || '')
+    ));
+
+    if (optimisticIndex >= 0) {
+      const updated = [...prevMessages];
+      updated[optimisticIndex] = {
+        ...updated[optimisticIndex],
+        ...nextMessage,
+        status: nextMessage.status || 'sent'
+      };
+      return dedupeMessagesById(updated);
+    }
+  }
+
+  return dedupeMessagesById([...prevMessages, nextMessage]);
+};
+
 export const formatCleanerChatTime = (createdAt) => {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return '';
@@ -200,18 +252,23 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
       setIsConnected(false);
     };
 
+    const onConnectError = (error) => {
+      console.error('[useCleanerChat] Socket connect error:', error?.message || error);
+      setIsConnected(false);
+    };
+
     // Listen for message status updates from server
     const onMessageSent = ({ id }) => {
       console.log('[useCleanerChat] Message sent:', id);
       setMessages((prev) =>
-        prev.map((m) => m.id === id ? { ...m, status: 'sent' } : m)
+        dedupeMessagesById(prev.map((m) => m.id === id ? { ...m, status: 'sent' } : m))
       );
     };
 
     const onMessageDelivered = ({ id }) => {
       console.log('[useCleanerChat] Message delivered:', id);
       setMessages((prev) =>
-        prev.map((m) => m.id === id ? { ...m, status: 'delivered' } : m)
+        dedupeMessagesById(prev.map((m) => m.id === id ? { ...m, status: 'delivered' } : m))
       );
     };
 
@@ -219,7 +276,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
       console.log('[useCleanerChat] Message seen:', id);
       // Only mark the specific message as seen (the latest one)
       setMessages((prev) =>
-        prev.map((m) => m.id === id ? { ...m, status: 'seen' } : m)
+        dedupeMessagesById(prev.map((m) => m.id === id ? { ...m, status: 'seen' } : m))
       );
     };
 
@@ -261,15 +318,11 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
 
       console.log('[useCleanerChat] New message received:', message);
       setMessages((prev) => {
-        // Prevent duplicates if message already exists
-        if (prev.some((m) => m.id === message.id)) {
-          return prev;
-        }
-        return [...prev, {
+        return mergeIncomingMessage(prev, {
           ...message,
           sender: message.sender || 'customer',
           status: 'received'
-        }];
+        }, currentUserId, 'cleaner');
       });
       if (message.sender !== 'cleaner') {
         incrementUnread(normalizedThreadId);
@@ -306,6 +359,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnectError);
     socket.on('message:sent', onMessageSent);
     socket.on('message:delivered', onMessageDelivered);
     socket.on('message:seen', onMessageSeen);
@@ -338,6 +392,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnectError);
       socket.off('message:sent', onMessageSent);
       socket.off('message:delivered', onMessageDelivered);
       socket.off('message:seen', onMessageSeen);
@@ -379,7 +434,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
         const currentUserId = getStoredUserId();
         const mapped = payload.map((message) => mapApiMessage(message, currentUserId));
         if (!cancelled) {
-          setMessages(mapped.length ? mapped : []);
+          setMessages(dedupeMessagesById(mapped.length ? mapped : []));
           if (currentUserId && payload.length) {
             const first = payload.find((message) => message?.sender_id && message?.receiver_id);
             if (first) {
@@ -568,7 +623,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
 
       console.log('[useCleanerChat] Updating message with ID:', tempId);
       setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? mapped : msg))
+        dedupeMessagesById(prev.map((msg) => (msg.id === tempId ? mapped : msg)))
       );
 
       if (mapped.senderId || mapped.receiverId) {

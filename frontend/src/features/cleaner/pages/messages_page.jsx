@@ -5,13 +5,13 @@ import {
   CalendarOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined
+  DeleteOutlined
 } from '@ant-design/icons';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import officeImage from '../../../assets/office.png';
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
+import { formatTimeRangeLabel } from '../../../utils/timeFormat';
 import {
   ensureRealtimeSocketConnected,
   getRealtimeSocket
@@ -21,6 +21,7 @@ import '../../../styles/cleaner/messages.scss';
 
 const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
+const CLEANER_HIDDEN_CHAT_STORAGE_KEY = 'cleaner_hidden_message_threads_v1';
 const fallbackThreads = [];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -54,6 +55,25 @@ const loadChatThreads = () => {
     // Ignore
   }
   return [];
+};
+
+const readHiddenThreadIds = () => {
+  try {
+    const raw = localStorage.getItem(CLEANER_HIDDEN_CHAT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeHiddenThreadIds = (threadIds) => {
+  try {
+    localStorage.setItem(CLEANER_HIDDEN_CHAT_STORAGE_KEY, JSON.stringify(threadIds));
+  } catch {
+    // Ignore storage issues for hidden chat state.
+  }
 };
 
 const normalizeThread = (job, index) => ({
@@ -151,63 +171,132 @@ const MessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [threads, setThreads] = useState([]);
-  const [activeThreadId, setActiveThreadId] = useState(
+const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
   const [threadPreviews, setThreadPreviews] = useState({});
+  const [hiddenThreadIds, setHiddenThreadIds] = useState(() => readHiddenThreadIds());
   const [priceInput, setPriceInput] = useState('');
   const [priceStatus, setPriceStatus] = useState('');
   const unreadByThread = useChatStore((state) => state.unreadByThread);
   const incrementUnread = useChatStore((state) => state.incrementUnread);
 
+  const visibleThreads = useMemo(() => {
+    const hidden = new Set(hiddenThreadIds.map((id) => String(id)));
+    return threads.filter((thread) => !hidden.has(String(thread.sourceRequestId || thread.id)));
+  }, [threads, hiddenThreadIds]);
+
   useEffect(() => {
-    try {
-      // First, try to load saved chat threads from localStorage
-      const savedThreads = loadChatThreads();
-      
-      // Also load from confirmed jobs
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-      if (!raw && savedThreads.length > 0) {
-        // No new jobs but have old chat threads - use those
-        setThreads(savedThreads);
-        return;
+    writeHiddenThreadIds(hiddenThreadIds);
+  }, [hiddenThreadIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+    
+    const loadThreads = async () => {
+      try {
+        // First, try to load saved chat threads from localStorage
+        const savedThreads = loadChatThreads();
+        
+        // Also load from confirmed jobs
+        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        if (!raw && savedThreads.length > 0) {
+          // No new jobs but have old chat threads - use those
+          if (!cancelled) setThreads(savedThreads);
+          return;
+        }
+        
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          // Use saved threads if no new jobs
+          if (!cancelled) setThreads(savedThreads.length > 0 ? savedThreads : []);
+          return;
+        }
+        
+        const normalized = parsed.filter(Boolean).map(normalizeThread);
+        
+        // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
+        const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
+        const mergedThreads = [
+          ...normalized,
+          ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
+        ];
+        
+        // Save merged threads back to localStorage
+        saveChatThreads(mergedThreads);
+        if (!cancelled) setThreads(mergedThreads);
+      } catch {
+        if (!cancelled) setThreads([]);
       }
-      
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        // Use saved threads if no new jobs
-        setThreads(savedThreads.length > 0 ? savedThreads : []);
-        return;
+    };
+    
+    loadThreads();
+    
+    // Poll for new confirmed jobs every 3 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        // Get current user ID
+        const currentUserId = (() => {
+          try {
+            const stored = JSON.parse(localStorage.getItem('user') || 'null');
+            return stored?.id || stored?.user_id || null;
+          } catch {
+            return null;
+          }
+        })();
+        
+        if (!currentUserId) return;
+        
+        // Fetch bookings assigned to this cleaner
+        const response = await api.get('/bookings', {
+          params: { page: 1, limit: 100 }
+        });
+        if (cancelled) return;
+        
+        const bookingsData = response?.data?.data || [];
+        // Filter to only confirmed bookings assigned to this cleaner
+        const cleanerConfirmedBookings = bookingsData.filter(
+          (b) => b.cleaner_id && String(b.cleaner_id) === String(currentUserId) && 
+                 (b.booking_status === 'confirmed' || b.booking_status === 'accepted')
+        );
+        
+        if (cleanerConfirmedBookings.length > 0) {
+          // Update localStorage with fresh data
+          const normalized = cleanerConfirmedBookings.map(normalizeThread);
+          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(normalized));
+          
+          // Merge with saved threads
+          const savedThreads = loadChatThreads();
+          const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
+          const mergedThreads = [
+            ...normalized,
+            ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
+          ];
+          saveChatThreads(mergedThreads);
+          if (!cancelled) setThreads(mergedThreads);
+        }
+      } catch {
+        // Ignore polling errors
       }
-      
-      const normalized = parsed.filter(Boolean).map(normalizeThread);
-      
-      // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
-      const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
-      const mergedThreads = [
-        ...normalized,
-        ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
-      ];
-      
-      // Save merged threads back to localStorage
-      saveChatThreads(mergedThreads);
-      setThreads(mergedThreads);
-    } catch {
-      setThreads([]);
-    }
+    }, 3000);
+    
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
   }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadPreviews = async () => {
-      if (!threads.length) {
+      if (!visibleThreads.length) {
         setThreadPreviews({});
         return;
       }
 
       if (!getAuthToken()) {
-        const fallbackMap = threads.reduce((acc, thread) => {
+        const fallbackMap = visibleThreads.reduce((acc, thread) => {
           const threadId = String(thread.sourceRequestId || thread.id);
           acc[threadId] = 'Tap to open conversation.';
           return acc;
@@ -220,7 +309,7 @@ const MessagesPage = () => {
 
       try {
         const entries = await Promise.all(
-          threads.map(async (thread) => {
+          visibleThreads.map(async (thread) => {
             const threadId = String(thread.sourceRequestId || thread.id);
             try {
               const response = await api.get(`/messages/booking/${threadId}`);
@@ -287,7 +376,7 @@ const MessagesPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [threads]);
+  }, [visibleThreads]);
 
   useEffect(() => {
     const paramThreadId = searchParams.get('thread') || searchParams.get('booking');
@@ -303,6 +392,8 @@ const MessagesPage = () => {
     const onNewMessage = (payload) => {
       const { bookingId, message } = extractRealtimeMessage(payload);
       if (!bookingId || !message) return;
+
+      setHiddenThreadIds((prev) => prev.filter((id) => String(id) !== String(bookingId)));
 
       setThreadPreviews((prev) => ({
         ...prev,
@@ -348,28 +439,28 @@ const MessagesPage = () => {
   }, [activeThreadId, incrementUnread]);
 
   useEffect(() => {
-    if (!threads.length) return;
+    if (!visibleThreads.length) return;
     const normalizedActive = String(activeThreadId || '');
-    const exists = threads.some((thread) =>
+    const exists = visibleThreads.some((thread) =>
       String(thread.sourceRequestId || thread.id) === normalizedActive
     );
     if (exists) return;
-    const first = threads[0];
+    const first = visibleThreads[0];
     const nextId = String(first.sourceRequestId || first.id);
     const params = new URLSearchParams(searchParams);
     params.set('thread', nextId);
     setSearchParams(params, { replace: true });
     setActiveThreadId(nextId);
-  }, [threads, activeThreadId, searchParams, setSearchParams]);
+  }, [visibleThreads, activeThreadId, searchParams, setSearchParams]);
 
   const activeThread = useMemo(() => {
-    if (!threads.length) return null;
+    if (!visibleThreads.length) return null;
     const activeId = String(activeThreadId || '');
     return (
-      threads.find((thread) => String(thread.sourceRequestId || thread.id) === activeId)
-      || threads[0]
+      visibleThreads.find((thread) => String(thread.sourceRequestId || thread.id) === activeId)
+      || visibleThreads[0]
     );
-  }, [threads, activeThreadId]);
+  }, [visibleThreads, activeThreadId]);
 
   useEffect(() => {
     if (!activeThread?.price) {
@@ -438,7 +529,41 @@ const MessagesPage = () => {
     setActiveThreadId(nextId);
   };
 
-  if (!threads.length) {
+  const handleDeleteThread = (thread, event) => {
+    event.stopPropagation();
+    const threadId = String(thread.sourceRequestId || thread.id);
+    const customerLabel = thread.customer || 'this customer';
+    const confirmed = window.confirm(`Delete this chat with ${customerLabel}?`);
+    if (!confirmed) return;
+
+    setHiddenThreadIds((prev) => (prev.includes(threadId) ? prev : [...prev, threadId]));
+    setThreads((prev) => prev.filter((item) => String(item.sourceRequestId || item.id) !== threadId));
+    setThreadPreviews((prev) => {
+      const next = { ...prev };
+      delete next[threadId];
+      return next;
+    });
+
+    useChatStore.getState().clearUnread(threadId);
+
+    if (String(activeThreadId || '') === threadId) {
+      const remaining = visibleThreads.filter((item) => String(item.sourceRequestId || item.id) !== threadId);
+      const params = new URLSearchParams(searchParams);
+      if (remaining.length > 0) {
+        const nextId = String(remaining[0].sourceRequestId || remaining[0].id);
+        params.set('thread', nextId);
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(nextId);
+      } else {
+        params.delete('thread');
+        params.delete('booking');
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(null);
+      }
+    }
+  };
+
+  if (!visibleThreads.length) {
     return (
       <div className="cleaner-messages-page">
         <div className="cleaner-messages-empty">
@@ -451,7 +576,7 @@ const MessagesPage = () => {
   }
 
   const dateLabel = activeThread
-    ? `${activeThread.monthYear} ${activeThread.day}, ${activeThread.timeRange}`
+    ? `${activeThread.monthYear} ${activeThread.day}, ${formatTimeRangeLabel(activeThread.timeRange, 'Time pending')}`
     : '';
 
   return (
@@ -461,7 +586,7 @@ const MessagesPage = () => {
           <p className="cleaner-messages-kicker">Conversations</p>
           <h1>Messages</h1>
         </div>
-        <span className="cleaner-messages-count">{threads.length} threads</span>
+        <span className="cleaner-messages-count">{visibleThreads.length} threads</span>
       </div>
 
       <div className="cleaner-messages-shell">
@@ -471,36 +596,48 @@ const MessagesPage = () => {
             <MessageOutlined />
           </div>
           <div className="cleaner-messages-thread-list">
-            {threads.map((thread) => {
+            {visibleThreads.map((thread) => {
               const threadId = String(thread.sourceRequestId || thread.id);
               const isActive = String(activeThread?.sourceRequestId || activeThread?.id) === threadId;
               const preview = threadPreviews[threadId] || 'Tap to open conversation.';
               const unreadCount = unreadByThread[threadId] || 0;
               return (
-                <button
+                <div
                   key={threadId}
-                  type="button"
-                  className={`cleaner-messages-thread ${isActive ? 'active' : ''}`}
-                  onClick={() => handleSelectThread(thread)}
+                  className={`cleaner-messages-thread-row ${isActive ? 'active' : ''}`}
                 >
-                  <div className="thread-avatar">
-                    {thread.customerAvatar ? (
-                      <img src={thread.customerAvatar} alt={thread.customer} className="thread-avatar-image" />
-                    ) : (
-                      thread.customer.charAt(0)
-                    )}
-                  </div>
-                  <div className="thread-meta">
-                    <strong>{thread.customer}</strong>
-                    <span>{preview}</span>
-                  </div>
-                  <div className="thread-meta-right">
-                    <span className="thread-time">{thread.timeRange}</span>
-                    {unreadCount > 0 && (
-                      <span className="thread-unread">{unreadCount}</span>
-                    )}
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    className={`cleaner-messages-thread ${isActive ? 'active' : ''}`}
+                    onClick={() => handleSelectThread(thread)}
+                  >
+                    <div className="thread-avatar">
+                      {thread.customerAvatar ? (
+                        <img src={thread.customerAvatar} alt={thread.customer} className="thread-avatar-image" />
+                      ) : (
+                        thread.customer.charAt(0)
+                      )}
+                    </div>
+                    <div className="thread-meta">
+                      <strong>{thread.customer}</strong>
+                      <span>{preview}</span>
+                    </div>
+                    <div className="thread-meta-right">
+                      {unreadCount > 0 && (
+                        <span className="thread-unread">{unreadCount}</span>
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="cleaner-messages-thread-delete"
+                    onClick={(event) => handleDeleteThread(thread, event)}
+                    aria-label={`Delete chat with ${thread.customer || 'Customer'}`}
+                    title="Delete chat"
+                  >
+                    <DeleteOutlined />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -531,14 +668,14 @@ const MessagesPage = () => {
                       <strong>{dateLabel}</strong>
                     </div>
                   </div>
-
                   <div className="my-jobs-detail-row">
                     <span className="my-jobs-detail-icon"><EnvironmentOutlined /></span>
                     <div>
                       <small>Location</small>
-                      <strong>{activeThread.location}</strong>
+                      <strong>{activeThread.customerAddress || activeThread.location || 'Location not provided'}</strong>
                     </div>
                   </div>
+
                 </div>
 
                 <div className="my-jobs-details-card my-jobs-details-card--service">
@@ -549,15 +686,6 @@ const MessagesPage = () => {
                       <strong>{activeThread.title}</strong>
                     </div>
                   </div>
-                </div>
-
-                <div className="my-jobs-checklist-card">
-                  <h6>Checklist Preview</h6>
-                  <ul>
-                    <li><CheckCircleOutlined /> Kitchen Deep Clean</li>
-                    <li><CheckCircleOutlined /> Bathroom Sanitization</li>
-                    <li><ClockCircleOutlined /> Window Cleaning (Pending)</li>
-                  </ul>
                 </div>
 
                 <button type="button" className="my-jobs-contract-btn">

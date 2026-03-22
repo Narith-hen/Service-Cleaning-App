@@ -12,18 +12,10 @@ import {
 } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import { cleanerService } from '../services/cleanerService';
-import { serviceService } from '../services/serviceService';
 import '../../../styles/admin/cleaners_page.css';
 
 const statusFilters = ['All', 'Active', 'Suspended', 'Inactive'];
 const ratingFilters = ['All', '4.5+', '4.0+', '3.5+'];
-const defaultServiceTypeOptions = [
-  { label: 'Home Cleaning', value: 'Home Cleaning' },
-  { label: 'Office Cleaning', value: 'Office Cleaning' },
-  { label: 'Deep Cleaning', value: 'Deep Cleaning' },
-  { label: 'Move In / Move Out', value: 'Move In / Move Out' },
-  { label: 'Post Construction', value: 'Post Construction' },
-];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const toAbsoluteImageUrl = (imageUrl) => {
@@ -68,6 +60,22 @@ const toRating = (value, fallback = 3) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const acceptedImageExtensions = new Set([
+  '.jpeg',
+  '.jpg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.heic',
+  '.heif',
+  '.avif',
+  '.bmp',
+  '.jfif',
+  '.svg',
+  '.tif',
+  '.tiff'
+]);
+
 const mapCleanerFromApi = (item) => ({
   id: String(
     item.id
@@ -105,8 +113,6 @@ const CleanersPage = () => {
   const [notificationApi, contextHolder] = notification.useNotification();
   const [cleaners, setCleaners] = useState([]);
   const [cleanersLoading, setCleanersLoading] = useState(false);
-  const [serviceTypeOptions, setServiceTypeOptions] = useState(defaultServiceTypeOptions);
-  const [serviceOptionsLoading, setServiceOptionsLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [ratingFilter, setRatingFilter] = useState('All');
@@ -152,36 +158,6 @@ const CleanersPage = () => {
     fetchCleaners();
   }, [fetchCleaners]);
 
-  useEffect(() => {
-    const loadServiceTypes = async () => {
-      setServiceOptionsLoading(true);
-      try {
-        const response = await serviceService.getServices({ page: 1, limit: 200 });
-        const rows = Array.isArray(response?.data) ? response.data : [];
-        const apiOptions = rows
-          .map((item) => String(item?.name || '').trim())
-          .filter(Boolean)
-          .map((name) => ({ label: name, value: name }));
-
-        const uniqueOptions = apiOptions.filter(
-          (option, index, list) => list.findIndex((item) => item.value === option.value) === index
-        );
-
-        if (uniqueOptions.length > 0) {
-          setServiceTypeOptions(uniqueOptions);
-          return;
-        }
-        setServiceTypeOptions(defaultServiceTypeOptions);
-      } catch {
-        setServiceTypeOptions(defaultServiceTypeOptions);
-      } finally {
-        setServiceOptionsLoading(false);
-      }
-    };
-
-    loadServiceTypes();
-  }, []);
-
   const filteredCleaners = useMemo(() => {
     return cleaners.filter((cleaner) => {
       const target = `${cleaner.cleanerCode || ''} ${cleaner.name} ${cleaner.companyName || ''} ${cleaner.email} ${cleaner.phone || ''}`.toLowerCase();
@@ -219,7 +195,6 @@ const CleanersPage = () => {
     form.setFieldsValue({
       status: 'Inactive',
       profileImage: '',
-      serviceType: undefined,
     });
     setIsFormOpen(true);
   };
@@ -233,7 +208,6 @@ const CleanersPage = () => {
       companyName: cleaner.companyName || cleaner.name,
       companyEmail: cleaner.companyEmail || cleaner.email,
       teamMember: cleaner.teamMember || '',
-      serviceType: cleaner.serviceType || undefined,
       status: cleaner.status || 'Active',
       latitude: cleaner.latitude ?? '',
       longitude: cleaner.longitude ?? '',
@@ -261,7 +235,6 @@ const CleanersPage = () => {
           companyEmail: values.companyEmail,
           phoneNumber: values.phone,
           teamMember: values.teamMember,
-          serviceType: values.serviceType,
           address: values.address,
           latitude: values.latitude,
           longitude: values.longitude,
@@ -291,7 +264,6 @@ const CleanersPage = () => {
           companyEmail: values.companyEmail,
           phoneNumber: values.phone,
           teamMember: values.teamMember,
-          serviceType: values.serviceType,
           address: values.address,
           latitude: values.latitude,
           longitude: values.longitude,
@@ -323,7 +295,6 @@ const CleanersPage = () => {
                 form.resetFields();
                 form.setFieldsValue({
                   profileImage: '',
-                  serviceType: undefined,
                 });
                 setIsFormOpen(true);
               }}
@@ -412,7 +383,10 @@ const CleanersPage = () => {
   const handleProfileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    const normalizedName = String(file.name || '').toLowerCase();
+    const extension = normalizedName.includes('.') ? normalizedName.slice(normalizedName.lastIndexOf('.')) : '';
+    const isImageFile = file.type.startsWith('image/') || acceptedImageExtensions.has(extension);
+    if (!isImageFile) {
       notificationApi.error({
         placement: 'bottomRight',
         message: 'Invalid file',
@@ -671,13 +645,6 @@ const CleanersPage = () => {
               <Form.Item name="teamMember" label="Team Member" rules={[{ required: true, message: 'Please enter team member information' }]}>
                 <Input placeholder="e.g. 5 members" />
               </Form.Item>
-              <Form.Item name="serviceType" label="Service Type" rules={[{ required: true, message: 'Please select service type' }]}>
-                <Select
-                  options={serviceTypeOptions}
-                  loading={serviceOptionsLoading}
-                  placeholder="--select service--"
-                />
-              </Form.Item>
               {editingCleaner && (
                 <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please select status' }]}>
                   <Select
@@ -754,7 +721,6 @@ const CleanersPage = () => {
                 <p><strong>Email:</strong> {viewingCleaner.companyEmail || viewingCleaner.email || '-'}</p>
                 <p><strong>Phone Number:</strong> {viewingCleaner.phone || '-'}</p>
                 <p><strong>Team Member:</strong> {viewingCleaner.teamMember || '-'}</p>
-                <p><strong>Service Type:</strong> {viewingCleaner.serviceType || '-'}</p>
                 <p><strong>Cleaner Code:</strong> {viewingCleaner.cleanerCode || '-'}</p>
                 <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCleaner.status)}`}>{viewingCleaner.status}</span></p>
                 <p><strong>Joining Date:</strong> {viewingCleaner.joiningDate || '-'}</p>

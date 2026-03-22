@@ -658,25 +658,7 @@ const BookingPage = () => {
             <span className="section-dot" aria-hidden>
               1
             </span>
-            <h3>Select Service &amp; Add Location</h3>
-          </div>
-          <div className="form-field">
-            <label htmlFor="service-select">Select Service</label>
-            <select
-              id="service-select"
-              value={serviceId}
-              onChange={(e) => setServiceId(e.target.value)}
-              disabled={loadingServices || services.length === 0}
-            >
-              {loadingServices && <option>Loading services...</option>}
-              {!loadingServices && services.length === 0 && <option>No services available</option>}
-              {!loadingServices &&
-                services.map((svc) => (
-                  <option key={svc.id} value={svc.id}>
-                    {svc.title}
-                  </option>
-                ))}
-            </select>
+            <h3>Add Location</h3>
           </div>
           <div className="input-shell">
             <SearchOutlined />

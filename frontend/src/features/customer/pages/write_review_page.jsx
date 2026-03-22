@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  ChevronDown,
-  Clock3,
-  Star,
-  X
-} from 'lucide-react';
+import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
+import { FiChevronDown, FiClock, FiX } from 'react-icons/fi';
 import api from '../../../services/api';
 import '../../../styles/customer/review_page.scss';
 
@@ -213,7 +209,7 @@ const WriteReviewPage = () => {
           onClick={() => navigate(returnPath)}
           aria-label="Close review page"
         >
-          <X size={24} />
+          <FiX size={24} />
         </button>
 
         <div className="review-sheet-avatar">
@@ -231,7 +227,7 @@ const WriteReviewPage = () => {
           {cleanerScoreText && (
             <>
               <span className="review-sheet-dot">•</span>
-              <Star size={14} fill="currentColor" />
+              <AiFillStar size={14} />
               <strong>{cleanerScoreText}</strong>
             </>
           )}
@@ -251,7 +247,7 @@ const WriteReviewPage = () => {
               role="radio"
               aria-label={`${value} star${value > 1 ? 's' : ''}`}
             >
-              <Star size={34} fill={value <= rating ? 'currentColor' : 'none'} />
+              {value <= rating ? <AiFillStar size={34} /> : <AiOutlineStar size={34} />}
             </button>
           ))}
         </div>
@@ -277,7 +273,7 @@ const WriteReviewPage = () => {
             maxLength={1000}
           />
           <span className="review-sheet-textarea-icon" aria-hidden>
-            <ChevronDown size={22} />
+            <FiChevronDown size={22} />
           </span>
         </div>
 
@@ -303,7 +299,7 @@ const WriteReviewPage = () => {
         <div className="review-sheet-meta">
           {loadingBooking ? (
             <span>
-              <Clock3 size={14} />
+              <FiClock size={14} />
               Loading booking details...
             </span>
           ) : (

@@ -8,7 +8,7 @@ import { playChatSound } from '../../../utils/chatSound';
 const CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
 
 // Socket.io server URL - configure based on environment
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Backend API URL for serving uploaded images
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -137,6 +137,58 @@ const unwrapRealtimeMessagePayload = (payload) => {
   };
 };
 
+const dedupeMessagesById = (messages) => {
+  const seenIds = new Set();
+
+  return (messages || []).filter((message) => {
+    const messageId = String(message?.id || '');
+    if (!messageId) return true;
+    if (seenIds.has(messageId)) return false;
+    seenIds.add(messageId);
+    return true;
+  });
+};
+
+const mergeIncomingMessage = (prevMessages, incomingMessage, currentUserId, ownSender) => {
+  const nextMessage = {
+    ...incomingMessage,
+    id: String(incomingMessage?.id || `message-${Date.now()}`),
+    status: incomingMessage?.status || 'received'
+  };
+
+  const existingIndex = prevMessages.findIndex((message) => String(message?.id || '') === nextMessage.id);
+  if (existingIndex >= 0) {
+    const updated = [...prevMessages];
+    updated[existingIndex] = { ...updated[existingIndex], ...nextMessage };
+    return dedupeMessagesById(updated);
+  }
+
+  const normalizedCurrentUserId = String(currentUserId || '');
+  const senderId = String(nextMessage.senderId || nextMessage.sender_id || '');
+  const isOwnMessage = normalizedCurrentUserId && senderId && normalizedCurrentUserId === senderId;
+
+  if (isOwnMessage) {
+    const optimisticIndex = prevMessages.findIndex((message) => (
+      String(message?.id || '').startsWith('temp-')
+      && message?.sender === ownSender
+      && String(message?.text || '') === String(nextMessage.text || '')
+      && String(message?.imageUrl || '') === String(nextMessage.imageUrl || '')
+    ));
+
+    if (optimisticIndex >= 0) {
+      const updated = [...prevMessages];
+      updated[optimisticIndex] = {
+        ...updated[optimisticIndex],
+        ...nextMessage,
+        status: nextMessage.status || 'sent'
+      };
+      return dedupeMessagesById(updated);
+    }
+  }
+
+  return dedupeMessagesById([...prevMessages, nextMessage]);
+};
+
 export const formatCustomerChatTime = (createdAt) => {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return '';
@@ -167,6 +219,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
   const [showLoadingIndicator, setShowLoadingIndicator] = useState(false);
   const [isCleanerTyping, setIsCleanerTyping] = useState(false);
   const [otherUserId, setOtherUserId] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [chatError, setChatError] = useState('');
   const soundEnabled = useChatStore((state) => state.soundEnabled);
   const setUserOnline = useChatStore((state) => state.setUserOnline);
   const setUserOffline = useChatStore((state) => state.setUserOffline);
@@ -207,22 +261,27 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       setIsConnected(false);
     };
 
+    const onConnectError = (error) => {
+      console.error('[useCustomerChat] Socket connect error:', error?.message || error);
+      setIsConnected(false);
+    };
+
     // Listen for message status updates from server
     const onMessageSent = ({ id }) => {
       setMessages((prev) =>
-        prev.map((m) => m.id === id ? { ...m, status: 'sent' } : m)
+        dedupeMessagesById(prev.map((m) => m.id === id ? { ...m, status: 'sent' } : m))
       );
     };
 
     const onMessageDelivered = ({ id }) => {
       setMessages((prev) =>
-        prev.map((m) => m.id === id ? { ...m, status: 'delivered' } : m)
+        dedupeMessagesById(prev.map((m) => m.id === id ? { ...m, status: 'delivered' } : m))
       );
     };
 
     const onMessageSeen = ({ id }) => {
       setMessages((prev) =>
-        prev.map((m) => m.id === id ? { ...m, status: 'seen' } : m)
+        dedupeMessagesById(prev.map((m) => m.id === id ? { ...m, status: 'seen' } : m))
       );
     };
 
@@ -261,15 +320,11 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       }
 
       setMessages((prev) => {
-        // Prevent duplicates if message already exists
-        if (prev.some((m) => m.id === message.id)) {
-          return prev;
-        }
-        return [...prev, {
+        return mergeIncomingMessage(prev, {
           ...message,
           sender: message.sender || 'cleaner',
           status: 'received'
-        }];
+        }, currentUserId, 'customer');
       });
       if (message.sender !== 'customer') {
         incrementUnread(normalizedThreadId);
@@ -307,6 +362,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnectError);
     socket.on('message:sent', onMessageSent);
     socket.on('message:delivered', onMessageDelivered);
     socket.on('message:seen', onMessageSeen);
@@ -339,6 +395,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnectError);
       socket.off('message:sent', onMessageSent);
       socket.off('message:delivered', onMessageDelivered);
       socket.off('message:seen', onMessageSeen);
@@ -362,6 +419,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     let cancelled = false;
     activeThreadRef.current = normalizedThreadId;
     setIsLoading(true);
+    setAccessDenied(false);
+    setChatError('');
 
     const loadFromApi = async () => {
       if (!getAuthToken()) {
@@ -379,7 +438,9 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
         const currentUserId = getStoredUserId();
         const mapped = payload.map((message) => mapApiMessage(message, currentUserId));
         if (!cancelled) {
-          setMessages(mapped.length ? mapped : []);
+          setAccessDenied(false);
+          setChatError('');
+          setMessages(dedupeMessagesById(mapped.length ? mapped : []));
           if (currentUserId && payload.length) {
             const first = payload.find((message) => message?.sender_id && message?.receiver_id);
             if (first) {
@@ -390,10 +451,19 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
             }
           }
         }
-      } catch {
-        const fallback = loadMessages(normalizedThreadId);
+      } catch (error) {
+        const statusCode = Number(error?.response?.status || 0);
+        const errorMessage = error?.response?.data?.message || 'Unable to load this conversation.';
+
         if (!cancelled) {
-          setMessages(fallback);
+          if (statusCode === 401 || statusCode === 403) {
+            setAccessDenied(true);
+            setChatError(errorMessage);
+            setMessages([]);
+          } else {
+            const fallback = loadMessages(normalizedThreadId);
+            setMessages(fallback);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -470,6 +540,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
   }, [normalizedThreadId, clearUnread]);
 
   const notifyTyping = useCallback(() => {
+    if (accessDenied) return;
     const socket = socketRef.current;
     if (socket && socket.connected) {
       socket.emit('typing', {
@@ -488,7 +559,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
         });
       }, 3000); // Stop typing after 3 seconds of inactivity
     }
-  }, [normalizedThreadId]);
+  }, [normalizedThreadId, accessDenied]);
 
   const sendMessage = async ({ text, attachment }) => {
     const trimmedText = String(text || '').trim();
@@ -496,6 +567,13 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     const imageName = attachment?.name || '';
     const imageFile = attachment?.file || null;
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    if (accessDenied) {
+      return {
+        success: false,
+        error: chatError || 'Not authorized to access this conversation'
+      };
+    }
 
     if (!trimmedText && !imageUrl) {
       return { success: false, error: 'Type a message or attach an image.' };
@@ -558,7 +636,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
 
       console.log('[useCustomerChat] Updating message with ID:', tempId);
       setMessages((prev) =>
-        prev.map((msg) => (msg.id === tempId ? mapped : msg))
+        dedupeMessagesById(prev.map((msg) => (msg.id === tempId ? mapped : msg)))
       );
 
       if (mapped.senderId || mapped.receiverId) {
@@ -573,9 +651,15 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
       console.error('[useCustomerChat] Send message error:', error);
       // Remove the optimistic message from the UI on failure
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      const statusCode = Number(error?.response?.status || 0);
+      const errorMessage = error?.response?.data?.message || 'Failed to send message. Check server connection.';
+      if (statusCode === 401 || statusCode === 403) {
+        setAccessDenied(true);
+        setChatError(errorMessage);
+      }
       return {
         success: false,
-        error: error?.response?.data?.message || 'Failed to send message. Check server connection.'
+        error: errorMessage
       };
     }
   };
@@ -598,6 +682,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     showLoadingIndicator,
     isCleanerTyping,
     notifyTyping,
-    otherUserId
+    otherUserId,
+    accessDenied,
+    chatError
   };
 };

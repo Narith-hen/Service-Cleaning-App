@@ -592,12 +592,7 @@ const deleteCleaner = async (req, res, next) => {
     const [userDeleteResult] = await connection.query(
       'DELETE FROM users WHERE user_id = ?',
       [cleanerId]
-    ).catch((error) => {
-      if (error?.code === 'ER_ROW_IS_REFERENCED_2') {
-        return [{ affectedRows: 0 }];
-      }
-      throw error;
-    });
+    );
 
     const [profileDeleteResult] = await connection.query(
       'DELETE FROM cleaner_profile WHERE cleaner_id = ?',
