@@ -79,7 +79,9 @@ const createReview = async (req, res, next) => {
           booking_id,
           user_id,
           cleaner_id,
-          booking_status
+          booking_status,
+          service_status,
+          payment_status
         FROM bookings
         WHERE booking_id = ?
         LIMIT 1
@@ -106,8 +108,15 @@ const createReview = async (req, res, next) => {
       return next(new AppError('Review already exists for this booking', 400));
     }
 
-    if (String(booking.booking_status || '').trim().toLowerCase() !== 'completed') {
-      return next(new AppError('Can only review completed bookings', 400));
+    const bookingStatus = String(booking.booking_status || '').trim().toLowerCase();
+    const serviceStatus = String(booking.service_status || '').trim().toLowerCase();
+    const paymentStatus = String(booking.payment_status || '').trim().toLowerCase();
+    const canReviewAfterPayment =
+      serviceStatus === 'completed'
+      && ['receipt_submitted', 'paid', 'completed'].includes(paymentStatus);
+
+    if (bookingStatus !== 'completed' && !canReviewAfterPayment) {
+      return next(new AppError('Can only review a completed and paid booking', 400));
     }
 
     const reviewColumns = await getReviewTableColumns(promiseDb);

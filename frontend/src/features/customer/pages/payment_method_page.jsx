@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CloudUploadOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import '../../../styles/customer/payment_method.scss';
@@ -31,6 +32,39 @@ const toAbsoluteFileUrl = (url) => {
   return `${apiHost}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+const getInitials = (name) => {
+  const parts = String(name || '')
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!parts.length) return 'CL';
+  return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+};
+
+const normalizeReviewBooking = (booking, fallbackBookingId, fallbackServiceName) => ({
+  bookingId: String(booking?.booking_id || booking?.id || fallbackBookingId || ''),
+  cleanerId: booking?.cleaner_id || booking?.cleaner?.user_id || null,
+  cleanerName:
+    booking?.cleaner_full_name ||
+    booking?.cleaner_username ||
+    booking?.cleaner_display_name ||
+    booking?.cleaner_name ||
+    booking?.cleaner?.username ||
+    [booking?.cleaner_first_name, booking?.cleaner_last_name].filter(Boolean).join(' ').trim() ||
+    'Assigned cleaner',
+  cleanerAvatar: toAbsoluteFileUrl(booking?.cleaner_avatar || booking?.cleaner?.avatar || ''),
+  serviceName:
+    booking?.service_name ||
+    booking?.service?.name ||
+    fallbackServiceName ||
+    'Cleaning Service',
+  reviewId: booking?.review_id ? Number(booking.review_id) : null,
+  reviewRating: Number(booking?.rating || 0),
+  reviewComment: booking?.review_comment || ''
+});
+
 const PaymentMethodPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -43,11 +77,20 @@ const PaymentMethodPage = () => {
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewFeedback, setReviewFeedback] = useState(null);
+  const hasShownSuccessModalRef = useRef(false);
+  const hasLoadedFinalizationRef = useRef(false);
 
   const amountDue = Number(finalization?.amount_due || 186.5);
   const paymentStatus = String(finalization?.payment_status || '').toLowerCase();
   const isReceiptSubmitted = paymentStatus === 'receipt_submitted';
   const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
+  const canRateCleaner = isReceiptSubmitted || isPaymentConfirmed;
   const canSubmitReceipt = !isReceiptSubmitted && !isPaymentConfirmed;
   const isPdfReceipt = receiptFile?.type === 'application/pdf';
 
@@ -84,13 +127,20 @@ const PaymentMethodPage = () => {
     let cancelled = false;
 
     const loadFinalization = async () => {
-      setLoadingFinalization(true);
+      if (!cancelled && !hasLoadedFinalizationRef.current) {
+        setLoadingFinalization(true);
+      }
       try {
         const response = await api.get(`/payments/booking/${bookingId}/finalization`);
         if (!cancelled) {
           const payload = response?.data?.data || null;
           setFinalization(payload);
-          setStatusText('');
+          hasLoadedFinalizationRef.current = true;
+          setStatusText((currentText) => (
+            payload?.payment_status === 'completed' || payload?.payment_status === 'paid'
+              ? 'Payment confirmed successfully.'
+              : currentText
+          ));
         }
       } catch (error) {
         if (!cancelled) {
@@ -104,8 +154,14 @@ const PaymentMethodPage = () => {
     };
 
     loadFinalization();
+
+    const intervalId = window.setInterval(() => {
+      loadFinalization();
+    }, 10000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
     };
   }, [bookingId]);
 
@@ -122,9 +178,49 @@ const PaymentMethodPage = () => {
     };
   }, [receiptFile]);
 
+  useEffect(() => {
+    if (!bookingId || !canRateCleaner || hasShownSuccessModalRef.current) return;
+
+    const modalStorageKey = `customer-payment-success:${bookingId}`;
+    const loadBookingForReview = async () => {
+      try {
+        const response = await api.get(`/bookings/${bookingId}`);
+        const booking = response?.data?.data || null;
+        const normalized = normalizeReviewBooking(booking, bookingId, finalization?.service_name);
+
+        setReviewBooking(normalized);
+        setRating(normalized.reviewId ? normalized.reviewRating : 0);
+        setComment(normalized.reviewId ? normalized.reviewComment : '');
+      } catch {
+        setReviewBooking(
+          normalizeReviewBooking(null, bookingId, finalization?.service_name)
+        );
+      } finally {
+        hasShownSuccessModalRef.current = true;
+        if (window.sessionStorage.getItem(modalStorageKey) !== 'dismissed') {
+          setShowSuccessModal(true);
+        }
+      }
+    };
+
+    loadBookingForReview();
+  }, [bookingId, canRateCleaner, finalization?.service_name]);
+
   const handleOpenFileDialog = () => {
     if (isPaymentConfirmed) return;
     fileInputRef.current?.click();
+  };
+
+  const handleCloseSuccessModal = () => {
+    if (bookingId) {
+      window.sessionStorage.setItem(`customer-payment-success:${bookingId}`, 'dismissed');
+    }
+    setShowSuccessModal(false);
+  };
+
+  const handleStarSelect = (value) => {
+    setRating((current) => (current === value ? Math.max(0, value - 1) : value));
+    setReviewFeedback(null);
   };
 
   const handleSubmitReceipt = async () => {
@@ -151,15 +247,80 @@ const PaymentMethodPage = () => {
 
       const payload = response?.data?.data || null;
       setFinalization(payload);
-      setStatusText('Receipt submitted successfully. Waiting for cleaner confirmation.');
+      setStatusText('Payment submitted successfully. You can rate your cleaner now.');
       setReceiptFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+      if (!hasShownSuccessModalRef.current) {
+        hasShownSuccessModalRef.current = true;
+        setReviewBooking((current) => current || normalizeReviewBooking(null, bookingId, payload?.service_name));
+        setRating(0);
+        setComment('');
+        setReviewFeedback(null);
+        setShowSuccessModal(true);
       }
     } catch (error) {
       setStatusText(error?.response?.data?.message || 'Failed to submit receipt.');
     } finally {
       setUploadingReceipt(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!bookingId) {
+      setReviewFeedback({ type: 'error', message: 'Missing booking reference.' });
+      return;
+    }
+
+    if (reviewBooking?.reviewId) {
+      setReviewFeedback({ type: 'muted', message: 'You already rated this cleaner.' });
+      return;
+    }
+
+    if (!rating) {
+      setReviewFeedback({ type: 'error', message: 'Please select a star rating first.' });
+      return;
+    }
+
+    setSubmittingReview(true);
+    setReviewFeedback(null);
+
+    try {
+      await api.post('/reviews', {
+        booking_id: Number(bookingId),
+        rating,
+        comment: comment.trim() || undefined,
+        command: comment.trim() || undefined,
+        cleaner_id: reviewBooking?.cleanerId ? Number(reviewBooking.cleanerId) : undefined
+      });
+
+      setReviewBooking((current) => (
+        current
+          ? {
+              ...current,
+              reviewId: -1,
+              reviewRating: rating,
+              reviewComment: comment.trim()
+            }
+          : current
+      ));
+      setReviewFeedback({ type: 'success', message: 'Thanks for rating your cleaner.' });
+      setStatusText('Payment confirmed successfully.');
+      window.setTimeout(() => {
+        handleCloseSuccessModal();
+      }, 1200);
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        (Array.isArray(error?.response?.data?.errors)
+          ? error.response.data.errors.map((item) => item.msg).join(', ')
+          : null) ||
+        'Could not submit your rating. Please try again.';
+
+      setReviewFeedback({ type: 'error', message });
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -277,6 +438,111 @@ const PaymentMethodPage = () => {
           </>
         )}
       </div>
+
+      {showSuccessModal && (
+        <div className="payment-success-modal-backdrop" role="presentation">
+          <section
+            className="payment-success-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-success-title"
+          >
+            <button
+              type="button"
+              className="payment-success-close"
+              onClick={handleCloseSuccessModal}
+              aria-label="Close payment success dialog"
+            >
+              <CloseOutlined />
+            </button>
+
+            <div className="payment-success-badge">
+              <CheckCircleOutlined />
+            </div>
+
+            <p className="payment-success-kicker">Payment Successful</p>
+            <h2 id="payment-success-title">
+              {isPaymentConfirmed ? 'Your cleaner confirmed the payment.' : 'Your payment has been submitted.'}
+            </h2>
+            <p className="payment-success-copy">
+              {reviewBooking?.serviceName || finalization?.service_name || 'Cleaning service'} is now completed.
+              Please rate your cleaner now that you have already paid.
+            </p>
+
+            <div className="payment-success-cleaner">
+              <div className="payment-success-avatar">
+                {reviewBooking?.cleanerAvatar ? (
+                  <img src={reviewBooking.cleanerAvatar} alt={reviewBooking.cleanerName || 'Cleaner'} />
+                ) : (
+                  <span>{getInitials(reviewBooking?.cleanerName)}</span>
+                )}
+              </div>
+
+              <div>
+                <strong>{reviewBooking?.cleanerName || 'Assigned cleaner'}</strong>
+                <span>Professional cleaner</span>
+              </div>
+            </div>
+
+            {!reviewBooking?.reviewId ? (
+              <>
+                <div className="payment-success-stars" role="radiogroup" aria-label="Rate your cleaner">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`payment-star-button${value <= rating ? ' is-active' : ''}`}
+                      onClick={() => handleStarSelect(value)}
+                      aria-label={`${value} star${value > 1 ? 's' : ''}`}
+                    >
+                      {value <= rating ? <AiFillStar size={30} /> : <AiOutlineStar size={30} />}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  className="payment-success-textarea"
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Tell us about your cleaner..."
+                  maxLength={500}
+                />
+
+                {reviewFeedback && (
+                  <p className={`payment-review-feedback is-${reviewFeedback.type}`}>
+                    {reviewFeedback.message}
+                  </p>
+                )}
+
+                <div className="payment-success-actions">
+                  <button type="button" className="payment-review-skip" onClick={handleCloseSuccessModal}>
+                    Maybe later
+                  </button>
+                  <button
+                    type="button"
+                    className="payment-review-submit"
+                    onClick={handleSubmitReview}
+                    disabled={submittingReview}
+                  >
+                    {submittingReview ? 'Submitting...' : 'Submit Rating'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="payment-review-feedback is-success">
+                  You already rated this cleaner. Thank you for your feedback.
+                </p>
+                <div className="payment-success-actions">
+                  <button type="button" className="payment-review-submit" onClick={handleCloseSuccessModal}>
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 };

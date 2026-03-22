@@ -89,16 +89,16 @@ const getBookingIdFromJob = (job) => {
 
 const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
   const bookingId = getBookingIdFromJob(job);
-  if (!bookingId) return false;
+  if (!bookingId) return null;
   try {
-    await api.patch(`/bookings/${bookingId}/status`, {
+    const response = await api.patch(`/bookings/${bookingId}/status`, {
       ...(bookingStatus ? { booking_status: bookingStatus } : {}),
       ...(serviceStatus ? { service_status: serviceStatus } : {})
     });
-    return true;
+    return response?.data?.data || null;
   } catch (error) {
     console.error('Failed to update booking status', error);
-    return false;
+    return null;
   }
 };
 
@@ -306,6 +306,7 @@ const MyJobsPage = () => {
           bedrooms: job.bedrooms || '3 Bedrooms',
           floors: job.floors || '2 Floors',
           serviceStatus: job.serviceStatus || 'booked',
+          startedAt: job.startedAt || job.started_at || null,
           paymentStatus: String(job.paymentStatus || '').toLowerCase(),
           serviceType: job.serviceType || 'home',
           serviceImage: job.serviceImage || '',
@@ -394,7 +395,7 @@ const MyJobsPage = () => {
 
     if (selectedJob) {
       try {
-        await updateJobStatusOnServer(selectedJob, {
+        const statusPayload = await updateJobStatusOnServer(selectedJob, {
           bookingStatus: 'in_progress',
           serviceStatus: 'in_progress'
         });
@@ -404,7 +405,12 @@ const MyJobsPage = () => {
           if (Array.isArray(parsed)) {
             const updated = parsed.map((job) =>
               (job.id === selectedJob.id || job.sourceRequestId === selectedJob.sourceRequestId)
-                ? { ...job, status: 'in-progress', serviceStatus: 'in_progress' }
+                ? {
+                    ...job,
+                    status: 'in-progress',
+                    serviceStatus: 'in_progress',
+                    startedAt: statusPayload?.started_at || job.startedAt || new Date().toISOString()
+                  }
                 : job
             );
             localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
