@@ -12,6 +12,7 @@ import proServiceImage from '../../../assets/pro.png';
 import api from '../../../services/api';
 import '../../../styles/customer/home.scss';
 
+
 const howItWorksSteps = [
   // {
   //   step: '1',
@@ -373,6 +374,7 @@ const CustomerHomePage = () => {
         <header className="faq-head">
           <p className="faq-kicker">FAQ</p>
           <h2 className="faq-title">Frequently Asked Questions</h2>
+          <h3 className="faq-title">Frequently Asked Questions</h3>
           <p>
             Everything customers usually ask before booking a cleaning service with us.
           </p>
