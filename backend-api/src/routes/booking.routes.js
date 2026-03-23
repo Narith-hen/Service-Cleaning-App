@@ -10,6 +10,7 @@ const {
   assignCleaner,
   cancelBooking,
   getBookingsByUser,
+  getMyBookingHistory,
   getBookingsByCleaner,
   getBookingHistory,
   trackBooking,
@@ -20,8 +21,10 @@ const {
 } = require('../controllers'); // Import from index.js
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validation.middleware');
+const { upload } = require('../middlewares/upload.middleware');
 
 const router = express.Router();
+const MAX_BOOKING_IMAGES = 10;
 
 // All routes require authentication
 router.use(authenticate);
@@ -45,7 +48,14 @@ const updateBookingValidation = [
 
 const statusUpdateValidation = [
   param('id').isInt(),
-  body('booking_status').isIn(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+  body('booking_status').optional().isIn(['pending', 'confirmed', 'in_progress', 'payment_required', 'completed', 'cancelled']),
+  body('service_status').optional().isIn(['pending', 'booked', 'started', 'in_progress', 'completed', 'cancelled']),
+  body().custom((value) => {
+    if (!value?.booking_status && !value?.service_status) {
+      throw new Error('booking_status or service_status is required');
+    }
+    return true;
+  }),
   body('reason').optional().isString()
 ];
 
@@ -76,6 +86,12 @@ router.get('/track/:id', [
   param('id').isInt()
 ], validate, trackBooking);
 
+// Logged-in customer booking history
+router.get('/my-history', authorize('customer', 'admin'), [
+  query('page').optional().isInt(),
+  query('limit').optional().isInt()
+], validate, getMyBookingHistory);
+
 // Get user bookings
 router.get('/user/:userId', authorize('admin', 'customer'), [
   param('userId').isInt()
@@ -104,10 +120,15 @@ router.get('/history/:id', [
 ], validate, getBookingHistory);
 
 // Booking images
-router.post('/:id/images', [
-  param('id').isInt(),
-  body('images').isArray({ min: 1 })
-], validate, addBookingImages);
+router.post(
+  '/:id/images',
+  upload.array('images', MAX_BOOKING_IMAGES),
+  [
+    param('id').isInt()
+  ],
+  validate,
+  addBookingImages
+);
 
 // Single booking operations
 router.get('/:id', [

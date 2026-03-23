@@ -7,7 +7,10 @@ const {
   getMessagesByBooking,
   createMessage,
   markMessagesRead,
-  uploadMessageImage
+  uploadMessageImage,
+  toggleBlockChat,
+  deleteChat,
+  getChatBlockStatus
 } = require('../controllers/base/message.controller');
 
 const router = express.Router();
@@ -30,5 +33,20 @@ router.post('/upload', upload.single('image'), uploadMessageImage);
 router.patch('/booking/:bookingId/read', [
   param('bookingId').isInt().withMessage('Valid booking id is required')
 ], validate, markMessagesRead);
+
+// Block/unblock a chat
+router.patch('/booking/:bookingId/block', [
+  param('bookingId').isInt().withMessage('Valid booking id is required')
+], validate, toggleBlockChat);
+
+// Get chat block status
+router.get('/booking/:bookingId/block-status', [
+  param('bookingId').isInt().withMessage('Valid booking id is required')
+], validate, getChatBlockStatus);
+
+// Delete all messages in a chat
+router.delete('/booking/:bookingId', [
+  param('bookingId').isInt().withMessage('Valid booking id is required')
+], validate, deleteChat);
 
 module.exports = router;

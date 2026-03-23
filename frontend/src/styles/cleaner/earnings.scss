@@ -182,7 +182,19 @@
         font-size: 13px;
       }
     }
+
+    &.withdraw-group {
+      margin-right: auto;
+
+      .ant-input {
+        width: 180px;
+      }
+    }
   }
+}
+
+.earnings-notification {
+  margin-bottom: 16px;
 }
 
 .transactions-list-panel {
@@ -492,6 +504,10 @@
 
   &.positive {
     color: #22c55e;
+  }
+
+  &.negative {
+    color: #ef4444;
   }
 }
 

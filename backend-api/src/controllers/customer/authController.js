@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const { generateToken } = require('../../utils/jwt.util');
 const fs = require("fs");
 const path = require("path");
@@ -67,25 +67,36 @@ const buildProfileResponse = async (userId) => {
     `
       SELECT
         COUNT(*) AS totalBookings,
-        COALESCE(
-          SUM(
-            CASE
-              WHEN LOWER(b.booking_status) = 'completed'
-                THEN COALESCE(p.amount, b.negotiated_price, b.total_price, 0)
-              ELSE 0
-            END
-          ),
-          0
-        ) AS totalSpent
+        COALESCE(SUM(total_price), 0) AS bookingTotalSpent
+      FROM bookings
+      WHERE user_id = ?
+    `,
+    [userId]
+  );
+
+  const [paymentRows] = await promiseDb.query(
+    `
+      SELECT
+        COALESCE(SUM(
+          CASE
+            WHEN LOWER(COALESCE(p.payment_status, '')) IN ('completed', 'paid')
+              THEN COALESCE(p.amount, 0)
+            ELSE 0
+          END
+        ), 0) AS paymentTotalSpent,
+        COUNT(p.payment_id) AS paymentCount
       FROM bookings b
-      LEFT JOIN payments p ON p.booking_id = b.booking_id AND LOWER(p.payment_status) = 'completed'
+      LEFT JOIN payments p ON p.booking_id = b.booking_id
       WHERE b.user_id = ?
     `,
     [userId]
   );
 
   const totalBookings = Number(bookingRows?.[0]?.totalBookings || 0);
-  const totalSpent = Number(bookingRows?.[0]?.totalSpent || 0);
+  const bookingTotalSpent = Number(bookingRows?.[0]?.bookingTotalSpent || 0);
+  const paymentTotalSpent = Number(paymentRows?.[0]?.paymentTotalSpent || 0);
+  const paymentCount = Number(paymentRows?.[0]?.paymentCount || 0);
+  const totalSpent = paymentCount > 0 ? paymentTotalSpent : bookingTotalSpent;
 
   const createdAt = user.created_at ? new Date(user.created_at) : null;
   const joinDate = createdAt

@@ -12,18 +12,10 @@ import {
 } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import { cleanerService } from '../services/cleanerService';
-import { serviceService } from '../services/serviceService';
 import '../../../styles/admin/cleaners_page.css';
 
 const statusFilters = ['All', 'Active', 'Suspended', 'Inactive'];
 const ratingFilters = ['All', '4.5+', '4.0+', '3.5+'];
-const defaultServiceTypeOptions = [
-  { label: 'Home Cleaning', value: 'Home Cleaning' },
-  { label: 'Office Cleaning', value: 'Office Cleaning' },
-  { label: 'Deep Cleaning', value: 'Deep Cleaning' },
-  { label: 'Move In / Move Out', value: 'Move In / Move Out' },
-  { label: 'Post Construction', value: 'Post Construction' },
-];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const toAbsoluteImageUrl = (imageUrl) => {
@@ -68,6 +60,22 @@ const toRating = (value, fallback = 3) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const acceptedImageExtensions = new Set([
+  '.jpeg',
+  '.jpg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.heic',
+  '.heif',
+  '.avif',
+  '.bmp',
+  '.jfif',
+  '.svg',
+  '.tif',
+  '.tiff'
+]);
+
 const mapCleanerFromApi = (item) => ({
   id: String(
     item.id
@@ -105,8 +113,6 @@ const CleanersPage = () => {
   const [notificationApi, contextHolder] = notification.useNotification();
   const [cleaners, setCleaners] = useState([]);
   const [cleanersLoading, setCleanersLoading] = useState(false);
-  const [serviceTypeOptions, setServiceTypeOptions] = useState(defaultServiceTypeOptions);
-  const [serviceOptionsLoading, setServiceOptionsLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [ratingFilter, setRatingFilter] = useState('All');
@@ -122,21 +128,6 @@ const CleanersPage = () => {
   const [form] = Form.useForm();
   const nameValue = Form.useWatch('companyName', form);
   const profileFileInputRef = useRef(null);
-  const deleteTimeoutsRef = useRef(new Map());
-  const deleteIntervalsRef = useRef(new Map());
-  const deletedCleanersRef = useRef(new Map());
-  const dismissedUndoRef = useRef(new Set());
-
-  useEffect(() => {
-    return () => {
-      deleteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-      deleteIntervalsRef.current.forEach((intervalId) => clearInterval(intervalId));
-      deleteTimeoutsRef.current.clear();
-      deleteIntervalsRef.current.clear();
-      deletedCleanersRef.current.clear();
-      dismissedUndoRef.current.clear();
-    };
-  }, []);
 
   const fetchCleaners = useCallback(async ({ silent = false, clearOnError = true } = {}) => {
     setCleanersLoading(true);
@@ -166,36 +157,6 @@ const CleanersPage = () => {
   useEffect(() => {
     fetchCleaners();
   }, [fetchCleaners]);
-
-  useEffect(() => {
-    const loadServiceTypes = async () => {
-      setServiceOptionsLoading(true);
-      try {
-        const response = await serviceService.getServices({ page: 1, limit: 200 });
-        const rows = Array.isArray(response?.data) ? response.data : [];
-        const apiOptions = rows
-          .map((item) => String(item?.name || '').trim())
-          .filter(Boolean)
-          .map((name) => ({ label: name, value: name }));
-
-        const uniqueOptions = apiOptions.filter(
-          (option, index, list) => list.findIndex((item) => item.value === option.value) === index
-        );
-
-        if (uniqueOptions.length > 0) {
-          setServiceTypeOptions(uniqueOptions);
-          return;
-        }
-        setServiceTypeOptions(defaultServiceTypeOptions);
-      } catch {
-        setServiceTypeOptions(defaultServiceTypeOptions);
-      } finally {
-        setServiceOptionsLoading(false);
-      }
-    };
-
-    loadServiceTypes();
-  }, []);
 
   const filteredCleaners = useMemo(() => {
     return cleaners.filter((cleaner) => {
@@ -234,7 +195,6 @@ const CleanersPage = () => {
     form.setFieldsValue({
       status: 'Inactive',
       profileImage: '',
-      serviceType: undefined,
     });
     setIsFormOpen(true);
   };
@@ -248,7 +208,6 @@ const CleanersPage = () => {
       companyName: cleaner.companyName || cleaner.name,
       companyEmail: cleaner.companyEmail || cleaner.email,
       teamMember: cleaner.teamMember || '',
-      serviceType: cleaner.serviceType || undefined,
       status: cleaner.status || 'Active',
       latitude: cleaner.latitude ?? '',
       longitude: cleaner.longitude ?? '',
@@ -276,7 +235,6 @@ const CleanersPage = () => {
           companyEmail: values.companyEmail,
           phoneNumber: values.phone,
           teamMember: values.teamMember,
-          serviceType: values.serviceType,
           address: values.address,
           latitude: values.latitude,
           longitude: values.longitude,
@@ -306,7 +264,6 @@ const CleanersPage = () => {
           companyEmail: values.companyEmail,
           phoneNumber: values.phone,
           teamMember: values.teamMember,
-          serviceType: values.serviceType,
           address: values.address,
           latitude: values.latitude,
           longitude: values.longitude,
@@ -338,7 +295,6 @@ const CleanersPage = () => {
                 form.resetFields();
                 form.setFieldsValue({
                   profileImage: '',
-                  serviceType: undefined,
                 });
                 setIsFormOpen(true);
               }}
@@ -371,122 +327,25 @@ const CleanersPage = () => {
       content: 'This action cannot be undone.',
       okText: 'Delete',
       okButtonProps: { danger: true },
-      onOk: () => {
-        setCleaners((prev) => {
-          const index = prev.findIndex((item) => item.id === cleaner.id);
-          if (index >= 0) {
-            deletedCleanersRef.current.set(cleaner.id, { cleaner, index });
-          }
-          return prev.filter((item) => item.id !== cleaner.id);
-        });
-
-        const existingTimeout = deleteTimeoutsRef.current.get(cleaner.id);
-        const existingInterval = deleteIntervalsRef.current.get(cleaner.id);
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
-        if (existingInterval) {
-          clearInterval(existingInterval);
-        }
-
-        const messageKey = `delete-${cleaner.id}`;
-        let secondsLeft = 20;
-        dismissedUndoRef.current.delete(cleaner.id);
-
-        const showUndoMessage = () => {
-          if (dismissedUndoRef.current.has(cleaner.id)) return;
-
-          notificationApi.open({
-            key: messageKey,
-            message: 'Cleaner deleted',
+      onOk: async () => {
+        try {
+          await cleanerService.deleteCleaner(cleaner.id);
+          setCleaners((prev) => prev.filter((item) => item.id !== cleaner.id));
+          notificationApi.success({
             placement: 'bottomRight',
-            duration: 0,
-            onClose: () => {
-              if (deletedCleanersRef.current.has(cleaner.id)) {
-                dismissedUndoRef.current.add(cleaner.id);
-                const pendingInterval = deleteIntervalsRef.current.get(cleaner.id);
-                if (pendingInterval) {
-                  clearInterval(pendingInterval);
-                  deleteIntervalsRef.current.delete(cleaner.id);
-                }
-              }
-            },
-            description: (
-              <span>
-                Status: <strong>{cleaner.status}</strong>. Undo in {secondsLeft}s.
-              </span>
-            ),
-            btn: (
-              <Button
-                type="link"
-                size="small"
-                style={{ paddingInline: 0 }}
-                onClick={() => {
-                  const deletedEntry = deletedCleanersRef.current.get(cleaner.id);
-                  if (!deletedEntry) return;
-
-                  const pendingTimeout = deleteTimeoutsRef.current.get(cleaner.id);
-                  const pendingInterval = deleteIntervalsRef.current.get(cleaner.id);
-                  if (pendingTimeout) {
-                    clearTimeout(pendingTimeout);
-                    deleteTimeoutsRef.current.delete(cleaner.id);
-                  }
-                  if (pendingInterval) {
-                    clearInterval(pendingInterval);
-                    deleteIntervalsRef.current.delete(cleaner.id);
-                  }
-
-                  setCleaners((prev) => {
-                    if (prev.some((item) => item.id === deletedEntry.cleaner.id)) {
-                      return prev;
-                    }
-                    const next = [...prev];
-                    const insertIndex = Math.min(deletedEntry.index, next.length);
-                    next.splice(insertIndex, 0, deletedEntry.cleaner);
-                    return next;
-                  });
-
-                  deletedCleanersRef.current.delete(cleaner.id);
-                  dismissedUndoRef.current.delete(cleaner.id);
-                  notificationApi.destroy(messageKey);
-                  notificationApi.success({
-                    placement: 'bottomRight',
-                    message: `${cleaner.name} restored`,
-                    duration: 2,
-                  });
-                }}
-              >
-                Undo
-              </Button>
-            ),
+            message: 'Cleaner deleted',
+            description: `${cleaner.name} was removed successfully.`,
+            duration: 2,
           });
-        };
-
-        const timeoutId = setTimeout(() => {
-          deletedCleanersRef.current.delete(cleaner.id);
-          dismissedUndoRef.current.delete(cleaner.id);
-          deleteTimeoutsRef.current.delete(cleaner.id);
-          const intervalId = deleteIntervalsRef.current.get(cleaner.id);
-          if (intervalId) {
-            clearInterval(intervalId);
-            deleteIntervalsRef.current.delete(cleaner.id);
-          }
-          notificationApi.destroy(messageKey);
-        }, 20000);
-
-        const intervalId = setInterval(() => {
-          secondsLeft -= 1;
-          if (secondsLeft <= 0) {
-            clearInterval(intervalId);
-            deleteIntervalsRef.current.delete(cleaner.id);
-            return;
-          }
-          showUndoMessage();
-        }, 1000);
-
-        deleteTimeoutsRef.current.set(cleaner.id, timeoutId);
-        deleteIntervalsRef.current.set(cleaner.id, intervalId);
-        showUndoMessage();
+        } catch (error) {
+          notificationApi.error({
+            placement: 'bottomRight',
+            message: 'Failed to delete cleaner',
+            description: error?.response?.data?.message || 'Could not delete cleaner from database.',
+            duration: 3,
+          });
+          throw error;
+        }
       },
     });
   };
@@ -524,7 +383,10 @@ const CleanersPage = () => {
   const handleProfileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    const normalizedName = String(file.name || '').toLowerCase();
+    const extension = normalizedName.includes('.') ? normalizedName.slice(normalizedName.lastIndexOf('.')) : '';
+    const isImageFile = file.type.startsWith('image/') || acceptedImageExtensions.has(extension);
+    if (!isImageFile) {
       notificationApi.error({
         placement: 'bottomRight',
         message: 'Invalid file',
@@ -783,13 +645,6 @@ const CleanersPage = () => {
               <Form.Item name="teamMember" label="Team Member" rules={[{ required: true, message: 'Please enter team member information' }]}>
                 <Input placeholder="e.g. 5 members" />
               </Form.Item>
-              <Form.Item name="serviceType" label="Service Type" rules={[{ required: true, message: 'Please select service type' }]}>
-                <Select
-                  options={serviceTypeOptions}
-                  loading={serviceOptionsLoading}
-                  placeholder="--select service--"
-                />
-              </Form.Item>
               {editingCleaner && (
                 <Form.Item name="status" label="Status" rules={[{ required: true, message: 'Please select status' }]}>
                   <Select
@@ -866,7 +721,6 @@ const CleanersPage = () => {
                 <p><strong>Email:</strong> {viewingCleaner.companyEmail || viewingCleaner.email || '-'}</p>
                 <p><strong>Phone Number:</strong> {viewingCleaner.phone || '-'}</p>
                 <p><strong>Team Member:</strong> {viewingCleaner.teamMember || '-'}</p>
-                <p><strong>Service Type:</strong> {viewingCleaner.serviceType || '-'}</p>
                 <p><strong>Cleaner Code:</strong> {viewingCleaner.cleanerCode || '-'}</p>
                 <p><strong>Status:</strong> <span className={`status-tag ${getStatusClass(viewingCleaner.status)}`}>{viewingCleaner.status}</span></p>
                 <p><strong>Joining Date:</strong> {viewingCleaner.joiningDate || '-'}</p>

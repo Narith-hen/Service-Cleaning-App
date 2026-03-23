@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
-import { Clock3, Home, SearchCheck } from 'lucide-react';
+import { ClockCircleOutlined, HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import '../../../styles/customer/booking_match.scss';
 import api from '../../../services/api';
 
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Create a shared socket instance
 let socketInstance = null;
@@ -17,6 +17,21 @@ const getSocket = () => {
     });
   }
   return socketInstance;
+};
+
+const getRealtimeAuth = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('user') || 'null');
+    return {
+      token: stored?.token || localStorage.getItem('token') || null,
+      userId: stored?.id || stored?.user_id || null
+    };
+  } catch {
+    return {
+      token: localStorage.getItem('token') || null,
+      userId: null
+    };
+  }
 };
 
 const statusUpdates = [
@@ -82,6 +97,11 @@ const BookingMatchPage = () => {
     }
   })();
 
+  const openAcceptedChat = (acceptedId) => {
+    if (!acceptedId) return;
+    navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedId))}`);
+  };
+
   useEffect(() => {
     const finalBookingId = bookingId || 'demo-1';
     const socket = getSocket();
@@ -110,7 +130,7 @@ const BookingMatchPage = () => {
 
         // Navigate to chat after a short delay
         setTimeout(() => {
-          navigate(`/customer/chat?booking=${finalBookingId}`);
+          openAcceptedChat(finalBookingId);
         }, 2000);
       }
     };
@@ -147,8 +167,16 @@ const BookingMatchPage = () => {
     }
 
     if (!socket.connected) {
-      const token = localStorage.getItem('token') || 'demo-customer-token';
-      const userId = 'hen-narith'; // Hardcoded for demo
+      const { token, userId } = getRealtimeAuth();
+      if (!token) {
+        return () => {
+          clearInterval(progressInterval);
+          clearInterval(statusTimer);
+          socket.off('connect', onConnect);
+          socket.off('job:matched', onJobMatched);
+          socket.emit('booking:leave', finalBookingId);
+        };
+      }
       socket.auth = { token, userId };
       socket.connect();
     } else {
@@ -179,7 +207,7 @@ const BookingMatchPage = () => {
           } catch {
             /* ignore */
           }
-          navigate(`/customer/chat?booking=${encodeURIComponent(String(stored))}`);
+          openAcceptedChat(stored);
           localStorage.removeItem(ACCEPTED_BOOKING_KEY);
         }
         const cancelled = localStorage.getItem(CANCELLED_BOOKING_KEY);
@@ -229,7 +257,7 @@ const BookingMatchPage = () => {
           } catch {
             /* ignore */
           }
-          navigate(`/customer/chat?booking=${encodeURIComponent(String(acceptedBookingId))}`);
+          openAcceptedChat(acceptedBookingId);
           localStorage.removeItem('last_booking_id');
           clearInterval(pollStatus);
           setProgress(100);
@@ -261,7 +289,7 @@ const BookingMatchPage = () => {
 
         <div className="icon-wrap" aria-hidden>
           <div className="loading-pulse">
-            <SearchCheck size={30} />
+            <SearchOutlined />
           </div>
         </div>
 
@@ -296,12 +324,12 @@ const BookingMatchPage = () => {
 
         <div className="service-meta">
           <p>
-            <Home size={12} />
+            <HomeOutlined />
             {serviceTitle || 'Residential'}
           </p>
           <span>|</span>
           <p>
-            <Clock3 size={12} />
+            <ClockCircleOutlined />
             {startTime || '10:00 AM'}
           </p>
         </div>
@@ -313,7 +341,7 @@ const BookingMatchPage = () => {
           <button
             type="button"
             className="skip-btn"
-            onClick={() => navigate('/customer/bookings/quotes')}
+            onClick={() => navigate(`/customer/bookings/quotes${bookingId ? `?booking=${encodeURIComponent(String(bookingId))}` : ''}`)}
             data-customer-button
           >
             Skip Matching
@@ -324,7 +352,7 @@ const BookingMatchPage = () => {
             disabled={progress < 95}
             aria-disabled={progress < 95}
             title={progress < 95 ? 'Matching in progress' : 'Continue to quotes'}
-            onClick={() => navigate('/customer/bookings/quotes')}
+            onClick={() => navigate(`/customer/bookings/quotes${bookingId ? `?booking=${encodeURIComponent(String(bookingId))}` : ''}`)}
             data-customer-button
           >
             Next
@@ -336,5 +364,3 @@ const BookingMatchPage = () => {
 };
 
 export default BookingMatchPage;
-
-

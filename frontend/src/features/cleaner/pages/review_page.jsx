@@ -1,138 +1,163 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircleFilled, StarFilled, SafetyCertificateFilled } from '@ant-design/icons';
+import { CheckCircleFilled, SafetyCertificateFilled } from '@ant-design/icons';
+import { useAuth } from '../../../hooks/useAuth';
+import api from '../../../services/api';
 import '../../../styles/cleaner/review.scss';
 
-const reviews = [
-  {
-    id: 1,
-    name: 'Sarah Jenkins',
-    date: 'Oct 24, 2024',
-    service: 'Deep House Cleaning',
-    rating: 5,
-    comment:
-      "Alex did an incredible job! The attention to detail in the kitchen and bathrooms was beyond my expectations. I've already scheduled my next bi-weekly maintenance.",
-    reply: null
-  },
-  {
-    id: 2,
-    name: 'Michael Chen',
-    date: 'Oct 20, 2024',
-    service: 'Office Recurring Clean',
-    rating: 4,
-    comment:
-      'Very punctual and efficient. The office looks great. One minor spot missed on the breakroom window but otherwise flawless. Will continue the contract.',
-    reply: null
-  },
-  {
-    id: 3,
-    name: 'David Miller',
-    date: 'Oct 18, 2024',
-    service: 'Move-out Sanitation',
-    rating: 5,
-    comment:
-      'I was worried about getting my deposit back but the place looked brand new when Alex was finished. Every corner was scrubbed. Absolute professional.',
-    reply: null
-  },
-  {
-    id: 4,
-    name: 'Emily Carter',
-    date: 'Oct 15, 2024',
-    service: 'Apartment Cleaning',
-    rating: 5,
-    comment:
-      'Very thorough cleaning and great communication before arrival. Kitchen and bathroom were spotless.',
-    reply: null
-  },
-  {
-    id: 5,
-    name: 'Ryan Lopez',
-    date: 'Oct 12, 2024',
-    service: 'Weekly Home Cleaning',
-    rating: 4,
-    comment:
-      'Arrived on time and finished quickly. Overall quality was very good and I am satisfied with the service.',
-    reply: null
-  },
-  {
-    id: 6,
-    name: 'Nina Patel',
-    date: 'Oct 10, 2024',
-    service: 'Deep House Cleaning',
-    rating: 5,
-    comment:
-      'Amazing work from start to finish. Floors, windows, and counters looked perfect after the service.',
-    reply: null
-  },
-  {
-    id: 7,
-    name: 'Jacob Thompson',
-    date: 'Oct 7, 2024',
-    service: 'Move-out Cleaning',
-    rating: 4,
-    comment:
-      'Strong attention to detail and professional behavior. I would definitely book again for future cleanings.',
-    reply: null
-  },
-  {
-    id: 8,
-    name: 'Lisa Nguyen',
-    date: 'Oct 4, 2024',
-    service: 'Office Recurring Clean',
-    rating: 5,
-    comment:
-      'Consistently excellent results. The workspace feels fresh and organized every time.',
-    reply: null
-  },
-  {
-    id: 9,
-    name: 'Daniel Brooks',
-    date: 'Oct 2, 2024',
-    service: 'Deep Cleaning',
-    rating: 4,
-    comment: 'Professional and careful with fragile items. Very happy with the final outcome.',
-    reply: null
-  },
-  {
-    id: 10,
-    name: 'Sophia Kim',
-    date: 'Sep 29, 2024',
-    service: 'Home Cleaning',
-    rating: 5,
-    comment: 'Best cleaning service I have booked this year. Everything looked fresh and spotless.',
-    reply: null
-  },
-  {
-    id: 11,
-    name: 'Anthony Reed',
-    date: 'Sep 26, 2024',
-    service: 'Weekly Home Cleaning',
-    rating: 4,
-    comment: 'Reliable and easy to work with. Minor touch-ups needed but overall excellent service.',
-    reply: null
-  },
-  {
-    id: 12,
-    name: 'Mia Rodriguez',
-    date: 'Sep 24, 2024',
-    service: 'Apartment Cleaning',
-    rating: 5,
-    comment: 'Great communication and very detailed cleaning. I will definitely schedule again.',
-    reply: null
-  },
-
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const EMPTY_DISTRIBUTION = [
+  { score: 5, count: 0 },
+  { score: 4, count: 0 },
+  { score: 3, count: 0 },
+  { score: 2, count: 0 },
+  { score: 1, count: 0 }
 ];
+
+const normalizeAssetUrl = (value) => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (String(value).startsWith('/')) return `${API_BASE_URL}${value}`;
+  return value;
+};
+
+const formatReviewDate = (value) => {
+  if (!value) return 'Recently';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+const buildInitial = (name) => {
+  const text = String(name || '').trim();
+  return text ? text.charAt(0).toUpperCase() : 'C';
+};
+
+const roundToHalfStar = (ratingValue) => Math.round((Math.max(Number(ratingValue) || 0, 0)) * 2) / 2;
+
+const getStarFillWidth = (ratingValue, index) => {
+  const normalizedRating = roundToHalfStar(ratingValue);
+  const fill = Math.min(Math.max(normalizedRating - index, 0), 1);
+  return `${fill * 100}%`;
+};
+
+const normalizeReview = (review) => ({
+  id: review.review_id,
+  name: review.reviewer_name || `Customer #${review.user_id}`,
+  date: formatReviewDate(review.created_at),
+  service: review.service_name || 'Cleaning Service',
+  rating: Number(review.rating || 0),
+  comment: review.comment || '',
+  avatar: normalizeAssetUrl(review.reviewer_avatar),
+  reply: null
+});
+
+const normalizeStats = (payload = {}) => {
+  const distributionMap = new Map(
+    (payload.distribution || []).map((item) => [Number(item.score), Number(item.count || 0)])
+  );
+
+  return {
+    averageRating: Number(payload.averageRating || 0),
+    totalReviews: Number(payload.totalReviews || 0),
+    distribution: EMPTY_DISTRIBUTION.map((item) => ({
+      score: item.score,
+      count: distributionMap.get(item.score) || 0
+    }))
+  };
+};
 
 const ReviewPage = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
+  const [reviewStats, setReviewStats] = useState(() => normalizeStats());
+  const [reviews, setReviews] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const reviewsPerPage = 4;
-  const totalPages = Math.ceil(reviews.length / reviewsPerPage);
+  const cleanerId = Number(user?.user_id || user?.id || 0) || null;
 
-  const pagedReviews = useMemo(() => {
-    const start = (currentPage - 1) * reviewsPerPage;
-    return reviews.slice(start, start + reviewsPerPage);
-  }, [currentPage]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [cleanerId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadReviews = async () => {
+      if (authLoading) return;
+
+      if (!cleanerId) {
+        if (!isMounted) return;
+        setReviewStats(normalizeStats());
+        setReviews([]);
+        setTotalPages(1);
+        setError('We could not find the cleaner account for this page.');
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const [statsResponse, reviewsResponse] = await Promise.all([
+          api.get('/reviews/stats', {
+            params: { cleanerId }
+          }),
+          api.get('/reviews', {
+            params: {
+              cleanerId,
+              page: currentPage,
+              limit: reviewsPerPage,
+              sort: 'newest'
+            }
+          })
+        ]);
+
+        if (!isMounted) return;
+
+        const nextStats = normalizeStats(statsResponse?.data?.data);
+        const nextReviews = Array.isArray(reviewsResponse?.data?.data)
+          ? reviewsResponse.data.data.map(normalizeReview)
+          : [];
+        const nextTotalPages = Math.max(Number(reviewsResponse?.data?.pagination?.pages || 1), 1);
+
+        setReviewStats(nextStats);
+        setReviews(nextReviews);
+        setTotalPages(nextTotalPages);
+      } catch (loadError) {
+        if (!isMounted) return;
+        console.error('Failed to load cleaner reviews:', loadError);
+        setReviewStats(normalizeStats());
+        setReviews([]);
+        setTotalPages(1);
+        setError(loadError?.response?.data?.message || 'Failed to load customer feedback.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadReviews();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, cleanerId, currentPage]);
+
+  const maxDistributionCount = useMemo(
+    () => Math.max(...reviewStats.distribution.map((item) => item.count), 0),
+    [reviewStats.distribution]
+  );
 
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
@@ -143,51 +168,69 @@ const ReviewPage = () => {
     <div className="cleaner-review-page">
       <div className="review-headline">
         <h1>Customer Feedback</h1>
-        <button type="button" className="reply-btn" onClick={() => navigate('/cleaner/jobs/available')}>
+        <button type="button" className="headline-action" onClick={() => navigate('/cleaner/jobs/available')}>
           View Available Jobs
         </button>
         <p>Monitor your reputation and engage with your clients.</p>
       </div>
 
-      <div className="overview-card">
-        <div className="rating-block">
-          <span className="label">Average Rating</span>
-          <div className="rating-value">4.9</div>
-          <div className="stars" aria-label="5 stars">
-            {[...Array(5)].map((_, i) => (
-              <StarFilled key={i} />
-            ))}
-          </div>
-          <p>Based on 124 reviews</p>
-        </div>
-
-        <div className="rating-breakdown">
-          {[5, 4, 3, 2, 1].map((score) => (
-            <div key={score} className="breakdown-row">
-              <span>{score}</span>
-              <span>{score === 5 ? 105 : score === 4 ? 15 : score === 3 ? 4 : score === 2 ? 0 : 0}</span>
+      <div className="feedback-overview">
+        <section className="feedback-rating-card">
+          <div className="rating-summary">
+            <div className="rating-block">
+              <div className="rating-value">{reviewStats.averageRating.toFixed(1)}</div>
+              <div className="stars" aria-label={`${reviewStats.averageRating.toFixed(1)} out of 5 stars`}>
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} className="average-star">
+                    <span className="average-star-base">{'\u2605'}</span>
+                    <span
+                      className="average-star-fill"
+                      style={{ width: getStarFillWidth(reviewStats.averageRating, i) }}
+                    >
+                      {'\u2605'}
+                    </span>
+                  </span>
+                ))}
+              </div>
+              <p>Based on {reviewStats.totalReviews} total reviews</p>
             </div>
-          ))}
-        </div>
 
-        <div className="status-box">
-          <h3>
-            <SafetyCertificateFilled /> Top 5% Cleaner
-          </h3>
-          <p>
-            You are among the highest-rated cleaners in your area. This status increases your visibility for premium
-            job requests.
-          </p>
-        </div>
+            <div className="rating-breakdown">
+              {reviewStats.distribution.map(({ score, count }) => (
+                <div key={score} className="breakdown-row">
+                  <span className="score-label">
+                    {score} {score === 1 ? 'Star' : 'Stars'}
+                  </span>
+                  <div className="bar-track" aria-hidden="true">
+                    <span
+                      className={`bar-fill${count === 0 ? ' is-empty' : ''}`}
+                      style={{ width: `${maxDistributionCount ? (count / maxDistributionCount) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="score-count">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <aside className="feedback-status-card">
+          <div className="status-icon" aria-hidden="true">
+            <SafetyCertificateFilled />
+          </div>
+          <h2>Top 5% Cleaner</h2>
+          <p>You&apos;re in the elite tier this month!</p>
+          <span className="status-badge">Platinum Badge</span>
+        </aside>
       </div>
 
       <div className="review-list-header">
         <h2>Recent Reviews</h2>
         <div className="actions">
-          <select defaultValue="most-recent">
+          <select value="most-recent" disabled aria-label="Review sort order">
             <option value="most-recent">Most Recent</option>
           </select>
-          <button type="button" className="review-filter-btn">
+          <button type="button" className="review-filter-btn" disabled>
             <svg className="review-filter-icon" viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2 4h12M4 8h8M6 12h4" />
             </svg>
@@ -196,80 +239,112 @@ const ReviewPage = () => {
         </div>
       </div>
 
-      <div className="review-list">
-        {pagedReviews.map((review) => (
-          <article key={review.id} className="review-card">
-            <div className="review-top">
-              <div className="review-author">
-                <span className="avatar">{review.name.charAt(0)}</span>
-                <div>
-                  <h3>{review.name}</h3>
-                  <div className="meta-line">
-                    <span className="stars-inline" aria-label={`${review.rating} out of 5 stars`}>
-                      {Array.from({ length: 5 }, (_, idx) => (
-                        <span key={idx} className={`star ${idx < review.rating ? 'filled' : 'empty'}`}>
-                          {'\u2605'}
-                        </span>
-                      ))}
+      {error ? <div className="review-feedback-message review-feedback-message--error">{error}</div> : null}
+      {isLoading ? <div className="review-feedback-message">Loading reviews...</div> : null}
+
+      {!isLoading && !error ? (
+        <div className="review-list">
+          {reviews.length ? (
+            reviews.map((review) => (
+              <article key={review.id} className="review-card">
+                <div className="review-top">
+                  <div className="review-author">
+                    <span className="avatar">
+                      {review.avatar ? (
+                        <img src={review.avatar} alt={review.name} />
+                      ) : (
+                        buildInitial(review.name)
+                      )}
                     </span>
-                    <span>{`Rated us ${review.rating}/5`}</span>
-                    <span>{review.date}</span>
+                    <div>
+                      <h3>{review.name}</h3>
+                      <div className="meta-line">
+                        <span className="stars-inline" aria-label={`${review.rating} out of 5 stars`}>
+                          {Array.from({ length: 5 }, (_, idx) => (
+                            <span key={idx} className={`star ${idx < review.rating ? 'filled' : 'empty'}`}>
+                              {'\u2605'}
+                            </span>
+                          ))}
+                        </span>
+                        <span>{`Rated us ${review.rating}/5`}</span>
+                        <span>{review.date}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="service-chip">{review.service}</span>
+                </div>
+
+                <p className="comment">{review.comment || 'No written feedback provided.'}</p>
+
+                {review.reply ? (
+                  <div className="reply-box">
+                    <div className="reply-head">
+                      <strong>{review.reply.title}</strong>
+                      <span>{review.reply.date}</span>
+                    </div>
+                    <p>{review.reply.text}</p>
+                  </div>
+                ) : null}
+
+                <div className="review-footer">
+                  <span className="verified">
+                    <CheckCircleFilled /> Verified Customer
+                  </span>
+                  <div className="review-actions">
+                    <button type="button" className="text-btn">
+                      Report
+                    </button>
                   </div>
                 </div>
-              </div>
-              <span className="service-chip">{review.service}</span>
-            </div>
+              </article>
+            ))
+          ) : (
+            <div className="review-feedback-message">No reviews have been submitted yet.</div>
+          )}
+        </div>
+      ) : null}
 
-            <p className="comment">{review.comment}</p>
+      {!isLoading && totalPages > 1 ? (
+        <div className="pagination-row">
+          <button
+            type="button"
+            aria-label="previous page"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={currentPage === 1 ? 'disabled' : ''}
+          >
+            <svg className="page-arrow left" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M10 3.5L5.5 8L10 12.5" />
+            </svg>
+          </button>
 
-            <div className="review-footer">
-              <span className="verified">
-                <CheckCircleFilled /> Verified Customer
-              </span>
-            </div>
-          </article>
-        ))}
-      </div>
+          {Array.from({ length: totalPages }, (_, idx) => {
+            const page = idx + 1;
+            return (
+              <button
+                key={page}
+                type="button"
+                className={currentPage === page ? 'active' : ''}
+                onClick={() => goToPage(page)}
+              >
+                {page}
+              </button>
+            );
+          })}
 
-      <div className="pagination-row">
-        <button
-          type="button"
-          aria-label="previous page"
-          onClick={() => goToPage(currentPage - 1)}
-          disabled={currentPage === 1}
-          className={currentPage === 1 ? 'disabled' : ''}
-        >
-          <svg className="page-arrow left" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M10 3.5L5.5 8L10 12.5" />
-          </svg>
-        </button>
-
-        {Array.from({ length: totalPages }, (_, idx) => {
-          const page = idx + 1;
-          return (
-            <button
-              key={page}
-              type="button"
-              className={currentPage === page ? 'active' : ''}
-              onClick={() => goToPage(page)}
-            >
-              {page}
-            </button>
-          );
-        })}
-
-        <button
-          type="button"
-          aria-label="next page"
-          onClick={() => goToPage(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className={currentPage === totalPages ? 'disabled' : ''}
-        >
-          <svg className="page-arrow right" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M6 3.5L10.5 8L6 12.5" />
-          </svg>
-        </button>
-      </div>
+          <button
+            type="button"
+            aria-label="next page"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={currentPage === totalPages ? 'disabled' : ''}
+          >
+            <svg className="page-arrow right" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M6 3.5L10.5 8L6 12.5" />
+            </svg>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };

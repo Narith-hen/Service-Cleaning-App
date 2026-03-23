@@ -46,6 +46,11 @@ export const cleanerService = {
     return response.data;
   },
 
+  deleteCleaner: async (cleanerId) => {
+    const response = await api.delete(`/admin/cleaners/${cleanerId}`);
+    return response.data;
+  },
+
   getCleanerById: async (cleanerId) => {
     const response = await api.get(`/admin/cleaners/${cleanerId}`);
     return response.data;

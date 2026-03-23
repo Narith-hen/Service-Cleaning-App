@@ -9,7 +9,7 @@ import {
   FilterOutlined,
   SortAscendingOutlined
 } from '@ant-design/icons';
-import { Select, DatePicker, Button } from 'antd';
+import { Select, DatePicker, Button, Input, Alert } from 'antd';
 import { Line } from '@ant-design/charts';
 import '../../../styles/cleaner/earnings.scss';
 import {
@@ -21,11 +21,65 @@ import {
 } from '../data/earnings_data';
 import { fetchCleanerEarnings, fetchCleanerEarningsSummary } from '../services/earningsService';
 
+const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+
+const mapCompletedJobToTransaction = (job) => {
+  const amount = parseMoneyAmount(job.price);
+  const dateLabel = job.monthYear && job.day ? `${job.monthYear}-${job.day}` : dayjs().format('YYYY-MM-DD');
+
+  return {
+    id: `job-${job.sourceRequestId || job.id || job.jobId}`,
+    date: dayjs(dateLabel).format('YYYY-MM-DD'),
+    status: 'COMPLETED',
+    statusType: 'completed',
+    transactionId: job.jobId || `#JOB-${job.sourceRequestId || job.id}`,
+    title: job.title || 'Completed Job',
+    subtitle: job.location || 'Service completed',
+    amount: `+$${amount.toFixed(2)}`,
+    amountType: 'positive',
+    image: job.image,
+    payoutMethod: 'Job Payout',
+    serviceAddress: job.location || '-'
+  };
+};
+
+const loadCompletedJobsTransactions = () => {
+  try {
+    const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((job) => String(job.status || '').toLowerCase() === 'completed')
+      .map(mapCompletedJobToTransaction);
+  } catch {
+    return [];
+  }
+};
+
+const summarizeTransactions = (list) =>
+  list.reduce(
+    (acc, tx) => {
+      const amount = parseMoneyAmount(tx.amount);
+      acc.total += amount;
+      if (tx.status?.toLowerCase() === 'completed') {
+        acc.completed += amount;
+      }
+      if (tx.status?.toLowerCase() === 'pending') {
+        acc.pending += amount;
+      }
+      return acc;
+    },
+    { total: 0, completed: 0, pending: 0 }
+  );
+
 const EarningsPage = () => {
   const [sortBy, setSortBy] = useState('most_recent');
   const [paymentStatus, setPaymentStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [notification, setNotification] = useState(null);
   const [appliedFilters, setAppliedFilters] = useState({
     sortBy: 'most_recent',
     paymentStatus: 'all',
@@ -34,6 +88,15 @@ const EarningsPage = () => {
   });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [earningsSummary, setEarningsSummary] = useState(cleanerEarningsSummary);
+  const [transactions, setTransactions] = useState(() => {
+    const completedFromJobs = loadCompletedJobsTransactions();
+    const deduped = new Map();
+    [...completedFromJobs, ...cleanerTransactions].forEach((tx) => {
+      const key = tx.id || `${tx.transactionId}-${tx.date}`;
+      if (!deduped.has(key)) deduped.set(key, tx);
+    });
+    return Array.from(deduped.values());
+  });
   const [monthlyEarnings, setMonthlyEarnings] = useState(cleanerMonthlyEarningsData);
 
   useEffect(() => {
@@ -72,6 +135,35 @@ const EarningsPage = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const handleStorageSync = () => {
+      const completedFromJobs = loadCompletedJobsTransactions();
+      setTransactions((prev) => {
+        const merged = new Map();
+        [...completedFromJobs, ...prev].forEach((tx) => {
+          const key = tx.id || `${tx.transactionId}-${tx.date}`;
+          if (!merged.has(key)) merged.set(key, tx);
+        });
+        return Array.from(merged.values());
+      });
+    };
+
+    window.addEventListener('storage', handleStorageSync);
+    window.addEventListener('cleaner-earnings-updated', handleStorageSync);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageSync);
+      window.removeEventListener('cleaner-earnings-updated', handleStorageSync);
+    };
+  }, []);
+
+  useEffect(() => {
+    setEarningsSummary((prev) => ({
+      ...prev,
+      ...summarizeTransactions(transactions)
+    }));
+  }, [transactions]);
 
   const chartConfig = {
     data: monthlyEarnings,
@@ -139,8 +231,49 @@ const EarningsPage = () => {
     });
   };
 
+  const handleWithdraw = () => {
+    const amount = parseMoneyAmount(withdrawAmount);
+
+    if (!amount) {
+      setNotification({ type: 'error', message: 'Enter an amount greater than 0.' });
+      return;
+    }
+
+    if (amount > (earningsSummary.total || 0)) {
+      setNotification({ type: 'error', message: 'Withdrawal exceeds available balance.' });
+      return;
+    }
+
+    const now = dayjs();
+    const withdrawalEntry = {
+      id: `wd-${now.valueOf()}`,
+      date: now.format('YYYY-MM-DD'),
+      status: 'COMPLETED',
+      statusType: 'completed',
+      transactionId: `#WD-${now.format('HHmmss')}`,
+      title: 'Withdrawal',
+      subtitle: 'Funds transferred to your payout method',
+      amount: `-$${amount.toFixed(2)}`,
+      amountType: 'negative',
+      image: transactions[0]?.image,
+      payoutMethod: 'Default Payout',
+      serviceAddress: '-'
+    };
+
+    setTransactions((prev) => [withdrawalEntry, ...prev]);
+    setEarningsSummary((prev) => ({
+      ...prev,
+      total: Math.max((prev.total || 0) - amount, 0)
+    }));
+    setWithdrawAmount('');
+    setNotification({
+      type: 'success',
+      message: `Withdrawal of ${formatMoney(amount)} processed.`
+    });
+  };
+
   const filteredTransactions = useMemo(() => {
-    const filtered = cleanerTransactions.filter((item) => {
+    const filtered = transactions.filter((item) => {
       const statusMatch =
         appliedFilters.paymentStatus === 'all' ||
         item.status.toLowerCase() === appliedFilters.paymentStatus;
@@ -164,7 +297,7 @@ const EarningsPage = () => {
 
       return new Date(b.date) - new Date(a.date);
     });
-  }, [appliedFilters]);
+  }, [appliedFilters, transactions]);
 
   return (
     <div className="cleaner-earnings-page">
@@ -172,6 +305,18 @@ const EarningsPage = () => {
         <h1>Earnings Overview</h1>
         <p>Track your income and payment history.</p>
       </div>
+
+      {notification && (
+        <div className="earnings-notification">
+          <Alert
+            message={notification.message}
+            type={notification.type}
+            showIcon
+            closable
+            onClose={() => setNotification(null)}
+          />
+        </div>
+      )}
 
       <section className="earnings-stats-panel">
         <div className="earnings-total-card">
@@ -202,6 +347,17 @@ const EarningsPage = () => {
       </section>
 
       <section className="earnings-filters-panel">
+        <div className="filter-group withdraw-group">
+          <Input
+            type="number"
+            min={0}
+            prefix="$"
+            placeholder="Withdraw amount"
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
+          />
+          <Button type="primary" onClick={handleWithdraw}>Withdraw</Button>
+        </div>
         <div className="filter-group">
           <FilterOutlined />
           <Select

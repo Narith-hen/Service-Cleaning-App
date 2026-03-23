@@ -46,6 +46,7 @@ module.exports = {
   updateBooking: baseBookingController.updateBooking,
   deleteBooking: baseBookingController.deleteBooking,
   getBookingsByUser: baseBookingController.getBookingsByUser,
+  getMyBookingHistory: baseBookingController.getMyBookingHistory,
   getBookingsByCleaner: baseBookingController.getBookingsByCleaner,
   getBookingHistory: baseBookingController.getBookingHistory,
   
@@ -66,7 +67,11 @@ module.exports = {
     res.status(200).json({ message: 'Update settings endpoint - to be implemented' });
   },
   getUserBookings: (req, res, next) => {
-    res.status(200).json({ message: 'Get user bookings endpoint - to be implemented' });
+    req.params = {
+      ...req.params,
+      userId: req.user?.user_id,
+    };
+    return baseBookingController.getBookingsByUser(req, res, next);
   },
   getUserReviews: (req, res, next) => {
     res.status(200).json({ message: 'Get user reviews endpoint - to be implemented' });
@@ -137,46 +142,22 @@ module.exports = {
   reportReview: (req, res, next) => {
     res.status(200).json({ message: 'Report review endpoint - to be implemented' });
   },
-  getReviewStats: (req, res, next) => {
-    res.status(200).json({ message: 'Get review stats endpoint - to be implemented' });
-  },
+  getReviewStats: reviewController.getReviewStats,
   
   // Additional payment functions
-  getPayments: (req, res, next) => {
-    res.status(200).json({ message: 'Get payments endpoint - to be implemented' });
-  },
-  refundPayment: (req, res, next) => {
-    res.status(200).json({ message: 'Refund payment endpoint - to be implemented' });
-  },
-  verifyPayment: (req, res, next) => {
-    res.status(200).json({ message: 'Verify payment endpoint - to be implemented' });
-  },
-  getUserPayments: (req, res, next) => {
-    res.status(200).json({ message: 'Get user payments endpoint - to be implemented' });
-  },
-  getPaymentMethods: (req, res, next) => {
-    res.status(200).json({ message: 'Get payment methods endpoint - to be implemented' });
-  },
-  addPaymentMethod: (req, res, next) => {
-    res.status(200).json({ message: 'Add payment method endpoint - to be implemented' });
-  },
-  removePaymentMethod: (req, res, next) => {
-    res.status(200).json({ message: 'Remove payment method endpoint - to be implemented' });
-  },
-  setDefaultPaymentMethod: (req, res, next) => {
-    res.status(200).json({ message: 'Set default payment method endpoint - to be implemented' });
-  },
-  getPaymentHistory: (req, res, next) => {
-    res.status(200).json({ message: 'Get payment history endpoint - to be implemented' });
-  },
+  getPayments: paymentController.getPayments,
+  refundPayment: paymentController.refundPayment,
+  verifyPayment: paymentController.verifyPayment,
+  getUserPayments: paymentController.getUserPayments,
+  getPaymentMethods: paymentController.getPaymentMethods,
+  addPaymentMethod: paymentController.addPaymentMethod,
+  removePaymentMethod: paymentController.removePaymentMethod,
+  setDefaultPaymentMethod: paymentController.setDefaultPaymentMethod,
+  getPaymentHistory: paymentController.getPaymentHistory,
   
   // Additional notification functions
-  getNotificationById: (req, res, next) => {
-    res.status(200).json({ message: 'Get notification by ID endpoint - to be implemented' });
-  },
-  deleteNotification: (req, res, next) => {
-    res.status(200).json({ message: 'Delete notification endpoint - to be implemented' });
-  },
+  getNotificationById: notificationController.getNotificationById,
+  deleteNotification: notificationController.deleteNotification,
   getNotificationSettings: (req, res, next) => {
     res.status(200).json({ message: 'Get notification settings endpoint - to be implemented' });
   },
@@ -220,6 +201,7 @@ module.exports = {
     getAllCleaners: adminCleanersController.getAllCleaners,
     createCleaner: adminCleanersController.createCleaner,
     updateCleaner: adminCleanersController.updateCleaner,
+    deleteCleaner: adminCleanersController.deleteCleaner,
     
     getAllServices: adminServicesController.getAllServices,
     getServiceById: adminServicesController.getServiceById,

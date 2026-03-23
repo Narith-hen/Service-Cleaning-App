@@ -1,6 +1,7 @@
 const db = require('../../config/db');
+const redis = require('../../config/redis');
 const AppError = require('../../utils/error.util');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
 const getBookingTableColumns = async (promiseDb) => {
@@ -35,6 +36,157 @@ const ensureBookingNegotiatedPriceColumn = async (promiseDb) => {
     'ALTER TABLE bookings ADD COLUMN negotiated_price FLOAT NULL AFTER total_price'
   );
 };
+
+const ensureBookingServiceStatusColumn = async (promiseDb) => {
+  const [rows] = await promiseDb.query("SHOW COLUMNS FROM bookings LIKE 'service_status'");
+  if (rows && rows.length > 0) return;
+  await promiseDb.query(
+    "ALTER TABLE bookings ADD COLUMN service_status VARCHAR(50) NULL AFTER booking_status"
+  );
+};
+
+const ensureBookingImagesTable = async (promiseDb) => {
+  await promiseDb.query(`
+    CREATE TABLE IF NOT EXISTS booking_images (
+      id INT NOT NULL AUTO_INCREMENT,
+      booking_id INT NOT NULL,
+      image_url LONGTEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_booking_images_booking_id (booking_id)
+    )
+  `);
+};
+
+const insertBookingImagesInChunks = async (promiseDb, bookingId, images, chunkSize = 3) => {
+  for (let index = 0; index < images.length; index += chunkSize) {
+    const batch = images.slice(index, index + chunkSize);
+    await promiseDb.query(
+      'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
+      [batch.map((url) => [bookingId, url, new Date()])]
+    );
+  }
+};
+
+const getStoredBookingImageUrls = (files = []) => (
+  (Array.isArray(files) ? files : [])
+    .map((file) => file?.filename ? `/uploads/bookings/${file.filename}` : '')
+    .filter(Boolean)
+);
+
+const resolveCustomerBookingUserIds = async (promiseDb, user) => {
+  const ids = new Set();
+  const numericUserId = Number(user?.user_id);
+  const normalizedEmail = String(user?.email || '').trim().toLowerCase();
+
+  if (Number.isInteger(numericUserId) && numericUserId > 0) {
+    ids.add(numericUserId);
+  }
+
+  if (normalizedEmail) {
+    const [emailRows] = await promiseDb.query(
+      `
+        SELECT u.user_id
+        FROM users u
+        LEFT JOIN roles r ON r.role_id = u.role_id
+        WHERE LOWER(u.email) = ?
+          AND LOWER(COALESCE(r.role_name, 'customer')) IN ('customer', 'admin')
+      `,
+      [normalizedEmail]
+    );
+
+    for (const row of emailRows || []) {
+      const rowId = Number(row?.user_id);
+      if (Number.isInteger(rowId) && rowId > 0) {
+        ids.add(rowId);
+      }
+    }
+  }
+
+  return Array.from(ids);
+};
+
+const getBookingTrackingMeta = (statusValue) => {
+  const status = String(statusValue || 'pending').trim().toLowerCase();
+
+  switch (status) {
+    case 'completed':
+      return { service_tracking_status: 'completed', service_tracking_label: 'Service Completed' };
+    case 'in_progress':
+    case 'in-progress':
+      return { service_tracking_status: 'in_progress', service_tracking_label: 'Service In Progress' };
+    case 'started':
+      return { service_tracking_status: 'started', service_tracking_label: 'Service Started' };
+    case 'confirmed':
+    case 'accepted':
+      return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
+    case 'cancelled':
+    case 'rejected':
+      return { service_tracking_status: 'cancelled', service_tracking_label: 'Service Cancelled' };
+    case 'payment_required':
+      return { service_tracking_status: 'payment_required', service_tracking_label: 'Awaiting Payment Confirmation' };
+    case 'booked':
+      return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
+    default:
+      return { service_tracking_status: 'booked', service_tracking_label: 'Service Booked' };
+  }
+};
+
+const SERVICE_IMAGE_SELECT_SQL = `COALESCE(
+              (
+                SELECT si.image_url
+                FROM service_images si
+                WHERE si.service_id = s.service_id
+                ORDER BY si.id DESC
+                LIMIT 1
+              ),
+              s.image
+            )`;
+
+
+const withBookingServiceMeta = (booking) => {
+  const existingService = booking?.service && typeof booking.service === 'object'
+    ? booking.service
+    : null;
+  const serviceId =
+    existingService?.service_id ??
+    existingService?.id ??
+    booking?.service_id ??
+    null;
+  const serviceName =
+    existingService?.name ||
+    booking?.service_name ||
+    booking?.serviceTitle ||
+    booking?.title ||
+    null;
+  const serviceImage =
+    existingService?.image ||
+    booking?.service_image ||
+    booking?.image ||
+    null;
+
+  const service = existingService || serviceId || serviceName || serviceImage
+    ? {
+        ...(existingService || {}),
+        service_id: existingService?.service_id ?? existingService?.id ?? serviceId,
+        id: existingService?.id ?? existingService?.service_id ?? serviceId,
+        name: existingService?.name || serviceName,
+        image: existingService?.image || serviceImage
+      }
+    : null;
+
+  return {
+    ...booking,
+    service_name: serviceName,
+    service_image: serviceImage,
+    service
+  };
+};
+
+const withBookingTrackingMeta = (booking) => ({
+  ...withBookingServiceMeta(booking),
+  ...getBookingTrackingMeta(booking?.service_status || booking?.booking_status)
+});
 
 const slugify = (value) =>
   String(value || '')
@@ -120,6 +272,7 @@ const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
     roleId = Number(roleRows?.[0]?.role_id || 0) || 2;
   }
 
+
   const phoneNumber = String(profile.phone_number || '').trim() || 'N/A';
   const insertColumns = [];
   const insertValues = [];
@@ -185,6 +338,26 @@ const createBooking = async (req, res, next) => {
     }
 
     const promiseDb = db.promise();
+    const [pendingPaymentRows] = await promiseDb.query(
+      `
+        SELECT booking_id
+        FROM bookings
+        WHERE user_id = ?
+          AND LOWER(COALESCE(booking_status, '')) = 'payment_required'
+          AND LOWER(COALESCE(payment_status, 'pending')) NOT IN ('paid', 'completed')
+        LIMIT 1
+      `,
+      [user_id]
+    );
+    if (pendingPaymentRows?.[0]?.booking_id) {
+      return next(
+        new AppError(
+          `Please complete payment for booking #${pendingPaymentRows[0].booking_id} before creating a new booking`,
+          403
+        )
+      );
+    }
+
     const [serviceRows] = await promiseDb.query(
       'SELECT * FROM services WHERE service_id = ?',
       [service_id]
@@ -213,12 +386,14 @@ const createBooking = async (req, res, next) => {
       }
     };
 
+
     appendBookingField('booking_reference', booking_reference, true);
     appendBookingField('booking_date', new Date(booking_date), true);
     appendBookingField('booking_time', booking_time);
     appendBookingField('address', address || 'Address pending');
     appendBookingField('booking_desc', notes || '');
     appendBookingField('booking_status', 'pending', true);
+    appendBookingField('service_status', 'booked');
     appendBookingField('total_price', total_price, true);
     appendBookingField('payment_status', 'pending', true);
     appendBookingField('user_id', user_id, true);
@@ -234,15 +409,25 @@ const createBooking = async (req, res, next) => {
 
     const booking_id = result.insertId;
     const [createdRows] = await promiseDb.query(
-      'SELECT * FROM bookings WHERE booking_id = ?',
+      `SELECT
+          b.*,
+          s.name AS service_name,
+          ${SERVICE_IMAGE_SELECT_SQL} AS service_image
+       FROM bookings b
+       LEFT JOIN services s ON s.service_id = b.service_id
+       WHERE b.booking_id = ?`,
       [booking_id]
     );
+
+    const createdBooking = withBookingTrackingMeta(createdRows[0]);
 
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
-      data: createdRows[0]
+      data: createdBooking
     });
+
+    publishJobCreated(createdBooking);
   } catch (error) {
     next(error);
   }
@@ -275,6 +460,7 @@ const getBookings = async (req, res, next) => {
         `SELECT 
             b.*,
             s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.email AS customer_email,
             u.phone_number AS customer_phone,
@@ -284,12 +470,12 @@ const getBookings = async (req, res, next) => {
               cp.company_name,
               TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
             ) AS cleaner_display_name,
-            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar,
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
             u.avatar AS customer_avatar,
             c.phone_number AS cleaner_phone,
             c.email AS cleaner_email
          FROM bookings b
-         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
          LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
@@ -312,7 +498,7 @@ const getBookings = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(withBookingTrackingMeta),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -329,14 +515,21 @@ const getBookings = async (req, res, next) => {
 const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const bookingId = Number.parseInt(id, 10);
 
-    const [rows] = await db
-      .promise()
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
+
+    const promiseDb = db.promise();
+    await ensureBookingImagesTable(promiseDb);
+
+    const [rows] = await promiseDb
       .query(
         `SELECT 
             b.*,
             s.name AS service_name,
-            s.price AS service_price,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             u.user_id AS customer_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.email AS customer_email,
@@ -348,7 +541,7 @@ const getBookingById = async (req, res, next) => {
               cp.company_name,
               TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
             ) AS cleaner_display_name,
-            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar,
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
             u.avatar AS customer_avatar,
             c.phone_number AS cleaner_phone,
             c.email AS cleaner_email,
@@ -357,13 +550,13 @@ const getBookingById = async (req, res, next) => {
             p.amount,
             r.review_id,
             r.rating,
-            r.command AS review_comment,
+            r.comment AS review_comment,
             promo.promotion_id,
             promo.discount_price,
             promo.start_date,
             promo.end_date
          FROM bookings b
-         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
          LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
@@ -371,19 +564,50 @@ const getBookingById = async (req, res, next) => {
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          LEFT JOIN promotions promo ON promo.promotion_id = b.promotion_id
          WHERE b.booking_id = ?`,
-        [id]
+        [bookingId]
       );
 
     if (!rows || rows.length === 0) {
       return next(new AppError('Booking not found', 404));
     }
 
+    const [imageRows] = await promiseDb.query(
+      `SELECT image_id, image_url, created_at
+       FROM booking_images
+       WHERE booking_id = ?
+       ORDER BY created_at ASC, image_id ASC`,
+      [bookingId]
+    );
+
+    const booking = withBookingTrackingMeta(rows[0]);
+    booking.images = (imageRows || []).map((imageRow) => ({
+      id: imageRow.image_id,
+      url: imageRow.image_url,
+      created_at: imageRow.created_at
+    }));
+
     res.status(200).json({
       success: true,
-      data: rows[0]
+      data: booking
     });
   } catch (error) {
     next(error);
+  }
+};
+
+const publishJobCreated = async (booking) => {
+  try {
+    if (!booking?.booking_id) return;
+
+    const startTime = String(booking?.booking_time || '').split('-')[0].trim() || 'TBD';
+    await redis.publish('job:created', JSON.stringify({
+      bookingId: String(booking.booking_id),
+      serviceTitle: booking.service_name || 'Cleaning',
+      startTime,
+      bookingData: booking
+    }));
+  } catch (error) {
+    console.error('Failed to publish job:created event:', error);
   }
 };
 
@@ -417,9 +641,12 @@ const updateBooking = async (req, res, next) => {
     const [updated] = await db
       .promise()
       .query(
-        `SELECT b.*, s.name AS service_name 
-         FROM bookings b 
-         JOIN services s ON s.service_id = b.service_id 
+        `SELECT
+            b.*,
+            s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image
+         FROM bookings b
+         LEFT JOIN services s ON s.service_id = b.service_id
          WHERE b.booking_id = ?`,
         [id]
       );
@@ -427,7 +654,7 @@ const updateBooking = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Booking updated successfully',
-      data: updated?.[0]
+      data: withBookingTrackingMeta(updated?.[0])
     });
   } catch (error) {
     next(error);
@@ -455,27 +682,75 @@ const deleteBooking = async (req, res, next) => {
   }
 };
 
+
 // Update booking status
 const updateBookingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { booking_status } = req.body;
+    const rawBookingStatus = req.body?.booking_status;
+    const rawServiceStatus = req.body?.service_status;
 
-    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    if (!rawBookingStatus && !rawServiceStatus) {
+      return next(new AppError('booking_status or service_status is required', 400));
+    }
+    const normalizedBookingStatus = rawBookingStatus ? String(rawBookingStatus).trim().toLowerCase() : null;
+    const normalizedServiceStatus = rawServiceStatus ? String(rawServiceStatus).trim().toLowerCase() : null;
+    const allowedBookingStatuses = new Set(['pending', 'confirmed', 'in_progress', 'payment_required', 'completed', 'cancelled']);
+    const allowedServiceStatuses = new Set(['pending', 'booked', 'started', 'in_progress', 'completed', 'cancelled']);
+    if (normalizedBookingStatus && !allowedBookingStatuses.has(normalizedBookingStatus)) {
+      return next(new AppError('Invalid booking status', 400));
+    }
+    if (normalizedServiceStatus && !allowedServiceStatuses.has(normalizedServiceStatus)) {
+      return next(new AppError('Invalid service status', 400));
+    }
+
+    const promiseDb = db.promise();
+    await ensureBookingServiceStatusColumn(promiseDb);
+    const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
-    await db
-      .promise()
-      .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', [booking_status, id]);
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    if (roleName !== 'admin') {
+      const accountSource = String(req.user?.account_source || '').toLowerCase();
+      const rawCleanerId = req.user?.user_id;
+      const cleanerId = accountSource === 'cleaner_profile'
+        ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+        : rawCleanerId;
+      if (!cleanerId) return next(new AppError('Unauthorized', 401));
+      if (!booking.cleaner_id || Number(booking.cleaner_id) !== Number(cleanerId)) {
+        return next(new AppError('Not authorized for this booking', 403));
+      }
+    }
 
-    await db
-      .promise()
+    const bookingColumns = await getBookingTableColumns(promiseDb);
+    const updates = [];
+    const params = [];
+
+    if (normalizedBookingStatus && bookingColumns.has('booking_status')) {
+      updates.push('booking_status = ?');
+      params.push(normalizedBookingStatus);
+    }
+    if (normalizedServiceStatus && bookingColumns.has('service_status')) {
+      updates.push('service_status = ?');
+      params.push(normalizedServiceStatus);
+    }
+
+    if (!updates.length) {
+      return next(new AppError('No status column found on bookings table', 500));
+    }
+
+    await promiseDb.query(
+      `UPDATE bookings SET ${updates.join(', ')} WHERE booking_id = ?`,
+      [...params, id]
+    );
+
+    await promiseDb
       .query(
         'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [
           'Booking Status Updated',
-          `Your booking #${id} status is now ${booking_status}`,
+          `Your booking #${id} status is now ${getBookingTrackingMeta(normalizedServiceStatus || normalizedBookingStatus).service_tracking_label}`,
           'booking',
           booking.user_id,
           id
@@ -486,7 +761,12 @@ const updateBookingStatus = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Booking status updated',
-      data: { booking_id: id, booking_status }
+      data: {
+        booking_id: id,
+        booking_status: normalizedBookingStatus || booking.booking_status,
+        service_status: normalizedServiceStatus || booking.service_status || null,
+        ...getBookingTrackingMeta(normalizedServiceStatus || normalizedBookingStatus)
+      }
     });
   } catch (error) {
     next(error);
@@ -505,6 +785,7 @@ const updateNegotiatedPrice = async (req, res, next) => {
 
     const promiseDb = db.promise();
     await ensureBookingNegotiatedPriceColumn(promiseDb);
+
 
     const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
@@ -582,13 +863,14 @@ const assignCleaner = async (req, res, next) => {
               cp.company_name,
               TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
             ) AS cleaner_display_name,
-            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar,
-            s.name AS service_name
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
+            s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image
          FROM bookings b
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
          LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
-         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN services s ON s.service_id = b.service_id
          WHERE b.booking_id = ?`,
         [id]
       );
@@ -609,7 +891,7 @@ const assignCleaner = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: booking
+      data: withBookingTrackingMeta(booking)
     });
   } catch (error) {
     next(error);
@@ -621,18 +903,34 @@ const cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
+    const promiseDb = db.promise();
+    await ensureBookingServiceStatusColumn(promiseDb);
 
-    const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
+    const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
 
-    await db
-      .promise()
-      .query('UPDATE bookings SET booking_status = ? WHERE booking_id = ?', ['cancelled', id]);
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
+    if (roleName !== 'admin' && Number(booking.user_id) !== Number(req.user?.user_id)) {
+      return next(new AppError('Not authorized for this booking', 403));
+    }
+
+    const bookingColumns = await getBookingTableColumns(promiseDb);
+    const updates = ['booking_status = ?'];
+    const params = ['cancelled'];
+
+    if (bookingColumns.has('service_status')) {
+      updates.push('service_status = ?');
+      params.push('cancelled');
+    }
+
+    await promiseDb.query(
+      `UPDATE bookings SET ${updates.join(', ')} WHERE booking_id = ?`,
+      [...params, id]
+    );
 
     // Notify customer (best-effort)
-    await db
-      .promise()
+    await promiseDb
       .query(
         'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [
@@ -648,7 +946,12 @@ const cancelBooking = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Booking cancelled successfully',
-      data: { booking_id: id, booking_status: 'cancelled' }
+      data: {
+        booking_id: id,
+        booking_status: 'cancelled',
+        service_status: 'cancelled',
+        ...getBookingTrackingMeta('cancelled')
+      }
     });
   } catch (error) {
     next(error);
@@ -668,12 +971,24 @@ const getBookingsByUser = async (req, res, next) => {
         `SELECT 
             b.*,
             s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
+            cp.company_name AS cleaner_company,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
+            c.phone_number AS cleaner_phone,
+            c.email AS cleaner_email,
             p.payment_status,
             p.amount,
             r.rating,
             r.review_id
          FROM bookings b
-         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          LEFT JOIN payments p ON p.booking_id = b.booking_id
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          WHERE b.user_id = ?
@@ -690,12 +1005,89 @@ const getBookingsByUser = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(withBookingTrackingMeta),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
         pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get booking history for the logged-in customer
+const getMyBookingHistory = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page || 1, 10));
+    const limit = Math.min(5, Math.max(1, parseInt(req.query.limit || 5, 10)));
+    const offset = (page - 1) * limit;
+    const promiseDb = db.promise();
+    const userId = Number(req.user?.user_id);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+
+
+    const [rows] = await promiseDb.query(
+      `SELECT 
+          b.*,
+          s.name AS service_name,
+          ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
+          cp.company_name AS cleaner_company,
+          TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+          COALESCE(
+            cp.company_name,
+            TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+          ) AS cleaner_display_name,
+          COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
+          c.phone_number AS cleaner_phone,
+          c.email AS cleaner_email,
+          p.payment_status,
+          p.amount,
+          r.rating,
+          r.review_id
+       FROM bookings b
+       LEFT JOIN services s ON s.service_id = b.service_id
+       LEFT JOIN users c ON c.user_id = b.cleaner_id
+       LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
+       LEFT JOIN payments p ON p.booking_id = b.booking_id
+       LEFT JOIN reviews r ON r.booking_id = b.booking_id
+       WHERE b.user_id = ?
+       ORDER BY b.created_at DESC, b.booking_id DESC
+       LIMIT ? OFFSET ?`,
+      [userId, limit, offset]
+    );
+
+    const [countRows] = await promiseDb.query(
+      `SELECT COUNT(*) AS total
+       FROM bookings
+       WHERE user_id = ?`,
+      [userId]
+    );
+
+    const total = countRows?.[0]?.total || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: rows.map(withBookingTrackingMeta),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
       }
     });
   } catch (error) {
@@ -709,24 +1101,45 @@ const getBookingsByCleaner = async (req, res, next) => {
     const { cleanerId } = req.params;
     const { page = 1, limit = 10 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
+    const promiseDb = db.promise();
+    const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
 
-    const [rows] = await db
-      .promise()
+    if (roleName !== 'admin') {
+      const accountSource = String(req.user?.account_source || '').toLowerCase();
+      const rawCleanerId = req.user?.user_id;
+      const authorizedCleanerId = accountSource === 'cleaner_profile'
+        ? await ensureCleanerUserRow(promiseDb, rawCleanerId)
+        : rawCleanerId;
+
+      if (!authorizedCleanerId) {
+        return next(new AppError('Unauthorized', 401));
+      }
+
+      if (Number(authorizedCleanerId) !== Number(cleanerId)) {
+        return next(new AppError('Not authorized to view these bookings', 403));
+      }
+    }
+
+    const [rows] = await promiseDb
       .query(
         `SELECT 
             b.*,
             s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
+            u.user_id AS customer_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.phone_number AS customer_phone,
+            u.email AS customer_email,
+            u.avatar AS customer_avatar,
             cp.company_name AS cleaner_company,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
             COALESCE(
               cp.company_name,
               TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
             ) AS cleaner_display_name,
-            COALESCE(cp.profile_image, c.avatar, c.profile_image) AS cleaner_avatar
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar
          FROM bookings b
-         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
          LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
@@ -736,15 +1149,14 @@ const getBookingsByCleaner = async (req, res, next) => {
         [cleanerId, parseInt(limit), offset]
       );
 
-    const [countRows] = await db
-      .promise()
+    const [countRows] = await promiseDb
       .query('SELECT COUNT(*) AS total FROM bookings WHERE cleaner_id = ?', [cleanerId]);
 
     const total = countRows?.[0]?.total || 0;
 
     res.status(200).json({
       success: true,
-      data: rows,
+      data: rows.map(withBookingTrackingMeta),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -762,25 +1174,34 @@ const getBookingHistory = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+
     const [rows] = await db
       .promise()
       .query(
         `SELECT 
             b.*,
             s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.phone_number AS customer_phone,
+            cp.company_name AS cleaner_company,
+            COALESCE(
+              cp.company_name,
+              TRIM(CONCAT_WS(' ', c.first_name, c.last_name))
+            ) AS cleaner_display_name,
             TRIM(CONCAT_WS(' ', c.first_name, c.last_name)) AS cleaner_username,
+            COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
             c.phone_number AS cleaner_phone,
             p.payment_status,
             p.amount,
             r.rating,
             r.review_id,
-            r.command AS review_comment
+            r.comment AS review_comment
          FROM bookings b
-         JOIN services s ON s.service_id = b.service_id
+         LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
          LEFT JOIN users c ON c.user_id = b.cleaner_id
+         LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          LEFT JOIN payments p ON p.booking_id = b.booking_id
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
          WHERE b.booking_id = ?`,
@@ -793,7 +1214,7 @@ const getBookingHistory = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: rows[0]
+      data: withBookingTrackingMeta(rows[0])
     });
   } catch (error) {
     next(error);
@@ -826,6 +1247,7 @@ const trackBooking = async (req, res, next) => {
             c.email AS cleaner_email,
             COALESCE(cp.profile_image, c.avatar) AS cleaner_avatar,
             s.name AS service_name,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             b.user_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_full_name,
             u.phone_number AS customer_phone,
@@ -846,7 +1268,7 @@ const trackBooking = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: rows[0]
+      data: withBookingTrackingMeta(rows[0])
     });
   } catch (error) {
     next(error);
@@ -860,22 +1282,14 @@ const getAvailableBookings = async (req, res, next) => {
     const limit = parseInt(req.query.limit || 10, 10);
     const offset = (page - 1) * limit;
 
+
     const [rows] = await db
       .promise()
       .query(
         `SELECT 
             b.*,
             s.name AS service_name,
-            COALESCE(
-              (
-                SELECT si.image_url
-                FROM service_images si
-                WHERE si.service_id = s.service_id
-                ORDER BY si.id DESC
-                LIMIT 1
-              ),
-              s.image
-            ) AS service_image,
+            ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_name,
             u.phone_number,
             u.avatar AS customer_avatar
@@ -977,6 +1391,7 @@ module.exports = {
   assignCleaner,
   cancelBooking,
   getBookingsByUser,
+  getMyBookingHistory,
   getBookingsByCleaner,
   getBookingHistory,
   trackBooking,
@@ -990,26 +1405,59 @@ const addBookingImages = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { images } = req.body;
+    const bookingId = Number.parseInt(id, 10);
 
-    if (!Array.isArray(images) || images.length === 0) {
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
+
+    const uploadedFileUrls = getStoredBookingImageUrls(req.files);
+    const bodyImages = Array.isArray(images) ? images : [];
+
+    if (uploadedFileUrls.length === 0 && bodyImages.length === 0) {
       return next(new AppError('No images provided', 400));
     }
 
-    const values = images.map((url) => [id, url]);
-    await db
-      .promise()
-      .query(
-        'INSERT INTO booking_images (booking_id, image_url, created_at) VALUES ?',
-        [values.map(([bid, url]) => [bid, url, new Date()])]
-      );
+    const promiseDb = db.promise();
+    await ensureBookingImagesTable(promiseDb);
+
+    const [bookingRows] = await promiseDb.query(
+      'SELECT booking_id FROM bookings WHERE booking_id = ? LIMIT 1',
+      [bookingId]
+    );
+    if (!bookingRows?.length) {
+      return next(new AppError('Booking not found', 404));
+    }
+
+    const normalizedImages = [...uploadedFileUrls, ...bodyImages]
+      .map((url) => String(url || '').trim())
+      .filter(Boolean);
+
+    if (!normalizedImages.length) {
+      return next(new AppError('No valid images provided', 400));
+    }
+
+    await insertBookingImagesInChunks(promiseDb, bookingId, normalizedImages);
 
     res.status(201).json({
       success: true,
       message: 'Images saved'
     });
   } catch (error) {
+    if (error?.code === 'ECONNRESET') {
+      return next(new AppError(
+        'Image upload failed because the database connection was reset. Try fewer or smaller images.',
+        413
+      ));
+    }
     next(error);
   }
 };
 
 module.exports.addBookingImages = addBookingImages;
+
+
+
+
+
+

@@ -4,6 +4,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
+  DollarOutlined,
   FileTextOutlined,
   MessageOutlined,
   SyncOutlined
@@ -33,6 +34,8 @@ const getNotificationIcon = (type) => {
       return <CheckCircleOutlined />;
     case 'chat':
       return <MessageOutlined />;
+    case 'payment':
+      return <DollarOutlined />;
     default:
       return <BellOutlined />;
   }
@@ -92,7 +95,7 @@ const NotificationPage = () => {
             {unreadCount > 0 && <span className="cleaner-notification-badge">{unreadCount} unread</span>}
           </div>
           <p>
-            Track real cleaner updates like new requests, in-progress jobs, completed jobs, and new chats.
+            Track real cleaner updates like new requests, payment submissions, in-progress jobs, completed jobs, and new chats.
           </p>
         </div>
       </section>

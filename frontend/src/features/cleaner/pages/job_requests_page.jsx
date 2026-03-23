@@ -15,7 +15,7 @@ import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/book
 import api from '../../../services/api';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 
-const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
 // Create a shared socket instance
 let socketInstance = null;
@@ -49,6 +49,7 @@ const mapBookingToRequest = (booking) => {
       booking.user?.username ||
       'Customer',
     customerAvatar: booking.customer_avatar || booking.user?.avatar || '',
+    customerPhone: booking.phone_number || '',
     address: booking.address || 'Address shared after accept',
     timeRange: startTime,
     amount: toMoney(booking.total_price || 0),
@@ -56,6 +57,22 @@ const mapBookingToRequest = (booking) => {
     day,
     bookingDate: booking?.booking_date || null,
     status: booking.booking_status || 'pending'
+  };
+};
+
+const mapRealtimeJobToRequest = (jobDetails) => {
+  const bookingData = jobDetails?.bookingData || jobDetails || {};
+  const mapped = mapBookingToRequest({
+    ...bookingData,
+    booking_id: bookingData.booking_id || jobDetails?.bookingId,
+    service_name: bookingData.service_name || jobDetails?.serviceTitle,
+    booking_time: bookingData.booking_time || jobDetails?.startTime,
+    booking_status: bookingData.booking_status || 'pending'
+  });
+
+  return {
+    ...mapped,
+    id: mapped.id || jobDetails?.bookingId
   };
 };
 
@@ -164,9 +181,29 @@ const JobRequestsPage = () => {
 
     const onConnect = () => {
       console.log('[JobRequests] Socket connected');
+      socket.emit('join:cleaners');
+    };
+
+    const onJobAvailable = (jobDetails) => {
+      const mapped = mapRealtimeJobToRequest(jobDetails);
+      if (!mapped?.id) return;
+
+      setRequests((prev) => {
+        if (prev.some((request) => String(request.id) === String(mapped.id))) {
+          return prev;
+        }
+        return [mapped, ...prev];
+      });
+    };
+
+    const onJobRemoved = ({ bookingId }) => {
+      if (!bookingId) return;
+      setRequests((prev) => prev.filter((request) => String(request.id) !== String(bookingId)));
     };
 
     socket.on('connect', onConnect);
+    socket.on('job:available', onJobAvailable);
+    socket.on('job:removed', onJobRemoved);
 
     if (!socket.connected) {
       const token = (() => {
@@ -194,6 +231,8 @@ const JobRequestsPage = () => {
 
     return () => {
       socket.off('connect', onConnect);
+      socket.off('job:available', onJobAvailable);
+      socket.off('job:removed', onJobRemoved);
     };
   }, []);
 
@@ -519,21 +558,33 @@ const JobRequestsPage = () => {
               </button>
             </div>
 
-            <div className="request-detail-grid">
-              <div className="request-detail-item">
-                <small>Customer</small>
-                <strong>{detailRequest.customer}</strong>
+            <div className="request-detail-customer-profile">
+              <div className="customer-avatar-section">
+                {detailRequest.customerAvatar ? (
+                  <img src={detailRequest.customerAvatar} alt={detailRequest.customer} className="customer-avatar" />
+                ) : (
+                  <div className="customer-avatar-placeholder">{detailRequest.customer.charAt(0).toUpperCase()}</div>
+                )}
               </div>
-              <div className="request-detail-item">
-                <small>Status</small>
-                <strong>
+              <div className="customer-info-section">
+                <h4>{detailRequest.customer}</h4>
+                {detailRequest.customerPhone && (
+                  <p className="customer-phone">
+                    <strong>Phone:</strong> {detailRequest.customerPhone}
+                  </p>
+                )}
+                <p className="customer-status">
+                  <strong>Status:</strong>{' '}
                   {detailRequest.status === 'accepted'
                     ? 'Accepted'
                     : detailRequest.status === 'cancelled'
                       ? 'Cancelled'
                       : 'Pending'}
-                </strong>
+                </p>
               </div>
+            </div>
+
+            <div className="request-detail-grid">
               <div className="request-detail-item">
                 <small>Address</small>
                 <strong>{detailRequest.address}</strong>
