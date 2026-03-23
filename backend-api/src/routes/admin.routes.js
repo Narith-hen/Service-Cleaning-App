@@ -83,7 +83,7 @@ router.post('/cleaners',
   body('companyEmail').isEmail(),
   body('phoneNumber').notEmpty(),
   body('teamMember').notEmpty(),
-  body('serviceType').notEmpty(),
+  body('serviceType').optional().notEmpty(),
   body('address').optional(),
   body('latitude').optional(),
   body('longitude').optional(),
@@ -99,11 +99,7 @@ router.put('/cleaners/:id',
 ], validate, admin.updateCleaner);
 
 router.delete('/cleaners/:id', [
-<<<<<<< HEAD
   param('id').notEmpty(),
-=======
-  param('id').notEmpty()
->>>>>>> develop
 ], validate, admin.deleteCleaner);
 
 // Booking management

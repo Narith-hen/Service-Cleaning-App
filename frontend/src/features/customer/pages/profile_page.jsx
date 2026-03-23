@@ -9,6 +9,12 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 
+const formatCurrency = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '$0.00';
+  return `$${amount.toFixed(2)}`;
+};
+
 const ProfilePage = () => {
   const { user, updateUser, uploadAvatar } = useAuth();
   const location = useLocation();
@@ -27,8 +33,8 @@ const ProfilePage = () => {
       phone: user?.phone || user?.phone_number || '',
       avatar: user?.avatar || null,
       joinDate: user?.joinDate || 'January 2024',
-      totalBookings: user?.totalBookings ?? 12,
-      totalSpent: user?.totalSpent ?? 540,
+      totalBookings: user?.totalBookings ?? 0,
+      totalSpent: user?.totalSpent ?? 0,
     }),
     [user]
   );
@@ -215,7 +221,7 @@ const ProfilePage = () => {
               </div>
               <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2" data-customer-card>
                 <span className="text-xs uppercase tracking-wide text-slate-500">Total Spend</span>
-                <strong className="text-lg text-slate-900">${profile.totalSpent}</strong>
+                <strong className="text-lg text-slate-900">{formatCurrency(profile.totalSpent)}</strong>
               </div>
             </div>
           </aside>

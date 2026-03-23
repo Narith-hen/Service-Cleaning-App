@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const AppError = require('../../utils/error.util');
 
 const getUserTableColumns = async () => {
@@ -48,6 +48,8 @@ const mapUserRow = (row) => ({
     bookings: Number(row.bookings_count || 0),
     reviews: Number(row.reviews_count || 0),
   },
+  total_spent: Number(row.total_spent || 0),
+  totalSpent: Number(row.total_spent || 0),
 });
 
 const getAllUsers = async (req, res, next) => {
@@ -75,6 +77,7 @@ const getAllUsers = async (req, res, next) => {
       'r.role_name',
       'COALESCE(bk.total_bookings, 0) AS bookings_count',
       'COALESCE(rv.total_reviews, 0) AS reviews_count',
+      'COALESCE(py.total_spent, bt.booking_total_spent, 0) AS total_spent',
     ];
 
     const whereClauses = [];
@@ -122,10 +125,29 @@ const getAllUsers = async (req, res, next) => {
         GROUP BY user_id
       ) bk ON bk.user_id = u.user_id
       LEFT JOIN (
+        SELECT user_id, COALESCE(SUM(total_price), 0) AS booking_total_spent
+        FROM bookings
+        GROUP BY user_id
+      ) bt ON bt.user_id = u.user_id
+      LEFT JOIN (
         SELECT user_id, COUNT(*) AS total_reviews
         FROM reviews
         GROUP BY user_id
       ) rv ON rv.user_id = u.user_id
+      LEFT JOIN (
+        SELECT
+          b.user_id,
+          COALESCE(SUM(
+            CASE
+              WHEN LOWER(COALESCE(p.payment_status, '')) IN ('completed', 'paid')
+                THEN COALESCE(p.amount, 0)
+              ELSE 0
+            END
+          ), 0) AS total_spent
+        FROM bookings b
+        LEFT JOIN payments p ON p.booking_id = b.booking_id
+        GROUP BY b.user_id
+      ) py ON py.user_id = u.user_id
       ${whereSql}
       ORDER BY u.created_at DESC
       LIMIT ?
@@ -224,7 +246,8 @@ const createUser = async (req, res, next) => {
           ${columns.has('status') ? 'u.status' : 'NULL AS status'},
           r.role_name,
           COALESCE(bk.total_bookings, 0) AS bookings_count,
-          COALESCE(rv.total_reviews, 0) AS reviews_count
+          COALESCE(rv.total_reviews, 0) AS reviews_count,
+          COALESCE(py.total_spent, bt.booking_total_spent, 0) AS total_spent
         FROM users u
         LEFT JOIN roles r ON r.role_id = u.role_id
         LEFT JOIN (
@@ -233,10 +256,29 @@ const createUser = async (req, res, next) => {
           GROUP BY user_id
         ) bk ON bk.user_id = u.user_id
         LEFT JOIN (
+          SELECT user_id, COALESCE(SUM(total_price), 0) AS booking_total_spent
+          FROM bookings
+          GROUP BY user_id
+        ) bt ON bt.user_id = u.user_id
+        LEFT JOIN (
           SELECT user_id, COUNT(*) AS total_reviews
           FROM reviews
           GROUP BY user_id
         ) rv ON rv.user_id = u.user_id
+        LEFT JOIN (
+          SELECT
+            b.user_id,
+            COALESCE(SUM(
+              CASE
+                WHEN LOWER(COALESCE(p.payment_status, '')) IN ('completed', 'paid')
+                  THEN COALESCE(p.amount, 0)
+                ELSE 0
+              END
+            ), 0) AS total_spent
+          FROM bookings b
+          LEFT JOIN payments p ON p.booking_id = b.booking_id
+          GROUP BY b.user_id
+        ) py ON py.user_id = u.user_id
         WHERE u.user_id = ?
         LIMIT 1
       `,
@@ -352,7 +394,8 @@ const updateUser = async (req, res, next) => {
           ${columns.has('status') ? 'u.status' : 'NULL AS status'},
           r.role_name,
           COALESCE(bk.total_bookings, 0) AS bookings_count,
-          COALESCE(rv.total_reviews, 0) AS reviews_count
+          COALESCE(rv.total_reviews, 0) AS reviews_count,
+          COALESCE(py.total_spent, bt.booking_total_spent, 0) AS total_spent
         FROM users u
         LEFT JOIN roles r ON r.role_id = u.role_id
         LEFT JOIN (
@@ -361,10 +404,29 @@ const updateUser = async (req, res, next) => {
           GROUP BY user_id
         ) bk ON bk.user_id = u.user_id
         LEFT JOIN (
+          SELECT user_id, COALESCE(SUM(total_price), 0) AS booking_total_spent
+          FROM bookings
+          GROUP BY user_id
+        ) bt ON bt.user_id = u.user_id
+        LEFT JOIN (
           SELECT user_id, COUNT(*) AS total_reviews
           FROM reviews
           GROUP BY user_id
         ) rv ON rv.user_id = u.user_id
+        LEFT JOIN (
+          SELECT
+            b.user_id,
+            COALESCE(SUM(
+              CASE
+                WHEN LOWER(COALESCE(p.payment_status, '')) IN ('completed', 'paid')
+                  THEN COALESCE(p.amount, 0)
+                ELSE 0
+              END
+            ), 0) AS total_spent
+          FROM bookings b
+          LEFT JOIN payments p ON p.booking_id = b.booking_id
+          GROUP BY b.user_id
+        ) py ON py.user_id = u.user_id
         WHERE u.user_id = ?
         LIMIT 1
       `,

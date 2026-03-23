@@ -1,6 +1,6 @@
 const db = require('../../config/db');
 const promiseDb = db.promise();
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const AppError = require('../../utils/error.util');
 const { uploadChatImage } = require('../../services/cloudinary.service');
@@ -199,7 +199,7 @@ const resolveMessagingUserId = async (user) => {
 
 const assertBookingAccess = async (bookingId, user) => {
   const [bookings] = await promiseDb.query(`SELECT * FROM bookings WHERE booking_id = ?`, [bookingId]);
-  if (!bookings.length) {
+  if (!bookings || !bookings.length) {
     throw new AppError('Booking not found', 404);
   }
   const booking = bookings[0];
@@ -218,7 +218,7 @@ const getMessagesByBooking = async (req, res, next) => {
     const { bookingId } = req.params;
     const bookingIdValue = Number(bookingId);
 
-    if (!Number.isFinite(bookingIdValue)) {
+    if (!Number.isFinite(bookingIdValue) || bookingIdValue <= 0) {
       return next(new AppError('Invalid booking id', 400));
     }
 
@@ -257,7 +257,7 @@ const createMessage = async (req, res, next) => {
     const { booking_id, message, file_url, file_type } = req.body;
     const bookingIdValue = Number(booking_id);
 
-    if (!Number.isFinite(bookingIdValue)) {
+    if (!Number.isFinite(bookingIdValue) || bookingIdValue <= 0) {
       return next(new AppError('Booking ID is required', 400));
     }
 
@@ -269,6 +269,12 @@ const createMessage = async (req, res, next) => {
 
     if (!booking.cleaner_id) {
       return next(new AppError('Cleaner has not been assigned to this booking yet', 400));
+    }
+
+    // Check if chat is blocked
+    const isBlocked = isCustomer ? Boolean(booking.cleaner_blocked) : Boolean(booking.customer_blocked);
+    if (isBlocked) {
+      return next(new AppError('This chat is blocked. You cannot send messages.', 403));
     }
 
     const senderUserId = await resolveMessagingUserId(req.user);
@@ -366,7 +372,7 @@ const markMessagesRead = async (req, res, next) => {
     const { bookingId } = req.params;
     const bookingIdValue = Number(bookingId);
 
-    if (!Number.isFinite(bookingIdValue)) {
+    if (!Number.isFinite(bookingIdValue) || bookingIdValue <= 0) {
       return next(new AppError('Invalid booking id', 400));
     }
 
@@ -448,9 +454,105 @@ const uploadMessageImage = async (req, res, next) => {
   }
 };
 
+// Block or unblock a chat conversation
+const toggleBlockChat = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const bookingIdValue = Number(bookingId);
+
+    if (!Number.isFinite(bookingIdValue) || bookingIdValue <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
+
+    const normalizedUserId = await resolveMessagingUserId(req.user);
+    const { booking, isCustomer } = await assertBookingAccess(bookingIdValue, req.user);
+
+    // Determine which field to update based on user role
+    const blockField = isCustomer ? 'customer_blocked' : 'cleaner_blocked';
+    const currentBlocked = isCustomer ? booking.customer_blocked : booking.cleaner_blocked;
+    const newBlocked = !currentBlocked;
+
+    await promiseDb.query(
+      `UPDATE bookings SET ${blockField} = ?, blocked_at = ? WHERE booking_id = ?`,
+      [newBlocked, newBlocked ? new Date() : null, bookingIdValue]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: newBlocked ? 'Chat blocked successfully' : 'Chat unblocked successfully',
+      data: {
+        blocked: newBlocked,
+        blockedBy: isCustomer ? 'customer' : 'cleaner'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete all messages in a chat conversation
+const deleteChat = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const bookingIdValue = Number(bookingId);
+
+    if (!Number.isFinite(bookingIdValue) || bookingIdValue <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
+
+    await assertBookingAccess(bookingIdValue, req.user);
+
+    // Delete all messages for this booking
+    const [result] = await promiseDb.query(
+      'DELETE FROM messages WHERE booking_id = ?',
+      [bookingIdValue]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Chat deleted successfully',
+      data: {
+        deletedCount: result.affectedRows
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get chat blocking status
+const getChatBlockStatus = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const bookingIdValue = Number(bookingId);
+
+    if (!Number.isFinite(bookingIdValue) || bookingIdValue <= 0) {
+      return next(new AppError('Invalid booking id', 400));
+    }
+
+    const normalizedUserId = await resolveMessagingUserId(req.user);
+    const { booking, isCustomer } = await assertBookingAccess(bookingIdValue, req.user);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        customer_blocked: Boolean(booking.customer_blocked),
+        cleaner_blocked: Boolean(booking.cleaner_blocked),
+        is_blocked: isCustomer ? Boolean(booking.cleaner_blocked) : Boolean(booking.customer_blocked),
+        blocked_at: booking.blocked_at
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getMessagesByBooking,
   createMessage,
   markMessagesRead,
-  uploadMessageImage
+  uploadMessageImage,
+  toggleBlockChat,
+  deleteChat,
+  getChatBlockStatus
 };
