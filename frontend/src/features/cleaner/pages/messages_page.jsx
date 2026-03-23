@@ -171,7 +171,7 @@ const MessagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [threads, setThreads] = useState([]);
-  const [activeThreadId, setActiveThreadId] = useState(
+const [activeThreadId, setActiveThreadId] = useState(
     searchParams.get('thread') || searchParams.get('booking')
   );
   const [threadPreviews, setThreadPreviews] = useState({});
@@ -191,40 +191,99 @@ const MessagesPage = () => {
   }, [hiddenThreadIds]);
 
   useEffect(() => {
-    try {
-      // First, try to load saved chat threads from localStorage
-      const savedThreads = loadChatThreads();
-      
-      // Also load from confirmed jobs
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-      if (!raw && savedThreads.length > 0) {
-        // No new jobs but have old chat threads - use those
-        setThreads(savedThreads);
-        return;
+    let cancelled = false;
+    
+    const loadThreads = async () => {
+      try {
+        // First, try to load saved chat threads from localStorage
+        const savedThreads = loadChatThreads();
+        
+        // Also load from confirmed jobs
+        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        if (!raw && savedThreads.length > 0) {
+          // No new jobs but have old chat threads - use those
+          if (!cancelled) setThreads(savedThreads);
+          return;
+        }
+        
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          // Use saved threads if no new jobs
+          if (!cancelled) setThreads(savedThreads.length > 0 ? savedThreads : []);
+          return;
+        }
+        
+        const normalized = parsed.filter(Boolean).map(normalizeThread);
+        
+        // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
+        const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
+        const mergedThreads = [
+          ...normalized,
+          ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
+        ];
+        
+        // Save merged threads back to localStorage
+        saveChatThreads(mergedThreads);
+        if (!cancelled) setThreads(mergedThreads);
+      } catch {
+        if (!cancelled) setThreads([]);
       }
-      
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        // Use saved threads if no new jobs
-        setThreads(savedThreads.length > 0 ? savedThreads : []);
-        return;
+    };
+    
+    loadThreads();
+    
+    // Poll for new confirmed jobs every 3 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        // Get current user ID
+        const currentUserId = (() => {
+          try {
+            const stored = JSON.parse(localStorage.getItem('user') || 'null');
+            return stored?.id || stored?.user_id || null;
+          } catch {
+            return null;
+          }
+        })();
+        
+        if (!currentUserId) return;
+        
+        // Fetch bookings assigned to this cleaner
+        const response = await api.get('/bookings', {
+          params: { page: 1, limit: 100 }
+        });
+        if (cancelled) return;
+        
+        const bookingsData = response?.data?.data || [];
+        // Filter to only confirmed bookings assigned to this cleaner
+        const cleanerConfirmedBookings = bookingsData.filter(
+          (b) => b.cleaner_id && String(b.cleaner_id) === String(currentUserId) && 
+                 (b.booking_status === 'confirmed' || b.booking_status === 'accepted')
+        );
+        
+        if (cleanerConfirmedBookings.length > 0) {
+          // Update localStorage with fresh data
+          const normalized = cleanerConfirmedBookings.map(normalizeThread);
+          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(normalized));
+          
+          // Merge with saved threads
+          const savedThreads = loadChatThreads();
+          const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
+          const mergedThreads = [
+            ...normalized,
+            ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
+          ];
+          saveChatThreads(mergedThreads);
+          if (!cancelled) setThreads(mergedThreads);
+        }
+      } catch {
+        // Ignore polling errors
       }
-      
-      const normalized = parsed.filter(Boolean).map(normalizeThread);
-      
-      // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
-      const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
-      const mergedThreads = [
-        ...normalized,
-        ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
-      ];
-      
-      // Save merged threads back to localStorage
-      saveChatThreads(mergedThreads);
-      setThreads(mergedThreads);
-    } catch {
-      setThreads([]);
-    }
+    }, 3000);
+    
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
   }, []);
 
   useEffect(() => {

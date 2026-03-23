@@ -4,6 +4,35 @@ const jwt = require('jsonwebtoken');
 
 const connectedUsers = new Map(); // userId -> socketId
 const userSockets = new Map(); // socketId -> userId
+const DEV_JWT_FALLBACK_SECRET = 'dev-local-jwt-secret-change-me';
+
+const verifySocketToken = (token) => {
+  const configuredSecret = String(process.env.JWT_SECRET || '').trim();
+  const secretsToTry = [];
+
+  if (configuredSecret) {
+    secretsToTry.push(configuredSecret);
+  }
+
+  // Match the backend's development fallback so local API tokens also work
+  // when the realtime server has a stale or missing JWT_SECRET value.
+  if (process.env.NODE_ENV !== 'production' && configuredSecret !== DEV_JWT_FALLBACK_SECRET) {
+    secretsToTry.push(DEV_JWT_FALLBACK_SECRET);
+  }
+
+  const attempted = new Set();
+  for (const secret of secretsToTry) {
+    if (!secret || attempted.has(secret)) continue;
+    attempted.add(secret);
+    try {
+      return jwt.verify(token, secret);
+    } catch (error) {
+      // Try the next candidate secret.
+    }
+  }
+
+  throw new Error('Authentication failed');
+};
 
 const initializeSocket = (server) => {
   const io = new Server(server, {
@@ -24,11 +53,11 @@ const initializeSocket = (server) => {
         return next(new Error('Authentication required'));
       }
 
-      const secret = process.env.JWT_SECRET || 'dev-local-jwt-secret-change-me';
-      const decoded = jwt.verify(token, secret);
+      const decoded = verifySocketToken(token);
       socket.userId = decoded.user_id;
       next();
     } catch (error) {
+      console.error('[socket] Authentication failed:', error.message);
       next(new Error('Authentication failed'));
     }
   });
@@ -186,7 +215,7 @@ const initializeSocket = (server) => {
   });
 
   // Subscribe to Redis channels for real-time updates from backend
-  subscriber.subscribe('booking:updates', 'notification:new', 'user:status', 'message:created', 'message:read');
+  subscriber.subscribe('booking:updates', 'notification:new', 'user:status', 'message:created', 'message:read', 'job:created');
 
   subscriber.on('message', (channel, message) => {
     console.log(`[Redis] Received message on channel: ${channel}`);
@@ -209,6 +238,9 @@ const initializeSocket = (server) => {
           break;
         case 'message:read':
           handleMessageRead(io, data);
+          break;
+        case 'job:created':
+          handleJobCreated(io, data);
           break;
       }
     } catch (error) {
@@ -288,6 +320,24 @@ const handleMessageRead = (io, data) => {
   };
 
   io.to(`booking:${bookingId}`).emit('messages:seen', payload);
+};
+
+const handleJobCreated = (io, data) => {
+  const payload = data?.bookingData
+    ? {
+        ...data.bookingData,
+        bookingId: String(data.bookingData.booking_id || data.bookingId || ''),
+        serviceTitle: data.serviceTitle || data.bookingData.service_name || data.bookingData.service?.name || 'Cleaning',
+        startTime: data.startTime || String(data.bookingData.booking_time || '').split('-')[0].trim() || 'TBD'
+      }
+    : {
+        ...data,
+        bookingId: String(data?.bookingId || data?.booking_id || '')
+      };
+
+  if (!payload.bookingId) return;
+
+  io.to('cleaners-room').emit('job:available', payload);
 };
 
 module.exports = {

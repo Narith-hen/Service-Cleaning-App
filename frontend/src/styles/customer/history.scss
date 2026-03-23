@@ -355,6 +355,31 @@
   border-radius: 24px;
 }
 
+.customer-history-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 24px;
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.customer-history-chat-btn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.customer-history-chat-btn .anticon {
+  font-size: 16px;
+}
+
 .customer-history-payment-button {
   background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
   color: #fff;

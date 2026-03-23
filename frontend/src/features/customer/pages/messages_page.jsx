@@ -101,6 +101,15 @@ const getAuthToken = () => {
   }
 };
 
+const getStoredUserId = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('user') || 'null');
+    return stored?.id || stored?.user_id || null;
+  } catch {
+    return null;
+  }
+};
+
 const readStoredThreadIds = () => {
   try {
     const raw = localStorage.getItem(CUSTOMER_CHAT_STORAGE_KEY);
@@ -184,7 +193,19 @@ const CustomerMessagesPage = () => {
     try {
       const response = await api.get(`/bookings/track/${bookingId}`);
       const data = response?.data?.data;
-      return data ? normalizeBooking(data) : null;
+      const normalized = data ? normalizeBooking(data) : null;
+      const currentUserId = String(getStoredUserId() || '');
+      if (!normalized || !currentUserId) return normalized;
+
+      const bookingCustomerId = String(
+        data?.user_id
+        || data?.customer_id
+        || data?.user?.id
+        || data?.customer?.id
+        || ''
+      );
+
+      return bookingCustomerId === currentUserId ? normalized : null;
     } catch {
       return null;
     }
@@ -197,7 +218,7 @@ const CustomerMessagesPage = () => {
     }
 
     const storedThreadIds = readStoredThreadIds();
-    if (storedThreadIds.length > 0) {
+    if (!getAuthToken() && storedThreadIds.length > 0) {
       return storedThreadIds
         .filter((id) => !hidden.has(String(id)))
         .map((id) =>
@@ -220,11 +241,14 @@ const CustomerMessagesPage = () => {
   }, [hiddenThreadIds]);
 
   useEffect(() => {
+    let cancelled = false;
+    
     const fetchBookings = async () => {
       setLoading(true);
       const selectedBookingId = searchParams.get('booking') || searchParams.get('thread');
       try {
         const response = await api.get('/bookings', { params: { page: 1, limit: 50 } });
+        if (cancelled) return;
         const bookingsData = response?.data?.data || [];
         let normalizedBookings = bookingsData.length > 0
           ? bookingsData.map(normalizeBooking)
@@ -232,23 +256,14 @@ const CustomerMessagesPage = () => {
 
         if (selectedBookingId && !normalizedBookings.some((b) => b.booking_id === String(selectedBookingId))) {
           const trackedBooking = await fetchTrackedBooking(selectedBookingId);
+          if (cancelled) return;
           normalizedBookings = trackedBooking
             ? [trackedBooking, ...normalizedBookings]
-            : [
-              normalizeBooking({
-                booking_id: selectedBookingId,
-                booking_date: new Date().toISOString(),
-                booking_time: '10:00 AM',
-                address: '123 Harmony Lane, Bright City',
-                service: { name: 'Custom Cleaning' },
-                cleaner: { id: null, username: 'Cleaner' }
-              }),
-              ...normalizedBookings
-            ];
+            : normalizedBookings;
         }
 
         const storedThreadIds = readStoredThreadIds();
-        if (storedThreadIds.length) {
+        if (storedThreadIds.length && !getAuthToken()) {
           const existing = new Set(normalizedBookings.map((b) => String(b.booking_id)));
           const synthetic = storedThreadIds
             .filter((id) => !existing.has(String(id)))
@@ -264,50 +279,23 @@ const CustomerMessagesPage = () => {
             );
           normalizedBookings = [...synthetic, ...normalizedBookings];
 
-          if (getAuthToken()) {
-            const toHydrate = storedThreadIds.filter((id) => !existing.has(String(id)));
-            const hydrated = await Promise.all(
-              toHydrate.map(async (id) => {
-                try {
-                  const resp = await api.get(`/bookings/track/${id}`);
-                  const data = resp?.data?.data;
-                  return data ? normalizeBooking(data) : null;
-                } catch {
-                  return null;
-                }
-              })
-            );
-
-            hydrated.filter(Boolean).forEach((entry) => {
-              normalizedBookings = normalizedBookings.map((booking) =>
-                String(booking.booking_id) === String(entry.booking_id) ? entry : booking
-              );
-            });
-          }
         }
 
         setBookings(normalizedBookings);
       } catch (error) {
         console.error('Failed to fetch bookings:', error);
+        if (cancelled) return;
         let normalizedBookings = [].map(normalizeBooking);
+        const selectedBookingId = searchParams.get('booking') || searchParams.get('thread');
         if (selectedBookingId && !normalizedBookings.some((b) => b.booking_id === String(selectedBookingId))) {
           const trackedBooking = await fetchTrackedBooking(selectedBookingId);
+          if (cancelled) return;
           normalizedBookings = trackedBooking
             ? [trackedBooking, ...normalizedBookings]
-            : [
-              normalizeBooking({
-                booking_id: selectedBookingId,
-                booking_date: new Date().toISOString(),
-                booking_time: '10:00 AM',
-                address: '123 Harmony Lane, Bright City',
-                service: { name: 'Custom Cleaning' },
-                cleaner: { id: null, username: 'Cleaner' }
-              }),
-              ...normalizedBookings
-            ];
+            : normalizedBookings;
         }
         const storedThreadIds = readStoredThreadIds();
-        if (storedThreadIds.length) {
+        if (storedThreadIds.length && !getAuthToken()) {
           const existing = new Set(normalizedBookings.map((b) => String(b.booking_id)));
           const synthetic = storedThreadIds
             .filter((id) => !existing.has(String(id)))
@@ -323,34 +311,44 @@ const CustomerMessagesPage = () => {
             );
           normalizedBookings = [...synthetic, ...normalizedBookings];
 
-          if (getAuthToken()) {
-            const toHydrate = storedThreadIds.filter((id) => !existing.has(String(id)));
-            const hydrated = await Promise.all(
-              toHydrate.map(async (id) => {
-                try {
-                  const resp = await api.get(`/bookings/track/${id}`);
-                  const data = resp?.data?.data;
-                  return data ? normalizeBooking(data) : null;
-                } catch {
-                  return null;
-                }
-              })
-            );
-
-            hydrated.filter(Boolean).forEach((entry) => {
-              normalizedBookings = normalizedBookings.map((booking) =>
-                String(booking.booking_id) === String(entry.booking_id) ? entry : booking
-              );
-            });
-          }
         }
         setBookings(normalizedBookings);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchBookings();
+    
+    // Poll for booking updates every 3 seconds to get cleaner info when booking is confirmed
+    const pollInterval = setInterval(() => {
+      const selectedBookingId = searchParams.get('booking') || searchParams.get('thread');
+      if (selectedBookingId) {
+        api.get(`/bookings/track/${selectedBookingId}`)
+          .then((resp) => {
+            if (cancelled) return;
+            const data = resp?.data?.data;
+            if (data) {
+              const normalized = normalizeBooking(data);
+              setBookings((prev) => {
+                const existing = new Set(prev.map((b) => String(b.booking_id)));
+                if (existing.has(String(normalized.booking_id))) {
+                  return prev.map((b) => 
+                    String(b.booking_id) === String(normalized.booking_id) ? normalized : b
+                  );
+                }
+                return [normalized, ...prev];
+              });
+            }
+          })
+          .catch(() => {}); // Ignore polling errors
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+    };
   }, [searchParams]);
 
   useEffect(() => {

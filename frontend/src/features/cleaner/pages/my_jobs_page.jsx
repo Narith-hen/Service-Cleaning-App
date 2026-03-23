@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
   UserOutlined,
@@ -7,7 +7,6 @@ import {
   HomeOutlined,
   AppstoreOutlined,
   MessageOutlined,
-  CloseOutlined,
   PlayCircleOutlined,
   CalendarOutlined,
   FileTextOutlined,
@@ -28,6 +27,9 @@ import airConditioningImage from '../../../assets/co.png';
 import moveImage from '../../../assets/move.png';
 import shopImage from '../../../assets/shop.png';
 import proImage from '../../../assets/pro.png';
+import customerAvatar1 from '../../../assets/larryta.png';
+import customerAvatar2 from '../../../assets/mey.JPG';
+import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import api from '../../../services/api';
@@ -37,48 +39,29 @@ const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
 
-const tabs = [
-  { key: 'all', label: 'All Jobs' },
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'in-progress', label: 'In-Progress' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' }
-];
-
+// Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
   try {
     localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
-  } catch {
-    // Ignore storage errors.
+  } catch (e) {
+    // Ignore storage errors
   }
 };
 
-const toDisplayImageUrl = (imageUrl) => {
-  const value = String(imageUrl || '').trim();
-  if (!value) return '';
-  if (
-    /^https?:\/\//i.test(value)
-    || value.startsWith('data:')
-    || value.startsWith('blob:')
-    || value.startsWith('/assets/')
-  ) {
-    return value;
-  }
-  return `${API_BASE_URL}${value.startsWith('/') ? '' : '/'}${value}`;
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
 };
 
 const pickJobImage = (job) => {
-  const apiImage = toDisplayImageUrl(job?.serviceImage || job?.imageUrl || '');
+  const apiImage = toAbsoluteImageUrl(job?.serviceImage || job?.imageUrl || '');
   if (apiImage) return apiImage;
 
   const title = String(job?.title || job?.serviceName || '').toLowerCase();
   const serviceType = String(job?.serviceType || '').toLowerCase();
-
+  
   if (title.includes('carpet') || serviceType.includes('carpet')) return carpetImage;
   if (title.includes('floor buff') || title.includes('pressure wash') || serviceType.includes('floor')) return floorBuffingImage;
   if (title.includes('air') || title.includes('conditioning') || serviceType.includes('air')) return airConditioningImage;
@@ -91,12 +74,12 @@ const pickJobImage = (job) => {
   if (title.includes('window') || serviceType.includes('window')) return windowImage;
   if (title.includes('construction') || serviceType.includes('construction')) return constructionImage;
   if (title.includes('customer') || serviceType.includes('customer')) return customerHomeImage;
-
+  
   return homeImage;
 };
 
 const getBookingIdFromJob = (job) => {
-  const rawId = job?.sourceRequestId || job?.bookingId || job?.booking_id || job?.id || '';
+  const rawId = job?.sourceRequestId || job?.bookingId || job?.id || '';
   const normalized = String(rawId);
   if (!normalized) return null;
   if (normalized.startsWith('confirmed-')) {
@@ -104,6 +87,7 @@ const getBookingIdFromJob = (job) => {
   }
   return normalized;
 };
+
 
 const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
   const bookingId = getBookingIdFromJob(job);
@@ -120,79 +104,34 @@ const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) =>
   }
 };
 
-const getCurrentCleanerId = () => {
-  try {
-    const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
-    const rawId = savedUser?.id || savedUser?.user_id || '';
-    return rawId ? String(rawId) : '';
-  } catch {
-    return '';
-  }
-};
-
-const toMoney = (value) => {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return '$0.00';
-  return `$${amount.toFixed(2)}`;
-};
-
-const parseBookingDate = (value) => {
-  if (!value) return null;
-  const nextDate = new Date(value);
-  if (Number.isNaN(nextDate.getTime())) return null;
-  return nextDate;
-};
-
-const getMonthYear = (date) => {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return 'Date TBD';
-  return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
-};
-
-const getDay = (date) => {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '--';
-  return String(date.getDate()).padStart(2, '0');
-};
-
-const formatTimeRange = (rawValue, bookingDate) => {
-  const value = String(rawValue || '').trim();
-  if (value) return value;
-  if (!(bookingDate instanceof Date) || Number.isNaN(bookingDate.getTime())) return 'Time TBD';
-  return bookingDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-const getDateTimeLabel = (job) => {
-  const day = String(job?.day || '').trim();
-  const monthYear = String(job?.monthYear || '').trim();
-  const timeRange = String(job?.timeRange || '').trim();
-  return [day, monthYear, timeRange].filter(Boolean).join(', ');
-};
-
-const normalizeJobStatus = (...values) => {
-  const normalized = values
-    .map((value) => String(value || '').trim().toLowerCase())
-    .filter(Boolean);
-
-  if (normalized.some((value) => value === 'completed')) return 'completed';
-  if (normalized.some((value) => value === 'cancelled' || value === 'rejected')) return 'cancelled';
-  if (normalized.some((value) => value === 'in_progress' || value === 'in-progress' || value === 'started')) {
-    return 'in-progress';
-  }
-  return 'upcoming';
-};
-
-const isPaymentReviewStatus = (status) => {
-  const normalized = String(status || '').toLowerCase();
-  return normalized === 'payment_review' || normalized === 'pending_payment' || normalized === 'awaiting_payment';
+const isPaymentReviewStatus = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  return normalized === 'payment-required'
+    || normalized === 'payment_required'
+    || normalized === 'awaiting_receipt'
+    || normalized === 'receipt_submitted';
 };
 
 const getPaymentBadge = (paymentStatus) => {
   const normalized = String(paymentStatus || '').toLowerCase();
-  if (normalized === 'completed' || normalized === 'paid') return { color: 'green', label: 'Paid' };
-  if (normalized === 'payment_review' || normalized === 'pending_payment' || normalized === 'awaiting_payment') {
-    return { color: 'orange', label: 'Payment Review' };
+
+  if (normalized === 'completed' || normalized === 'paid') {
+    return {
+      tone: 'paid',
+      icon: <DollarOutlined />,
+      label: 'Paid'
+    };
   }
-  if (normalized === 'failed' || normalized === 'error') return { color: 'red', label: 'Payment Failed' };
-  return { color: 'default', label: 'Unknown' };
+
+  if (normalized === 'receipt_submitted') {
+    return {
+      tone: 'payment-submitted',
+      icon: <ClockCircleOutlined />,
+      label: 'Payment Submitted'
+    };
+  }
+
+  return null;
 };
 
 const formatSingleTimeLabel = (value) => {
@@ -248,20 +187,6 @@ const formatJobImageTimeLabel = (job) => {
   return formatSingleTimeLabel(startTime || timeRange);
 };
 
-const buildJobRecord = (job = {}) => {
-  const nextJob = {
-    ...job,
-    status: normalizeJobStatus(job?.status, job?.serviceStatus, job?.service_status),
-    serviceStatus: job?.serviceStatus || job?.service_status || '',
-    customerAvatar: toDisplayImageUrl(job?.customerAvatar || job?.customer_avatar || ''),
-    serviceImage: job?.serviceImage || job?.service_image || ''
-  };
-
-  return {
-    ...nextJob,
-    image: nextJob.image || pickJobImage(nextJob)
-  };
-};
 
 const fallbackJobs = [
   {
@@ -329,173 +254,72 @@ const fallbackJobs = [
   }
 ];
 
-
-const normalizeStoredJob = (job) => {
-  const bookingId = getBookingIdFromJob(job);
-  const bookingDate = parseBookingDate(job?.bookingDate || job?.booking_date);
-
-  return buildJobRecord({
-    id: job?.id || (bookingId ? `confirmed-${bookingId}` : `confirmed-${Date.now()}`),
-    sourceRequestId: job?.sourceRequestId || bookingId || job?.id || '',
-    status: normalizeJobStatus(job?.status, job?.serviceStatus, job?.service_status),
-    title: job?.title || job?.serviceName || job?.service_name || 'Cleaning Job',
-    jobId: job?.jobId || (bookingId ? `#SOMA-${bookingId}` : '#SOMA-00000'),
-    price: job?.price || toMoney(job?.negotiatedPrice ?? job?.negotiated_price ?? job?.total_price ?? 0),
-    day: job?.day || getDay(bookingDate),
-    monthYear: job?.monthYear || getMonthYear(bookingDate),
-    timeRange: job?.timeRange || formatTimeRange(job?.booking_time, bookingDate),
-    location: job?.location || job?.address || 'Address pending',
-    customer: job?.customer || job?.customer_name || job?.customer_username || 'Customer',
-    customerId: String(job?.customerId || job?.customer_id || ''),
-    customerPhone: job?.customerPhone || job?.customer_phone || '',
-    customerEmail: job?.customerEmail || job?.customer_email || '',
-    customerAvatar: job?.customerAvatar || job?.customer_avatar || '',
-    bedrooms: job?.bedrooms || '3 Bedrooms',
-    floors: job?.floors || '2 Floors',
-    serviceStatus: job?.serviceStatus || job?.service_status || 'booked',
-    serviceType: job?.serviceType || job?.service_name || '',
-    serviceImage: job?.serviceImage || job?.service_image || '',
-    bookingDate: job?.bookingDate || job?.booking_date || ''
-  });
-};
-
-const readStoredJobs = () => {
-  try {
-    const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter(Boolean).map(normalizeStoredJob);
-  } catch {
-    return [];
-  }
-};
-
-const mapApiBookingToJob = (booking, storedJob) => {
-  const bookingId = String(booking?.booking_id || booking?.id || storedJob?.sourceRequestId || '');
-  const bookingDate = parseBookingDate(booking?.booking_date || storedJob?.bookingDate);
-  const customerName = String(booking?.customer_username || booking?.customer_name || storedJob?.customer || '').trim();
-
-  return buildJobRecord({
-    id: storedJob?.id || (bookingId ? `confirmed-${bookingId}` : `confirmed-${Date.now()}`),
-    sourceRequestId: bookingId || storedJob?.sourceRequestId || '',
-    status: normalizeJobStatus(
-      booking?.service_tracking_status,
-      booking?.service_status,
-      booking?.booking_status,
-      storedJob?.status
-    ),
-    title: booking?.service_name || booking?.service?.name || storedJob?.title || 'Cleaning Job',
-    jobId: storedJob?.jobId || (bookingId ? `#SOMA-${bookingId}` : '#SOMA-00000'),
-    price: storedJob?.price || toMoney(booking?.negotiated_price ?? booking?.total_price ?? 0),
-    day: storedJob?.day || getDay(bookingDate),
-    monthYear: storedJob?.monthYear || getMonthYear(bookingDate),
-    timeRange: storedJob?.timeRange || formatTimeRange(booking?.booking_time, bookingDate),
-    location: booking?.address || storedJob?.location || 'Address pending',
-    customer: customerName || 'Customer',
-    customerId: String(booking?.customer_id || storedJob?.customerId || ''),
-    customerPhone: booking?.customer_phone || storedJob?.customerPhone || '',
-    customerEmail: booking?.customer_email || storedJob?.customerEmail || '',
-    customerAvatar: toDisplayImageUrl(booking?.customer_avatar || storedJob?.customerAvatar || ''),
-    bedrooms: storedJob?.bedrooms || '3 Bedrooms',
-    floors: storedJob?.floors || '2 Floors',
-    serviceStatus: booking?.service_status || storedJob?.serviceStatus || 'booked',
-    serviceType: booking?.service_name || storedJob?.serviceType || '',
-    serviceImage: booking?.service_image || storedJob?.serviceImage || '',
-    bookingDate: booking?.booking_date || storedJob?.bookingDate || ''
-  });
-};
-
-const persistJobs = (jobs) => {
-  try {
-    localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(jobs));
-  } catch {
-    // Ignore storage errors.
-  }
-};
+const tabs = [
+  { key: 'all', label: 'All Jobs' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'in-progress', label: 'In-Progress' },
+  { key: 'payment', label: 'Payment Review' },
+  { key: 'completed', label: 'Completed' }
+];
 
 const MyJobsPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'all');
-  const [jobs, setJobs] = useState([]);
+  const [activeTab, setActiveTab] = useState('all');
+  const [jobs, setJobs] = useState(fallbackJobs);
   const [activeMessageJobId, setActiveMessageJobId] = useState(null);
   const [jobActionStateById, setJobActionStateById] = useState({});
-  const [loading, setLoading] = useState(true);
   const [paymentWorkflowByBooking, setPaymentWorkflowByBooking] = useState({});
-  const [, setPaymentActionByBooking] = useState({});
+  const [paymentActionByBooking, setPaymentActionByBooking] = useState({});
 
   useEffect(() => {
-    let cancelled = false;
+    try {
+      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      if (!raw) return;
 
-    const syncJobs = async () => {
-      setLoading(true);
-      const storedJobs = readStoredJobs();
-      const storedByBookingId = new Map(
-        storedJobs.map((job) => [String(getBookingIdFromJob(job) || ''), job])
-      );
-      const cleanerId = getCurrentCleanerId();
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
 
-      if (!cleanerId) {
-        if (!cancelled) {
-          setJobs(storedJobs);
-          setLoading(false);
-        }
-        return;
-      }
+      const seenJobKeys = new Set();
+      const normalized = parsed
+        .filter(Boolean)
+        .filter((job) => {
+          const uniqueKey = String(job.sourceRequestId || job.id || '');
+          if (!uniqueKey) return true;
+          if (seenJobKeys.has(uniqueKey)) return false;
+          seenJobKeys.add(uniqueKey);
+          return true;
+        })
+        .map((job) => ({
+          id: job.id || `confirmed-${job.sourceRequestId || Date.now()}`,
+          sourceRequestId: job.sourceRequestId || job.id,
+          status: job.status || 'in-progress',
+          title: job.title || 'Cleaning Job',
+          jobId: job.jobId || '#SOMA-00000',
+          price: job.price || '$0.00',
+          day: job.day || '01',
+          monthYear: job.monthYear || 'June 2026',
+          timeRange: job.timeRange || '09:00 AM - 12:00 PM',
+          location: job.location || 'Phnom Penh, Cambodia',
+          customer: job.customer || 'Customer',
+          customerId: job.customerId || job.customer_id || '3',
+          customerPhone: job.customerPhone || job.customer_phone || '',
+          customerEmail: job.customerEmail || job.customer_email || '',
+          customerAvatar: job.customerAvatar || '',
+          bedrooms: job.bedrooms || '3 Bedrooms',
+          floors: job.floors || '2 Floors',
+          serviceStatus: job.serviceStatus || 'booked',
+          paymentStatus: String(job.paymentStatus || '').toLowerCase(),
+          serviceType: job.serviceType || 'home',
+          serviceImage: job.serviceImage || '',
+          image: pickJobImage(job)
+        }));
 
-      try {
-        const response = await api.get(`/bookings/cleaner/${cleanerId}`, {
-          params: { limit: 50 }
-        });
-        const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
-        const apiJobs = rows.map((booking) =>
-          mapApiBookingToJob(
-            booking,
-            storedByBookingId.get(String(booking?.booking_id || booking?.id || ''))
-          )
-        );
-        const knownBookingIds = new Set(
-          apiJobs.map((job) => String(getBookingIdFromJob(job) || ''))
-        );
-        const mergedJobs = [
-          ...apiJobs,
-          ...storedJobs.filter((job) => {
-            const bookingId = String(getBookingIdFromJob(job) || '');
-            return bookingId && !knownBookingIds.has(bookingId);
-          })
-        ];
-
-        persistJobs(mergedJobs);
-        if (!cancelled) {
-          setJobs(mergedJobs);
-        }
-      } catch (error) {
-        console.error('Failed to load cleaner jobs', error);
-        if (!cancelled) {
-          setJobs(storedJobs);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    syncJobs();
-    window.addEventListener('focus', syncJobs);
-    window.addEventListener('storage', syncJobs);
-    window.addEventListener('cleaner-notifications-updated', syncJobs);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', syncJobs);
-      window.removeEventListener('storage', syncJobs);
-      window.removeEventListener('cleaner-notifications-updated', syncJobs);
-    };
+      setJobs(normalized);
+    } catch {
+      setJobs(fallbackJobs);
+    }
   }, []);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -616,6 +440,7 @@ const MyJobsPage = () => {
     const bookingId = getBookingIdFromJob(job);
     if (!bookingId) return;
 
+
     const bookingKey = String(bookingId);
     setPaymentActionByBooking((prev) => ({ ...prev, [bookingKey]: 'confirming' }));
     try {
@@ -691,7 +516,7 @@ const MyJobsPage = () => {
                 <span className="my-jobs-detail-icon"><CalendarOutlined /></span>
                 <div>
                   <small>Date &amp; Time</small>
-                  <strong>{getDateTimeLabel(activeMessageJob) || 'Schedule pending'}</strong>
+                  <strong>Tomorrow, 9:00 AM</strong>
                 </div>
               </div>
 
@@ -724,6 +549,7 @@ const MyJobsPage = () => {
     );
   }
 
+
   return (
     <div className="cleaner-my-jobs-v2">
       <div className="my-jobs-tabs-v2">
@@ -751,10 +577,10 @@ const MyJobsPage = () => {
           const actionState = jobActionStateById[job.id]
             || (job.status === 'completed' || isPaymentConfirmed
               ? 'completed'
-              : job.status === 'in-progress'
-                ? 'in-progress'
-                : job.status === 'cancelled'
-                  ? 'cancelled'
+              : needsPaymentReview
+                ? 'payment-required'
+                : job.status === 'in-progress'
+                  ? 'in-progress'
                   : 'idle');
 
           return (
@@ -771,13 +597,15 @@ const MyJobsPage = () => {
                 }
               }}
             >
-              <aside
-                className="my-job-date-v2"
-                style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
-              >
-                <span className={`status-pill ${job.status}`}>
-                  {job.status === 'completed'
-                    ? 'COMPLETED'
+            <aside
+              className="my-job-date-v2"
+              style={{ '--job-date-bg': `url(${job.image || officeImage})` }}
+            >
+              <span className={`status-pill ${actionState === 'payment-required' ? 'in-progress' : job.status}`}>
+                {actionState === 'completed'
+                  ? 'COMPLETED'
+                  : actionState === 'payment-required'
+                    ? 'PAYMENT REVIEW'
                     : job.status === 'in-progress'
                     ? 'IN PROGRESS'
                     : 'ACTIVE NOW'}
@@ -802,81 +630,148 @@ const MyJobsPage = () => {
                   <h3>{job.title}</h3>
                 </div>
 
-                <p className="job-line-v2">
-                  <EnvironmentOutlined /> {job.location}
-                </p>
+                <div className="job-price-v2">
+                  <strong>{job.price}</strong>
+                  <small>Fixed Rate</small>
+                </div>
+              </div>
 
-                <p className="job-line-v2">
-                  <UserOutlined /> Customer: {job.customer}
-                </p>
+              <p className="job-line-v2">
+                <EnvironmentOutlined /> {job.location}
+              </p>
 
-                <p className="job-line-v2">
-                  <HomeOutlined /> {job.bedrooms}
-                  <span className="dot">•</span>
-                  <AppstoreOutlined /> {job.floors}
-                </p>
+              <p className="job-line-v2">
+                <UserOutlined /> Customer: {job.customer}
+              </p>
 
               <p className="job-line-v2">
                 <CalendarOutlined /> {formatJobDateLabel(job)}
               </p>
 
+              <div className="job-actions-v2">
+                {actionState === 'idle' && (
                   <button
                     type="button"
-                    className="ghost-btn message-btn"
+                    className="start-btn"
                     onClick={(event) => {
                       event.stopPropagation();
-                      const threadData = {
-                        id: job.id,
-                        sourceRequestId: job.sourceRequestId,
-                        status: job.status,
-                        title: job.title,
-                        jobId: job.jobId,
-                        price: job.price,
-                        day: job.day,
-                        monthYear: job.monthYear,
-                        timeRange: job.timeRange,
-                        location: job.location,
-                        customer: job.customer,
-                        customerId: job.customerId || '3',
-                        customerPhone: job.customerPhone || '',
-                        customerEmail: job.customerEmail || '',
-                        customerAvatar: job.customerAvatar || '',
-                        bedrooms: job.bedrooms,
-                        floors: job.floors,
-                        image: job.image,
-                        serviceImage: job.serviceImage || '',
-                        serviceType: job.serviceType
-                      };
-
-                      try {
-                        const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
-                        const parsed = raw ? JSON.parse(raw) : [];
-                        const existing = Array.isArray(parsed) ? parsed : [];
-                        const threadId = job.sourceRequestId || job.id;
-                        const filtered = existing.filter(
-                          (thread) => (thread.sourceRequestId || thread.id) !== threadId
-                        );
-                        saveChatThreads([threadData, ...filtered]);
-                      } catch {
-                        // Ignore storage errors.
-                      }
-
-                      setActiveMessageJobId(job.id);
+                      handleStartJob(job.id);
                     }}
                   >
-                    <MessageOutlined /> Messages
+                    <PlayCircleOutlined /> Start Job
                   </button>
-                </div>
-              </section>
+                )}
+
+                {actionState === 'in-progress' && (
+                  <button
+                    type="button"
+                    className="progress-btn"
+                    disabled
+                  >
+                    <ClockCircleOutlined /> In progress
+                  </button>
+                )}
+
+                {actionState === 'completed' && (
+                  <button type="button" className="completed-btn" disabled>
+                    <CheckCircleOutlined /> Completed
+                  </button>
+                )}
+
+                {paymentBadge && (
+                  <span className={`job-payment-badge ${paymentBadge.tone}`}>
+                    {paymentBadge.icon}
+                    {paymentBadge.label}
+                  </span>
+                )}
+
+                {actionState === 'payment-required' && (
+                  <>
+                    {paymentStatus === 'receipt_submitted' && paymentFlow?.receipt_image_url ? (
+                      <>
+                        <button
+                          type="button"
+                          className="start-btn"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleConfirmReceipt(job);
+                          }}
+                          disabled={paymentActionByBooking[String(bookingId)] === 'confirming'}
+                        >
+                          <CheckCircleOutlined /> {paymentActionByBooking[String(bookingId)] === 'confirming' ? 'Confirming...' : 'Confirm Receipt'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleViewReceipt(job);
+                          }}
+                        >
+                          <EyeOutlined /> View Receipt
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" className="progress-btn" disabled>
+                        <ClockCircleOutlined /> Waiting customer receipt
+                      </button>
+                    )}
+                  </>
+                )}
+
+
+                <button
+                  type="button"
+                  className="ghost-btn message-btn"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    // Save job to chat threads for history
+                    const threadData = {
+                      id: job.id,
+                      sourceRequestId: job.sourceRequestId,
+                      status: job.status,
+                      title: job.title,
+                      jobId: job.jobId,
+                      price: job.price,
+                      day: job.day,
+                      monthYear: job.monthYear,
+                      timeRange: job.timeRange,
+                      location: job.location,
+                      customer: job.customer,
+                      customerId: job.customerId || '3',
+                      customerPhone: job.customerPhone || '',
+                      customerEmail: job.customerEmail || '',
+                      customerAvatar: job.customerAvatar || '',
+                      bedrooms: job.bedrooms,
+                      floors: job.floors,
+                      image: job.image,
+                      serviceImage: job.serviceImage || '',
+                      serviceType: job.serviceType,
+                      paymentStatus
+                    };
+                    
+                    try {
+                      const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+                      const existing = raw ? JSON.parse(raw) : [];
+                      const threadId = job.sourceRequestId || job.id;
+                      const filtered = existing.filter(t => (t.sourceRequestId || t.id) !== threadId);
+                      saveChatThreads([threadData, ...filtered]);
+                    } catch (e) {
+                      // Ignore
+                    }
+                    
+                    setActiveMessageJobId(job.id);
+                  }}
+                >
+                  <MessageOutlined /> Messages
+                </button>
+              </div>
+            </section>
             </article>
           );
         })}
 
-        {loading && visibleJobs.length === 0 && (
-          <div className="my-jobs-empty-v2">Loading jobs...</div>
-        )}
-
-        {!loading && visibleJobs.length === 0 && (
+        {visibleJobs.length === 0 && (
           <div className="my-jobs-empty-v2">No jobs in this tab yet.</div>
         )}
       </div>
