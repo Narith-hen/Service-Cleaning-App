@@ -50,17 +50,17 @@ export default function HomePage() {
   const processSteps = [
     {
       number: "1",
-      title: "Book Online",
+      title: "Book a Service",
       description: "Choose your service, date, and time that fits your busy schedule."
     },
     {
       number: "2",
-      title: "We Clean",
+      title: "Cleaning Process",
       description: "Our certified professional arrives and makes your home sparkle."
     },
     {
       number: "3",
-      title: "Enjoy Life",
+      title: "Enjoy a Spotless Space",
       description: "Step into a fresh, clean home and spend your time on what matters."
     }
   ];
@@ -216,21 +216,48 @@ export default function HomePage() {
           </motion.div>
 
           <motion.div 
-            className="relative mt-14 grid gap-10 md:grid-cols-3"
+            className="relative mt-14 grid gap-12 md:grid-cols-3"
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
           >
-            <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
+            {processSteps.map((step, index) => (
+              <motion.article
+                key={step.number}
+                variants={fadeUpVariant}
+                className="relative text-center"
+              >
+                {index < processSteps.length - 1 && (
+                  <div className="absolute left-[68%] top-[44px] hidden items-center gap-2 md:flex lg:left-[72%]">
+                    <div className="h-px w-12 bg-[#9be06f]" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      className="h-5 w-5 text-[#76cf65]"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m13 6 6 6-6 6" />
+                    </svg>
+                  </div>
+                )}
 
-            {processSteps.map((step) => (
-              <motion.article key={step.number} variants={fadeUpVariant} className="relative text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
-                  {step.number}
+                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#cfeec4] bg-[radial-gradient(circle_at_35%_30%,#f5fff1_0%,#ebf9e4_58%,#dff1d7_100%)] shadow-[inset_0_0_0_10px_rgba(255,255,255,0.5)]">
+                  <span className="text-[34px] font-black leading-none text-[#1f9a29]">
+                    {step.number}
+                  </span>
                 </div>
-                <h3 className="mt-100 text-2xl font-extrabold text-slate-900">{step.title}</h3>
-                <p className="mx-auto mt-3 max-w-xs text-slate-500">{step.description}</p>
+                <h3 className="mx-auto mt-5 max-w-[16rem] text-[clamp(1.9rem,2.7vw,2.7rem)] font-black leading-[1.02] text-slate-900">
+                  {step.title}
+                </h3>
+                <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-slate-500">
+                  {step.description}
+                </p>
               </motion.article>
             ))}
           </motion.div>
