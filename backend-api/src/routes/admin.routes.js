@@ -151,6 +151,7 @@ router.delete('/promotions/:id', [
 
 // Dashboard
 router.get('/dashboard', admin.getAdminDashboard);
+router.get('/dashboard/top-cleaners', admin.getTopCleaners);
 router.get('/health', admin.getSystemHealth);
 
 module.exports = router;

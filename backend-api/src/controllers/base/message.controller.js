@@ -206,9 +206,13 @@ const assertBookingAccess = async (bookingId, user) => {
   const normalizedUserId = await resolveMessagingUserId(user);
   const isCustomer = booking.user_id === normalizedUserId;
   const isCleaner = booking.cleaner_id === normalizedUserId;
+  const normalizedBookingStatus = String(booking.booking_status || '').trim().toLowerCase();
 
   if (!isCustomer && !isCleaner) {
     throw new AppError('Not authorized to access this conversation', 403);
+  }
+  if (isCleaner && normalizedBookingStatus === 'pending') {
+    throw new AppError('Cleaner cannot access chat before accepting this booking', 403);
   }
   return { booking, isCustomer, isCleaner };
 };

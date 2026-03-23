@@ -74,6 +74,15 @@ const getStoredBookingImageUrls = (files = []) => (
     .filter(Boolean)
 );
 
+const normalizeCoordinate = (value, min, max) => {
+  if (value === undefined || value === null || value === '') return null;
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < min || numericValue > max) {
+    return null;
+  }
+  return numericValue;
+};
+
 const resolveCustomerBookingUserIds = async (promiseDb, user) => {
   const ids = new Set();
   const numericUserId = Number(user?.user_id);
@@ -329,12 +338,18 @@ const ensureCleanerUserRow = async (promiseDb, cleanerProfileId) => {
 // Create booking (mysql2)
 const createBooking = async (req, res, next) => {
   try {
-    const { booking_date, start_time, end_time, service_id, address, notes } = req.body;
+    const { booking_date, start_time, end_time, service_id, address, notes, latitude, longitude } = req.body;
     const user_id = req.user?.user_id;
+    const normalizedAddress = typeof address === 'string' ? address.trim() : '';
+    const normalizedLatitude = normalizeCoordinate(latitude, -90, 90);
+    const normalizedLongitude = normalizeCoordinate(longitude, -180, 180);
 
     if (!user_id) return next(new AppError('Unauthorized', 401));
     if (!booking_date || !service_id) {
       return next(new AppError('booking_date and service_id are required', 400));
+    }
+    if (!normalizedAddress && (normalizedLatitude === null || normalizedLongitude === null)) {
+      return next(new AppError('Address or coordinates are required', 400));
     }
 
     const promiseDb = db.promise();
@@ -370,7 +385,12 @@ const createBooking = async (req, res, next) => {
     const svc = serviceRows[0];
     const total_price = Number(svc.price ?? svc.service_price ?? svc.cost ?? 0) || 0;
     const booking_reference = `BK-${Date.now()}`;
-    const booking_time = start_time && end_time ? `${start_time} - ${end_time}` : start_time || '';
+    const normalizedStartTime = typeof start_time === 'string' ? start_time.trim() : '';
+    const normalizedEndTime = typeof end_time === 'string' ? end_time.trim() : '';
+    const booking_time =
+      normalizedStartTime && normalizedEndTime
+        ? `${normalizedStartTime} - ${normalizedEndTime}`
+        : normalizedStartTime || '';
 
     const bookingColumns = await getBookingTableColumns(promiseDb);
     const insertColumns = [];
@@ -387,11 +407,13 @@ const createBooking = async (req, res, next) => {
     };
 
 
-    appendBookingField('booking_reference', booking_reference, true);
+    appendBookingField('booking_reference', booking_reference);
     appendBookingField('booking_date', new Date(booking_date), true);
     appendBookingField('booking_time', booking_time);
-    appendBookingField('address', address || 'Address pending');
-    appendBookingField('booking_desc', notes || '');
+    appendBookingField('address', normalizedAddress || 'Address pending');
+    appendBookingField('latitude', normalizedLatitude);
+    appendBookingField('longitude', normalizedLongitude);
+    appendBookingField('booking_desc', typeof notes === 'string' ? notes.trim() : '');
     appendBookingField('booking_status', 'pending', true);
     appendBookingField('service_status', 'booked');
     appendBookingField('total_price', total_price, true);
@@ -530,10 +552,6 @@ const getBookingById = async (req, res, next) => {
             b.*,
             s.name AS service_name,
             ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
-<<<<<<< HEAD
-            b.total_price AS service_price,
-=======
->>>>>>> b360da9779038ad6fd9463c87a80bd936c5d0962
             u.user_id AS customer_id,
             TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_username,
             u.email AS customer_email,

@@ -16,12 +16,13 @@ import {
   ensureRealtimeSocketConnected,
   getRealtimeSocket
 } from '../../../services/socketService';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/cleaner/messages.scss';
 
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
-const CLEANER_HIDDEN_CHAT_STORAGE_KEY = 'cleaner_hidden_message_threads_v1';
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
+const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
+const getCleanerHiddenChatStorageKey = () => getCleanerScopedStorageKey('cleaner_hidden_message_threads_v1');
 const fallbackThreads = [];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -36,7 +37,7 @@ const normalizeAssetUrl = (value) => {
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
   try {
-    localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
+    localStorage.setItem(getCleanerChatThreadsStorageKey(), JSON.stringify(threads));
   } catch (e) {
     // Ignore storage errors
   }
@@ -45,7 +46,8 @@ const saveChatThreads = (threads) => {
 // Helper to load chat threads from localStorage
 const loadChatThreads = () => {
   try {
-    const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+    const raw = localStorage.getItem(getCleanerChatThreadsStorageKey());
+    
     if (raw) {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
@@ -59,7 +61,7 @@ const loadChatThreads = () => {
 
 const readHiddenThreadIds = () => {
   try {
-    const raw = localStorage.getItem(CLEANER_HIDDEN_CHAT_STORAGE_KEY);
+    const raw = localStorage.getItem(getCleanerHiddenChatStorageKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
@@ -70,7 +72,7 @@ const readHiddenThreadIds = () => {
 
 const writeHiddenThreadIds = (threadIds) => {
   try {
-    localStorage.setItem(CLEANER_HIDDEN_CHAT_STORAGE_KEY, JSON.stringify(threadIds));
+    localStorage.setItem(getCleanerHiddenChatStorageKey(), JSON.stringify(threadIds));
   } catch {
     // Ignore storage issues for hidden chat state.
   }
@@ -199,7 +201,7 @@ const [activeThreadId, setActiveThreadId] = useState(
         const savedThreads = loadChatThreads();
         
         // Also load from confirmed jobs
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         if (!raw && savedThreads.length > 0) {
           // No new jobs but have old chat threads - use those
           if (!cancelled) setThreads(savedThreads);
@@ -263,7 +265,7 @@ const [activeThreadId, setActiveThreadId] = useState(
         if (cleanerConfirmedBookings.length > 0) {
           // Update localStorage with fresh data
           const normalized = cleanerConfirmedBookings.map(normalizeThread);
-          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(normalized));
+          localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(normalized));
           
           // Merge with saved threads
           const savedThreads = loadChatThreads();
@@ -498,7 +500,7 @@ const [activeThreadId, setActiveThreadId] = useState(
       );
 
       try {
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         const parsed = raw ? JSON.parse(raw) : [];
         if (Array.isArray(parsed)) {
           const updated = parsed.map((job) =>
@@ -506,7 +508,7 @@ const [activeThreadId, setActiveThreadId] = useState(
               ? { ...job, price: formatted }
               : job
           );
-          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
         }
       } catch {
         /* ignore storage errors */

@@ -9,6 +9,13 @@ export const adminService = {
     return response.data;
   },
 
+  getTopCleaners: async (limit = 3) => {
+    const response = await api.get('/admin/dashboard/top-cleaners', {
+      params: { limit }
+    });
+    return response.data;
+  },
+
   getRecentBookings: async (limit = 10) => {
     const response = await api.get('/admin/dashboard/recent-bookings', {
       params: { limit }

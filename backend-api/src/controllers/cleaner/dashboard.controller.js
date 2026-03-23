@@ -210,11 +210,6 @@ const resolveCleanerIdentity = async (promiseDb, user) => {
       cleanerProfileId = matchedProfileId;
       ids.add(matchedProfileId);
     }
-
-    for (const row of profileRows || []) {
-      const id = toPositiveInt(row?.cleaner_id);
-      if (id) ids.add(id);
-    }
   }
 
   return {
@@ -374,7 +369,7 @@ const getCleanerDashboard = async (req, res, next) => {
         LEFT JOIN users u ON u.user_id = b.user_id
         LEFT JOIN services s ON s.service_id = b.service_id
         WHERE b.cleaner_id IN (${inClause})
-          AND LOWER(COALESCE(b.booking_status, '')) IN ('confirmed', 'pending', 'started', 'in_progress', 'in-progress')
+          AND LOWER(COALESCE(b.booking_status, '')) IN ('confirmed', 'started', 'in_progress', 'in-progress')
           AND b.booking_date >= ?
           AND b.booking_date < ?
         ORDER BY b.booking_date ASC
@@ -426,6 +421,8 @@ const getCleanerJobs = async (req, res, next) => {
     if (status) {
       whereClauses.push('LOWER(COALESCE(b.booking_status, \'\')) = LOWER(?)');
       params.push(status);
+    } else {
+      whereClauses.push(`LOWER(COALESCE(b.booking_status, '')) <> 'pending'`);
     }
     const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
 

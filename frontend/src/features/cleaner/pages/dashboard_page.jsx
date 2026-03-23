@@ -13,8 +13,6 @@ import api from '../../../services/api';
 import '../../../styles/cleaner/dashboard.scss';
 import { cleanerEarningsSummary, formatMoney } from '../data/earnings_data';
 import { fetchCleanerEarnings } from '../services/earningsService';
-
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const FALLBACK_COMPLETED_JOBS = 2;
 const FALLBACK_PENDING_REQUESTS = 1;
 

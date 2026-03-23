@@ -174,6 +174,7 @@ module.exports = {
     res.status(200).json({ message: 'Send notification endpoint - to be implemented' });
   },
   
+  
 
   // Customer namespace
   customer: {
@@ -219,6 +220,7 @@ module.exports = {
     deletePromotion: adminPromotionsController.deletePromotion,
     
     getAdminDashboard: adminDashboardController.getAdminDashboard,
+    getTopCleaners: adminDashboardController.getTopCleaners,
     getSystemHealth: adminDashboardController.getSystemHealth
   }
 };

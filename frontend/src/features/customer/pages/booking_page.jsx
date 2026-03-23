@@ -6,6 +6,7 @@ import {
   PictureOutlined,
   EnvironmentOutlined,
   SearchOutlined,
+  LoadingOutlined,
   CloudUploadOutlined,
   CloseOutlined
 } from '@ant-design/icons';
@@ -42,6 +43,7 @@ const BookingPage = () => {
   const markerRef = useRef(null);
   const autocompleteRef = useRef(null);
   const geocoderRef = useRef(null);
+  const mapWarningTimeoutRef = useRef(null);
   const [address, setAddress] = useState('');
   const [details, setDetails] = useState('');
   const [files, setFiles] = useState([]);
@@ -50,18 +52,75 @@ const BookingPage = () => {
   const prevFilesLengthRef = useRef(0);
   const [preferredDate, setPreferredDate] = useState('');
   const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
   const [statusMessage, setStatusMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [services, setServices] = useState([]);
   const [serviceId, setServiceId] = useState('');
   const [loadingServices, setLoadingServices] = useState(false);
-  const bookingTime = `${startTime} - ${endTime}`;
+  const bookingTime = startTime;
   const [isAddressVerified, setIsAddressVerified] = useState(false);
   const [mapError, setMapError] = useState('');
   const [mapWarning, setMapWarning] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const showKeyHint = typeof mapError === 'string' && mapError.startsWith('Missing Google Maps API key');
+
+  const clearMapWarning = () => {
+    if (mapWarningTimeoutRef.current) {
+      clearTimeout(mapWarningTimeoutRef.current);
+      mapWarningTimeoutRef.current = null;
+    }
+    setMapWarning('');
+  };
+
+  const showMapWarning = (message, duration = 4000) => {
+    if (mapWarningTimeoutRef.current) {
+      clearTimeout(mapWarningTimeoutRef.current);
+    }
+    setMapWarning(message);
+    if (duration > 0) {
+      mapWarningTimeoutRef.current = window.setTimeout(() => {
+        setMapWarning('');
+        mapWarningTimeoutRef.current = null;
+      }, duration);
+    }
+  };
+
+  const updateMapPosition = (position) => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.panTo(position);
+    mapInstanceRef.current.setZoom(16);
+    if (markerRef.current) {
+      markerRef.current.setPosition(position);
+    }
+  };
+
+  const formatReadableGeocodeAddress = (result) => {
+    if (!result) return '';
+
+    const addressComponents = result.address_components || [];
+    const getComponent = (types) => {
+      const component = addressComponents.find((entry) => entry.types.some((type) => types.includes(type)));
+      return component?.long_name || component?.short_name || '';
+    };
+
+    const locality = getComponent(['locality', 'sublocality', 'administrative_area_level_2']);
+    const streetNumber = getComponent(['street_number']);
+    const streetName = getComponent(['route']);
+    const city = getComponent(['administrative_area_level_1']);
+
+    let readableAddress = locality || city || '';
+
+    if (streetName) {
+      readableAddress = readableAddress
+        ? `${readableAddress}, ${streetNumber ? `${streetName} ${streetNumber}` : streetName}`
+        : streetNumber
+          ? `${streetName} ${streetNumber}`
+          : streetName;
+    }
+
+    return readableAddress || result.formatted_address || '';
+  };
 
   const loadGoogleMaps = (apiKey, hostLabel) =>
     new Promise((resolve, reject) => {
@@ -246,8 +305,19 @@ const BookingPage = () => {
             return;
           }
           if (!window.google?.maps?.places) {
+            if (mapWarningTimeoutRef.current) {
+              clearTimeout(mapWarningTimeoutRef.current);
+            }
             setMapWarning('Places API not available. Address autocomplete is disabled.');
+            mapWarningTimeoutRef.current = window.setTimeout(() => {
+              setMapWarning('');
+              mapWarningTimeoutRef.current = null;
+            }, 5000);
           } else {
+            if (mapWarningTimeoutRef.current) {
+              clearTimeout(mapWarningTimeoutRef.current);
+              mapWarningTimeoutRef.current = null;
+            }
             setMapWarning('');
           }
           setMapError('');
@@ -265,6 +335,14 @@ const BookingPage = () => {
       cancelled = true;
       if (window.gm_authFailure === handleAuthFailure) {
         delete window.gm_authFailure;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mapWarningTimeoutRef.current) {
+        clearTimeout(mapWarningTimeoutRef.current);
       }
     };
   }, []);
@@ -362,15 +440,20 @@ const BookingPage = () => {
   }, [isMapReady]);
 
   const handleUseCurrentLocation = () => {
+    if (isLocating) return;
+
     if (!navigator.geolocation) {
-      setMapWarning('Geolocation is not supported by this browser.');
+      showMapWarning('Geolocation is not supported by this browser.');
       return;
     }
 
     if (!isMapReady || !mapInstanceRef.current) {
-      setMapWarning('Map is not ready yet.');
+      showMapWarning('Map is not ready yet.');
       return;
     }
+
+    clearMapWarning();
+    setIsLocating(true);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -378,25 +461,37 @@ const BookingPage = () => {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
-        mapInstanceRef.current.panTo(coords);
-        mapInstanceRef.current.setZoom(16);
-        if (markerRef.current) {
-          markerRef.current.setPosition(coords);
-        }
+        updateMapPosition(coords);
         setIsAddressVerified(true);
+        setAddress('Finding nearby address...');
+        setIsLocating(false);
 
         if (geocoderRef.current) {
           geocoderRef.current.geocode({ location: coords }, (results, status) => {
             if (status === 'OK' && results?.[0]?.formatted_address) {
-              setAddress(results[0].formatted_address);
+              clearMapWarning();
+              setAddress(formatReadableGeocodeAddress(results[0]));
+            } else {
+              setAddress(`Current location (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`);
+              showMapWarning('Using your current coordinates while the address loads.', 3500);
             }
           });
+        } else {
+          setAddress(`Current location (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`);
+          showMapWarning('Using your current coordinates while the address loads.', 3500);
         }
       },
-      () => {
-        setMapWarning('Unable to access your current location.');
+      (error) => {
+        setIsLocating(false);
+        const nextWarning =
+          error?.code === 1
+            ? 'Location access was blocked. Allow it in your browser and try again.'
+            : error?.code === 3
+              ? 'Location request timed out. Try again in an open area.'
+              : 'Unable to access your current location right now.';
+        showMapWarning(nextWarning, 5000);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
     );
   };
 
@@ -477,10 +572,10 @@ const BookingPage = () => {
   }, []);
 
   const handleConfirmBooking = async () => {
-    if (!preferredDate || !startTime || !endTime) {
+    if (!preferredDate || !startTime) {
       setStatusMessage({
         title: 'Missing details',
-        message: 'Please select date, start time, and end time before confirming.',
+        message: 'Please select date and start time before confirming.',
         ago: ''
       });
       return;
@@ -539,7 +634,6 @@ const BookingPage = () => {
         service_id: numericServiceId,
         address: address || 'Address pending',
         start_time: startTime,
-        end_time: endTime
       };
 
       if (details && details.trim()) {
@@ -580,7 +674,7 @@ const BookingPage = () => {
       const { month, day } = formatDateParts(preferredDate);
       setStatusMessage({
         title: 'Request submitted',
-        message: `We are matching you with a cleaner. Request date: ${month} ${day}, ${startTime} - ${endTime}.`,
+        message: `We are matching you with a cleaner. Request date: ${month} ${day}, ${startTime}.`,
         ago: 'just now'
       });
       navigate('/customer/bookings/matching', {
@@ -672,8 +766,16 @@ const BookingPage = () => {
                 setIsAddressVerified(false);
               }}
             />
-            <button type="button" className="locate-btn" onClick={handleUseCurrentLocation} data-customer-button>
-              Use current location
+            <button
+              type="button"
+              className={`locate-btn${isLocating ? ' locate-btn--loading' : ''}`}
+              onClick={handleUseCurrentLocation}
+              disabled={isLocating}
+              aria-busy={isLocating}
+              data-customer-button
+            >
+              {isLocating ? <LoadingOutlined spin /> : null}
+              {isLocating ? 'Finding location...' : 'Use current location'}
             </button>
           </div>
           <div className="map-shell map-shell--google" aria-label="map-preview">
@@ -802,34 +904,21 @@ const BookingPage = () => {
               {statusMessage.ago && <small>{statusMessage.ago}</small>}
             </div>
           )}
-          <div className="form-field">
-            <label htmlFor="preferred-date">Preferred Date</label>
-            <input
-              id="preferred-date"
-              type="date"
-              value={preferredDate}
-              onChange={(e) => setPreferredDate(e.target.value)}
-            />
-          </div>
-          <div className="time-grid">
+          <div className="form-row">
             <div className="form-field">
-              <label htmlFor="start-time">Start Time (Hour &amp; Minute)</label>
-              <select id="start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
-                <option value="" disabled>
-                  Select start time
-                </option>
-                {timeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="preferred-date">Preferred Date</label>
+              <input
+                id="preferred-date"
+                type="date"
+                value={preferredDate}
+                onChange={(e) => setPreferredDate(e.target.value)}
+              />
             </div>
             <div className="form-field">
-              <label htmlFor="end-time">End Time (Hour &amp; Minute)</label>
-              <select id="end-time" value={endTime} onChange={(e) => setEndTime(e.target.value)}>
+              <label htmlFor="start-time">Time (Hour &amp; Minute)</label>
+              <select id="start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)}>
                 <option value="" disabled>
-                  Select end time
+                  Select time
                 </option>
                 {timeOptions.map((option) => (
                   <option key={option} value={option}>

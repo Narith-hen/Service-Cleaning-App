@@ -3,8 +3,9 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import '../../../styles/cleaner/cancel_during.css';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import api from '../../../services/api';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 
 const CancelDuringWorkPage = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const CancelDuringWorkPage = () => {
         });
       }
 
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -40,7 +41,7 @@ const CancelDuringWorkPage = () => {
               ? { ...job, status: 'cancelled', cancel_reason: reason.trim() || '' }
               : job
           );
-          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
           dispatchCleanerNotificationsUpdated();
         }
       }

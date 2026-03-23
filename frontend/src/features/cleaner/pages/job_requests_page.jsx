@@ -14,6 +14,7 @@ import '../../../styles/cleaner/my_jobs.scss';
 import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/bookingSync';
 import api from '../../../services/api';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 
@@ -29,8 +30,8 @@ const getSocket = () => {
   return socketInstance;
 };
 
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
+const getCleanerChatStorageKey = () => getCleanerScopedStorageKey('cleaner_message_threads_v1');
 
 const mapBookingToRequest = (booking) => {
   const date = booking?.booking_date ? new Date(booking.booking_date) : null;
@@ -139,21 +140,21 @@ const JobRequestsPage = () => {
 
     try {
       // Get existing jobs
-      const existingRaw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const existingRaw = localStorage.getItem(getConfirmedMyJobsStorageKey());
       const existingJobs = existingRaw ? JSON.parse(existingRaw) : [];
       
       // Add new job to the beginning
       const updatedJobs = [confirmedJob, ...existingJobs];
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updatedJobs));
+      localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updatedJobs));
       
       // Also save to chat threads for history
-      const chatRaw = localStorage.getItem(CLEANER_CHAT_STORAGE_KEY);
+      const chatRaw = localStorage.getItem(getCleanerChatStorageKey());
       const existingThreads = chatRaw ? JSON.parse(chatRaw) : {};
       existingThreads[request.id] = []; // Initialize empty messages for this thread
-      localStorage.setItem(CLEANER_CHAT_STORAGE_KEY, JSON.stringify(existingThreads));
+      localStorage.setItem(getCleanerChatStorageKey(), JSON.stringify(existingThreads));
       dispatchCleanerNotificationsUpdated();
     } catch {
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify([confirmedJob]));
+      localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify([confirmedJob]));
       dispatchCleanerNotificationsUpdated();
     }
   };

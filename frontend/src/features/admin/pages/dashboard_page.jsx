@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ApartmentOutlined,
   AppstoreOutlined,
@@ -15,18 +15,65 @@ import '../../../styles/admin/dashboard_page.css';
 import { useTheme } from '../../../contexts/theme_context';
 import { bookingRows } from '../data/bookings_data';
 import { starterCleaners } from '../data/cleaners_data';
+import { adminService } from '../services/adminService';
+
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const toAbsoluteImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith('data:')) return imageUrl;
+  return `${apiHost}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+};
+
+const extractTopCleanerRows = (response) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.data)) return response.data.data;
+  return [];
+};
+
+const toSafeNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const mapTopCleaner = (cleaner) => ({
+  id: String(cleaner?.id || cleaner?.cleaner_id || cleaner?.cleanerCode || cleaner?.cleaner_code || ''),
+  name: cleaner?.name || cleaner?.companyName || cleaner?.company_name || cleaner?.username || 'Cleaner',
+  profileImage: toAbsoluteImageUrl(cleaner?.profileImage || cleaner?.profile_image || cleaner?.avatar || ''),
+  totalJobs: toSafeNumber(cleaner?.totalJobs ?? cleaner?.total_jobs),
+  rating: toSafeNumber(cleaner?.rating ?? cleaner?.avg_rating),
+  reviews: toSafeNumber(cleaner?.reviews ?? cleaner?.total_reviews),
+});
 
 const DashboardPage = () => {
   const { darkMode } = useTheme();
+  const [topCleaners, setTopCleaners] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTopCleaners = async () => {
+      try {
+        const response = await adminService.getTopCleaners(3);
+        const rows = extractTopCleanerRows(response).map(mapTopCleaner).filter((cleaner) => cleaner.id);
+        setTopCleaners(rows);
+      } catch (error) {
+        console.error('Failed to fetch top cleaners:', error);
+        setTopCleaners([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopCleaners();
+  }, []);
+
   const totalBookings = bookingRows.length;
   const monthlyRevenue = bookingRows
     .filter((booking) => booking.status !== 'Cancelled')
     .reduce((sum, booking) => sum + booking.amount, 0);
   const activeCleanersCount = starterCleaners.filter((cleaner) => cleaner.status === 'Active').length;
-  const topCleaners = starterCleaners
-    .filter((cleaner) => cleaner.rating > 0)
-    .sort((a, b) => b.totalJobs - a.totalJobs)
-    .slice(0, 3);
   const recentBookings = [...bookingRows]
     .sort((a, b) => new Date(`${b.date} ${b.time}`) - new Date(`${a.date} ${a.time}`))
     .slice(0, 4)
@@ -35,7 +82,7 @@ const DashboardPage = () => {
       customer: booking.customerName,
       cleaner: booking.cleanerName,
       status: booking.status,
-      amount: `$${booking.amount.toFixed(2)}`,
+      amount: `${booking.amount.toFixed(2)}`,
     }));
 
   const kpiCards = [
@@ -173,23 +220,41 @@ const DashboardPage = () => {
             <a href="/admin/cleaners">View all</a>
           </div>
           <div className="top-cleaners-list">
-            {topCleaners.map((cleaner) => (
-              <div key={cleaner.id} className="cleaner-row">
+            {loading ? (
+              <div className="cleaner-row">
                 <div className="cleaner-identity">
-                  <div className="cleaner-avatar">
-                    <UserOutlined />
-                  </div>
-                  <div>
-                    <p className="cleaner-name">{cleaner.name}</p>
-                    <span>{cleaner.totalJobs} jobs completed</span>
-                  </div>
-                </div>
-                <div className="cleaner-stats">
-                  <span>{cleaner.rating.toFixed(1)} rating</span>
-                  <span>{cleaner.reviews} reviews</span>
+                  <span>Loading top cleaners...</span>
                 </div>
               </div>
-            ))}
+            ) : topCleaners.length > 0 ? (
+              topCleaners.map((cleaner) => (
+                <div key={cleaner.id} className="cleaner-row">
+                  <div className="cleaner-identity">
+                    <div className="cleaner-avatar">
+                      {cleaner.profileImage ? (
+                        <img src={cleaner.profileImage} alt={cleaner.name} className="cleaner-avatar-img" />
+                      ) : (
+                        <UserOutlined />
+                      )}
+                    </div>
+                    <div>
+                      <p className="cleaner-name">{cleaner.name}</p>
+                      <span>{Number(cleaner.totalJobs)} jobs completed</span>
+                    </div>
+                  </div>
+                  <div className="cleaner-stats">
+                    <span>{parseFloat(cleaner.rating).toFixed(1)} rating</span>
+                    <span>{Number(cleaner.reviews)} reviews</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="cleaner-row">
+                <div className="cleaner-identity">
+                  <span>No top cleaners found</span>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>

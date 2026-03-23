@@ -32,18 +32,19 @@ import customerAvatar2 from '../../../assets/mey.JPG';
 import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
+const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
   try {
-    localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
+    localStorage.setItem(getCleanerChatThreadsStorageKey(), JSON.stringify(threads));
   } catch (e) {
     // Ignore storage errors
   }
@@ -188,71 +189,57 @@ const formatJobImageTimeLabel = (job) => {
 };
 
 
-const fallbackJobs = [
-  {
-    id: 'default-1',
-    sourceRequestId: 'default-1',
-    status: 'upcoming',
-    title: 'Deep House Cleaning',
-    jobId: '#SOMA-48291',
-    price: '$85.00',
-    day: '24',
-    monthYear: 'June 2026',
-    timeRange: '09:00 AM - 12:00 PM',
-    location: '123 Street 271, Sangkat Boeung Tumpun, Phnom Penh, Cambodia',
-    customer: 'Sovan Reach',
-    customerId: '3',
-    customerPhone: '+855 12 345 678',
-    customerEmail: 'sovanreach@email.com',
-    customerAvatar: '',
-    bedrooms: '3 Bedrooms',
-    floors: '2 Floors',
-    image: homeImage,
-    serviceType: 'home'
-  },
-  {
-    id: 'default-2',
-    sourceRequestId: 'default-2',
-    status: 'completed',
-    title: 'Office Deep Cleaning',
-    jobId: '#SOMA-48280',
-    price: '$120.00',
-    day: '20',
-    monthYear: 'June 2026',
-    timeRange: '08:00 AM - 11:00 AM',
-    location: '456 Business Center, Phnom Penh, Cambodia',
-    customer: 'Mey Sotharith',
-    customerId: '4',
-    customerPhone: '+855 10 987 654',
-    customerEmail: 'meysotharith@company.com',
-    customerAvatar: '',
-    bedrooms: '5 Rooms',
-    floors: '1 Floor',
-    image: officeImage,
-    serviceType: 'office'
-  },
-  {
-    id: 'default-3',
-    sourceRequestId: 'default-3',
-    status: 'completed',
-    title: 'Window Cleaning Service',
-    jobId: '#SOMA-48275',
-    price: '$65.00',
-    day: '15',
-    monthYear: 'June 2026',
-    timeRange: '10:00 AM - 01:00 PM',
-    location: '789 Riverside, Phnom Penh, Cambodia',
-    customer: 'Larry Ta',
-    customerId: '5',
-    customerPhone: '+855 98 765 432',
-    customerEmail: 'larryta@email.com',
-    customerAvatar: '',
-    bedrooms: '4 Bedrooms',
-    floors: '2 Floors',
-    image: windowImage,
-    serviceType: 'window'
+const mapBookingStatusToJobStatus = (bookingStatus, paymentStatus) => {
+  const normalizedBookingStatus = String(bookingStatus || '').toLowerCase();
+  const normalizedPaymentStatus = String(paymentStatus || '').toLowerCase();
+
+  if (normalizedPaymentStatus === 'awaiting_receipt' || normalizedPaymentStatus === 'receipt_submitted') {
+    return 'payment-required';
   }
-];
+  if (normalizedBookingStatus === 'completed' || normalizedPaymentStatus === 'completed' || normalizedPaymentStatus === 'paid') {
+    return 'completed';
+  }
+  if (normalizedBookingStatus === 'in_progress' || normalizedBookingStatus === 'in-progress' || normalizedBookingStatus === 'started') {
+    return 'in-progress';
+  }
+  return 'upcoming';
+};
+
+const mapApiJobToUiJob = (job) => {
+  const bookingDate = job?.booking_date ? new Date(job.booking_date) : null;
+  const hasValidDate = bookingDate instanceof Date && !Number.isNaN(bookingDate.getTime());
+
+  return {
+    id: `confirmed-${job?.booking_id}`,
+    sourceRequestId: String(job?.booking_id || ''),
+    bookingId: String(job?.booking_id || ''),
+    status: mapBookingStatusToJobStatus(job?.booking_status, job?.payment_status),
+    title: job?.service?.name || job?.service_name || 'Cleaning Job',
+    jobId: job?.booking_id ? `#SOMA-${String(job.booking_id).padStart(5, '0')}` : '#SOMA-00000',
+    price: `$${Number(job?.total_price || 0).toFixed(2)}`,
+    day: hasValidDate ? String(bookingDate.getDate()).padStart(2, '0') : '',
+    monthYear: hasValidDate
+      ? bookingDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      : '',
+    timeRange: job?.booking_time || '',
+    location: job?.user?.address || job?.address || 'Location pending',
+    customer: job?.user?.username || 'Customer',
+    customerId: String(job?.user_id || job?.user?.user_id || ''),
+    customerPhone: job?.user?.phone_number || '',
+    customerEmail: job?.user?.email || '',
+    customerAvatar: job?.user?.avatar || '',
+    bedrooms: job?.bedrooms || '3 Bedrooms',
+    floors: job?.floors || '2 Floors',
+    serviceStatus: job?.service_status || 'booked',
+    paymentStatus: String(job?.payment_status || '').toLowerCase(),
+    serviceType: job?.serviceType || 'home',
+    serviceImage: job?.serviceImage || '',
+    image: pickJobImage({
+      title: job?.service?.name || job?.service_name || 'Cleaning Job',
+      serviceImage: job?.serviceImage || ''
+    })
+  };
+};
 
 const tabs = [
   { key: 'all', label: 'All Jobs' },
@@ -265,59 +252,50 @@ const tabs = [
 const MyJobsPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
-  const [jobs, setJobs] = useState(fallbackJobs);
+  const [jobs, setJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
   const [activeMessageJobId, setActiveMessageJobId] = useState(null);
   const [jobActionStateById, setJobActionStateById] = useState({});
   const [paymentWorkflowByBooking, setPaymentWorkflowByBooking] = useState({});
   const [paymentActionByBooking, setPaymentActionByBooking] = useState({});
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-      if (!raw) return;
+    const confirmedMyJobsStorageKey = getConfirmedMyJobsStorageKey();
+    let cancelled = false;
 
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length === 0) return;
+    const loadJobs = async () => {
+      setLoadingJobs(true);
+      try {
+        const response = await api.get('/dashboard/cleaner/jobs', {
+          params: { page: 1, limit: 100 }
+        });
+        if (cancelled) return;
 
-      const seenJobKeys = new Set();
-      const normalized = parsed
-        .filter(Boolean)
-        .filter((job) => {
-          const uniqueKey = String(job.sourceRequestId || job.id || '');
-          if (!uniqueKey) return true;
-          if (seenJobKeys.has(uniqueKey)) return false;
-          seenJobKeys.add(uniqueKey);
-          return true;
-        })
-        .map((job) => ({
-          id: job.id || `confirmed-${job.sourceRequestId || Date.now()}`,
-          sourceRequestId: job.sourceRequestId || job.id,
-          status: job.status || 'in-progress',
-          title: job.title || 'Cleaning Job',
-          jobId: job.jobId || '#SOMA-00000',
-          price: job.price || '$0.00',
-          day: job.day || '01',
-          monthYear: job.monthYear || 'June 2026',
-          timeRange: job.timeRange || '09:00 AM - 12:00 PM',
-          location: job.location || 'Phnom Penh, Cambodia',
-          customer: job.customer || 'Customer',
-          customerId: job.customerId || job.customer_id || '3',
-          customerPhone: job.customerPhone || job.customer_phone || '',
-          customerEmail: job.customerEmail || job.customer_email || '',
-          customerAvatar: job.customerAvatar || '',
-          bedrooms: job.bedrooms || '3 Bedrooms',
-          floors: job.floors || '2 Floors',
-          serviceStatus: job.serviceStatus || 'booked',
-          paymentStatus: String(job.paymentStatus || '').toLowerCase(),
-          serviceType: job.serviceType || 'home',
-          serviceImage: job.serviceImage || '',
-          image: pickJobImage(job)
-        }));
+        const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const normalized = rows.filter(Boolean).map(mapApiJobToUiJob);
+        setJobs(normalized);
+        localStorage.setItem(confirmedMyJobsStorageKey, JSON.stringify(normalized));
+      } catch {
+        if (cancelled) return;
+        try {
+          const raw = localStorage.getItem(confirmedMyJobsStorageKey);
+          const parsed = raw ? JSON.parse(raw) : [];
+          setJobs(Array.isArray(parsed) ? parsed.filter(Boolean) : []);
+        } catch {
+          setJobs([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingJobs(false);
+        }
+      }
+    };
 
-      setJobs(normalized);
-    } catch {
-      setJobs(fallbackJobs);
-    }
+    loadJobs();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
 
@@ -400,7 +378,7 @@ const MyJobsPage = () => {
           bookingStatus: 'in_progress',
           serviceStatus: 'in_progress'
         });
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
@@ -409,7 +387,7 @@ const MyJobsPage = () => {
                 ? { ...job, status: 'in-progress', serviceStatus: 'in_progress' }
                 : job
             );
-            localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+            localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
             dispatchCleanerNotificationsUpdated();
           }
         }
@@ -466,7 +444,7 @@ const MyJobsPage = () => {
       }));
 
       try {
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         const parsed = raw ? JSON.parse(raw) : [];
         if (Array.isArray(parsed)) {
           const updated = parsed.map((item) =>
@@ -474,7 +452,7 @@ const MyJobsPage = () => {
               ? { ...item, status: 'completed', serviceStatus: 'completed', paymentStatus: 'completed' }
               : item
           );
-          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
           dispatchCleanerNotificationsUpdated();
         }
       } catch {
@@ -566,7 +544,11 @@ const MyJobsPage = () => {
       </div>
 
       <div className="my-jobs-list-v2">
-        {visibleJobs.map((job) => {
+        {loadingJobs && (
+          <div className="my-jobs-empty-v2">Loading your jobs...</div>
+        )}
+
+        {!loadingJobs && visibleJobs.map((job) => {
           const bookingId = getBookingIdFromJob(job);
           const paymentFlow = bookingId ? paymentWorkflowByBooking[String(bookingId)] : null;
           const paymentStatus = String(paymentFlow?.payment_status || job.paymentStatus || '').toLowerCase();
@@ -751,7 +733,7 @@ const MyJobsPage = () => {
                     };
                     
                     try {
-                      const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+                      const raw = localStorage.getItem(getCleanerChatThreadsStorageKey());
                       const existing = raw ? JSON.parse(raw) : [];
                       const threadId = job.sourceRequestId || job.id;
                       const filtered = existing.filter(t => (t.sourceRequestId || t.id) !== threadId);
@@ -771,7 +753,7 @@ const MyJobsPage = () => {
           );
         })}
 
-        {visibleJobs.length === 0 && (
+        {!loadingJobs && visibleJobs.length === 0 && (
           <div className="my-jobs-empty-v2">No jobs in this tab yet.</div>
         )}
       </div>

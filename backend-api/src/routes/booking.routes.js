@@ -34,7 +34,33 @@ const createBookingValidation = [
   body('booking_date').isISO8601().withMessage('Valid booking date required'),
   body('service_id').isInt().withMessage('Service ID is required'),
   body('promotion_id').optional().isInt(),
-  body('address').notEmpty().withMessage('Address is required'),
+  body('address').optional({ values: 'falsy' }).isString().withMessage('Address must be a string'),
+  body('start_time').optional({ values: 'falsy' }).isString().withMessage('Start time must be a string'),
+  body('end_time').optional({ values: 'falsy' }).isString().withMessage('End time must be a string'),
+  body('latitude')
+    .optional({ values: 'falsy' })
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+  body('longitude')
+    .optional({ values: 'falsy' })
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180'),
+  body().custom((value) => {
+    const hasAddress = typeof value?.address === 'string' && value.address.trim().length > 0;
+    const hasCoordinates =
+      value?.latitude !== undefined &&
+      value?.latitude !== null &&
+      value?.latitude !== '' &&
+      value?.longitude !== undefined &&
+      value?.longitude !== null &&
+      value?.longitude !== '';
+
+    if (!hasAddress && !hasCoordinates) {
+      throw new Error('Address or coordinates are required');
+    }
+
+    return true;
+  }),
   body('notes').optional().isString(),
   body('contact_phone').optional().isMobilePhone()
 ];

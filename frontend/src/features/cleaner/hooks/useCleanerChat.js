@@ -3,8 +3,9 @@ import { io } from 'socket.io-client';
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
 import { playChatSound } from '../../../utils/chatSound';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 
-const CLEANER_CHAT_STORAGE_KEY = 'cleaner_message_threads_v1';
+const getCleanerChatStorageKey = () => getCleanerScopedStorageKey('cleaner_message_threads_v1');
 
 // Socket.io server URL - configure based on environment
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
@@ -73,7 +74,7 @@ const sanitizeMessages = (messages) => {
 
 const readStoredThreads = () => {
   try {
-    const raw = localStorage.getItem(CLEANER_CHAT_STORAGE_KEY);
+    const raw = localStorage.getItem(getCleanerChatStorageKey());
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : {};
@@ -84,7 +85,7 @@ const readStoredThreads = () => {
 
 const writeStoredThreads = (threads) => {
   try {
-    localStorage.setItem(CLEANER_CHAT_STORAGE_KEY, JSON.stringify(threads));
+    localStorage.setItem(getCleanerChatStorageKey(), JSON.stringify(threads));
   } catch {
     // Ignore storage failures so chat still works for the current session.
   }
