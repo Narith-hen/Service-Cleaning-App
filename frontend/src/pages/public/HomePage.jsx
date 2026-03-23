@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -17,6 +18,8 @@ const staggerContainer = {
 };
 
 export default function HomePage() {
+  const [openFaqIndex, setOpenFaqIndex] = useState(1);
+
   const testimonials = [
     {
      
@@ -80,6 +83,34 @@ export default function HomePage() {
       description: "Get in touch for questions, quotes, and booking support.",
       to: "/contact",
       cta: "Contact Now"
+    }
+  ];
+
+  const faqItems = [
+    {
+      question: "What cleaning services do you offer?",
+      answer:
+        "We provide home cleaning, office cleaning, deep cleaning, move-in or move-out cleaning, and shop cleaning services."
+    },
+    {
+      question: "Do you bring your own cleaning supplies?",
+      answer:
+        "Yes. Our cleaners arrive with standard supplies and equipment, so you do not need to prepare anything unless you prefer specific products."
+    },
+    {
+      question: "Do I need to stay at home during the service?",
+      answer:
+        "No. Many customers give access instructions in advance, but you can stay if you prefer to be present while the cleaning is done."
+    },
+    {
+      question: "How can I reschedule or cancel a booking?",
+      answer:
+        "You can manage your booking from your account dashboard or contact our support team if you need help changing the date and time."
+    },
+    {
+      question: "How fast can I book a cleaning appointment?",
+      answer:
+        "You can book online in a few minutes, and available time slots depend on your location, service type, and cleaner availability."
     }
   ];
 
@@ -294,6 +325,86 @@ export default function HomePage() {
                 Contact Sales
               </Link>
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="bg-[#f2f4f3] py-20">
+        <div className="mx-auto max-w-4xl px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#32c753]">
+              FAQ
+            </p>
+            <h2 className="mt-3 text-4xl font-black text-slate-900 md:text-5xl">
+              Frequently Asked Questions
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-500">
+              Everything customers usually ask before booking a cleaning service with us.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="mt-12 space-y-4"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            {faqItems.map((item, index) => {
+              const isOpen = openFaqIndex === index;
+
+              return (
+                <motion.article
+                  key={item.question}
+                  variants={fadeUpVariant}
+                  className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
+                    isOpen
+                      ? "border-[#9be06f] shadow-[0_20px_50px_rgba(50,199,83,0.12)]"
+                      : "border-slate-200"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? -1 : index)}
+                    className="flex min-h-[72px] w-full items-center justify-between gap-4 px-5 py-3.5 text-left"
+                  >
+                    <span className="text-base font-semibold text-slate-900">
+                      {item.question}
+                    </span>
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className={`h-3 w-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.25"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-slate-100 px-5 pb-4 pt-2">
+                      <p className="max-w-3xl text-sm leading-6 text-slate-500">
+                        {item.answer}
+                      </p>
+                    </div>
+                  )}
+                </motion.article>
+              );
+            })}
           </motion.div>
         </div>
       </section>

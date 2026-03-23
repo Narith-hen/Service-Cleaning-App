@@ -13,23 +13,23 @@ import api from '../../../services/api';
 import '../../../styles/customer/home.scss';
 
 const howItWorksSteps = [
+  // {
+  //   step: '1',
+  //   title: 'Book a Service',
+  //   description: 'Choose the cleaning service and select your preferred date and time.'
+  // },
   {
     step: '1',
     title: 'Book a Service',
-    description: 'Choose the cleaning service and select your preferred date and time.'
+    description: 'Choose the cleaning service and select your preferred date and time..'
   },
   {
     step: '2',
-    title: 'Cleaner Arrives',
-    description: 'Our professional cleaners arrive fully equipped.'
-  },
-  {
-    step: '3',
     title: 'Cleaning Process',
     description: 'They clean your home or office efficiently.'
   },
   {
-    step: '4',
+    step: '3',
     title: 'Enjoy a Spotless Space',
     description: 'Relax and enjoy a fresh and clean environment.'
   }
@@ -125,11 +125,40 @@ const whyChoosePoints = [
   'Customer support'
 ];
 
+const faqItems = [
+  {
+    question: 'What cleaning services do you offer?',
+    answer:
+      'We provide home cleaning, office cleaning, deep cleaning, move-in or move-out cleaning, and shop cleaning services.'
+  },
+  {
+    question: 'Do you bring your own cleaning supplies?',
+    answer:
+      'Yes. Our cleaners arrive with standard supplies and equipment, so you do not need to prepare anything unless you prefer specific products.'
+  },
+  {
+    question: 'Do I need to stay at home during the service?',
+    answer:
+      'No. Many customers give access instructions in advance, but you can stay if you prefer to be present while the cleaning is done.'
+  },
+  {
+    question: 'How can I reschedule or cancel a booking?',
+    answer:
+      'You can manage your booking from your account dashboard or contact our support team if you need help changing the date and time.'
+  },
+  {
+    question: 'How fast can I book a cleaning appointment?',
+    answer:
+      'You can book online in a few minutes, and available time slots depend on your location, service type, and cleaner availability.'
+  }
+];
+
 const CustomerHomePage = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [motionEnabled, setMotionEnabled] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -340,6 +369,55 @@ const CustomerHomePage = () => {
               <span className="why-text">{point}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="dashboard-faq reveal reveal-delay-3">
+        <header className="section-head">
+          <p className="section-kicker">FAQ</p>
+          <h2>Frequently Asked Questions</h2>
+          <p>
+            Everything customers usually ask before booking a cleaning service with us.
+          </p>
+        </header>
+
+        <div className="faq-accordion">
+          {faqItems.map((item, index) => {
+            const isOpen = openFaqIndex === index;
+
+            return (
+              <article
+                key={item.question}
+                className={`faq-card reveal stagger-${Math.min((index % 4) + 1, 4)} ${isOpen ? 'is-open' : ''}`}
+              >
+                <button
+                  type="button"
+                  className="faq-trigger"
+                  onClick={() => setOpenFaqIndex(isOpen ? -1 : index)}
+                >
+                  <span>{item.question}</span>
+                  <span className="faq-chevron" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.25"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className="faq-answer">
+                    <p>{item.answer}</p>
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
 
