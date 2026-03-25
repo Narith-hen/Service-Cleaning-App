@@ -33,6 +33,36 @@ const normalizeAssetUrl = (value) => {
   return String(value);
 };
 
+const getCurrentUserId = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem('user') || 'null');
+    return stored?.id || stored?.user_id || null;
+  } catch {
+    return null;
+  }
+};
+
+const formatThreadDateParts = (bookingDate) => {
+  const dateValue = bookingDate ? new Date(bookingDate) : null;
+  if (!dateValue || Number.isNaN(dateValue.getTime())) {
+    return {
+      day: '01',
+      monthYear: 'June 2026'
+    };
+  }
+
+  return {
+    day: String(dateValue.getDate()).padStart(2, '0'),
+    monthYear: dateValue.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  };
+};
+
+const isCleanerMessageEligibleBooking = (booking, currentUserId) => {
+  if (!booking || !currentUserId) return false;
+  if (String(booking.cleaner_id || '') !== String(currentUserId)) return false;
+  return String(booking.booking_status || '').trim().toLowerCase() !== 'cancelled';
+};
+
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
   try {
@@ -76,27 +106,31 @@ const writeHiddenThreadIds = (threadIds) => {
   }
 };
 
-const normalizeThread = (job, index) => ({
-  id: String(job?.id || job?.sourceRequestId || `thread-${index + 1}`),
-  sourceRequestId: job?.sourceRequestId || job?.id || `thread-${index + 1}`,
-  status: job?.status || 'upcoming',
-  title: job?.title || 'Cleaning Job',
-  jobId: job?.jobId || '#SOMA-00000',
-  price: job?.price || '$0.00',
-  day: job?.day || '01',
-  monthYear: job?.monthYear || 'June 2026',
-  timeRange: job?.timeRange || '09:00 AM - 12:00 PM',
-  location: job?.location || 'Phnom Penh, Cambodia',
-  customer: job?.customer || 'Customer',
-  customerId: job?.customerId || job?.customer_id || '3',
-  customerAvatar: normalizeAssetUrl(job?.customerAvatar || job?.customer_avatar || ''),
-  customerPhone: job?.customerPhone || job?.customer_phone || '',
-  customerEmail: job?.customerEmail || job?.customer_email || '',
-  customerAddress: job?.customerAddress || job?.customer_address || job?.location || '',
-  bedrooms: job?.bedrooms || '3 Bedrooms',
-  floors: job?.floors || '2 Floors',
-  image: job?.image || officeImage
-});
+const normalizeThread = (job, index) => {
+  const { day, monthYear } = formatThreadDateParts(job?.booking_date);
+
+  return {
+    id: String(job?.sourceRequestId || job?.booking_id || job?.id || `thread-${index + 1}`),
+    sourceRequestId: job?.sourceRequestId || job?.booking_id || job?.id || `thread-${index + 1}`,
+    status: job?.status || job?.service_tracking_status || job?.booking_status || 'upcoming',
+    title: job?.title || job?.service_name || 'Cleaning Job',
+    jobId: job?.jobId || (job?.booking_id ? `#SOMA-${String(job.booking_id).padStart(5, '0')}` : '#SOMA-00000'),
+    price: job?.price || (job?.negotiated_price || job?.total_price ? `$${Number(job?.negotiated_price || job?.total_price || 0).toFixed(2)}` : '$0.00'),
+    day: job?.day || day,
+    monthYear: job?.monthYear || monthYear,
+    timeRange: job?.timeRange || job?.booking_time || '09:00 AM - 12:00 PM',
+    location: job?.location || job?.address || 'Phnom Penh, Cambodia',
+    customer: job?.customer || job?.customer_username || job?.customer_name || 'Customer',
+    customerId: job?.customerId || job?.customer_id || job?.user_id || '3',
+    customerAvatar: normalizeAssetUrl(job?.customerAvatar || job?.customer_avatar || ''),
+    customerPhone: job?.customerPhone || job?.customer_phone || '',
+    customerEmail: job?.customerEmail || job?.customer_email || '',
+    customerAddress: job?.customerAddress || job?.customer_address || job?.address || job?.location || '',
+    bedrooms: job?.bedrooms || '3 Bedrooms',
+    floors: job?.floors || '2 Floors',
+    image: job?.image || officeImage
+  };
+};
 
 const getAuthToken = () => {
   try {
@@ -200,20 +234,41 @@ const [activeThreadId, setActiveThreadId] = useState(
         
         // Also load from confirmed jobs
         const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
-        if (!raw && savedThreads.length > 0) {
-          // No new jobs but have old chat threads - use those
-          if (!cancelled) setThreads(savedThreads);
-          return;
-        }
-        
         const parsed = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          // Use saved threads if no new jobs
+        const normalizedLocal = Array.isArray(parsed)
+          ? parsed.filter(Boolean).map(normalizeThread)
+          : [];
+
+        let normalizedServer = [];
+        const currentUserId = getCurrentUserId();
+
+        if (getAuthToken() && currentUserId) {
+          try {
+            const response = await api.get(`/bookings/cleaner/${currentUserId}`, {
+              params: { page: 1, limit: 100 }
+            });
+            const bookingRows = Array.isArray(response?.data?.data) ? response.data.data : [];
+            normalizedServer = bookingRows
+              .filter((booking) => isCleanerMessageEligibleBooking(booking, currentUserId))
+              .map(normalizeThread);
+          } catch {
+            normalizedServer = [];
+          }
+        }
+
+        const seenThreadIds = new Set();
+        const normalized = [...normalizedServer, ...normalizedLocal].filter((thread) => {
+          const threadId = String(thread?.sourceRequestId || thread?.id || '');
+          if (!threadId) return false;
+          if (seenThreadIds.has(threadId)) return false;
+          seenThreadIds.add(threadId);
+          return true;
+        });
+
+        if (!normalized.length) {
           if (!cancelled) setThreads(savedThreads.length > 0 ? savedThreads : []);
           return;
         }
-        
-        const normalized = parsed.filter(Boolean).map(normalizeThread);
         
         // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
         const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
@@ -235,29 +290,19 @@ const [activeThreadId, setActiveThreadId] = useState(
     // Poll for new confirmed jobs every 3 seconds
     const pollInterval = setInterval(async () => {
       try {
-        // Get current user ID
-        const currentUserId = (() => {
-          try {
-            const stored = JSON.parse(localStorage.getItem('user') || 'null');
-            return stored?.id || stored?.user_id || null;
-          } catch {
-            return null;
-          }
-        })();
+        const currentUserId = getCurrentUserId();
         
         if (!currentUserId) return;
         
         // Fetch bookings assigned to this cleaner
-        const response = await api.get('/bookings', {
+        const response = await api.get(`/bookings/cleaner/${currentUserId}`, {
           params: { page: 1, limit: 100 }
         });
         if (cancelled) return;
         
         const bookingsData = response?.data?.data || [];
-        // Filter to only confirmed bookings assigned to this cleaner
-        const cleanerConfirmedBookings = bookingsData.filter(
-          (b) => b.cleaner_id && String(b.cleaner_id) === String(currentUserId) && 
-                 (b.booking_status === 'confirmed' || b.booking_status === 'accepted')
+        const cleanerConfirmedBookings = bookingsData.filter((booking) =>
+          isCleanerMessageEligibleBooking(booking, currentUserId)
         );
         
         if (cleanerConfirmedBookings.length > 0) {
