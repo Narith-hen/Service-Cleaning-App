@@ -10,6 +10,7 @@ import { serviceService } from '../services/serviceService';
 
 const INVENTORY_PAGE_SIZE = 5;
 const INVENTORY_CATEGORIES = ['LIQUID SUPPLIES', 'EQUIPMENT', 'CONSUMABLES', 'TOOLS', 'CHEMICALS'];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 'all'];
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -117,14 +118,26 @@ const ServicesPage = () => {
   const totalServices = services.length;
   const activeServices = services.filter((item) => (item.status || 'Active') === 'Active').length;
   const inactiveServices = services.filter((item) => (item.status || 'Active') === 'Inactive').length;
-  const servicePages = Math.max(1, Math.ceil(filteredServices.length / servicePageSize));
+  const isShowingAllServices = servicePageSize === 'all';
+  const effectiveServicePageSize = isShowingAllServices ? Math.max(filteredServices.length, 1) : Number(servicePageSize);
+  const servicePages = isShowingAllServices ? 1 : Math.max(1, Math.ceil(filteredServices.length / effectiveServicePageSize));
   const currentServicePage = Math.min(servicePage, servicePages);
-  const serviceStart = filteredServices.length === 0 ? 0 : (currentServicePage - 1) * servicePageSize + 1;
-  const serviceEnd = Math.min(currentServicePage * servicePageSize, filteredServices.length);
-  const pagedServices = filteredServices.slice(
-    (currentServicePage - 1) * servicePageSize,
-    currentServicePage * servicePageSize
-  );
+  const serviceStart = filteredServices.length === 0
+    ? 0
+    : isShowingAllServices
+      ? 1
+      : (currentServicePage - 1) * effectiveServicePageSize + 1;
+  const serviceEnd = filteredServices.length === 0
+    ? 0
+    : isShowingAllServices
+      ? filteredServices.length
+      : Math.min(currentServicePage * effectiveServicePageSize, filteredServices.length);
+  const pagedServices = isShowingAllServices
+    ? filteredServices
+    : filteredServices.slice(
+      (currentServicePage - 1) * effectiveServicePageSize,
+      currentServicePage * effectiveServicePageSize
+    );
 
   const fetchServices = async () => {
     setLoadingServices(true);
@@ -521,28 +534,23 @@ const ServicesPage = () => {
             <select
               value={servicePageSize}
               onChange={(event) => {
-                setServicePageSize(Number(event.target.value));
+                const nextValue = event.target.value === 'all' ? 'all' : Number(event.target.value);
+                setServicePageSize(nextValue);
                 setServicePage(1);
               }}
             >
-              {[10, 20, 50].map((value) => (
-                <option key={value} value={value}>{value}</option>
+              {PAGE_SIZE_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {value === 'all' ? 'All' : value}
+                </option>
               ))}
             </select>
           </label>
           <button
             type="button"
-            className="svc-btn svc-btn-secondary"
-            onClick={() => setServicePage((prev) => Math.max(1, prev - 1))}
-            disabled={currentServicePage === 1}
-          >
-            Previous
-          </button>
-          <button
-            type="button"
             className="svc-btn svc-btn-primary"
             onClick={() => setServicePage((prev) => Math.min(servicePages, prev + 1))}
-            disabled={currentServicePage === servicePages}
+            disabled={isShowingAllServices || currentServicePage === servicePages}
           >
             Next
           </button>

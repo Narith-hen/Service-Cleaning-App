@@ -1,6 +1,7 @@
 const db = require('../../config/db');
 const bcrypt = require('bcrypt');
 const AppError = require('../../utils/error.util');
+const { syncCleanerCompletedJobs } = require('../../utils/cleanerReviewStats.util');
 
 const normalizeStatus = (row) => {
   const statusText = String(row.status || '').trim().toLowerCase();
@@ -125,6 +126,7 @@ const getCleanerRowById = async (promiseDb, cleanerId, cleanerProfileColumns) =>
   const hasLatitude = cleanerProfileColumns.has('latitude');
   const hasLongitude = cleanerProfileColumns.has('longitude');
   const hasProfileImage = cleanerProfileColumns.has('profile_image');
+  const hasTotalJobs = cleanerProfileColumns.has('total_jobs');
   const hasTotalReviews = cleanerProfileColumns.has('total_reviews');
   const hasRating = cleanerProfileColumns.has('rating');
   const hasAvgRating = cleanerProfileColumns.has('avg_rating');
@@ -151,7 +153,7 @@ const getCleanerRowById = async (promiseDb, cleanerId, cleanerProfileColumns) =>
         ${hasLatitude ? 'cp.latitude' : 'NULL'} AS latitude,
         ${hasLongitude ? 'cp.longitude' : 'NULL'} AS longitude,
         ${hasProfileImage ? 'cp.profile_image' : 'NULL'} AS profile_image,
-        COALESCE(bk.total_jobs, 0) AS total_jobs,
+        COALESCE(${hasTotalJobs ? 'cp.total_jobs' : 'NULL'}, bk.total_jobs, 0) AS total_jobs,
         COALESCE(rv.total_reviews, ${hasTotalReviews ? 'cp.total_reviews' : 'NULL'}, 0) AS total_reviews,
         COALESCE(rv.avg_rating, ${profileRatingExpression}, 3.00) AS avg_rating
       FROM cleaner_profile cp
@@ -159,6 +161,7 @@ const getCleanerRowById = async (promiseDb, cleanerId, cleanerProfileColumns) =>
       LEFT JOIN (
         SELECT cleaner_id, COUNT(*) AS total_jobs
         FROM bookings
+        WHERE LOWER(COALESCE(booking_status, '')) = 'completed'
         GROUP BY cleaner_id
       ) bk ON bk.cleaner_id = cp.cleaner_id
       LEFT JOIN (
@@ -226,11 +229,13 @@ const mapCleanerRow = (row) => {
 const getAllCleaners = async (req, res, next) => {
   try {
     const promiseDb = db.promise();
+    await syncCleanerCompletedJobs(promiseDb);
     const cleanerProfileColumns = await getCleanerProfileColumns(promiseDb);
     const hasAddress = cleanerProfileColumns.has('address');
     const hasLatitude = cleanerProfileColumns.has('latitude');
     const hasLongitude = cleanerProfileColumns.has('longitude');
     const hasProfileImage = cleanerProfileColumns.has('profile_image');
+    const hasTotalJobs = cleanerProfileColumns.has('total_jobs');
     const hasTotalReviews = cleanerProfileColumns.has('total_reviews');
     const hasRating = cleanerProfileColumns.has('rating');
     const hasAvgRating = cleanerProfileColumns.has('avg_rating');
@@ -257,7 +262,7 @@ const getAllCleaners = async (req, res, next) => {
         ${hasLatitude ? 'cp.latitude' : 'NULL'} AS latitude,
         ${hasLongitude ? 'cp.longitude' : 'NULL'} AS longitude,
         ${hasProfileImage ? 'cp.profile_image' : 'NULL'} AS profile_image,
-        COALESCE(bk.total_jobs, 0) AS total_jobs,
+        COALESCE(${hasTotalJobs ? 'cp.total_jobs' : 'NULL'}, bk.total_jobs, 0) AS total_jobs,
         COALESCE(rv.total_reviews, ${hasTotalReviews ? 'cp.total_reviews' : 'NULL'}, 0) AS total_reviews,
         COALESCE(rv.avg_rating, ${profileRatingExpression}, 3.00) AS avg_rating
       FROM cleaner_profile cp
@@ -266,6 +271,7 @@ const getAllCleaners = async (req, res, next) => {
       LEFT JOIN (
         SELECT cleaner_id, COUNT(*) AS total_jobs
         FROM bookings
+        WHERE LOWER(COALESCE(booking_status, '')) = 'completed'
         GROUP BY cleaner_id
       ) bk ON bk.cleaner_id = cp.cleaner_id
       LEFT JOIN (

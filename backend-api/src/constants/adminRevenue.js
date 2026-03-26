@@ -1,0 +1,5 @@
+const ADMIN_EARNING_PER_PAID_BOOKING = 10;
+
+module.exports = {
+  ADMIN_EARNING_PER_PAID_BOOKING,
+};

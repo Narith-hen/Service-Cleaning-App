@@ -1,9 +1,10 @@
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
+import { getCleanerScopedStorageKey } from './storageKeys';
 
-export const CLEANER_NOTIFICATIONS_KEY = 'cleaner_notifications_v1';
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
+export const getCleanerNotificationsStorageKey = () => getCleanerScopedStorageKey('cleaner_notifications_v1');
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
+const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
 
 const readJson = (key, fallback) => {
   try {
@@ -119,7 +120,7 @@ const buildRequestNotifications = async () => {
 };
 
 const buildJobStatusNotifications = () => {
-  const jobs = ensureArray(readJson(CONFIRMED_MY_JOBS_STORAGE_KEY, []));
+  const jobs = ensureArray(readJson(getConfirmedMyJobsStorageKey(), []));
   const now = Date.now();
 
   return jobs.map((job, index) => {
@@ -151,8 +152,8 @@ const buildJobStatusNotifications = () => {
 
 const buildChatNotifications = () => {
   const unreadByThread = useChatStore.getState().unreadByThread || {};
-  const threads = ensureArray(readJson(CLEANER_CHAT_THREADS_KEY, []));
-  const jobs = ensureArray(readJson(CONFIRMED_MY_JOBS_STORAGE_KEY, []));
+  const threads = ensureArray(readJson(getCleanerChatThreadsStorageKey(), []));
+  const jobs = ensureArray(readJson(getConfirmedMyJobsStorageKey(), []));
   const now = Date.now();
 
   return Object.entries(unreadByThread).map(([threadId, unreadCount], index) => {
@@ -172,7 +173,7 @@ const buildChatNotifications = () => {
   });
 };
 
-export const loadCleanerNotifications = () => ensureArray(readJson(CLEANER_NOTIFICATIONS_KEY, []));
+export const loadCleanerNotifications = () => ensureArray(readJson(getCleanerNotificationsStorageKey(), []));
 
 export const dispatchCleanerNotificationsUpdated = () => {
   try {
@@ -184,7 +185,7 @@ export const dispatchCleanerNotificationsUpdated = () => {
 
 export const saveCleanerNotifications = (notifications = []) => {
   try {
-    localStorage.setItem(CLEANER_NOTIFICATIONS_KEY, JSON.stringify(ensureArray(notifications)));
+    localStorage.setItem(getCleanerNotificationsStorageKey(), JSON.stringify(ensureArray(notifications)));
   } catch {
     // Ignore storage issues.
   }

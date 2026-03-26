@@ -16,12 +16,13 @@ import {
   ensureRealtimeSocketConnected,
   getRealtimeSocket
 } from '../../../services/socketService';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/cleaner/messages.scss';
 
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
-const CLEANER_CHAT_THREADS_KEY = 'cleaner_chat_threads_history';
-const CLEANER_HIDDEN_CHAT_STORAGE_KEY = 'cleaner_hidden_message_threads_v1';
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
+const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
+const getCleanerHiddenChatStorageKey = () => getCleanerScopedStorageKey('cleaner_hidden_message_threads_v1');
 const fallbackThreads = [];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -36,7 +37,7 @@ const normalizeAssetUrl = (value) => {
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
   try {
-    localStorage.setItem(CLEANER_CHAT_THREADS_KEY, JSON.stringify(threads));
+    localStorage.setItem(getCleanerChatThreadsStorageKey(), JSON.stringify(threads));
   } catch (e) {
     // Ignore storage errors
   }
@@ -45,7 +46,8 @@ const saveChatThreads = (threads) => {
 // Helper to load chat threads from localStorage
 const loadChatThreads = () => {
   try {
-    const raw = localStorage.getItem(CLEANER_CHAT_THREADS_KEY);
+    const raw = localStorage.getItem(getCleanerChatThreadsStorageKey());
+    
     if (raw) {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
@@ -59,7 +61,7 @@ const loadChatThreads = () => {
 
 const readHiddenThreadIds = () => {
   try {
-    const raw = localStorage.getItem(CLEANER_HIDDEN_CHAT_STORAGE_KEY);
+    const raw = localStorage.getItem(getCleanerHiddenChatStorageKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
@@ -70,15 +72,56 @@ const readHiddenThreadIds = () => {
 
 const writeHiddenThreadIds = (threadIds) => {
   try {
-    localStorage.setItem(CLEANER_HIDDEN_CHAT_STORAGE_KEY, JSON.stringify(threadIds));
+    localStorage.setItem(getCleanerHiddenChatStorageKey(), JSON.stringify(threadIds));
   } catch {
     // Ignore storage issues for hidden chat state.
   }
 };
 
-const normalizeThread = (job, index) => ({
-  id: String(job?.id || job?.sourceRequestId || `thread-${index + 1}`),
-  sourceRequestId: job?.sourceRequestId || job?.id || `thread-${index + 1}`,
+const getCanonicalThreadId = (job, index = 0) => {
+  const rawCandidates = [
+    job?.booking_id,
+    job?.bookingId,
+    job?.sourceRequestId,
+    job?.id
+  ];
+
+  for (const candidate of rawCandidates) {
+    const text = String(candidate || '').trim();
+    if (!text) continue;
+    if (text.startsWith('confirmed-')) {
+      const unwrapped = text.replace(/^confirmed-/, '').trim();
+      if (unwrapped) return unwrapped;
+    }
+    if (/^\d+$/.test(text)) {
+      return text;
+    }
+  }
+
+  return `thread-${index + 1}`;
+};
+
+const dedupeThreads = (items = []) => {
+  const seen = new Set();
+  const result = [];
+
+  for (const item of items) {
+    const normalized = normalizeThread(item, result.length);
+    const key = String(normalized.sourceRequestId || normalized.id || '').trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+  }
+
+  return result;
+};
+
+const normalizeThread = (job, index) => {
+  const canonicalThreadId = getCanonicalThreadId(job, index);
+
+  return {
+  id: canonicalThreadId,
+  sourceRequestId: canonicalThreadId,
   status: job?.status || 'upcoming',
   title: job?.title || 'Cleaning Job',
   jobId: job?.jobId || '#SOMA-00000',
@@ -96,7 +139,8 @@ const normalizeThread = (job, index) => ({
   bedrooms: job?.bedrooms || '3 Bedrooms',
   floors: job?.floors || '2 Floors',
   image: job?.image || officeImage
-});
+};
+};
 
 const getAuthToken = () => {
   try {
@@ -156,7 +200,7 @@ const mergeThreadWithBooking = (thread, bookingData = {}) => {
       : thread.price,
     day: formattedDay,
     monthYear: formattedMonthYear,
-    timeRange: thread.timeRange,
+    timeRange: bookingData.booking_time || thread.timeRange,
     location: bookingData.address || thread.location,
     customer: customerName || 'Customer',
     customerId: bookingData.user_id || thread.customerId,
@@ -199,28 +243,30 @@ const [activeThreadId, setActiveThreadId] = useState(
         const savedThreads = loadChatThreads();
         
         // Also load from confirmed jobs
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         if (!raw && savedThreads.length > 0) {
           // No new jobs but have old chat threads - use those
-          if (!cancelled) setThreads(savedThreads);
+          const dedupedSavedThreads = dedupeThreads(savedThreads);
+          saveChatThreads(dedupedSavedThreads);
+          if (!cancelled) setThreads(dedupedSavedThreads);
           return;
         }
         
         const parsed = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(parsed) || parsed.length === 0) {
           // Use saved threads if no new jobs
-          if (!cancelled) setThreads(savedThreads.length > 0 ? savedThreads : []);
+          const dedupedSavedThreads = savedThreads.length > 0 ? dedupeThreads(savedThreads) : [];
+          if (dedupedSavedThreads.length > 0) {
+            saveChatThreads(dedupedSavedThreads);
+          }
+          if (!cancelled) setThreads(dedupedSavedThreads);
           return;
         }
         
-        const normalized = parsed.filter(Boolean).map(normalizeThread);
-        
-        // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
-        const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
-        const mergedThreads = [
-          ...normalized,
-          ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
-        ];
+        const mergedThreads = dedupeThreads([
+          ...parsed.filter(Boolean),
+          ...savedThreads
+        ]);
         
         // Save merged threads back to localStorage
         saveChatThreads(mergedThreads);
@@ -262,16 +308,15 @@ const [activeThreadId, setActiveThreadId] = useState(
         
         if (cleanerConfirmedBookings.length > 0) {
           // Update localStorage with fresh data
-          const normalized = cleanerConfirmedBookings.map(normalizeThread);
-          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(normalized));
+          const normalized = dedupeThreads(cleanerConfirmedBookings);
+          localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(normalized));
           
           // Merge with saved threads
           const savedThreads = loadChatThreads();
-          const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
-          const mergedThreads = [
+          const mergedThreads = dedupeThreads([
             ...normalized,
-            ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
-          ];
+            ...savedThreads
+          ]);
           saveChatThreads(mergedThreads);
           if (!cancelled) setThreads(mergedThreads);
         }
@@ -411,14 +456,15 @@ const [activeThreadId, setActiveThreadId] = useState(
           return prev;
         }
 
-        return [
+        return dedupeThreads([
           normalizeThread({
+            bookingId,
             sourceRequestId: bookingId,
             id: bookingId,
             customer: message?.sender?.username || 'Customer'
           }, 0),
           ...prev
-        ];
+        ]);
       });
     };
 
@@ -498,7 +544,7 @@ const [activeThreadId, setActiveThreadId] = useState(
       );
 
       try {
-        const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+        const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         const parsed = raw ? JSON.parse(raw) : [];
         if (Array.isArray(parsed)) {
           const updated = parsed.map((job) =>
@@ -506,7 +552,7 @@ const [activeThreadId, setActiveThreadId] = useState(
               ? { ...job, price: formatted }
               : job
           );
-          localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
         }
       } catch {
         /* ignore storage errors */

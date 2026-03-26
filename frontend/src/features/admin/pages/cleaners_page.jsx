@@ -16,6 +16,7 @@ import '../../../styles/admin/cleaners_page.css';
 
 const statusFilters = ['All', 'Active', 'Suspended', 'Inactive'];
 const ratingFilters = ['All', '4.5+', '4.0+', '3.5+'];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 'all'];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const toAbsoluteImageUrl = (imageUrl) => {
@@ -171,11 +172,19 @@ const CleanersPage = () => {
     });
   }, [cleaners, searchText, statusFilter, ratingFilter]);
 
-  const pages = Math.max(1, Math.ceil(filteredCleaners.length / pageSize));
+  const isShowingAllRows = pageSize === 'all';
+  const effectivePageSize = isShowingAllRows ? Math.max(filteredCleaners.length, 1) : Number(pageSize);
+  const pages = isShowingAllRows ? 1 : Math.max(1, Math.ceil(filteredCleaners.length / effectivePageSize));
   const page = Math.min(currentPage, pages);
-  const pagedCleaners = filteredCleaners.slice((page - 1) * pageSize, page * pageSize);
-  const pageStart = filteredCleaners.length === 0 ? 0 : (page - 1) * pageSize + 1;
-  const pageEnd = Math.min(page * pageSize, filteredCleaners.length);
+  const pagedCleaners = isShowingAllRows
+    ? filteredCleaners
+    : filteredCleaners.slice((page - 1) * effectivePageSize, page * effectivePageSize);
+  const pageStart = filteredCleaners.length === 0 ? 0 : isShowingAllRows ? 1 : (page - 1) * effectivePageSize + 1;
+  const pageEnd = filteredCleaners.length === 0
+    ? 0
+    : isShowingAllRows
+      ? filteredCleaners.length
+      : Math.min(page * effectivePageSize, filteredCleaners.length);
 
   useEffect(() => {
     if (currentPage > pages) {
@@ -478,10 +487,11 @@ const CleanersPage = () => {
               <tr>
                 <th>CLEANER</th>
                 <th>COMPANY NAME</th>
+                <th>EMAIL</th>
                 <th>PHONE NUMBER</th>
                 <th className="jobs-center">TOTAL JOBS</th>
                 <th className="rating-center">AVERAGE RATING</th>
-                <th className="status-center">ACCOUNT STATUS</th>
+                <th className="status-center">STATUS</th>
                 <th className="actions-center">ACTIONS</th>
               </tr>
             </thead>
@@ -505,6 +515,7 @@ const CleanersPage = () => {
                       </div>
                     </td>
                     <td>{cleaner.companyName || cleaner.name || '-'}</td>
+                    <td className="email-cell">{cleaner.companyEmail || cleaner.email || '-'}</td>
                     <td>{cleaner.phone || '-'}</td>
                     <td className="number-cell jobs-center">{cleaner.totalJobs}</td>
                     <td className="rating-center">
@@ -553,7 +564,7 @@ const CleanersPage = () => {
                 ))
               ) : (
                 <tr>
-                  <td className="empty" colSpan={7}>
+                  <td className="empty" colSpan={8}>
                     {cleanersLoading ? 'Loading cleaners...' : 'No cleaners found for current filters.'}
                   </td>
                 </tr>
@@ -572,20 +583,16 @@ const CleanersPage = () => {
                 setPageSize(value);
                 setCurrentPage(1);
               }}
-              options={[10, 20, 50].map((value) => ({ label: value, value }))}
+              options={PAGE_SIZE_OPTIONS.map((value) => ({
+                label: value === 'all' ? 'All' : value,
+                value
+              }))}
               className="page-size-select"
             />
             <button
               type="button"
-              disabled={page === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
               className="next"
-              disabled={page === pages}
+              disabled={isShowingAllRows || page === pages}
               onClick={() => setCurrentPage((prev) => Math.min(pages, prev + 1))}
             >
               Next

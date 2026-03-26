@@ -60,30 +60,6 @@ const serviceHighlights = [
   }
 ];
 
-const featuredCleaners = [
-  {
-    id: 'c1',
-    photo: narithImage,
-    company: 'FreshNest Cleaning Co.',
-    rating: 5,
-    reviews: 186
-  },
-  {
-    id: 'c2',
-    photo: meyImage,
-    company: 'Sparkle Pro Services',
-    rating: 5,
-    reviews: 241
-  },
-  {
-    id: 'c3',
-    photo: molikaImage,
-    company: 'PrimeCare Cleaners',
-    rating: 5,
-    reviews: 203
-  }
-];
-
 const fallbackImages = [homeServiceImage, officeServiceImage, windowServiceImage, moveServiceImage, shopServiceImage, proServiceImage];
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -103,7 +79,17 @@ const mapServiceFromApi = (item, index) => ({
   status: String(item?.status || 'active').toLowerCase(),
 });
 
+<<<<<<< HEAD
 const hiddenServiceTitles = new Set(['Reliable Regular Cleaning Services for Homes & Offices']);
+=======
+const mapFeaturedCleanerFromApi = (cleaner, index) => ({
+  id: String(cleaner?.id || cleaner?.cleaner_id || `cleaner-${index}`),
+  photo: toAbsoluteImageUrl(cleaner?.profileImage || cleaner?.profile_image || cleaner?.photo || '') || fallbackImages[index % fallbackImages.length],
+  company: cleaner?.name || cleaner?.username || cleaner?.company_name || 'Cleaning Company',
+  rating: Math.max(1, Math.round(Number(cleaner?.rating) || 0)),
+  reviews: Number(cleaner?.reviews || cleaner?.total_reviews || 0)
+});
+>>>>>>> develop
 
 const truncateWords = (text, wordLimit = 25) => {
   if (!text) return '';
@@ -151,6 +137,50 @@ const faqItems = [
 
 const CustomerHomePage = () => {
   const navigate = useNavigate();
+  const [featuredCleaners, setFeaturedCleaners] = useState([]);
+  const [loadingCleaners, setLoadingCleaners] = useState(true);
+
+  useEffect(() => {
+    const fetchTopCleaners = async () => {
+      try {
+        const response = await api.get('/dashboard/top-cleaners?limit=3');
+        if (response.data.success) {
+          const cleaners = (response.data.data || []).map(mapFeaturedCleanerFromApi);
+          setFeaturedCleaners(cleaners);
+        }
+      } catch (error) {
+        console.error('Failed to fetch top cleaners:', error);
+        // Use fallback data if API fails
+        setFeaturedCleaners([
+          {
+            id: 'c1',
+            photo: narithImage,
+            company: 'FreshNest Cleaning Co.',
+            rating: 5,
+            reviews: 186
+          },
+          {
+            id: 'c2',
+            photo: meyImage,
+            company: 'Sparkle Pro Services',
+            rating: 5,
+            reviews: 241
+          },
+          {
+            id: 'c3',
+            photo: molikaImage,
+            company: 'PrimeCare Cleaners',
+            rating: 5,
+            reviews: 203
+          }
+        ]);
+      } finally {
+        setLoadingCleaners(false);
+      }
+    };
+
+    fetchTopCleaners();
+  }, []);
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [motionEnabled, setMotionEnabled] = useState(false);
@@ -330,23 +360,40 @@ const CustomerHomePage = () => {
         </header>
 
         <div className="cleaners-grid">
-          {featuredCleaners.map((cleaner, index) => (
-            <article key={cleaner.id} className={`cleaner-card reveal stagger-${Math.min(index + 1, 3)}`}>
-              <div className="cleaner-photo-wrap">
-                <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
+          {loadingCleaners ? (
+            // Loading skeleton
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={`skeleton-${index}`} className={`cleaner-card reveal stagger-${Math.min(index + 1, 3)}`}>
+                <div className="cleaner-photo-wrap skeleton-loader"></div>
+                <h3 className="skeleton-loader" style={{ width: '80%', height: '24px', margin: '10px 0' }}></h3>
+                <p className="skeleton-loader" style={{ width: '60%', height: '20px', margin: '5px 0' }}></p>
+                <p className="skeleton-loader" style={{ width: '40%', height: '16px', margin: '5px 0' }}></p>
+                <button className="cleaner-profile-btn skeleton-loader" style={{ height: '36px' }}></button>
               </div>
-              <h3>{cleaner.company}</h3>
-              <p className="cleaner-rating">{'\u2605'.repeat(cleaner.rating)}</p>
-              <p className="cleaner-reviews">{cleaner.reviews} total reviews</p>
-              <button
-                type="button"
-                className="cleaner-profile-btn"
-                onClick={() => navigate('/customer/services')}
-              >
-                View Profile
-              </button>
-            </article>
-          ))}
+            ))
+          ) : featuredCleaners.length > 0 ? (
+            featuredCleaners.map((cleaner, index) => (
+              <article key={cleaner.id} className={`cleaner-card reveal stagger-${Math.min(index + 1, 3)}`}>
+                <div className="cleaner-photo-wrap">
+                  <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
+                </div>
+                <h3>{cleaner.company}</h3>
+                <p className="cleaner-rating">{'\u2605'.repeat(cleaner.rating)}</p>
+                <p className="cleaner-reviews">{cleaner.reviews} total reviews</p>
+                <button
+                  type="button"
+                  className="cleaner-profile-btn"
+                  onClick={() => navigate('/customer/services')}
+                >
+                  View Profile
+                </button>
+              </article>
+            ))
+          ) : (
+            <div className="no-cleaners-message">
+              <p>No top cleaners available at the moment.</p>
+            </div>
+          )}
         </div>
       </section>
 

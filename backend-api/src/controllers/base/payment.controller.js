@@ -1,6 +1,7 @@
 const path = require('path');
 const db = require('../../config/db');
 const AppError = require('../../utils/error.util');
+const { syncCleanerCompletedJobs } = require('../../utils/cleanerReviewStats.util');
 
 const ALLOWED_PAYMENT_STATUSES = new Set([
   'pending',
@@ -75,6 +76,64 @@ const getBookingTableColumns = async (promiseDb) => {
 const getPaymentTableColumns = async (promiseDb) => {
   const [columns] = await promiseDb.query('SHOW COLUMNS FROM payments');
   return new Set((columns || []).map((column) => column.Field));
+};
+
+const resolveCleanerUserAccountId = async (promiseDb, cleanerProfileId) => {
+  const cleanerId = parsePositiveInt(cleanerProfileId);
+  if (!cleanerId) return null;
+
+  const [existingUserRows] = await promiseDb.query(
+    'SELECT user_id FROM users WHERE user_id = ? LIMIT 1',
+    [cleanerId]
+  );
+  if (existingUserRows?.[0]?.user_id) {
+    return Number(existingUserRows[0].user_id);
+  }
+
+  const [profileRows] = await promiseDb.query(
+    `
+      SELECT cp.cleaner_id, cp.company_email
+      FROM cleaner_profile cp
+      WHERE cp.cleaner_id = ?
+      LIMIT 1
+    `,
+    [cleanerId]
+  );
+
+  const profile = profileRows?.[0];
+  if (!profile) return cleanerId;
+
+  const normalizedEmail = String(profile.company_email || '').trim().toLowerCase();
+  if (!normalizedEmail) return cleanerId;
+
+  const [userRows] = await promiseDb.query(
+    `
+      SELECT u.user_id
+      FROM users u
+      LEFT JOIN roles r ON r.role_id = u.role_id
+      WHERE LOWER(u.email) = ?
+        AND LOWER(COALESCE(r.role_name, '')) = 'cleaner'
+      LIMIT 1
+    `,
+    [normalizedEmail]
+  );
+
+  return userRows?.[0]?.user_id ? Number(userRows[0].user_id) : cleanerId;
+};
+
+const resolveRequestUserIds = async (promiseDb, req) => {
+  const ids = new Set();
+  const directUserId = parsePositiveInt(req?.user?.user_id);
+  const accountSource = String(req?.user?.account_source || '').trim().toLowerCase();
+
+  if (directUserId) ids.add(directUserId);
+
+  if (accountSource === 'cleaner_profile' || accountSource === 'cleaner') {
+    const mappedCleanerUserId = await resolveCleanerUserAccountId(promiseDb, directUserId);
+    if (mappedCleanerUserId) ids.add(mappedCleanerUserId);
+  }
+
+  return ids;
 };
 
 const ensurePaymentWorkflowColumns = async (promiseDb) => {
@@ -198,17 +257,17 @@ const buildFinalizationPayload = (row) => {
   };
 };
 
-const hasAccessToPayment = (req, row) => {
+const hasAccessToPayment = async (promiseDb, req, row) => {
   if (isAdminUser(req)) return true;
-  const userId = Number(req?.user?.user_id);
-  if (!Number.isInteger(userId) || userId <= 0) return false;
-  return userId === Number(row?.user_id) || userId === Number(row?.cleaner_id);
+  const userIds = await resolveRequestUserIds(promiseDb, req);
+  if (!userIds.size) return false;
+  return userIds.has(Number(row?.user_id)) || userIds.has(Number(row?.cleaner_id));
 };
 
-const isAssignedCleaner = (req, row) => {
+const isAssignedCleaner = async (promiseDb, req, row) => {
   if (isAdminUser(req)) return true;
-  const userId = Number(req?.user?.user_id);
-  return Number.isInteger(userId) && userId > 0 && userId === Number(row?.cleaner_id);
+  const userIds = await resolveRequestUserIds(promiseDb, req);
+  return userIds.has(Number(row?.cleaner_id));
 };
 
 const isBookingCustomer = (req, row) => {
@@ -441,7 +500,9 @@ const getPaymentById = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const payment = await getPaymentByIdWithMeta(promiseDb, paymentId);
     if (!payment) return next(new AppError('Payment not found', 404));
-    if (!hasAccessToPayment(req, payment)) return next(new AppError('Not authorized', 403));
+    if (!(await hasAccessToPayment(promiseDb, req, payment))) {
+      return next(new AppError('Not authorized', 403));
+    }
 
     return res.status(200).json({
       success: true,
@@ -464,7 +525,9 @@ const processPayment = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const payment = await getPaymentByIdWithMeta(promiseDb, paymentId);
     if (!payment) return next(new AppError('Payment not found', 404));
-    if (!hasAccessToPayment(req, payment)) return next(new AppError('Not authorized', 403));
+    if (!(await hasAccessToPayment(promiseDb, req, payment))) {
+      return next(new AppError('Not authorized', 403));
+    }
 
     await promiseDb.query(
       'UPDATE payments SET payment_status = ? WHERE payment_id = ?',
@@ -476,6 +539,10 @@ const processPayment = async (req, res, next) => {
         ? { bookingStatus: 'completed', serviceStatus: 'completed', markCompletedAt: true }
         : {}),
     });
+
+    if ((nextStatus === 'completed' || nextStatus === 'paid') && payment?.cleaner_id) {
+      await syncCleanerCompletedJobs(promiseDb, Number(payment.cleaner_id));
+    }
 
     const updatedPayment = await getPaymentByIdWithMeta(promiseDb, paymentId);
     return res.status(200).json({
@@ -497,7 +564,9 @@ const refundPayment = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const payment = await getPaymentByIdWithMeta(promiseDb, paymentId);
     if (!payment) return next(new AppError('Payment not found', 404));
-    if (!hasAccessToPayment(req, payment)) return next(new AppError('Not authorized', 403));
+    if (!(await hasAccessToPayment(promiseDb, req, payment))) {
+      return next(new AppError('Not authorized', 403));
+    }
 
     await promiseDb.query(
       'UPDATE payments SET payment_status = ? WHERE payment_id = ?',
@@ -527,7 +596,9 @@ const verifyPayment = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const payment = await getPaymentByIdWithMeta(promiseDb, paymentId);
     if (!payment) return next(new AppError('Payment not found', 404));
-    if (!hasAccessToPayment(req, payment)) return next(new AppError('Not authorized', 403));
+    if (!(await hasAccessToPayment(promiseDb, req, payment))) {
+      return next(new AppError('Not authorized', 403));
+    }
 
     const normalizedStatus = String(payment.payment_status || '').trim().toLowerCase();
     const verified = normalizedStatus === 'completed' || normalizedStatus === 'paid';
@@ -660,7 +731,9 @@ const getPaymentFinalization = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const row = await getBookingWithPaymentMeta(promiseDb, bookingId);
     if (!row) return next(new AppError('Booking not found', 404));
-    if (!hasAccessToPayment(req, row)) return next(new AppError('Not authorized', 403));
+    if (!(await hasAccessToPayment(promiseDb, req, row))) {
+      return next(new AppError('Not authorized', 403));
+    }
 
     return res.status(200).json({
       success: true,
@@ -680,7 +753,9 @@ const requestFinalPayment = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const row = await getBookingWithPaymentMeta(promiseDb, bookingId);
     if (!row) return next(new AppError('Booking not found', 404));
-    if (!isAssignedCleaner(req, row)) return next(new AppError('Only the assigned cleaner can request final payment', 403));
+    if (!(await isAssignedCleaner(promiseDb, req, row))) {
+      return next(new AppError('Only the assigned cleaner can request final payment', 403));
+    }
 
     const amountDue = toFiniteAmount(row.negotiated_price ?? row.total_price, 0);
     if (amountDue <= 0) {
@@ -819,7 +894,9 @@ const confirmPaymentReceipt = async (req, res, next) => {
     await ensurePaymentWorkflowColumns(promiseDb);
     const row = await getBookingWithPaymentMeta(promiseDb, bookingId);
     if (!row) return next(new AppError('Booking not found', 404));
-    if (!isAssignedCleaner(req, row)) return next(new AppError('Only the assigned cleaner can confirm payment receipt', 403));
+    if (!(await isAssignedCleaner(promiseDb, req, row))) {
+      return next(new AppError('Only the assigned cleaner can confirm payment receipt', 403));
+    }
 
     if (!row.payment_id) return next(new AppError('No payment found for this booking', 404));
     if (!row.receipt_image_url) return next(new AppError('Customer has not uploaded a receipt yet', 400));
@@ -848,6 +925,10 @@ const confirmPaymentReceipt = async (req, res, next) => {
       paymentStatus: 'paid',
       markCompletedAt: true,
     });
+
+    if (row?.cleaner_id) {
+      await syncCleanerCompletedJobs(promiseDb, Number(row.cleaner_id));
+    }
 
     await sendBookingNotification(promiseDb, {
       title: 'Payment Confirmed',

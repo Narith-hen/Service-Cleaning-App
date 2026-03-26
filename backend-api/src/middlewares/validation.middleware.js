@@ -6,9 +6,12 @@ const validate = (req, res, next) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
-      errors: errors.array().map(err => ({
-        field: err.param,
-        message: err.msg
+      errors: errors.array().map((err) => ({
+        field: err.path || err.param || null,
+        path: err.path || err.param || null,
+        msg: err.msg,
+        message: err.msg,
+        location: err.location || null
       }))
     });
   }
