@@ -35,9 +35,52 @@
   font-size: 15px;
 }
 
+.admin-bookings-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-bookings-review-select {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.admin-bookings-review-select span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bookings-muted);
+}
+
+.admin-bookings-review-select .ant-select {
+  min-width: 220px;
+}
+
+.admin-bookings-review-select .ant-select-selector {
+  border-radius: 14px !important;
+  min-height: 46px !important;
+  border: 1px solid #d7e2ef !important;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04) !important;
+  padding: 0 14px !important;
+}
+
+.admin-bookings-review-select .ant-select-selection-wrap {
+  align-items: center;
+}
+
+.admin-bookings-review-select .ant-select-selection-item {
+  color: var(--bookings-text);
+  font-weight: 600;
+}
+
 .admin-bookings-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -69,6 +112,11 @@
 .kpi-icon.tone-green {
   background: #dcfce7;
   color: #16a34a;
+}
+
+.kpi-icon.tone-emerald {
+  background: #d1fae5;
+  color: #047857;
 }
 
 .kpi-icon.tone-rose {
@@ -596,7 +644,7 @@
   }
 
   .admin-bookings-kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -611,8 +659,26 @@
 }
 
 @media (max-width: 640px) {
+  .admin-bookings-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-bookings-review-select {
+    width: 100%;
+  }
+
+  .admin-bookings-review-select .ant-select {
+    width: 100%;
+    min-width: 0;
+  }
+
   .admin-bookings-header h1 {
     font-size: 28px;
+  }
+
+  .admin-bookings-kpi-grid {
+    grid-template-columns: 1fr;
   }
 
   .admin-bookings-filter-row {

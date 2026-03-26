@@ -1,16 +1,15 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
+import { useTranslation } from '../../../contexts/translation_context';
 import {
   DashboardOutlined,
   CalendarOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
   ToolOutlined,
-  GiftOutlined,
   StarOutlined,
   BarChartOutlined,
-  LineChartOutlined,
   SettingOutlined,
   LogoutOutlined,
   CloseOutlined
@@ -21,6 +20,7 @@ import '../../../styles/admin/sidebar.css';
 const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { ta } = useTranslation();
 
   const menuSections = [
     {
@@ -36,7 +36,6 @@ const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) 
       title: null,
       items: [
         { icon: <ToolOutlined />, label: 'Services', path: '/admin/services' },
-        { icon: <GiftOutlined />, label: 'Promotions', path: '/admin/promotions' },
         { icon: <StarOutlined />, label: 'Reviews', path: '/admin/reviews' },
       ]
     },
@@ -44,12 +43,13 @@ const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) 
       title: null,
       items: [
         { icon: <BarChartOutlined />, label: 'Revenue Analysis', path: '/admin/reports/revenue' },
-        { icon: <LineChartOutlined />, label: 'Performance', path: '/admin/reports/performance' },
       ]
     }
   ];
 
   const handleLogout = async () => {
+    const confirmed = window.confirm(ta('Are you sure want to logout?'));
+    if (!confirmed) return;
     await logout();
     navigate('/auth/login', { replace: true });
   };
@@ -62,7 +62,7 @@ const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) 
           <img className="sidebar-brand-logo" src={logoSomaet} alt="Somaet logo" />
           <div className="logo-text">
             <h2>Somaet Admin</h2>
-            <p>Enterprise Edition</p>
+            <p>{ta('Enterprise Edition')}</p>
           </div>
         </div>
         {isCompact && (
@@ -87,7 +87,7 @@ const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) 
                 onClick={() => isCompact && onClose()}
               >
                 <span className="nav-icon">{item.icon}</span>
-                <span className="nav-label">{item.label}</span>
+                <span className="nav-label">{ta(item.label)}</span>
               </NavLink>
             ))}
           </div>
@@ -98,12 +98,12 @@ const AdminSidebar = ({ isCompact = false, isOpen = true, onClose = () => {} }) 
       <div className="sidebar-footer">
         <NavLink to="/admin/settings" className="nav-item" onClick={() => isCompact && onClose()}>
           <span className="nav-icon"><SettingOutlined /></span>
-          <span className="nav-label">Settings</span>
+          <span className="nav-label">{ta('Settings')}</span>
         </NavLink>
         
         <button className="logout-btn" onClick={() => { if (isCompact) onClose(); handleLogout(); }}>
           <LogoutOutlined className="nav-icon" />
-          <span>Logout</span>
+          <span>{ta('Logout')}</span>
         </button>
       </div>
     </div>

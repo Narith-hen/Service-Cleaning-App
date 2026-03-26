@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import '../../../styles/admin/dashboard_page.css';
 import { useTheme } from '../../../contexts/theme_context';
+import { useTranslation } from '../../../contexts/translation_context';
 import { bookingRows } from '../data/bookings_data';
 import { starterCleaners } from '../data/cleaners_data';
 import { adminService } from '../services/adminService';
@@ -162,6 +163,7 @@ const dashboardViewOptions = [
 
 const DashboardPage = () => {
   const { darkMode } = useTheme();
+  const { ta } = useTranslation();
   const [topCleaners, setTopCleaners] = useState([]);
   const [dashboardPayload, setDashboardPayload] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -198,6 +200,8 @@ const DashboardPage = () => {
       .filter((booking) => booking.status !== 'Cancelled')
       .reduce((sum, booking) => sum + booking.amount, 0)
   );
+  const customerComplaints = toSafeNumber(dashboardPayload?.stats?.customer_complaints, 0);
+  const urgentComplaints = toSafeNumber(dashboardPayload?.stats?.urgent_complaints, 0);
   const activeCleanersCount = starterCleaners.filter((cleaner) => cleaner.status === 'Active').length;
   const recentBookings = Array.isArray(dashboardPayload?.recent_bookings) && dashboardPayload.recent_bookings.length > 0
     ? dashboardPayload.recent_bookings.slice(0, 5).map(mapRecentBooking)
@@ -239,10 +243,10 @@ const DashboardPage = () => {
     },
     {
       title: 'CUSTOMER COMPLAINTS',
-      value: '5',
+      value: String(customerComplaints),
       icon: <ClockCircleOutlined />,
       tone: 'red',
-      subtitle: '2 require urgent response',
+      subtitle: `${urgentComplaints} require urgent response`,
     },
   ];
 
@@ -274,15 +278,6 @@ const DashboardPage = () => {
     })),
     [rawBookingVolume]
   );
-  const bookingVolumeGrowth = useMemo(() => {
-    if (bookingVolumeTrend.length < 2) return 0;
-    const firstValue = toSafeNumber(bookingVolumeTrend[0]?.value);
-    const lastValue = toSafeNumber(bookingVolumeTrend[bookingVolumeTrend.length - 1]?.value);
-    if (firstValue === 0) {
-      return lastValue > 0 ? 100 : 0;
-    }
-    return ((lastValue - firstValue) / firstValue) * 100;
-  }, [bookingVolumeTrend]);
   const bookingChartConfig = useMemo(() => ({
     data: bookingVolumeTrend,
     xField: 'label',
@@ -290,20 +285,38 @@ const DashboardPage = () => {
     smooth: true,
     autoFit: true,
     height: 320,
+    theme: darkMode ? 'classicDark' : 'classic',
     color: '#16a34a',
+    scale: {
+      color: {
+        range: ['#16a34a']
+      }
+    },
+    lineStyle: {
+      lineWidth: 2,
+      stroke: '#16a34a'
+    },
+    line: {
+      style: {
+        lineWidth: 2,
+        stroke: '#16a34a'
+      }
+    },
     padding: [24, 20, 48, 48],
     point: {
       size: 4,
       shape: 'circle',
       style: {
-        fill: '#ffffff',
+        fill: darkMode ? '#0f1b33' : '#ffffff',
         stroke: '#16a34a',
         lineWidth: 2
       }
     },
     area: {
       style: {
-        fill: 'l(270) 0:#dcfce7 1:#ffffff'
+        fill: darkMode
+          ? 'l(270) 0:rgba(34,197,94,0.28) 1:rgba(14,23,42,0)'
+          : 'l(270) 0:#dcfce7 1:#ffffff'
       }
     },
     xAxis: {
@@ -315,7 +328,7 @@ const DashboardPage = () => {
       },
       line: {
         style: {
-          stroke: darkMode ? '#2f466a' : '#dbe5f0'
+          stroke: darkMode ? '#2b4a37' : '#cfe9d7'
         }
       }
     },
@@ -329,7 +342,7 @@ const DashboardPage = () => {
       grid: {
         line: {
           style: {
-            stroke: darkMode ? '#2f466a' : '#eef4fb',
+            stroke: darkMode ? '#2b4a37' : '#e5f5ea',
             lineDash: [4, 4]
           }
         }
@@ -381,18 +394,18 @@ const DashboardPage = () => {
     <section className={`admin-dashboard-page ${darkMode ? 'dark-mode' : ''}`}>
       <div className="dashboard-header-row">
         <div>
-          <h1 className="admin-page-title">Admin Dashboard</h1>
-          <p className="admin-page-subtitle">View platform activity, bookings, and performance insights.</p>
+          <h1 className="admin-page-title">{ta('Admin Dashboard')}</h1>
+          <p className="admin-page-subtitle">{ta('View platform activity, bookings, and performance insights.')}</p>
         </div>
 
         <label className="dashboard-earnings-select">
-          <span>Dashboard View</span>
+          <span>{ta('Dashboard View')}</span>
           <Select
             value={dashboardView}
             onChange={setDashboardView}
             options={dashboardViewOptions.map((option) => ({
               value: option.value,
-              label: option.label
+              label: ta(option.label)
             }))}
             popupMatchSelectWidth={false}
           />
@@ -419,8 +432,8 @@ const DashboardPage = () => {
       <div className="dashboard-content-grid">
         <section className="dashboard-panel">
           <div className="panel-head">
-            <h3>Recent Bookings</h3>
-            <a href="/admin/bookings">View all</a>
+            <h3>{ta('Recent Bookings')}</h3>
+            <a href="/admin/bookings">{ta('View all')}</a>
           </div>
           <div className="table-scroll">
             <table className="dashboard-table">
@@ -478,8 +491,8 @@ const DashboardPage = () => {
 
         <section className="dashboard-panel">
           <div className="panel-head">
-            <h3>Top Cleaners</h3>
-            <a href="/admin/cleaners">View all</a>
+            <h3>{ta('Top Cleaners')}</h3>
+            <a href="/admin/cleaners">{ta('View all')}</a>
           </div>
           <div className="top-cleaners-list">
             {loading ? (
@@ -524,12 +537,9 @@ const DashboardPage = () => {
       <section className="dashboard-panel booking-volume-panel">
         <div className="panel-head booking-head">
           <div>
-            <h3>Booking Performance</h3> 
+            <h3>{ta('Booking Performance')}</h3> 
             <p>{currentBookingVolumeMeta}</p>
           </div>
-          <span className={`trend-chip ${bookingVolumeGrowth >= 0 ? 'positive' : 'negative'}`}>
-            {bookingVolumeGrowth >= 0 ? '+' : ''}{bookingVolumeGrowth.toFixed(1)}%
-          </span>
         </div>
         <div className="dashboard-chart-shell">
           <Line {...bookingChartConfig} />
@@ -555,7 +565,7 @@ const DashboardPage = () => {
                 <div className="service-metrics">
                   <div className="service-meta">
                     <strong>{item.name}</strong>
-                    <span>{item.bookings} Bookings</span>
+                    <span>{item.bookings} {ta('Bookings')}</span>
                   </div>
                   <div className="service-bar">
                     <div className={`service-bar-fill tone-${item.tone}`} style={{ width: `${item.width}%` }} />
@@ -568,7 +578,7 @@ const DashboardPage = () => {
 
         <section className="dashboard-panel">
           <div className="panel-head">
-            <h3>Latest Reviews</h3>
+            <h3>{ta('Latest Reviews')}</h3>
             <a href="/admin/reviews">View all</a>
           </div>
           <div className="latest-review-list">

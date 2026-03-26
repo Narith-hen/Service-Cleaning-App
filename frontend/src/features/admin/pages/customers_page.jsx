@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import { userService } from '../services/userService';
+import { useTranslation } from '../../../contexts/translation_context';
 import '../../../styles/admin/customers_page.css';
 
 const starterCustomers = [
@@ -170,6 +171,7 @@ const mapCustomerFromApi = (user) => {
 };
 
 const CustomersPage = () => {
+  const { ta } = useTranslation();
   const [notificationApi, contextHolder] = notification.useNotification();
   const [customers, setCustomers] = useState(starterCustomers.slice(0, 0));
   const [searchText, setSearchText] = useState('');
@@ -554,8 +556,8 @@ const CustomersPage = () => {
       {contextHolder}
       <header className="customers-header">
         <div>
-          <h1 className="admin-page-title">Manage Customers</h1>
-          <p className="admin-page-subtitle">View and manage your registered customer database.</p>
+          <h1 className="admin-page-title">{ta('Manage Customers')}</h1>
+          <p className="admin-page-subtitle">{ta('View and manage your registered customer database.')}</p>
         </div>
       </header>
 

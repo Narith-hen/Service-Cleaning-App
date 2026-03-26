@@ -61,3 +61,9 @@ a {
   font-weight: 500;
   text-decoration: inherit;
 }
+
+.ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item-danger:hover,
+.ant-dropdown .ant-dropdown-menu .ant-dropdown-menu-item-danger-active {
+  background: #b91c1c !important;
+  color: #ffffff !important;
+}

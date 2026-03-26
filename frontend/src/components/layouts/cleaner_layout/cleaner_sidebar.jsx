@@ -12,10 +12,12 @@ import {
   CloseOutlined
 } from '@ant-design/icons';
 import logoSomaet from '../../../assets/Logo_somaet.png';
+import { useAuth } from '../../../hooks/useAuth';
 import '../../../styles/cleaner/sidebar.css';
 
 const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = () => {} }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const menuItems = [
     { icon: <DashboardOutlined />, label: 'Dashboard', path: '/cleaner/dashboard' },
@@ -27,9 +29,11 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
     { icon: <SettingOutlined />, label: 'Settings', path: '/cleaner/settings' },
   ];
 
-  const handleLogout = () => {
-    // Add logout logic
-    navigate('/');
+  const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure want to logout?');
+    if (!confirmed) return;
+    await logout();
+    navigate('/auth/login', { replace: true });
   };
 
   return (
@@ -67,7 +71,7 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
 
       {/* Logout Button */}
       <div className="sidebar-footer">
-        <button className="logout-btn" onClick={() => { if (isCompact) onClose(); handleLogout(); }}>
+        <button className="logout-btn" onClick={async () => { if (isCompact) onClose(); await handleLogout(); }}>
           <LogoutOutlined className="nav-icon" />
           <span>Logout</span>
         </button>

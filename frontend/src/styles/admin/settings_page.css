@@ -312,6 +312,21 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
+.settings-field input:disabled,
+.settings-field select:disabled {
+  background: #eef2f7;
+  color: #64748b;
+  cursor: not-allowed;
+  border-color: #d7e2ef;
+}
+
+.admin-layout.dark .settings-field input:disabled,
+.admin-layout.dark .settings-field select:disabled {
+  background: #172036;
+  color: #9fb3c8;
+  border-color: #334155;
+}
+
 .settings-field input:focus,
 .settings-field select:focus {
   border-color: #22c55e;
@@ -403,6 +418,8 @@
   margin-top: 18px;
   display: flex;
   justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .settings-primary-button {
@@ -421,7 +438,63 @@
   box-shadow: 0 12px 24px rgba(34, 197, 94, 0.24);
 }
 
+.settings-secondary-button {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(34, 197, 94, 0.36);
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-secondary-button:hover {
+  border-color: #16a34a;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.24);
+}
+
+.admin-layout.dark .settings-secondary-button {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+}
+
+.admin-layout.dark .settings-secondary-button:hover {
+  background: rgba(34, 197, 94, 0.28);
+  color: #dcfce7;
+}
+
+.settings-cancel-button {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--settings-border);
+  background: var(--settings-soft-bg);
+  color: var(--settings-text);
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-cancel-button:hover {
+  border-color: #94a3b8;
+  background: #e2e8f0;
+}
+
 .settings-primary-button:disabled,
+.settings-secondary-button:disabled,
+.settings-cancel-button:disabled,
 .settings-avatar-button:disabled,
 .toggle-switch:disabled {
   opacity: 0.6;

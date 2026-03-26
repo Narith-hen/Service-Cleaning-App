@@ -111,8 +111,10 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
   const showDarkModeToggle = true;
 
   const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure want to logout?');
+    if (!confirmed) return;
     await logout();
-    navigate('/auth/login');
+    navigate('/auth/login', { replace: true });
   };
 
   const profileMenu = {

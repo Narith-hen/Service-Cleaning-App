@@ -9,14 +9,20 @@ import {
   SmileOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
-import { Modal } from 'antd';
+import { Modal, Select } from 'antd';
 import '../../../styles/admin/bookings_page.css';
 import { bookingService } from '../services/bookingService';
+import { useTranslation } from '../../../contexts/translation_context';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 const STATUS_ORDER = ['Pending', 'Booked', 'Confirmed', 'Started', 'In Progress', 'Payment Required', 'Completed', 'Cancelled'];
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 'all'];
+const BOOKING_REVIEW_RANGE_OPTIONS = [
+  { value: 'week', label: 'Weekly' },
+  { value: 'month', label: 'Monthly' },
+  { value: 'total', label: 'All' }
+];
 
 const toAbsoluteImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
@@ -81,6 +87,28 @@ const formatDuration = (totalSeconds) => {
 const formatStatusLabel = (value) => String(value || 'pending')
   .replace(/_/g, ' ')
   .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const resolveRangeStart = (range) => {
+  const normalized = String(range || 'total').trim().toLowerCase();
+  if (normalized === 'total') return null;
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  if (normalized === 'week') {
+    const day = start.getDay();
+    const offset = day === 0 ? 6 : day - 1;
+    start.setDate(start.getDate() - offset);
+    return start;
+  }
+
+  if (normalized === 'month') {
+    start.setDate(1);
+    return start;
+  }
+
+  return null;
+};
 
 const normalizeStatusKey = (value) => String(value || 'pending')
   .trim()
@@ -201,6 +229,8 @@ const mapBookingRow = (row) => {
     cleanerAvatar: toAbsoluteImageUrl(row?.cleaner_avatar || row?.cleaner?.avatar || ''),
     date: formatBookingDate(bookingDateSource),
     time: formatBookingTime(bookingTimeSource),
+    dateRaw: bookingDateSource || null,
+    createdAt: row?.created_at || null,
     amount: toSafeNumber(row?.negotiated_price ?? row?.total_price ?? row?.payment_amount),
     status: displayStatus.label,
     statusKey: displayStatus.key,
@@ -333,12 +363,14 @@ const fetchAllBookings = async () => {
 };
 
 const BookingsPage = () => {
+  const { ta } = useTranslation();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [serviceFilter, setServiceFilter] = useState('All');
+  const [bookingReviewRange, setBookingReviewRange] = useState('total');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -433,19 +465,27 @@ const BookingsPage = () => {
   }, [rows, searchText, statusFilter, serviceFilter]);
 
   const bookingStats = useMemo(() => {
-    const total = rows.length;
-    const ongoing = rows.filter((row) => (
-      ['booked', 'confirmed', 'started', 'in_progress'].includes(row.statusKey)
-    )).length;
-    const cancelled = rows.filter((row) => row.statusKey === 'cancelled').length;
-    const cancellationRate = total > 0 ? ((cancelled / total) * 100).toFixed(1) : '0.0';
+    const rangeStart = resolveRangeStart(bookingReviewRange);
+    const scopedRows = rangeStart
+      ? rows.filter((row) => {
+          const parsedDate = new Date(row.createdAt || row.dateRaw || '');
+          if (Number.isNaN(parsedDate.getTime())) return false;
+          return parsedDate >= rangeStart;
+        })
+      : rows;
+
+    const total = scopedRows.length;
+    const confirmed = scopedRows.filter((row) => row.statusKey === 'confirmed').length;
+    const completed = scopedRows.filter((row) => row.statusKey === 'completed').length;
+    const cancelled = scopedRows.filter((row) => row.statusKey === 'cancelled').length;
 
     return {
       total,
-      ongoing,
-      cancellationRate,
+      confirmed,
+      completed,
+      cancelled,
     };
-  }, [rows]);
+  }, [rows, bookingReviewRange]);
 
   const isShowingAllRows = pageSize === 'all';
   const effectivePageSize = isShowingAllRows ? Math.max(filteredRows.length, 1) : Number(pageSize);
@@ -470,25 +510,45 @@ const BookingsPage = () => {
   return (
     <section className="admin-bookings-page">
       <header className="admin-bookings-header">
-        <h1 className="admin-page-title">Manage Bookings</h1>
-        <p className="admin-page-subtitle">Manage, track and coordinate all cleaning appointments.</p>
+        <div>
+          <h1 className="admin-page-title">{ta('Manage Bookings')}</h1>
+          <p className="admin-page-subtitle">{ta('Manage, track and coordinate all cleaning appointments.')}</p>
+        </div>
+
+        <label className="admin-bookings-review-select">
+          <span>{ta('Booking Review')}</span>
+          <Select
+            value={bookingReviewRange}
+            onChange={setBookingReviewRange}
+            options={BOOKING_REVIEW_RANGE_OPTIONS.map((option) => ({
+              ...option,
+              label: ta(option.label)
+            }))}
+            popupMatchSelectWidth={false}
+          />
+        </label>
       </header>
 
       <section className="admin-bookings-kpi-grid">
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-blue"><FileTextOutlined /></div>
-          <span className="kpi-label">TOTAL BOOKINGS</span>
+          <span className="kpi-label">{ta('TOTAL BOOKINGS')}</span>
           <h3>{bookingStats.total.toLocaleString()}</h3>
         </article>
         <article className="admin-bookings-kpi-card">
-          <div className="kpi-icon tone-green"><SyncOutlined /></div>
-          <span className="kpi-label">ONGOING NOW</span>
-          <h3>{bookingStats.ongoing.toLocaleString()}</h3>
+          <div className="kpi-icon tone-emerald"><SmileOutlined /></div>
+          <span className="kpi-label">{ta('CONFIRMED')}</span>
+          <h3>{bookingStats.confirmed.toLocaleString()}</h3>
+        </article>
+        <article className="admin-bookings-kpi-card">
+          <div className="kpi-icon tone-green"><CheckCircleOutlined /></div>
+          <span className="kpi-label">{ta('COMPLETED')}</span>
+          <h3>{bookingStats.completed.toLocaleString()}</h3>
         </article>
         <article className="admin-bookings-kpi-card">
           <div className="kpi-icon tone-rose"><CloseCircleOutlined /></div>
-          <span className="kpi-label">CANCELLATION RATE</span>
-          <h3>{bookingStats.cancellationRate}%</h3>
+          <span className="kpi-label">{ta('CANCELLED')}</span>
+          <h3>{bookingStats.cancelled.toLocaleString()}</h3>
         </article>
       </section>
 
@@ -497,7 +557,7 @@ const BookingsPage = () => {
           <SearchOutlined />
           <input
             type="text"
-            placeholder="Search by Booking ID, Customer..."
+            placeholder={ta('Search by Booking ID, Customer...')}
             value={searchText}
             onChange={(event) => {
               setSearchText(event.target.value);
@@ -515,7 +575,7 @@ const BookingsPage = () => {
         >
           {statusOptions.map((status) => (
             <option key={status} value={status}>
-              {status === 'All' ? 'Status: All' : status}
+              {status === 'All' ? ta('Status: All') : ta(status)}
             </option>
           ))}
         </select>
@@ -529,7 +589,7 @@ const BookingsPage = () => {
         >
           {serviceOptions.map((service) => (
             <option key={service} value={service}>
-              {service === 'All' ? 'Service Type' : service}
+              {service === 'All' ? ta('Service Type') : service}
             </option>
           ))}
         </select>
@@ -540,21 +600,21 @@ const BookingsPage = () => {
           <table className="bookings-table">
             <thead>
               <tr>
-                <th>BOOKING ID</th>
-                <th>CUSTOMER</th>
-                <th>SERVICE TYPE</th>
-                <th>CLEANER</th>
-                <th>DATE & TIME</th>
-                <th>AMOUNT</th>
-                <th>STATUS</th>
-                <th>ACTIONS</th>
+                <th>{ta('BOOKING ID')}</th>
+                <th>{ta('CUSTOMER')}</th>
+                <th>{ta('SERVICE TYPE')}</th>
+                <th>{ta('CLEANER')}</th>
+                <th>{ta('DATE & TIME')}</th>
+                <th>{ta('AMOUNT')}</th>
+                <th>{ta('STATUS')}</th>
+                <th>{ta('ACTIONS')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td className="empty-row" colSpan={8}>
-                    Loading booking data...
+                    {ta('Loading booking data...')}
                   </td>
                 </tr>
               ) : errorMessage ? (
@@ -632,7 +692,7 @@ const BookingsPage = () => {
               ) : (
                 <tr>
                   <td className="empty-row" colSpan={8}>
-                    No bookings match the current filters.
+                    {ta('No bookings match the current filters.')}
                   </td>
                 </tr>
               )}
@@ -641,10 +701,10 @@ const BookingsPage = () => {
         </div>
 
         <footer className="bookings-pagination">
-          <span>Showing {pageStart}-{pageEnd} of {filteredRows.length} results</span>
+          <span>{ta('Showing')} {pageStart}-{pageEnd} {ta('of')} {filteredRows.length} {ta('results')}</span>
           <div className="pager-actions">
             <label className="rows-label">
-              Rows per page
+              {ta('Rows per page')}
               <select
                 value={pageSize}
                 onChange={(event) => {
@@ -655,7 +715,7 @@ const BookingsPage = () => {
               >
                 {PAGE_SIZE_OPTIONS.map((value) => (
                   <option key={value} value={value}>
-                    {value === 'all' ? 'All' : value}
+                    {value === 'all' ? ta('All') : value}
                   </option>
                 ))}
               </select>
@@ -666,7 +726,7 @@ const BookingsPage = () => {
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={isShowingAllRows || currentPage === totalPages}
             >
-              Next
+              {ta('Next')}
             </button>
           </div>
         </footer>

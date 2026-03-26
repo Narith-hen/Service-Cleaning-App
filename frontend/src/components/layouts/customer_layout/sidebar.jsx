@@ -130,6 +130,8 @@ const Sidebar = ({
 
   const handleAuthAction = async () => {
     if (user) {
+      const confirmed = window.confirm('Are you sure want to logout?');
+      if (!confirmed) return;
       await logout();
       onNavigate('/auth/login');
       onClose();

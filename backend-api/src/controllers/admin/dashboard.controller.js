@@ -187,6 +187,7 @@ const getAdminDashboard = async (req, res, next) => {
       [bookingCountRows],
       [revenueRows],
       [serviceCountRows],
+      [complaintStatsRows],
       [recentBookingRows],
       [recentUserRows],
       [topServiceRows],
@@ -210,6 +211,16 @@ const getAdminDashboard = async (req, res, next) => {
           ${revenueFilterSql}
       `, [ADMIN_EARNING_PER_PAID_BOOKING, ...revenueQueryParams]),
       promiseDb.query('SELECT COUNT(*) AS total_services FROM services'),
+      promiseDb.query(
+        `
+          SELECT
+            COALESCE(SUM(CASE WHEN COALESCE(r.rating, 0) <= 2 THEN 1 ELSE 0 END), 0) AS customer_complaints,
+            COALESCE(SUM(CASE WHEN COALESCE(r.rating, 0) <= 1 THEN 1 ELSE 0 END), 0) AS urgent_complaints
+          FROM reviews r
+          ${reviewFilterSql}
+        `,
+        reviewQueryParams
+      ),
       promiseDb.query(`
         SELECT
           b.booking_id,
@@ -302,6 +313,8 @@ const getAdminDashboard = async (req, res, next) => {
           total_bookings: Number(bookingCountRows?.[0]?.total_bookings || 0),
           total_revenue: Number(revenueRows?.[0]?.total_revenue || 0),
           total_services: Number(serviceCountRows?.[0]?.total_services || 0),
+          customer_complaints: Number(complaintStatsRows?.[0]?.customer_complaints || 0),
+          urgent_complaints: Number(complaintStatsRows?.[0]?.urgent_complaints || 0),
           revenue_range: normalizedRange
         },
         recent_bookings: (recentBookingRows || []).map((row) => ({
