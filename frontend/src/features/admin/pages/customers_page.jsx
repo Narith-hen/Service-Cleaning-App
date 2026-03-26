@@ -109,6 +109,7 @@ const starterCustomers = [
 
 const statusFilters = ['All', 'Active', 'Inactive'];
 const tierFilters = ['All', 'VIP', 'Regular', 'New Customer', 'One-Time / Monthly'];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 'all'];
 
 const getInitials = (fullName) => {
   const [first = '', last = ''] = fullName.split(' ');
@@ -241,11 +242,19 @@ const CustomersPage = () => {
     });
   }, [customers, searchText, statusFilter, tierFilter]);
 
-  const pages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
+  const isShowingAllRows = pageSize === 'all';
+  const effectivePageSize = isShowingAllRows ? Math.max(filteredCustomers.length, 1) : Number(pageSize);
+  const pages = isShowingAllRows ? 1 : Math.max(1, Math.ceil(filteredCustomers.length / effectivePageSize));
   const page = Math.min(currentPage, pages);
-  const pagedCustomers = filteredCustomers.slice((page - 1) * pageSize, page * pageSize);
-  const pageStart = filteredCustomers.length === 0 ? 0 : (page - 1) * pageSize + 1;
-  const pageEnd = Math.min(page * pageSize, filteredCustomers.length);
+  const pagedCustomers = isShowingAllRows
+    ? filteredCustomers
+    : filteredCustomers.slice((page - 1) * effectivePageSize, page * effectivePageSize);
+  const pageStart = filteredCustomers.length === 0 ? 0 : isShowingAllRows ? 1 : (page - 1) * effectivePageSize + 1;
+  const pageEnd = filteredCustomers.length === 0
+    ? 0
+    : isShowingAllRows
+      ? filteredCustomers.length
+      : Math.min(page * effectivePageSize, filteredCustomers.length);
 
   useEffect(() => {
     if (currentPage > pages) {
@@ -600,7 +609,7 @@ const CustomersPage = () => {
                 <th>CUSTOMER</th>
                 <th>PHONE NUMBER</th>
                 <th>TOTAL BOOKINGS</th>
-                <th>ACCOUNT STATUS</th>
+                <th>STATUS</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
@@ -698,21 +707,17 @@ const CustomersPage = () => {
                 setPageSize(value);
                 setCurrentPage(1);
               }}
-              options={[10, 20, 50].map((value) => ({ label: value, value }))}
+              options={PAGE_SIZE_OPTIONS.map((value) => ({
+                label: value === 'all' ? 'All' : value,
+                value
+              }))}
               className="page-size-select"
             />
             <button
               type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
               className="next"
               onClick={() => setCurrentPage((prev) => Math.min(pages, prev + 1))}
-              disabled={page === pages}
+              disabled={isShowingAllRows || page === pages}
             >
               Next
             </button>

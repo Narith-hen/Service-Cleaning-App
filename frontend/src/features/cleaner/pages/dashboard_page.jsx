@@ -10,11 +10,10 @@ import {
   DollarOutlined
 } from '@ant-design/icons';
 import api from '../../../services/api';
+import { formatSingleTimeLabel, formatTimeRangeLabel } from '../../../utils/timeFormat';
 import '../../../styles/cleaner/dashboard.scss';
 import { cleanerEarningsSummary, formatMoney } from '../data/earnings_data';
 import { fetchCleanerEarnings } from '../services/earningsService';
-
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
 const FALLBACK_COMPLETED_JOBS = 2;
 const FALLBACK_PENDING_REQUESTS = 1;
 
@@ -167,11 +166,12 @@ const formatBookingTimeParts = (bookingDate, bookingTime) => {
   const rawTime = String(bookingTime || '').trim();
   if (rawTime) {
     const startTime = rawTime.split('-').map((part) => part.trim()).filter(Boolean)[0] || rawTime;
-    const match = startTime.match(/^(\d{1,2}:\d{2})\s*([AaPp][Mm])$/);
-    if (match) {
+    const formattedStartTime = formatSingleTimeLabel(startTime, '');
+    if (formattedStartTime) {
+      const [timePart, meridiemPart] = formattedStartTime.split(/\s+/);
       return {
-        time: match[1],
-        meridiem: match[2].toUpperCase()
+        time: timePart || 'TBD',
+        meridiem: meridiemPart || ''
       };
     }
   }
@@ -205,8 +205,9 @@ const formatTimeParts = (dateValue) => {
 
 const formatBookingStatus = (status) => {
   const normalized = String(status || '').toLowerCase().replace(/_/g, '-');
-  if (normalized === 'in-progress') return 'IN PROGRESS';
+  if (normalized === 'in-progress' || normalized === 'started') return 'IN PROGRESS';
   if (normalized === 'confirmed') return 'UPCOMING';
+  if (normalized === 'accepted' || normalized === 'booked') return 'UPCOMING';
   if (normalized === 'pending') return 'PENDING';
   if (normalized === 'completed') return 'COMPLETED';
   return 'UPCOMING';
@@ -214,6 +215,7 @@ const formatBookingStatus = (status) => {
 
 const getStatusClassName = (statusLabel) => {
   if (statusLabel === 'IN PROGRESS') return 'in-progress';
+  if (statusLabel === 'COMPLETED') return 'completed';
   return 'upcoming';
 };
 
@@ -226,8 +228,8 @@ const mapUpcomingJob = (job) => {
     meridiem,
     title: job?.service?.name || 'Cleaning Service',
     location: customerName,
-    duration: job?.booking_time || 'Scheduled service',
-    amount: formatCurrency(job?.total_price),
+    duration: formatTimeRangeLabel(job?.booking_time, 'Scheduled service'),
+    amount: formatCurrency(job?.negotiated_price ?? job?.total_price),
     status: formatBookingStatus(job?.booking_status)
   };
 };
@@ -463,9 +465,7 @@ const CleanerDashboardPage = () => {
               <span className={`stat-icon ${item.tone}`}>{item.icon}</span>
               {item.note ? (
                 <span className={`stat-note ${item.tone}`}>{item.note}</span>
-              ) : (
-                <StarOutlined className="stat-star" />
-              )}
+              ) : null}
             </div>
             <p className="stat-title">{item.title}</p>
             <p className="stat-value">{item.value}</p>

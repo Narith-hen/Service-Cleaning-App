@@ -139,8 +139,16 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 app.use((err, req, res, next) => {
-  console.error(err);
   const statusCode = Number(err?.statusCode || err?.status) || 500;
+  const isOperational = Boolean(err?.isOperational);
+  const shouldLog = !isOperational || statusCode >= 500;
+
+  if (shouldLog) {
+    console.error(err);
+  } else {
+    console.warn(`${req.method} ${req.originalUrl} -> ${statusCode}: ${err?.message || 'Request failed'}`);
+  }
+
   res.status(statusCode).json({
     success: false,
     message: err?.message || 'Internal server error'

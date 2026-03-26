@@ -82,6 +82,8 @@ const normalizeBooking = (booking) => ({
   booking_status: String(booking?.booking_status || booking?.status || '').toLowerCase(),
   booking_date: booking?.booking_date || new Date().toISOString(),
   booking_time: booking?.booking_time || '09:00 AM',
+  total_price: booking?.total_price ?? booking?.price ?? null,
+  negotiated_price: booking?.negotiated_price ?? null,
   address:
     booking?.address
     || booking?.location
@@ -91,6 +93,12 @@ const normalizeBooking = (booking) => ({
   service: booking?.service || { name: booking?.service_name || booking?.serviceTitle || 'Cleaning Service' },
   cleaner: buildCleanerPayload(booking)
 });
+
+const formatMoney = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '';
+  return `$${numeric.toFixed(2)}`;
+};
 
 const getAuthToken = () => {
   try {
@@ -601,6 +609,9 @@ const CustomerMessagesPage = () => {
     || activeBooking?.service_location
     || activeBooking?.service?.location
     || 'Location not provided';
+  const negotiatedPrice = activeBooking?.negotiated_price != null
+    ? formatMoney(activeBooking.negotiated_price)
+    : '';
   return (
     <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
       <div className="customer-messages-header" data-customer-reveal>
@@ -718,6 +729,19 @@ const CustomerMessagesPage = () => {
                 <button type="button" className="my-jobs-contract-btn">
                   <FileTextOutlined /> View Full Job Contract
                 </button>
+
+                {negotiatedPrice && (
+                  <div className="my-jobs-price-card">
+                    <div className="my-jobs-price-header">
+                      <div>
+                        <small>NEGOTIATED PRICE</small>
+                        <strong>{negotiatedPrice}</strong>
+                      </div>
+                      <span className="my-jobs-price-badge">Cleaner</span>
+                    </div>
+                    <p className="my-jobs-price-status">Your cleaner submitted a new agreed price.</p>
+                  </div>
+                )}
 
                 <div className="my-jobs-map-preview" />
               </aside>

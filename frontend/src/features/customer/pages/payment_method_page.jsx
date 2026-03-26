@@ -48,6 +48,7 @@ const PaymentMethodPage = () => {
   const paymentStatus = String(finalization?.payment_status || '').toLowerCase();
   const isReceiptSubmitted = paymentStatus === 'receipt_submitted';
   const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
+  const canReviewService = isReceiptSubmitted || isPaymentConfirmed;
   const canSubmitReceipt = !isReceiptSubmitted && !isPaymentConfirmed;
   const isPdfReceipt = receiptFile?.type === 'application/pdf';
 
@@ -272,6 +273,20 @@ const PaymentMethodPage = () => {
             >
               Back To History
             </button>
+
+            {bookingId && canReviewService && (
+              <button
+                type="button"
+                className="back-history-button"
+                onClick={() => navigate(`/customer/write-review/${bookingId}`, {
+                  state: {
+                    from: `/customer/payment-methods?bookingId=${bookingId}`
+                  }
+                })}
+              >
+                Review Service
+              </button>
+            )}
 
             {statusText && <p className="payment-status-text">{statusText}</p>}
           </>

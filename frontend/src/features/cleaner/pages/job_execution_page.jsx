@@ -13,8 +13,9 @@ import {
 import '../../../styles/cleaner/job_execution.scss';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import api from '../../../services/api';
+import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 
-const CONFIRMED_MY_JOBS_STORAGE_KEY = 'cleaner_confirmed_my_jobs';
+const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 
 const fallbackJob = {
   id: 'default-1',
@@ -80,7 +81,7 @@ const JobExecutionPage = () => {
 
   const currentJob = useMemo(() => {
     try {
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
       if (!raw) return fallbackJob;
 
       const parsed = JSON.parse(raw);

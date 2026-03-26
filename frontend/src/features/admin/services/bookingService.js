@@ -7,22 +7,25 @@ export const bookingService = {
   },
 
   getBookingById: async (bookingId) => {
-    const response = await api.get(`/admin/bookings/${bookingId}`);
+    const response = await api.get(`/bookings/${bookingId}`);
     return response.data;
   },
 
   updateBookingStatus: async (bookingId, status) => {
-    const response = await api.patch(`/admin/bookings/${bookingId}/status`, { status });
+    const payload = typeof status === 'object' && status !== null
+      ? status
+      : { booking_status: status };
+    const response = await api.patch(`/bookings/${bookingId}/status`, payload);
     return response.data;
   },
 
   cancelBooking: async (bookingId, reason) => {
-    const response = await api.post(`/admin/bookings/${bookingId}/cancel`, { reason });
+    const response = await api.patch(`/bookings/${bookingId}/cancel`, { reason });
     return response.data;
   },
 
   assignCleaner: async (bookingId, cleanerId) => {
-    const response = await api.post(`/admin/bookings/${bookingId}/assign`, { cleanerId });
+    const response = await api.post(`/admin/bookings/${bookingId}/assign`, { cleaner_id: cleanerId });
     return response.data;
   },
 
@@ -39,7 +42,7 @@ export const bookingService = {
   },
 
   getBookingHistory: async (bookingId) => {
-    const response = await api.get(`/admin/bookings/${bookingId}/history`);
+    const response = await api.get(`/bookings/history/${bookingId}`);
     return response.data;
   }
 };

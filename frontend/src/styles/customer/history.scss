@@ -301,6 +301,24 @@
   color: #b45309;
 }
 
+.customer-history-status.paid {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.customer-history-status.payment-submitted {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.customer-history-status.reviewed {
+  border-color: #c7d2fe;
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
 .customer-history-status.cancelled {
   border-color: #fca5a5;
   background: #fee2e2;
@@ -385,6 +403,14 @@
   color: #fff;
   border-color: #f59e0b;
   box-shadow: 0 12px 24px rgba(245, 158, 11, 0.22);
+}
+
+.customer-history-review-btn {
+  gap: 8px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
 }
 
 .customer-history-empty {

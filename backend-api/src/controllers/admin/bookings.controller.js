@@ -70,8 +70,11 @@ const getAllBookings = async (req, res, next) => {
         SELECT
           b.*,
           ${customerNameExpr} AS user_name,
+          ${userColumns.has('avatar') ? 'u.avatar' : 'NULL'} AS customer_avatar,
           u.email AS user_email,
           COALESCE(${cleanerUserNameExpr}, NULLIF(cp.company_name, ''), CONCAT('Cleaner #', b.cleaner_id)) AS cleaner_name,
+          COALESCE(NULLIF(cp.company_email, ''), ${userColumns.has('email') ? 'c.email' : 'NULL'}) AS cleaner_email,
+          COALESCE(cp.profile_image, ${userColumns.has('avatar') ? 'c.avatar' : 'NULL'}) AS cleaner_avatar,
           s.name AS service_name,
           s.description AS service_description,
           p.payment_id,

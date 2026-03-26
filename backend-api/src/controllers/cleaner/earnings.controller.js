@@ -97,7 +97,7 @@ const mapRecentPaymentRow = (row) => ({
     },
     user: {
       user_id: Number(row?.user_id || 0),
-      username: row?.username || `Customer #${row?.user_id || ''}`
+      username: row?.customer_name || `Customer #${row?.user_id || ''}`
     }
   }
 });
@@ -145,7 +145,7 @@ const getEarnings = async (req, res, next) => {
           b.booking_date,
           b.total_price,
           u.user_id,
-          u.username,
+          TRIM(CONCAT_WS(' ', u.first_name, u.last_name)) AS customer_name,
           s.service_id,
           s.name AS service_name
         FROM payments p

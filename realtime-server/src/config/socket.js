@@ -1,10 +1,36 @@
 const { Server } = require('socket.io');
 const { redis, subscriber } = require('./redis');
+const fs = require('fs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const dotenv = require('dotenv');
 
 const connectedUsers = new Map(); // userId -> socketId
 const userSockets = new Map(); // socketId -> userId
 const DEV_JWT_FALLBACK_SECRET = 'dev-local-jwt-secret-change-me';
+let backendJwtSecretCache;
+
+const getBackendJwtSecret = () => {
+  if (backendJwtSecretCache !== undefined) {
+    return backendJwtSecretCache;
+  }
+
+  try {
+    const backendEnvPath = path.resolve(__dirname, '../../../backend-api/.env');
+    if (!fs.existsSync(backendEnvPath)) {
+      backendJwtSecretCache = '';
+      return backendJwtSecretCache;
+    }
+
+    const parsed = dotenv.parse(fs.readFileSync(backendEnvPath));
+    backendJwtSecretCache = String(parsed?.JWT_SECRET || '').trim();
+    return backendJwtSecretCache;
+  } catch (error) {
+    console.warn('[socket] Unable to read backend JWT secret:', error.message);
+    backendJwtSecretCache = '';
+    return backendJwtSecretCache;
+  }
+};
 
 const verifySocketToken = (token) => {
   const configuredSecret = String(process.env.JWT_SECRET || '').trim();
@@ -12,6 +38,11 @@ const verifySocketToken = (token) => {
 
   if (configuredSecret) {
     secretsToTry.push(configuredSecret);
+  }
+
+  const backendSecret = getBackendJwtSecret();
+  if (backendSecret && backendSecret !== configuredSecret) {
+    secretsToTry.push(backendSecret);
   }
 
   // Match the backend's development fallback so local API tokens also work
@@ -318,6 +349,10 @@ const handleMessageRead = (io, data) => {
     updatedCount: Number(data?.updatedCount || 0),
     seenAt: data?.seenAt || new Date().toISOString()
   };
+
+  if (!payload.messageId && payload.updatedCount <= 0) {
+    return;
+  }
 
   io.to(`booking:${bookingId}`).emit('messages:seen', payload);
 };
