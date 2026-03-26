@@ -157,7 +157,6 @@ const CustomerHomePage = () => {
   }, []);
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
-  const [motionEnabled, setMotionEnabled] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -177,41 +176,6 @@ const CustomerHomePage = () => {
     fetchServices();
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return undefined;
-
-    const elements = document.querySelectorAll('.customer-home-landing .reveal');
-    if (!elements.length) return undefined;
-
-    setMotionEnabled(true);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        });
-      },
-      {
-        threshold: 0.18,
-        rootMargin: '0px 0px -10% 0px'
-      }
-    );
-
-    const frame = window.requestAnimationFrame(() => {
-      elements.forEach((element) => observer.observe(element));
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [loadingServices, services.length]);
-
   const handleBookService = (service) => {
     navigate('/customer/bookings', {
       state: {
@@ -228,7 +192,7 @@ const CustomerHomePage = () => {
   };
 
   return (
-    <div className={`customer-home-landing ${motionEnabled ? 'motion-enhanced' : ''}`}>
+    <div className="customer-home-landing">
       <section className="editorial-hero reveal">
         <div className="hero-copy">
           <h1>

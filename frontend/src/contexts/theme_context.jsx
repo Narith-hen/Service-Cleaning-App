@@ -5,8 +5,13 @@ const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
   const getInitialTheme = () => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme || 'light'; 
+    try {
+      const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
+      return savedTheme || 'light';
+    } catch (error) {
+      console.error('Failed to read theme from storage:', error);
+      return 'light';
+    }
   };
 
   const [theme, setTheme] = useState(getInitialTheme);
@@ -16,17 +21,23 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     setDarkMode(theme === 'dark');
     
-    // Apply theme to document body
-    if (theme === 'dark') {
-      document.body.classList.add('dark-mode');
-      document.body.classList.remove('light-mode');
-    } else {
-      document.body.classList.add('light-mode');
-      document.body.classList.remove('dark-mode');
+    if (typeof document !== 'undefined') {
+      if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+      } else {
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
+      }
     }
     
-    // Save to localStorage
-    localStorage.setItem('theme', theme);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('theme', theme);
+      }
+    } catch (error) {
+      console.error('Failed to save theme to storage:', error);
+    }
   }, [theme]);
 
   // Toggle theme function

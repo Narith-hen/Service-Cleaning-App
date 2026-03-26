@@ -18,7 +18,9 @@ const MainLayout = () => {
     location.pathname === '/customer/dashboard' || location.pathname === '/customer/home';
   
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
+  const [viewportWidth, setViewportWidth] = useState(() => (
+    typeof window === 'undefined' ? TARGET_SCREEN_BREAKPOINT : window.innerWidth
+  ));
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const mainContentRef = React.useRef(null);

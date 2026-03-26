@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import homeImage from '../../../assets/image.png';
 import ctaBgImage from '../../../assets/WelcomeService.png';
@@ -9,49 +9,59 @@ import '../../../styles/public/home.scss';
 
 export default function PublicHomePage() {
   const { darkMode = false } = useOutletContext() || {};
+  const [motionReady, setMotionReady] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const elements = document.querySelectorAll('.public-home-reveal');
+    if (!elements.length) return undefined;
 
-    if (prefersReducedMotion) {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
       elements.forEach((element) => element.classList.add('is-visible'));
+      setMotionReady(false);
       return undefined;
     }
 
-    // Immediately reveal elements that are already in the initial viewport
-    const initialVisibleRect = window.innerHeight * 0.5; // Check first 50% of viewport
-    elements.forEach((element) => {
-      const rect = element.getBoundingClientRect();
-      if (rect.top < initialVisibleRect && rect.bottom > 0) {
-        element.classList.add('is-visible');
-      }
-    });
+    try {
+      const initialVisibleRect = window.innerHeight * 0.7;
+      elements.forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        if (rect.top < initialVisibleRect && rect.bottom > 0) {
+          element.classList.add('is-visible');
+        }
+      });
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        });
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '0px 0px 0px 0px'
-      }
-    );
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -8% 0px'
+        }
+      );
 
-    elements.forEach((element) => {
-      // Only observe elements that aren't already visible
-      if (!element.classList.contains('is-visible')) {
-        observer.observe(element);
-      }
-    });
+      elements.forEach((element) => {
+        if (!element.classList.contains('is-visible')) {
+          observer.observe(element);
+        }
+      });
 
-    return () => observer.disconnect();
+      setMotionReady(true);
+
+      return () => observer.disconnect();
+    } catch (error) {
+      console.error('Failed to initialize public home motion:', error);
+      elements.forEach((element) => element.classList.add('is-visible'));
+      setMotionReady(false);
+      return undefined;
+    }
   }, []);
 
   const testimonials = [
@@ -103,7 +113,7 @@ export default function PublicHomePage() {
   ];
 
   return (
-    <div className={`public-home-page ${darkMode ? 'bg-[#0b1220] text-slate-100' : 'bg-white text-gray-800'} font-sans`}>
+    <div className={`public-home-page ${motionReady ? 'public-home-motion-ready' : ''} ${darkMode ? 'bg-[#0b1220] text-slate-100' : 'bg-white text-gray-800'} font-sans`}>
       <section id="home" className={darkMode ? 'bg-[#111b2f]' : 'bg-[#f2f4f3]'}>
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 py-14 md:grid-cols-2 md:px-10 lg:px-16">
           <div className="public-home-reveal max-w-xl text-left">

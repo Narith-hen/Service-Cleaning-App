@@ -4,7 +4,7 @@
   --public-home-shadow-hover: 0 28px 60px rgba(15, 23, 42, 0.18);
 }
 
-.public-home-page .public-home-reveal {
+.public-home-page.public-home-motion-ready .public-home-reveal {
   opacity: 0;
   transform: translate3d(0, 36px, 0) scale(0.985);
   transition:
@@ -16,7 +16,7 @@
   will-change: opacity, transform;
 }
 
-.public-home-page .public-home-reveal.is-visible {
+.public-home-page.public-home-motion-ready .public-home-reveal.is-visible {
   opacity: 1;
   transform: translate3d(0, 0, 0) scale(1);
 }
