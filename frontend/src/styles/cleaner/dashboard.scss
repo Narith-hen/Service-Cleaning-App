@@ -128,11 +128,6 @@
   color: #d97706;
 }
 
-.stat-star {
-  color: #fbbf24;
-  font-size: 14px;
-}
-
 .stat-title {
   margin: 0;
   font-size: 14px;
@@ -308,6 +303,11 @@
 
 .job-status.upcoming {
   background: #ecfdf3;
+  color: #15803d;
+}
+
+.job-status.completed {
+  background: #dcfce7;
   color: #15803d;
 }
 

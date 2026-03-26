@@ -1,8 +1,13 @@
 import api from '../../../services/api';
 
 export const reportService = {
-  getRevenueReport: async (filters) => {
+  getRevenueReport: async (filters = {}) => {
     const response = await api.get('/admin/reports/revenue', { params: filters });
+    return response.data;
+  },
+
+  getPerformanceReport: async (filters = {}) => {
+    const response = await api.get('/admin/reports/performance', { params: filters });
     return response.data;
   },
 
@@ -12,7 +17,7 @@ export const reportService = {
   },
 
   getCleanerPerformanceReport: async (filters) => {
-    const response = await api.get('/admin/reports/cleaner-performance', { params: filters });
+    const response = await api.get('/admin/reports/performance', { params: filters });
     return response.data;
   },
 

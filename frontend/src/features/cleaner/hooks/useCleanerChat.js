@@ -472,7 +472,7 @@ export const useCleanerChat = ({ threadId, receiverId }) => {
     const threads = readStoredThreads();
     const updated = { ...threads, [normalizedThreadId]: messages };
     try {
-      localStorage.setItem(CLEANER_CHAT_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(getCleanerChatStorageKey(), JSON.stringify(updated));
     } catch {
       // localStorage quota exceeded — retry without imageUrl to save space.
       const fallback = messages.map(({ imageUrl, imageName, ...rest }) => rest);

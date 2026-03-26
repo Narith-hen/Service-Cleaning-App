@@ -9,6 +9,43 @@ const resolveCleanerRatingColumn = (columnSet) => {
   return '';
 };
 
+const syncCleanerCompletedJobs = async (promiseDb, cleanerId = null) => {
+  const cleanerProfileColumns = await getCleanerProfileColumns(promiseDb);
+  if (!cleanerProfileColumns.has('total_jobs')) {
+    return {
+      cleanerProfileColumns,
+      updated: false
+    };
+  }
+
+  const params = [];
+  const whereClause = cleanerId ? 'WHERE cp.cleaner_id = ?' : '';
+  if (cleanerId) {
+    params.push(cleanerId);
+  }
+
+  await promiseDb.query(
+    `
+      UPDATE cleaner_profile cp
+      LEFT JOIN (
+        SELECT cleaner_id, COUNT(*) AS total_jobs
+        FROM bookings
+        WHERE cleaner_id IS NOT NULL
+          AND LOWER(COALESCE(booking_status, '')) = 'completed'
+        GROUP BY cleaner_id
+      ) bk ON bk.cleaner_id = cp.cleaner_id
+      SET cp.\`total_jobs\` = COALESCE(bk.total_jobs, 0)
+      ${whereClause}
+    `,
+    params
+  );
+
+  return {
+    cleanerProfileColumns,
+    updated: true
+  };
+};
+
 const syncCleanerReviewStats = async (promiseDb, cleanerId = null) => {
   const cleanerProfileColumns = await getCleanerProfileColumns(promiseDb);
   const updates = [];
@@ -64,5 +101,6 @@ const syncCleanerReviewStats = async (promiseDb, cleanerId = null) => {
 module.exports = {
   getCleanerProfileColumns,
   resolveCleanerRatingColumn,
+  syncCleanerCompletedJobs,
   syncCleanerReviewStats
 };

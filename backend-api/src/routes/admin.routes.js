@@ -118,6 +118,21 @@ router.post('/bookings/:id/assign', [
 
 router.get('/bookings/stats', admin.getBookingStats);
 
+// Review management
+router.get('/reviews', [
+  query('page').optional().isInt(),
+  query('limit').optional().isInt(),
+  query('rating').optional().isInt({ min: 1, max: 5 }),
+  query('search').optional().isString(),
+  query('sort').optional().isIn(['newest', 'oldest', 'highest', 'lowest'])
+], validate, admin.getAllReviews);
+
+router.get('/reviews/stats', admin.getReviewStats);
+
+router.delete('/reviews/:id', [
+  param('id').isInt()
+], validate, admin.deleteReview);
+
 // Promotion management
 router.get('/promotions', [
   query('page').optional().isInt(),
@@ -148,6 +163,15 @@ router.put('/promotions/:id', [
 router.delete('/promotions/:id', [
   param('id').isInt()
 ], validate, admin.deletePromotion);
+
+// Reports
+router.get('/reports/revenue', [
+  query('range').optional().isIn(['week', 'month', 'total'])
+], validate, admin.getRevenueReport);
+
+router.get('/reports/performance', [
+  query('range').optional().isIn(['week', 'month', 'total'])
+], validate, admin.getPerformanceReport);
 
 // Dashboard
 router.get('/dashboard', admin.getAdminDashboard);

@@ -1,6 +1,7 @@
 const path = require('path');
 const db = require('../../config/db');
 const AppError = require('../../utils/error.util');
+const { syncCleanerCompletedJobs } = require('../../utils/cleanerReviewStats.util');
 
 const ALLOWED_PAYMENT_STATUSES = new Set([
   'pending',
@@ -539,6 +540,10 @@ const processPayment = async (req, res, next) => {
         : {}),
     });
 
+    if ((nextStatus === 'completed' || nextStatus === 'paid') && payment?.cleaner_id) {
+      await syncCleanerCompletedJobs(promiseDb, Number(payment.cleaner_id));
+    }
+
     const updatedPayment = await getPaymentByIdWithMeta(promiseDb, paymentId);
     return res.status(200).json({
       success: true,
@@ -920,6 +925,10 @@ const confirmPaymentReceipt = async (req, res, next) => {
       paymentStatus: 'paid',
       markCompletedAt: true,
     });
+
+    if (row?.cleaner_id) {
+      await syncCleanerCompletedJobs(promiseDb, Number(row.cleaner_id));
+    }
 
     await sendBookingNotification(promiseDb, {
       title: 'Payment Confirmed',

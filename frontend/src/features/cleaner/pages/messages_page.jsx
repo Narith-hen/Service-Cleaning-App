@@ -78,9 +78,50 @@ const writeHiddenThreadIds = (threadIds) => {
   }
 };
 
-const normalizeThread = (job, index) => ({
-  id: String(job?.id || job?.sourceRequestId || `thread-${index + 1}`),
-  sourceRequestId: job?.sourceRequestId || job?.id || `thread-${index + 1}`,
+const getCanonicalThreadId = (job, index = 0) => {
+  const rawCandidates = [
+    job?.booking_id,
+    job?.bookingId,
+    job?.sourceRequestId,
+    job?.id
+  ];
+
+  for (const candidate of rawCandidates) {
+    const text = String(candidate || '').trim();
+    if (!text) continue;
+    if (text.startsWith('confirmed-')) {
+      const unwrapped = text.replace(/^confirmed-/, '').trim();
+      if (unwrapped) return unwrapped;
+    }
+    if (/^\d+$/.test(text)) {
+      return text;
+    }
+  }
+
+  return `thread-${index + 1}`;
+};
+
+const dedupeThreads = (items = []) => {
+  const seen = new Set();
+  const result = [];
+
+  for (const item of items) {
+    const normalized = normalizeThread(item, result.length);
+    const key = String(normalized.sourceRequestId || normalized.id || '').trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(normalized);
+  }
+
+  return result;
+};
+
+const normalizeThread = (job, index) => {
+  const canonicalThreadId = getCanonicalThreadId(job, index);
+
+  return {
+  id: canonicalThreadId,
+  sourceRequestId: canonicalThreadId,
   status: job?.status || 'upcoming',
   title: job?.title || 'Cleaning Job',
   jobId: job?.jobId || '#SOMA-00000',
@@ -98,7 +139,8 @@ const normalizeThread = (job, index) => ({
   bedrooms: job?.bedrooms || '3 Bedrooms',
   floors: job?.floors || '2 Floors',
   image: job?.image || officeImage
-});
+};
+};
 
 const getAuthToken = () => {
   try {
@@ -158,7 +200,7 @@ const mergeThreadWithBooking = (thread, bookingData = {}) => {
       : thread.price,
     day: formattedDay,
     monthYear: formattedMonthYear,
-    timeRange: thread.timeRange,
+    timeRange: bookingData.booking_time || thread.timeRange,
     location: bookingData.address || thread.location,
     customer: customerName || 'Customer',
     customerId: bookingData.user_id || thread.customerId,
@@ -204,25 +246,27 @@ const [activeThreadId, setActiveThreadId] = useState(
         const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
         if (!raw && savedThreads.length > 0) {
           // No new jobs but have old chat threads - use those
-          if (!cancelled) setThreads(savedThreads);
+          const dedupedSavedThreads = dedupeThreads(savedThreads);
+          saveChatThreads(dedupedSavedThreads);
+          if (!cancelled) setThreads(dedupedSavedThreads);
           return;
         }
         
         const parsed = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(parsed) || parsed.length === 0) {
           // Use saved threads if no new jobs
-          if (!cancelled) setThreads(savedThreads.length > 0 ? savedThreads : []);
+          const dedupedSavedThreads = savedThreads.length > 0 ? dedupeThreads(savedThreads) : [];
+          if (dedupedSavedThreads.length > 0) {
+            saveChatThreads(dedupedSavedThreads);
+          }
+          if (!cancelled) setThreads(dedupedSavedThreads);
           return;
         }
         
-        const normalized = parsed.filter(Boolean).map(normalizeThread);
-        
-        // Merge with saved threads (keep old chat threads that might not be in jobs anymore)
-        const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
-        const mergedThreads = [
-          ...normalized,
-          ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
-        ];
+        const mergedThreads = dedupeThreads([
+          ...parsed.filter(Boolean),
+          ...savedThreads
+        ]);
         
         // Save merged threads back to localStorage
         saveChatThreads(mergedThreads);
@@ -264,16 +308,15 @@ const [activeThreadId, setActiveThreadId] = useState(
         
         if (cleanerConfirmedBookings.length > 0) {
           // Update localStorage with fresh data
-          const normalized = cleanerConfirmedBookings.map(normalizeThread);
+          const normalized = dedupeThreads(cleanerConfirmedBookings);
           localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(normalized));
           
           // Merge with saved threads
           const savedThreads = loadChatThreads();
-          const existingThreadIds = new Set(normalized.map(t => t.sourceRequestId || t.id));
-          const mergedThreads = [
+          const mergedThreads = dedupeThreads([
             ...normalized,
-            ...savedThreads.filter(t => !existingThreadIds.has(t.sourceRequestId || t.id))
-          ];
+            ...savedThreads
+          ]);
           saveChatThreads(mergedThreads);
           if (!cancelled) setThreads(mergedThreads);
         }
@@ -413,14 +456,15 @@ const [activeThreadId, setActiveThreadId] = useState(
           return prev;
         }
 
-        return [
+        return dedupeThreads([
           normalizeThread({
+            bookingId,
             sourceRequestId: bookingId,
             id: bookingId,
             customer: message?.sender?.username || 'Customer'
           }, 0),
           ...prev
-        ];
+        ]);
       });
     };
 

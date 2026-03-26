@@ -5,6 +5,7 @@ const paymentController = require('./base/payment.controller');
 const notificationController = require('./base/notification.controller');
 const reviewController = require('./base/review.controller');
 const promotionController = require('./base/promotion.controller');
+const settingsController = require('./base/settings.controller');
 
 // Customer controllers
 const customerDashboardController = require('./customer/dashboard.controller');
@@ -18,8 +19,10 @@ const adminUsersController = require('./admin/users.controller');
 const adminCleanersController = require('./admin/cleaners.controller');
 const adminServicesController = require('./admin/services.controller');
 const adminBookingsController = require('./admin/bookings.controller');
+const adminReviewsController = require('./admin/reviews.controller');
 const adminPromotionsController = require('./admin/promotions.controller');
 const adminDashboardController = require('./admin/dashboard.controller');
+const adminReportsController = require('./admin/reports.controller');
 
 // Combine all controllers for easy access
 module.exports = {
@@ -54,18 +57,12 @@ module.exports = {
   updateProfile: (req, res, next) => {
     res.status(200).json({ message: 'Update profile endpoint - to be implemented' });
   },
-  changePassword: (req, res, next) => {
-    res.status(200).json({ message: 'Change password endpoint - to be implemented' });
-  },
+  changePassword: settingsController.changePassword,
   uploadAvatar: (req, res, next) => {
     res.status(200).json({ message: 'Upload avatar endpoint - to be implemented' });
   },
-  getUserSettings: (req, res, next) => {
-    res.status(200).json({ message: 'Get user settings endpoint - to be implemented' });
-  },
-  updateSettings: (req, res, next) => {
-    res.status(200).json({ message: 'Update settings endpoint - to be implemented' });
-  },
+  getUserSettings: settingsController.getUserSettings,
+  updateSettings: settingsController.updateSettings,
   getUserBookings: (req, res, next) => {
     req.params = {
       ...req.params,
@@ -210,14 +207,21 @@ module.exports = {
     updateService: adminServicesController.updateService,
     deleteService: adminServicesController.deleteService,
     
-    getAllBookings: adminBookingsController.getAllBookings,
-    assignCleaner: adminBookingsController.assignCleaner,
-    getBookingStats: adminBookingsController.getBookingStats,
-    
-    getAllPromotions: adminPromotionsController.getAllPromotions,
+      getAllBookings: adminBookingsController.getAllBookings,
+      assignCleaner: adminBookingsController.assignCleaner,
+      getBookingStats: adminBookingsController.getBookingStats,
+
+      getAllReviews: adminReviewsController.getAllReviews,
+      getReviewStats: adminReviewsController.getReviewStats,
+      deleteReview: adminReviewsController.deleteReview,
+      
+      getAllPromotions: adminPromotionsController.getAllPromotions,
     createPromotion: adminPromotionsController.createPromotion,
     updatePromotion: adminPromotionsController.updatePromotion,
     deletePromotion: adminPromotionsController.deletePromotion,
+
+    getRevenueReport: adminReportsController.getRevenueReport,
+    getPerformanceReport: adminReportsController.getPerformanceReport,
     
     getAdminDashboard: adminDashboardController.getAdminDashboard,
     getTopCleaners: adminDashboardController.getTopCleaners,

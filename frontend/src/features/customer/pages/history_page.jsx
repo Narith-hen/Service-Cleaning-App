@@ -156,6 +156,7 @@ const normalizeHistoryBooking = (booking, index = 0) => {
     status,
     rawStatus: String(rawStatus).toLowerCase(),
     bookingStatus: String(booking?.booking_status || booking?.status || 'pending').toLowerCase(),
+    serviceStatus: String(booking?.service_status || '').toLowerCase(),
     paymentStatus: String(booking?.payment_status || booking?.payment?.payment_status || '').toLowerCase(),
     reviewId: booking?.review_id ? Number(booking.review_id) : null,
     reviewRating: booking?.rating ? Number(booking.rating) : 0,
@@ -308,6 +309,21 @@ const hasAssignedCleaner = (item) => {
   // Check if the cleaner name is not the default placeholder
   const cleanerName = String(item?.cleanerName || '').toLowerCase();
   return item?.cleanerId && cleanerName && cleanerName !== 'cleaner pending' && cleanerName !== 'assigned cleaner';
+};
+
+const canReviewHistoryBooking = (item) => {
+  if (item?.reviewId) return false;
+
+  const bookingStatus = String(item?.bookingStatus || '').toLowerCase();
+  const serviceStatus = String(item?.serviceStatus || '').toLowerCase();
+  const paymentStatus = String(item?.paymentStatus || '').toLowerCase();
+
+  if (bookingStatus === 'completed') {
+    return true;
+  }
+
+  return serviceStatus === 'completed'
+    && ['receipt_submitted', 'completed', 'paid'].includes(paymentStatus);
 };
 
 const CustomerHistoryPage = () => {
@@ -464,7 +480,7 @@ const CustomerHistoryPage = () => {
             const paymentConfirmed =
               item.paymentStatus === 'completed'
               || item.paymentStatus === 'paid';
-            const canRateService = paymentConfirmed && !item.reviewId;
+            const canRateService = canReviewHistoryBooking(item);
 
             return (
               <article
@@ -520,6 +536,18 @@ const CustomerHistoryPage = () => {
                         {statusButton.icon}
                         {statusButton.label}
                       </span>
+                      {paymentBadge && (
+                        <span className={`customer-history-status ${paymentBadge.tone}`}>
+                          {paymentBadge.icon}
+                          {paymentBadge.label}
+                        </span>
+                      )}
+                      {reviewBadge && (
+                        <span className={`customer-history-status ${reviewBadge.tone}`}>
+                          {reviewBadge.icon}
+                          {reviewBadge.label}
+                        </span>
+                      )}
                       {hasAssignedCleaner(item) && (
                         <button
                           type="button"
@@ -555,6 +583,17 @@ const CustomerHistoryPage = () => {
                           data-customer-button
                         >
                           Pay Now
+                        </button>
+                      )}
+                      {canRateService && (
+                        <button
+                          type="button"
+                          className="customer-history-action-btn customer-history-review-btn"
+                          onClick={() => openRatingPage(item)}
+                          data-customer-button
+                        >
+                          <StarFilled />
+                          Review Service
                         </button>
                       )}
                     </div>

@@ -50,6 +50,42 @@
   box-shadow: 0 10px 18px -12px rgba(22, 163, 74, 0.9);
 }
 
+.dashboard-earnings-select {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dashboard-earnings-select span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dash-muted);
+}
+
+.dashboard-earnings-select .ant-select {
+  min-width: 220px;
+}
+
+.dashboard-earnings-select .ant-select-selector {
+  border-radius: 14px !important;
+  min-height: 46px !important;
+  border: 1px solid #d7e2ef !important;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04) !important;
+  padding: 0 14px !important;
+}
+
+.dashboard-earnings-select .ant-select-selection-wrap {
+  align-items: center;
+}
+
+.dashboard-earnings-select .ant-select-selection-item {
+  color: var(--dash-text);
+  font-weight: 600;
+}
+
 .dashboard-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -126,7 +162,7 @@
 
 .dashboard-content-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 3fr 1fr;
   gap: 14px;
 }
 
@@ -151,10 +187,11 @@
   color: var(--dash-text);
   font-size: 1rem;
   letter-spacing: -0.01em;
+  font-weight: bold;
 }
 
 .panel-head a {
-  color: #2563eb;
+  color: #16a34a;
   text-decoration: none;
   font-size: 0.75rem;
   font-weight: 700;
@@ -167,6 +204,14 @@
   overflow-y: auto;
   height: 60vh;
   max-height: 520px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.table-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .dashboard-table {
@@ -197,6 +242,32 @@
 .dashboard-table td {
   color: #0f213f;
   font-weight: 500;
+}
+
+.table-user-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.table-user-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .status-chip {
@@ -292,147 +363,44 @@
 }
 
 .booking-volume-panel {
-  padding-bottom: 16px;
+  padding-bottom: 24px;
+  text-align: start;
 }
 
 .booking-head {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .booking-head p {
   margin: 4px 0 0;
   color: var(--dash-muted);
-  font-size: 0.8rem;
+  font-size: 0.98rem;
 }
 
-.panel-filter-btn {
-  border: 1px solid #d6e0ee;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff, #f4f7fb);
-  color: #334155;
-  padding: 7px 12px;
+.booking-head h3 {
+  font-size: 1.55rem;
   font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
 }
 
-.booking-volume-shell {
-  border: 1px solid #dbe4f1;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #f9fbff 0%, #f6f9fd 100%);
-  padding: 16px 12px 10px;
-  position: relative;
-}
-
-.booking-grid-lines {
-  position: absolute;
-  top: 18px;
-  right: 12px;
-  left: 12px;
-  bottom: 56px;
-  display: grid;
-  grid-template-rows: repeat(4, 1fr);
-  pointer-events: none;
-}
-
-.booking-grid-lines span {
-  border-top: 1px dashed #d5deeb;
-  font-size: 0.62rem;
-  color: #95a4bc;
+.trend-chip {
+  padding: 9px 14px;
+  border-radius: 999px;
   font-weight: 700;
-  text-align: right;
-  line-height: 0.1;
+  font-size: 0.95rem;
 }
 
-.booking-volume-chart {
-  height: 260px;
-  display: grid;
-  grid-template-columns: repeat(var(--booking-points, 7), minmax(0, 1fr));
-  gap: 10px;
-  align-items: end;
-  padding: 10px 2px 0;
-  position: relative;
-  z-index: 2;
-}
-
-.volume-col {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.volume-value {
-  font-size: 0.82rem;
-  color: #0b3f22;
+.trend-chip.positive {
   background: #dcfce7;
-  border-radius: 999px;
-  padding: 2px 8px;
+  color: #15803d;
 }
 
-.volume-track {
-  width: 100%;
-  max-width: 88px;
-  min-height: 84px;
-  height: var(--volume-capacity);
-  border-radius: 12px 12px 6px 6px;
-  background: linear-gradient(180deg, #d2d9e2 0%, #c7ced8 100%);
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
+.trend-chip.negative {
+  background: #ffe4e6;
+  color: #be123c;
 }
 
-.volume-fill {
-  width: 100%;
-  height: var(--volume-fill);
-  border-radius: 10px 10px 4px 4px;
-  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-}
-
-.volume-col span {
-  font-size: 0.71rem;
-  font-weight: 700;
-  color: #6b7d95;
-}
-
-.volume-col small {
-  font-size: 0.66rem;
-  font-weight: 700;
-  color: #8797ac;
-}
-
-.booking-volume-legend {
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  color: #6f8097;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.booking-volume-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.booking-volume-legend i {
-  width: 14px;
-  height: 8px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-.legend-capacity {
-  background: #c6ced9;
-}
-
-.legend-booked {
-  background: #22c55e;
+.dashboard-chart-shell {
+  min-height: 320px;
 }
 
 .dashboard-insights-grid {
@@ -461,6 +429,14 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
+}
+
+.service-icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
 }
 
 .service-icon.tone-green { background: #dcfce7; color: #15803d; }
@@ -550,6 +526,14 @@
   font-weight: 700;
 }
 
+.review-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+
 .review-avatar.tone-teal {
   background: linear-gradient(140deg, #0ea5e9 0%, #14b8a6 100%);
 }
@@ -593,10 +577,6 @@
   .dashboard-insights-grid {
     grid-template-columns: 1fr;
   }
-
-  .booking-volume-chart {
-    height: 240px;
-  }
 }
 
 @media (max-width: 860px) {
@@ -608,18 +588,6 @@
   .dashboard-header-row {
     padding: 16px;
   }
-
-  .booking-volume-chart {
-    gap: 7px;
-  }
-
-  .volume-track {
-    max-width: 64px;
-  }
-
-  .booking-grid-lines {
-    bottom: 54px;
-  }
 }
 
 @media (max-width: 580px) {
@@ -629,18 +597,6 @@
 
   .dashboard-panel {
     padding: 12px;
-  }
-
-  .booking-volume-chart {
-    height: 214px;
-  }
-
-  .volume-col span {
-    font-size: 0.66rem;
-  }
-
-  .booking-volume-legend {
-    justify-content: flex-start;
   }
 }
 
@@ -662,6 +618,15 @@
   background: linear-gradient(145deg, #13223d 0%, #101c32 100%);
 }
 
+.admin-dashboard-page.dark-mode .dashboard-earnings-select .ant-select-selector {
+  background: linear-gradient(180deg, #132038, #0d182c) !important;
+  border-color: #324a6f !important;
+}
+
+.admin-dashboard-page.dark-mode .dashboard-earnings-select .ant-select-selection-item {
+  color: #dbeafe;
+}
+
 .admin-dashboard-page.dark-mode .dashboard-table td,
 .admin-dashboard-page.dark-mode .dashboard-table th,
 .admin-dashboard-page.dark-mode .review-row {
@@ -672,39 +637,13 @@
   color: #d9e2ef;
 }
 
-.admin-dashboard-page.dark-mode .panel-head a {
-  color: #86efac;
-}
-
-.admin-dashboard-page.dark-mode .panel-filter-btn {
-  background: linear-gradient(180deg, #132038, #0d182c);
-  border-color: #324a6f;
+.admin-dashboard-page.dark-mode .table-user-avatar {
+  background: #243552;
   color: #dbeafe;
 }
 
-.admin-dashboard-page.dark-mode .booking-volume-shell {
-  border-color: #2f4569;
-  background: linear-gradient(180deg, #11203b 0%, #101d34 100%);
-}
-
-.admin-dashboard-page.dark-mode .booking-grid-lines span {
-  border-top-color: #2f466a;
-  color: #7f94b3;
-}
-
-.admin-dashboard-page.dark-mode .volume-track {
-  background: linear-gradient(180deg, #36455f 0%, #2b384f 100%);
-}
-
-.admin-dashboard-page.dark-mode .volume-value {
-  color: #c7f9dc;
-  background: rgba(34, 197, 94, 0.2);
-}
-
-.admin-dashboard-page.dark-mode .volume-col span,
-.admin-dashboard-page.dark-mode .volume-col small,
-.admin-dashboard-page.dark-mode .booking-volume-legend {
-  color: #9cb0cb;
+.admin-dashboard-page.dark-mode .panel-head a {
+  color: #86efac;
 }
 
 .admin-dashboard-page.dark-mode .service-bar {

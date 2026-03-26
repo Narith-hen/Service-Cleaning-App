@@ -419,12 +419,14 @@ const markMessagesRead = async (req, res, next) => {
       }
     }
 
-    await publishMessageRead({
-      bookingId: bookingIdValue,
-      readerUserId: normalizedReaderUserId,
-      messageId: latestSeenMessageId,
-      updatedCount: updated.affectedRows
-    });
+    if (updated.affectedRows > 0) {
+      await publishMessageRead({
+        bookingId: bookingIdValue,
+        readerUserId: normalizedReaderUserId,
+        messageId: latestSeenMessageId,
+        updatedCount: updated.affectedRows
+      });
+    }
 
     res.status(200).json({
       success: true,

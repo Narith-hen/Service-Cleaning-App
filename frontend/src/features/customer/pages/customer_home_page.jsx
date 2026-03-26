@@ -85,6 +85,14 @@ const mapServiceFromApi = (item, index) => ({
   status: String(item?.status || 'active').toLowerCase(),
 });
 
+const mapFeaturedCleanerFromApi = (cleaner, index) => ({
+  id: String(cleaner?.id || cleaner?.cleaner_id || `cleaner-${index}`),
+  photo: toAbsoluteImageUrl(cleaner?.profileImage || cleaner?.profile_image || cleaner?.photo || '') || fallbackImages[index % fallbackImages.length],
+  company: cleaner?.name || cleaner?.username || cleaner?.company_name || 'Cleaning Company',
+  rating: Math.max(1, Math.round(Number(cleaner?.rating) || 0)),
+  reviews: Number(cleaner?.reviews || cleaner?.total_reviews || 0)
+});
+
 const truncateWords = (text, wordLimit = 25) => {
   if (!text) return '';
   const words = text.trim().split(/\s+/);
@@ -109,15 +117,9 @@ const CustomerHomePage = () => {
   useEffect(() => {
     const fetchTopCleaners = async () => {
       try {
-        const response = await api.get('/admin/dashboard/top-cleaners?limit=3');
+        const response = await api.get('/dashboard/top-cleaners?limit=3');
         if (response.data.success) {
-          const cleaners = response.data.data.map(cleaner => ({
-            id: cleaner.id,
-            photo: cleaner.photo || narithImage, // Fallback to default image
-            company: cleaner.name || cleaner.username,
-            rating: Math.round(cleaner.rating) || 5,
-            reviews: cleaner.reviews || 0
-          }));
+          const cleaners = (response.data.data || []).map(mapFeaturedCleanerFromApi);
           setFeaturedCleaners(cleaners);
         }
       } catch (error) {
@@ -347,7 +349,7 @@ const CustomerHomePage = () => {
                   <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
                 </div>
                 <h3>{cleaner.company}</h3>
-                <p className="cleaner-rating">{'★'.repeat(cleaner.rating)}</p>
+                <p className="cleaner-rating">{'\u2605'.repeat(cleaner.rating)}</p>
                 <p className="cleaner-reviews">{cleaner.reviews} total reviews</p>
                 <button
                   type="button"

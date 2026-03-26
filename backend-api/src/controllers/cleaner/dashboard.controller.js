@@ -25,6 +25,24 @@ const normalizePagination = (page, limit) => {
   return { page: normalizedPage, limit: normalizedLimit, offset };
 };
 
+const TODAY_SCHEDULE_BOOKING_STATUSES = [
+  'confirmed',
+  'accepted',
+  'booked',
+  'started',
+  'in_progress',
+  'in-progress',
+  'payment_required',
+  'completed'
+];
+
+const toSqlDateString = (value = new Date()) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getTableColumns = async (promiseDb, tableName) => {
   const [rows] = await promiseDb.query(`SHOW COLUMNS FROM \`${tableName}\``);
   return new Set((rows || []).map((row) => String(row.Field || '').toLowerCase()));
@@ -53,6 +71,7 @@ const mapDashboardJobRow = (row) => ({
   booking_time: row?.booking_time || '',
   booking_status: row?.booking_status || null,
   total_price: Number(row?.total_price || 0),
+  negotiated_price: row?.negotiated_price == null ? null : Number(row?.negotiated_price || 0),
   address: row?.address || '',
   user: {
     username: row?.customer_name || `Customer #${row?.user_id || ''}`,
@@ -67,8 +86,10 @@ const mapDashboardJobRow = (row) => ({
 const mapCleanerJobRow = (row) => ({
   booking_id: Number(row?.booking_id || 0),
   booking_date: row?.booking_date || null,
+  booking_time: row?.booking_time || '',
   booking_status: row?.booking_status || null,
   total_price: Number(row?.total_price || 0),
+  negotiated_price: row?.negotiated_price == null ? null : Number(row?.negotiated_price || 0),
   payment_status: row?.payment_status || null,
   service_id: Number(row?.service_id || 0),
   user_id: Number(row?.user_id || 0),
@@ -281,10 +302,8 @@ const getCleanerDashboard = async (req, res, next) => {
     const cleanerIds = identity.cleanerIds.length ? identity.cleanerIds : [rawCleanerId];
     const cleanerProfileId = identity.cleanerProfileId || rawCleanerId;
     const inClause = buildSqlInClause(cleanerIds);
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+    const todaySqlDate = toSqlDateString(new Date());
+    const statusInClause = buildSqlInClause(TODAY_SCHEDULE_BOOKING_STATUSES);
     const userColumns = await getTableColumns(promiseDb, 'users');
     const customerNameExpr = buildUserNameExpression('u', userColumns, `CONCAT('Customer #', b.user_id)`);
 
@@ -304,10 +323,10 @@ const getCleanerDashboard = async (req, res, next) => {
           SELECT COUNT(*) AS total
           FROM bookings
           WHERE cleaner_id IN (${inClause})
-            AND booking_date >= ?
-            AND booking_date < ?
+            AND DATE(booking_date) = ?
+            AND LOWER(COALESCE(booking_status, '')) IN (${statusInClause})
         `,
-        [...cleanerIds, startOfToday, endOfToday]
+        [...cleanerIds, todaySqlDate, ...TODAY_SCHEDULE_BOOKING_STATUSES]
       ),
       promiseDb.query(
         `
@@ -359,6 +378,7 @@ const getCleanerDashboard = async (req, res, next) => {
           b.booking_time,
           b.booking_status,
           b.total_price,
+          b.negotiated_price,
           b.address,
           b.user_id,
           b.service_id,
@@ -369,13 +389,12 @@ const getCleanerDashboard = async (req, res, next) => {
         LEFT JOIN users u ON u.user_id = b.user_id
         LEFT JOIN services s ON s.service_id = b.service_id
         WHERE b.cleaner_id IN (${inClause})
-          AND LOWER(COALESCE(b.booking_status, '')) IN ('confirmed', 'started', 'in_progress', 'in-progress')
-          AND b.booking_date >= ?
-          AND b.booking_date < ?
-        ORDER BY b.booking_date ASC
+          AND DATE(b.booking_date) = ?
+          AND LOWER(COALESCE(b.booking_status, '')) IN (${statusInClause})
+        ORDER BY b.booking_date ASC, b.booking_time ASC, b.booking_id ASC
         LIMIT 5
       `,
-      [...cleanerIds, startOfToday, endOfToday]
+      [...cleanerIds, todaySqlDate, ...TODAY_SCHEDULE_BOOKING_STATUSES]
     );
 
     res.status(200).json({
@@ -431,8 +450,10 @@ const getCleanerJobs = async (req, res, next) => {
         SELECT
           b.booking_id,
           b.booking_date,
+          b.booking_time,
           b.booking_status,
           b.total_price,
+          b.negotiated_price,
           b.payment_status,
           b.address,
           b.user_id,

@@ -62,6 +62,19 @@ const buildReviewerAvatarExpression = (userColumns) => (
   userColumns.has('avatar') ? 'u.avatar' : 'NULL'
 );
 
+const canReviewBooking = (booking) => {
+  const bookingStatus = String(booking?.booking_status || '').trim().toLowerCase();
+  const serviceStatus = String(booking?.service_status || '').trim().toLowerCase();
+  const paymentStatus = String(booking?.payment_status || '').trim().toLowerCase();
+
+  if (bookingStatus === 'completed') {
+    return true;
+  }
+
+  return serviceStatus === 'completed'
+    && ['receipt_submitted', 'completed', 'paid'].includes(paymentStatus);
+};
+
 const createReview = async (req, res, next) => {
   let transactionStarted = false;
   try {
@@ -79,7 +92,9 @@ const createReview = async (req, res, next) => {
           booking_id,
           user_id,
           cleaner_id,
-          booking_status
+          booking_status,
+          service_status,
+          payment_status
         FROM bookings
         WHERE booking_id = ?
         LIMIT 1
@@ -106,8 +121,8 @@ const createReview = async (req, res, next) => {
       return next(new AppError('Review already exists for this booking', 400));
     }
 
-    if (String(booking.booking_status || '').trim().toLowerCase() !== 'completed') {
-      return next(new AppError('Can only review completed bookings', 400));
+    if (!canReviewBooking(booking)) {
+      return next(new AppError('Can only review services after payment is submitted for a completed booking', 400));
     }
 
     const reviewColumns = await getReviewTableColumns(promiseDb);

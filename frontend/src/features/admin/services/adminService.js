@@ -3,7 +3,7 @@ import api from '../../../services/api';
 export const adminService = {
   // Dashboard
   getDashboardStats: async (dateRange) => {
-    const response = await api.get('/admin/dashboard/stats', {
+    const response = await api.get('/admin/dashboard', {
       params: { range: dateRange }
     });
     return response.data;

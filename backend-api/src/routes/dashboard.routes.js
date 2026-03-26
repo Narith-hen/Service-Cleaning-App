@@ -28,6 +28,9 @@ router.patch('/cleaner/jobs/:id/status', authorize('cleaner'), cleaner.updateJob
 router.get('/cleaner/earnings', authorize('cleaner'), cleaner.getEarnings);
 router.get('/cleaner/earnings/summary', authorize('cleaner'), cleaner.getEarningsSummary);
 
+// Shared dashboard
+router.get('/top-cleaners', authorize('customer', 'cleaner', 'admin'), admin.getTopCleaners);
+
 // Admin dashboard
 router.get('/admin', authorize('admin'), admin.getAdminDashboard);
 router.get('/admin/health', authorize('admin'), admin.getSystemHealth);

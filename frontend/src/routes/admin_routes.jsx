@@ -62,11 +62,19 @@ export const adminRoutes = {
     },
     {
       path: 'reports',
+      element: <Navigate to="revenue" replace />
+    },
+    {
+      path: 'reports/revenue',
       element: <AdminReports />
     },
     {
-      path: 'analytics',
+      path: 'reports/performance',
       element: <AdminAnalytics />
+    },
+    {
+      path: 'analytics',
+      element: <Navigate to="/admin/reports/performance" replace />
     },
     {
       path: 'settings',

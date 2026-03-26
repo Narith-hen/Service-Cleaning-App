@@ -63,6 +63,7 @@ const BookingPage = () => {
   const [mapWarning, setMapWarning] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [selectedCoords, setSelectedCoords] = useState(null);
   const showKeyHint = typeof mapError === 'string' && mapError.startsWith('Missing Google Maps API key');
 
   const clearMapWarning = () => {
@@ -94,6 +95,80 @@ const BookingPage = () => {
       markerRef.current.setPosition(position);
     }
   };
+
+  const formatCoordinateAddress = (coords) =>
+    `Current location (${Number(coords?.lat || 0).toFixed(5)}, ${Number(coords?.lng || 0).toFixed(5)})`;
+
+  const updateSelectedLocation = ({ coords, nextAddress = '', verified = true }) => {
+    if (!coords || !Number.isFinite(Number(coords.lat)) || !Number.isFinite(Number(coords.lng))) {
+      setSelectedCoords(null);
+      setIsAddressVerified(false);
+      return;
+    }
+
+    const normalizedCoords = {
+      lat: Number(coords.lat),
+      lng: Number(coords.lng)
+    };
+
+    setSelectedCoords(normalizedCoords);
+    setIsAddressVerified(Boolean(verified));
+    updateMapPosition(normalizedCoords);
+
+    if (typeof nextAddress === 'string' && nextAddress.trim()) {
+      setAddress(nextAddress.trim());
+      return;
+    }
+
+    setAddress(formatCoordinateAddress(normalizedCoords));
+  };
+
+  const fetchReverseGeocodeAddress = async (coords) => {
+    if (!GOOGLE_MAPS_KEY) return '';
+
+    try {
+      const lat = Number(coords?.lat);
+      const lng = Number(coords?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${encodeURIComponent(`${lat},${lng}`)}&key=${encodeURIComponent(GOOGLE_MAPS_KEY)}`
+      );
+
+      if (!response.ok) return '';
+
+      const data = await response.json();
+      if (data?.status !== 'OK' || !Array.isArray(data?.results) || !data.results[0]) {
+        return '';
+      }
+
+      return formatReadableGeocodeAddress(data.results[0]);
+    } catch {
+      return '';
+    }
+  };
+
+  const reverseGeocodePosition = (coords) =>
+    new Promise((resolve) => {
+      if (!geocoderRef.current) {
+        fetchReverseGeocodeAddress(coords).then(resolve);
+        return;
+      }
+
+      geocoderRef.current.geocode({ location: coords }, (results, status) => {
+        if (status === 'OK' && results?.[0]) {
+          resolve(formatReadableGeocodeAddress(results[0]));
+          return;
+        }
+
+        fetchReverseGeocodeAddress(coords).then(resolve);
+      });
+    });
+
+  const getCurrentPosition = (options) =>
+    new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
 
   const formatReadableGeocodeAddress = (result) => {
     if (!result) return '';
@@ -392,15 +467,22 @@ const BookingPage = () => {
       }
       map.panTo(position);
       map.setZoom(16);
-      setIsAddressVerified(true);
+      updateSelectedLocation({
+        coords: {
+          lat: position.lat(),
+          lng: position.lng()
+        },
+        verified: true
+      });
 
-      if (geocoderRef.current) {
-        geocoderRef.current.geocode({ location: position }, (results, status) => {
-          if (status === 'OK' && results?.[0]?.formatted_address) {
-            setAddress(results[0].formatted_address);
-          }
-        });
-      }
+      reverseGeocodePosition({
+        lat: position.lat(),
+        lng: position.lng()
+      }).then((resolvedAddress) => {
+        if (resolvedAddress) {
+          setAddress(resolvedAddress);
+        }
+      });
     });
 
     return () => {
@@ -420,16 +502,19 @@ const BookingPage = () => {
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       const formattedAddress = place?.formatted_address || addressInputRef.current?.value || '';
-      setAddress(formattedAddress);
 
       if (place?.geometry?.location && mapInstanceRef.current) {
-        mapInstanceRef.current.panTo(place.geometry.location);
-        mapInstanceRef.current.setZoom(16);
-        if (markerRef.current) {
-          markerRef.current.setPosition(place.geometry.location);
-        }
-        setIsAddressVerified(true);
+        updateSelectedLocation({
+          coords: {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          },
+          nextAddress: formattedAddress,
+          verified: true
+        });
       } else {
+        setAddress(formattedAddress);
+        setSelectedCoords(null);
         setIsAddressVerified(false);
       }
     });
@@ -439,7 +524,12 @@ const BookingPage = () => {
     };
   }, [isMapReady]);
 
-  const handleUseCurrentLocation = () => {
+  useEffect(() => {
+    if (!selectedCoords || !isMapReady || !mapInstanceRef.current) return;
+    updateMapPosition(selectedCoords);
+  }, [selectedCoords, isMapReady]);
+
+  const handleUseCurrentLocation = async () => {
     if (isLocating) return;
 
     if (!navigator.geolocation) {
@@ -447,52 +537,74 @@ const BookingPage = () => {
       return;
     }
 
-    if (!isMapReady || !mapInstanceRef.current) {
-      showMapWarning('Map is not ready yet.');
-      return;
-    }
-
     clearMapWarning();
     setIsLocating(true);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coords = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        updateMapPosition(coords);
-        setIsAddressVerified(true);
-        setAddress('Finding nearby address...');
-        setIsLocating(false);
-
-        if (geocoderRef.current) {
-          geocoderRef.current.geocode({ location: coords }, (results, status) => {
-            if (status === 'OK' && results?.[0]?.formatted_address) {
-              clearMapWarning();
-              setAddress(formatReadableGeocodeAddress(results[0]));
-            } else {
-              setAddress(`Current location (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`);
-              showMapWarning('Using your current coordinates while the address loads.', 3500);
-            }
-          });
-        } else {
-          setAddress(`Current location (${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`);
-          showMapWarning('Using your current coordinates while the address loads.', 3500);
+    try {
+      if (navigator.permissions?.query) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        if (permission?.state === 'denied') {
+          setIsLocating(false);
+          showMapWarning('Location access was blocked. Allow it in your browser and try again.', 5000);
+          return;
         }
-      },
-      (error) => {
-        setIsLocating(false);
-        const nextWarning =
-          error?.code === 1
-            ? 'Location access was blocked. Allow it in your browser and try again.'
-            : error?.code === 3
-              ? 'Location request timed out. Try again in an open area.'
-              : 'Unable to access your current location right now.';
-        showMapWarning(nextWarning, 5000);
-      },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
-    );
+      }
+    } catch {
+      // Permissions API is optional; continue with direct lookup.
+    }
+
+    const geolocationAttempts = [
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 }
+    ];
+
+    let resolvedPosition = null;
+    let lastError = null;
+
+    for (const options of geolocationAttempts) {
+      try {
+        resolvedPosition = await getCurrentPosition(options);
+        if (resolvedPosition) break;
+      } catch (error) {
+        lastError = error;
+        if (error?.code === 1) break;
+      }
+    }
+
+    if (!resolvedPosition) {
+      setIsLocating(false);
+      const nextWarning =
+        lastError?.code === 1
+          ? 'Location access was blocked. Allow it in your browser and try again.'
+          : lastError?.code === 3
+            ? 'Location request timed out. Turn on device location, then try again.'
+            : 'Unable to access your current location right now.';
+      showMapWarning(nextWarning, 5000);
+      return;
+    }
+
+    const coords = {
+      lat: resolvedPosition.coords.latitude,
+      lng: resolvedPosition.coords.longitude
+    };
+
+    updateSelectedLocation({
+      coords,
+      nextAddress: 'Finding nearby address...',
+      verified: true
+    });
+
+    const resolvedAddress = await reverseGeocodePosition(coords);
+    setIsLocating(false);
+
+    if (resolvedAddress) {
+      clearMapWarning();
+      setAddress(resolvedAddress);
+      return;
+    }
+
+    setAddress(formatCoordinateAddress(coords));
+    showMapWarning('Using your current coordinates while the address loads.', 3500);
   };
 
   const stateService = locationHook.state?.service || locationHook.state || null;
@@ -640,6 +752,11 @@ const BookingPage = () => {
         payload.notes = details.trim();
       }
 
+      if (selectedCoords) {
+        payload.latitude = Number(selectedCoords.lat);
+        payload.longitude = Number(selectedCoords.lng);
+      }
+
       const resp = await api.post('/bookings', payload);
       const bookingId = resp?.data?.data?.booking_id;
 
@@ -763,6 +880,7 @@ const BookingPage = () => {
               ref={addressInputRef}
               onChange={(e) => {
                 setAddress(e.target.value);
+                setSelectedCoords(null);
                 setIsAddressVerified(false);
               }}
             />

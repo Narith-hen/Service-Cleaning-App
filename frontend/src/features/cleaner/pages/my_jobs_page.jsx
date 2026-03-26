@@ -208,6 +208,7 @@ const mapBookingStatusToJobStatus = (bookingStatus, paymentStatus) => {
 const mapApiJobToUiJob = (job) => {
   const bookingDate = job?.booking_date ? new Date(job.booking_date) : null;
   const hasValidDate = bookingDate instanceof Date && !Number.isNaN(bookingDate.getTime());
+  const displayPrice = Number(job?.negotiated_price ?? job?.total_price ?? 0);
 
   return {
     id: `confirmed-${job?.booking_id}`,
@@ -216,7 +217,7 @@ const mapApiJobToUiJob = (job) => {
     status: mapBookingStatusToJobStatus(job?.booking_status, job?.payment_status),
     title: job?.service?.name || job?.service_name || 'Cleaning Job',
     jobId: job?.booking_id ? `#SOMA-${String(job.booking_id).padStart(5, '0')}` : '#SOMA-00000',
-    price: `$${Number(job?.total_price || 0).toFixed(2)}`,
+    price: `$${displayPrice.toFixed(2)}`,
     day: hasValidDate ? String(bookingDate.getDate()).padStart(2, '0') : '',
     monthYear: hasValidDate
       ? bookingDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })

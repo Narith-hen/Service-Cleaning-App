@@ -1,6 +1,7 @@
 const db = require('../../config/db');
 const redis = require('../../config/redis');
 const AppError = require('../../utils/error.util');
+const { syncCleanerCompletedJobs } = require('../../utils/cleanerReviewStats.util');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
@@ -767,6 +768,10 @@ const updateBookingStatus = async (req, res, next) => {
       [...params, id]
     );
 
+    if (booking.cleaner_id) {
+      await syncCleanerCompletedJobs(promiseDb, Number(booking.cleaner_id));
+    }
+
     await promiseDb
       .query(
         'INSERT INTO notifications (title, message, type_notification, user_id, booking_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
@@ -1259,6 +1264,7 @@ const trackBooking = async (req, res, next) => {
             b.booking_time,
             b.total_price,
             b.negotiated_price,
+            b.address,
             b.cleaner_id,
             cp.company_name AS cleaner_company,
             COALESCE(cp.company_name, TRIM(CONCAT_WS(' ', c.first_name, c.last_name))) AS cleaner_display_name,
