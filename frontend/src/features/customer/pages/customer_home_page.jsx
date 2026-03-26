@@ -181,11 +181,6 @@ const CustomerHomePage = () => {
   }, []);
   const [services, setServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
-<<<<<<< HEAD
-  const [motionEnabled, setMotionEnabled] = useState(false);
-  const [openFaqIndex, setOpenFaqIndex] = useState(1);
-=======
->>>>>>> develop
 
   useEffect(() => {
     const fetchServices = async () => {

@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-=======
 import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
->>>>>>> develop
+import { motion } from 'framer-motion';
 import homeImage from '../../../assets/image.png';
 import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
@@ -22,11 +17,9 @@ const staggerContainer = {
 };
 
 export default function PublicHomePage() {
-<<<<<<< HEAD
-  const [openFaqIndex, setOpenFaqIndex] = useState(-1);
-=======
   const { darkMode = false } = useOutletContext() || {};
   const [motionReady, setMotionReady] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState(1);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -80,7 +73,6 @@ export default function PublicHomePage() {
       return undefined;
     }
   }, []);
->>>>>>> develop
 
   const testimonials = [
     {
@@ -153,33 +145,29 @@ export default function PublicHomePage() {
   ];
 
   return (
-<<<<<<< HEAD
-    <div className="bg-gray-50 font-sans text-gray-800">
-      <section id="home" className="bg-[#f2f4f3] py-14">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-8 md:grid-cols-2">
-          <motion.div
-            className="max-w-xl"
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-          >
-            <motion.p variants={fadeUpVariant} className="text-xs font-bold uppercase tracking-[0.25em] text-slate-600">
-=======
     <div className={`public-home-page ${motionReady ? 'public-home-motion-ready' : ''} ${darkMode ? 'bg-[#0b1220] text-slate-100' : 'bg-white text-gray-800'} font-sans`}>
       <section id="home" className={darkMode ? 'bg-[#111b2f]' : 'bg-[#f2f4f3]'}>
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 py-14 md:grid-cols-2 md:px-10 lg:px-16">
           <div className="public-home-reveal max-w-xl text-left">
-            <p className={`public-home-kicker text-2xs font-bold uppercase tracking-[0.25em] ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
->>>>>>> develop
+            <motion.p
+              variants={fadeUpVariant}
+              className={`public-home-kicker text-2xs font-bold uppercase tracking-[0.25em] ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}
+            >
               Professional Cleaning
             </motion.p>
-            <motion.h1 variants={fadeUpVariant} className="mt-3 text-5xl font-black leading-[0.95] text-slate-900 md:text-6xl">
+            <motion.h1
+              variants={fadeUpVariant}
+              className={`mt-3 text-5xl font-black leading-[0.95] md:text-6xl ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}
+            >
               Professional <br />
               Cleaning for a <br />
               <span className="text-[#32c753]">Spotless Home</span>
             </motion.h1>
 
-            <motion.p variants={fadeUpVariant} className="mt-6 text-base leading-7 text-slate-500">
+            <motion.p
+              variants={fadeUpVariant}
+              className={`mt-6 text-base leading-7 ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}
+            >
               Experience the joy of a pristine living space with our eco-friendly, expert
               cleaning services tailored to your specific needs.
             </motion.p>
@@ -199,7 +187,10 @@ export default function PublicHomePage() {
               </Link>
             </motion.div>
 
-            <motion.div variants={fadeUpVariant} className="mt-7 flex items-center gap-3 text-sm text-slate-500">
+            <motion.div
+              variants={fadeUpVariant}
+              className={`mt-7 flex items-center gap-3 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-500'}`}
+            >
               <div className="flex -space-x-2">
                 <span className="h-5 w-5 rounded-full border border-white bg-[#ffb38b]" />
                 <span className="h-5 w-5 rounded-full border border-white bg-[#ffd1b8]" />
@@ -207,7 +198,7 @@ export default function PublicHomePage() {
               </div>
               <p>Trusted by 2,000+ local homeowners</p>
             </motion.div>
-          </motion.div>
+          </div>
 
           <motion.div
             className="relative"
