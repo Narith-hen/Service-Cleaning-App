@@ -8,6 +8,7 @@ import ContactPage from '../features/public/pages/contact_page';
 import LoginPage from '../features/public/pages/login_page';
 import RegisterPage from '../features/public/pages/register_page';
 import NotFoundPage from '../features/public/pages/notfound_page';
+import ErrorBoundary from '../components/common/error_boundary';
 export const publicRoutes = [
   {
     path: '/login',
@@ -19,11 +20,19 @@ export const publicRoutes = [
   },
   {
     path: '/',
-    element: <MainLayout />,
+    element: (
+      <ErrorBoundary fallbackTitle="Public site failed to load.">
+        <MainLayout />
+      </ErrorBoundary>
+    ),
     children: [
       {
         index: true,
-        element: <PublicHomePage />
+        element: (
+          <ErrorBoundary fallbackTitle="Home page failed to load.">
+            <PublicHomePage />
+          </ErrorBoundary>
+        )
       },
       {
         path: 'services',

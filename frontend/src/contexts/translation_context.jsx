@@ -155,23 +155,51 @@ const translations = {
 
 export const TranslationProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('language') || 'en';
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem('language') || 'en' : 'en';
+    } catch (error) {
+      console.error('Failed to read language from storage:', error);
+      return 'en';
+    }
   });
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('darkMode') === 'true';
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem('darkMode') === 'true' : false;
+    } catch (error) {
+      console.error('Failed to read dark mode from storage:', error);
+      return false;
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem('language', language);
-    document.documentElement.lang = language;
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('language', language);
+      }
+    } catch (error) {
+      console.error('Failed to save language to storage:', error);
+    }
+
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = language;
+    }
   }, [language]);
 
   useEffect(() => {
-    localStorage.setItem('darkMode', darkMode);
-    if (darkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('darkMode', darkMode);
+      }
+    } catch (error) {
+      console.error('Failed to save dark mode to storage:', error);
+    }
+
+    if (typeof document !== 'undefined') {
+      if (darkMode) {
+        document.body.classList.add('dark-mode');
+      } else {
+        document.body.classList.remove('dark-mode');
+      }
     }
   }, [darkMode]);
 

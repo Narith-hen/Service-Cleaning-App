@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+=======
+import { useEffect, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
+>>>>>>> develop
 import homeImage from '../../../assets/image.png';
 import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
@@ -17,7 +22,65 @@ const staggerContainer = {
 };
 
 export default function PublicHomePage() {
+<<<<<<< HEAD
   const [openFaqIndex, setOpenFaqIndex] = useState(-1);
+=======
+  const { darkMode = false } = useOutletContext() || {};
+  const [motionReady, setMotionReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const elements = document.querySelectorAll('.public-home-reveal');
+    if (!elements.length) return undefined;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+      elements.forEach((element) => element.classList.add('is-visible'));
+      setMotionReady(false);
+      return undefined;
+    }
+
+    try {
+      const initialVisibleRect = window.innerHeight * 0.7;
+      elements.forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        if (rect.top < initialVisibleRect && rect.bottom > 0) {
+          element.classList.add('is-visible');
+        }
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -8% 0px'
+        }
+      );
+
+      elements.forEach((element) => {
+        if (!element.classList.contains('is-visible')) {
+          observer.observe(element);
+        }
+      });
+
+      setMotionReady(true);
+
+      return () => observer.disconnect();
+    } catch (error) {
+      console.error('Failed to initialize public home motion:', error);
+      elements.forEach((element) => element.classList.add('is-visible'));
+      setMotionReady(false);
+      return undefined;
+    }
+  }, []);
+>>>>>>> develop
 
   const testimonials = [
     {
@@ -90,6 +153,7 @@ export default function PublicHomePage() {
   ];
 
   return (
+<<<<<<< HEAD
     <div className="bg-gray-50 font-sans text-gray-800">
       <section id="home" className="bg-[#f2f4f3] py-14">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-8 md:grid-cols-2">
@@ -100,6 +164,13 @@ export default function PublicHomePage() {
             animate="visible"
           >
             <motion.p variants={fadeUpVariant} className="text-xs font-bold uppercase tracking-[0.25em] text-slate-600">
+=======
+    <div className={`public-home-page ${motionReady ? 'public-home-motion-ready' : ''} ${darkMode ? 'bg-[#0b1220] text-slate-100' : 'bg-white text-gray-800'} font-sans`}>
+      <section id="home" className={darkMode ? 'bg-[#111b2f]' : 'bg-[#f2f4f3]'}>
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 py-14 md:grid-cols-2 md:px-10 lg:px-16">
+          <div className="public-home-reveal max-w-xl text-left">
+            <p className={`public-home-kicker text-2xs font-bold uppercase tracking-[0.25em] ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+>>>>>>> develop
               Professional Cleaning
             </motion.p>
             <motion.h1 variants={fadeUpVariant} className="mt-3 text-5xl font-black leading-[0.95] text-slate-900 md:text-6xl">
