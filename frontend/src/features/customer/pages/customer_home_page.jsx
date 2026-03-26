@@ -60,6 +60,8 @@ const serviceHighlights = [
   }
 ];
 
+const hiddenServiceTitles = new Set();
+
 const fallbackImages = [homeServiceImage, officeServiceImage, windowServiceImage, moveServiceImage, shopServiceImage, proServiceImage];
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -79,9 +81,6 @@ const mapServiceFromApi = (item, index) => ({
   status: String(item?.status || 'active').toLowerCase(),
 });
 
-<<<<<<< HEAD
-const hiddenServiceTitles = new Set(['Reliable Regular Cleaning Services for Homes & Offices']);
-=======
 const mapFeaturedCleanerFromApi = (cleaner, index) => ({
   id: String(cleaner?.id || cleaner?.cleaner_id || `cleaner-${index}`),
   photo: toAbsoluteImageUrl(cleaner?.profileImage || cleaner?.profile_image || cleaner?.photo || '') || fallbackImages[index % fallbackImages.length],
@@ -89,7 +88,6 @@ const mapFeaturedCleanerFromApi = (cleaner, index) => ({
   rating: Math.max(1, Math.round(Number(cleaner?.rating) || 0)),
   reviews: Number(cleaner?.reviews || cleaner?.total_reviews || 0)
 });
->>>>>>> develop
 
 const truncateWords = (text, wordLimit = 25) => {
   if (!text) return '';
@@ -421,7 +419,6 @@ const CustomerHomePage = () => {
         <header className="faq-head">
           <p className="faq-kicker">FAQ</p>
           <h2 className="faq-title">Frequently Asked Questions</h2>
-          <h3 className="faq-title">Frequently Asked Questions</h3>
           <p>
             Everything customers usually ask before booking a cleaning service with us.
           </p>
