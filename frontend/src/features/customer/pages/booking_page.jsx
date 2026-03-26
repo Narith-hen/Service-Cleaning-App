@@ -26,6 +26,15 @@ const timeOptions = hourOptions.flatMap((hour) => {
 const GOOGLE_MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+const KNOWN_LOCATION_MATCHES = [
+  {
+    label: 'Passerelles Numeriques Cambodia (PNC)',
+    geocodeQuery: 'Passerelles numeriques Cambodia (PNC), Street 371, Phnom Penh, Cambodia',
+    lat: 11.55086,
+    lng: 104.88308,
+    radiusMeters: 250
+  }
+];
 
 const toAbsoluteImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
@@ -43,6 +52,7 @@ const BookingPage = () => {
   const markerRef = useRef(null);
   const autocompleteRef = useRef(null);
   const geocoderRef = useRef(null);
+  const knownLocationCoordsCacheRef = useRef({});
   const mapWarningTimeoutRef = useRef(null);
   const [address, setAddress] = useState('');
   const [details, setDetails] = useState('');
@@ -65,6 +75,10 @@ const BookingPage = () => {
   const [isMapReady, setIsMapReady] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState(null);
   const showKeyHint = typeof mapError === 'string' && mapError.startsWith('Missing Google Maps API key');
+  const fallbackMapQuery = selectedCoords
+    ? `${Number(selectedCoords.lat).toFixed(6)},${Number(selectedCoords.lng).toFixed(6)}`
+    : (address || '').trim() || 'Phnom Penh, Cambodia';
+  const fallbackMapSrc = `https://maps.google.com/maps?output=embed&q=${encodeURIComponent(fallbackMapQuery)}`;
 
   const clearMapWarning = () => {
     if (mapWarningTimeoutRef.current) {
@@ -99,6 +113,118 @@ const BookingPage = () => {
   const formatCoordinateAddress = (coords) =>
     `Current location (${Number(coords?.lat || 0).toFixed(5)}, ${Number(coords?.lng || 0).toFixed(5)})`;
 
+  const getDistanceInMeters = (fromCoords, toCoords) => {
+    const toRadians = (value) => (value * Math.PI) / 180;
+    const earthRadiusMeters = 6371000;
+    const latDelta = toRadians(Number(toCoords.lat) - Number(fromCoords.lat));
+    const lngDelta = toRadians(Number(toCoords.lng) - Number(fromCoords.lng));
+    const startLat = toRadians(Number(fromCoords.lat));
+    const endLat = toRadians(Number(toCoords.lat));
+
+    const haversine =
+      Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+      Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDelta / 2) * Math.sin(lngDelta / 2);
+
+    return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+  };
+
+  const getKnownLocationMatch = (coords) => {
+    const lat = Number(coords?.lat);
+    const lng = Number(coords?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    return KNOWN_LOCATION_MATCHES.find((locationMatch) => (
+      getDistanceInMeters({ lat, lng }, locationMatch) <= locationMatch.radiusMeters
+    ));
+  };
+
+  const getKnownLocationLabel = (coords) => getKnownLocationMatch(coords)?.label || '';
+
+  const fetchKnownLocationCoords = async (locationMatch) => {
+    if (!locationMatch) return null;
+
+    const cachedCoords = knownLocationCoordsCacheRef.current[locationMatch.label];
+    if (cachedCoords) return cachedCoords;
+
+    const fallbackCoords = {
+      lat: Number(locationMatch.lat),
+      lng: Number(locationMatch.lng)
+    };
+
+    if (!GOOGLE_MAPS_KEY) {
+      knownLocationCoordsCacheRef.current[locationMatch.label] = fallbackCoords;
+      return fallbackCoords;
+    }
+
+    try {
+      const query = locationMatch.geocodeQuery || locationMatch.label;
+
+      if (geocoderRef.current) {
+        const geocodedCoords = await new Promise((resolve, reject) => {
+          geocoderRef.current.geocode({ address: query }, (results, status) => {
+            if (status === 'OK' && results?.[0]?.geometry?.location) {
+              resolve({
+                lat: results[0].geometry.location.lat(),
+                lng: results[0].geometry.location.lng()
+              });
+              return;
+            }
+
+            reject(new Error(status || 'UNKNOWN'));
+          });
+        });
+
+        knownLocationCoordsCacheRef.current[locationMatch.label] = geocodedCoords;
+        return geocodedCoords;
+      }
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${encodeURIComponent(GOOGLE_MAPS_KEY)}`
+      );
+      if (!response.ok) {
+        knownLocationCoordsCacheRef.current[locationMatch.label] = fallbackCoords;
+        return fallbackCoords;
+      }
+
+      const data = await response.json();
+      const location = data?.results?.[0]?.geometry?.location;
+      const resolvedCoords = location?.lat && location?.lng
+        ? { lat: Number(location.lat), lng: Number(location.lng) }
+        : fallbackCoords;
+
+      knownLocationCoordsCacheRef.current[locationMatch.label] = resolvedCoords;
+      return resolvedCoords;
+    } catch {
+      knownLocationCoordsCacheRef.current[locationMatch.label] = fallbackCoords;
+      return fallbackCoords;
+    }
+  };
+
+  const scoreGeocodeResult = (result) => {
+    const types = result?.types || [];
+    const hasType = (type) => types.includes(type);
+
+    let score = 0;
+    if (hasType('point_of_interest') || hasType('establishment')) score += 100;
+    if (hasType('premise')) score += 90;
+    if (hasType('subpremise')) score += 80;
+    if (hasType('street_address')) score += 50;
+    if (hasType('route')) score += 30;
+    if (hasType('plus_code')) score -= 25;
+    if (hasType('political')) score -= 10;
+
+    return score;
+  };
+
+  const pickPreferredGeocodeResult = (results) => {
+    if (!Array.isArray(results) || !results.length) return null;
+
+    return results.reduce((bestResult, currentResult) => {
+      if (!bestResult) return currentResult;
+      return scoreGeocodeResult(currentResult) > scoreGeocodeResult(bestResult) ? currentResult : bestResult;
+    }, null);
+  };
+
   const updateSelectedLocation = ({ coords, nextAddress = '', verified = true }) => {
     if (!coords || !Number.isFinite(Number(coords.lat)) || !Number.isFinite(Number(coords.lng))) {
       setSelectedCoords(null);
@@ -126,6 +252,9 @@ const BookingPage = () => {
   const fetchReverseGeocodeAddress = async (coords) => {
     if (!GOOGLE_MAPS_KEY) return '';
 
+    const knownLocationLabel = getKnownLocationLabel(coords);
+    if (knownLocationLabel) return knownLocationLabel;
+
     try {
       const lat = Number(coords?.lat);
       const lng = Number(coords?.lng);
@@ -142,7 +271,7 @@ const BookingPage = () => {
         return '';
       }
 
-      return formatReadableGeocodeAddress(data.results[0]);
+      return formatReadableGeocodeAddress(pickPreferredGeocodeResult(data.results));
     } catch {
       return '';
     }
@@ -150,6 +279,12 @@ const BookingPage = () => {
 
   const reverseGeocodePosition = (coords) =>
     new Promise((resolve) => {
+      const knownLocationLabel = getKnownLocationLabel(coords);
+      if (knownLocationLabel) {
+        resolve(knownLocationLabel);
+        return;
+      }
+
       if (!geocoderRef.current) {
         fetchReverseGeocodeAddress(coords).then(resolve);
         return;
@@ -157,7 +292,7 @@ const BookingPage = () => {
 
       geocoderRef.current.geocode({ location: coords }, (results, status) => {
         if (status === 'OK' && results?.[0]) {
-          resolve(formatReadableGeocodeAddress(results[0]));
+          resolve(formatReadableGeocodeAddress(pickPreferredGeocodeResult(results)));
           return;
         }
 
@@ -179,10 +314,19 @@ const BookingPage = () => {
       return component?.long_name || component?.short_name || '';
     };
 
+    const placeName = getComponent(['point_of_interest', 'establishment', 'premise', 'subpremise']);
     const locality = getComponent(['locality', 'sublocality', 'administrative_area_level_2']);
     const streetNumber = getComponent(['street_number']);
     const streetName = getComponent(['route']);
     const city = getComponent(['administrative_area_level_1']);
+
+    const routeLine = streetName
+      ? (streetNumber ? `${streetName} ${streetNumber}` : streetName)
+      : '';
+
+    if (placeName) {
+      return [...new Set([placeName, routeLine, locality || city].filter(Boolean))].join(', ');
+    }
 
     let readableAddress = locality || city || '';
 
@@ -587,14 +731,19 @@ const BookingPage = () => {
       lat: resolvedPosition.coords.latitude,
       lng: resolvedPosition.coords.longitude
     };
+    const knownLocationMatch = getKnownLocationMatch(coords);
+    const snappedCoords = knownLocationMatch
+      ? await fetchKnownLocationCoords(knownLocationMatch)
+      : coords;
+    const knownLocationLabel = knownLocationMatch?.label || '';
 
     updateSelectedLocation({
-      coords,
-      nextAddress: 'Finding nearby address...',
+      coords: snappedCoords,
+      nextAddress: knownLocationLabel || 'Finding nearby address...',
       verified: true
     });
 
-    const resolvedAddress = await reverseGeocodePosition(coords);
+    const resolvedAddress = await reverseGeocodePosition(snappedCoords);
     setIsLocating(false);
 
     if (resolvedAddress) {
@@ -898,9 +1047,17 @@ const BookingPage = () => {
           </div>
           <div className="map-shell map-shell--google" aria-label="map-preview">
             {mapError ? (
-              <div className="map-fallback">
+              <div className="map-fallback map-fallback--embed">
                 <p>{mapError}</p>
                 {showKeyHint && <p>Add `VITE_GOOGLE_MAPS_API_KEY` to your frontend `.env` file.</p>}
+                <iframe
+                  className="map-fallback-iframe"
+                  title="Google Maps fallback preview"
+                  src={fallbackMapSrc}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <p className="map-fallback-note">Fallback map mode is active while API authentication is being fixed.</p>
               </div>
             ) : !isMapReady ? (
               <div className="map-fallback">

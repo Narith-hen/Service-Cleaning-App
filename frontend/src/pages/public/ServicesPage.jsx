@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import homeImage from "../../assets/Homes .png";
 import DeepImage from "../../assets/Deep.png";
@@ -13,6 +13,7 @@ import windowImage from "../../assets/window.png";
 import moveImage from "../../assets/move.png";
 import shopImage from "../../assets/shop.png";
 import proImage from "../../assets/pro.png";
+import "../../styles/customer/home.scss";
 
 const fallbackServices = [
   {
@@ -79,6 +80,7 @@ const mapServiceFromApi = (item, index) => ({
 });
 
 export default function ServicesPage({ embedded = false, darkMode = false, useApiServices = false }) {
+  const navigate = useNavigate();
   const [services, setServices] = useState(fallbackServices);
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [servicesError, setServicesError] = useState("");
@@ -135,115 +137,123 @@ export default function ServicesPage({ embedded = false, darkMode = false, useAp
     return [...activeServices, ...inactiveServices];
   }, [services]);
 
+  const renderServiceCards = () => (
+    <div className="service-highlight-grid">
+      {orderedServices.map((service, index) => {
+        const isInactive = service.status === "inactive";
+        const statusText = isInactive ? "Inactive" : "Active";
+
+        return (
+          <article
+            key={service.id}
+            className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}
+            data-customer-reveal={useApiServices ? '' : undefined}
+            data-customer-card={useApiServices ? '' : undefined}
+            style={useApiServices ? { '--customer-reveal-delay': Math.min(index % 4, 3) } : undefined}
+          >
+            <div className="service-highlight-media">
+              <img src={service.image} alt={service.title} />
+              <span className={`service-status-badge ${isInactive ? '' : 'active'}`}>
+                {statusText}
+              </span>
+            </div>
+
+            <div className="service-highlight-body">
+              <h3>{service.title}</h3>
+              <p>{truncateWords(service.description, 25)}</p>
+              <button
+                type="button"
+                className="service-card-btn"
+                onClick={() =>
+                  navigate(bookServicePath, {
+                    state: {
+                      service: {
+                        service_id: service.id,
+                        id: service.id,
+                        title: service.title,
+                        name: service.title,
+                        description: service.description,
+                        image: service.image
+                      }
+                    }
+                  })
+                }
+                data-customer-button={useApiServices ? '' : undefined}
+              >
+                Book Now
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className={darkMode ? "bg-[#0b1220] text-slate-100" : "bg-[#f2f4f3] text-slate-800"}>
       {!embedded && <Navbar />}
 
-      <div className="max-w-6xl mx-auto pt-20 pb-24 px-6">
-        <h2
-          className={`text-4xl font-black text-center mb-1 ${darkMode ? "text-slate-100" : "text-slate-900"}`}
-          data-customer-reveal={useApiServices ? '' : undefined}
-          style={{ fontSize: '32px', color: '#008000', fontWeight: 600, letterSpacing: '0.02em'
-        }}>
-          OUR SERVICES
-        </h2>
-        <p
-          className={`mx-auto mb-5 max-w-2xl text-center leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}
-          data-customer-reveal={useApiServices ? '' : undefined}
-          style={useApiServices ? { '--customer-reveal-delay': 1 } : undefined}
-        >
-          Professional cleaning packages with modern service quality. Hover cards to preview
-          the interactive layout.
-        </p>
+      {useApiServices ? (
+        <div className="customer-home-landing overflow-x-hidden">
+          <section
+            className="our-services"
+            style={{ background: 'transparent', boxShadow: 'none' }}
+          >
+            <header className="services-head">
+              <p className="services-kicker" data-customer-reveal style={{ '--customer-reveal-delay': 0 }}>
+                OUR SERVICES
+              </p>
+              <p
+                className="services-summary"
+                data-customer-reveal
+                style={{ '--customer-reveal-delay': 1 }}
+              >
+                Professional cleaning packages with modern service quality. Hover cards to preview
+                the interactive layout.
+              </p>
+            </header>
 
-        {isLoadingServices ? (
-          <div className={`mx-auto max-w-2xl text-center ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
-            Loading services...
-          </div>
-        ) : orderedServices.length === 0 ? (
-          <div className={`mx-auto max-w-3xl text-center ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
-            {servicesError || "No services available right now."}
-          </div>
-        ) : (
-          <div className="mt-2 grid md:grid-cols-3 gap-8 lg:gap-10">
-            {orderedServices.map((service, index) => {
-              const isInactive = service.status === "inactive";
-              const statusText = isInactive ? "Inactive" : "Active";
-              const statusBadgeClass = isInactive ? "bg-[#ef4444]" : "bg-[#22c55e]";
+            {isLoadingServices ? (
+              <div className="services-loading text-center text-[#5f728d]">
+                Loading services...
+              </div>
+            ) : orderedServices.length === 0 ? (
+              <div className="text-center text-[#5f728d]">
+                {servicesError || "No services available right now."}
+              </div>
+            ) : (
+              renderServiceCards()
+            )}
+          </section>
+        </div>
+      ) : (
+        <div className="max-w-6xl mx-auto pt-20 pb-24 px-6">
+          <h2
+            className={`text-4xl font-black text-center mb-1 ${darkMode ? "text-slate-100" : "text-slate-900"}`}
+            style={{ fontSize: '32px', color: '#008000', fontWeight: 600, letterSpacing: '0.02em' }}
+          >
+            OUR SERVICES
+          </h2>
+          <p className={`mx-auto mb-5 max-w-2xl text-center leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
+            Professional cleaning packages with modern service quality. Hover cards to preview
+            the interactive layout.
+          </p>
 
-              return (
-                <div
-                  key={service.id}
-                  className={`group relative overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 hover:-translate-y-3 hover:shadow-2xl ${
-                    darkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
-                  }`}
-                  data-customer-reveal={useApiServices ? '' : undefined}
-                  data-customer-card={useApiServices ? '' : undefined}
-                  style={useApiServices ? { '--customer-reveal-delay': Math.min(index % 4, 3) } : undefined}
-                >
-                  {/* Image Container */}
-                  <div className="relative h-56 overflow-hidden">
-                    <img
-                      src={service.image}
-                      alt={service.title}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-80" />
-                    
-                    {/* Status Badge */}
-                    <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-bold text-white ${statusBadgeClass} shadow-lg`}>
-                      {statusText}
-                    </span>
-                    
-                    {/* Service Icon Overlay */}
-                    <div className="absolute bottom-4 left-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-8">
-                    <h3 className={`mb-3 text-xl font-extrabold transition-colors duration-300 group-hover:text-[#32c753] ${darkMode ? "text-slate-100" : "text-slate-900"}`}>
-                      {service.title}
-                    </h3>
-                    <div className={`mb-6 h-1 w-12 rounded-full bg-[#32c753] transition-all duration-300 group-hover:w-20`} />
-                    <p className={`mb-6 line-clamp-3 leading-relaxed ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
-                      {truncateWords(service.description, 25)}
-                    </p>
-                    <div className="flex items-center justify-center">
-                      <Link
-                        to={bookServicePath}
-                        state={{
-                          service: {
-                            service_id: service.id,
-                            id: service.id,
-                            title: service.title,
-                            name: service.title,
-                            description: service.description,
-                            image: service.image
-                          }
-                        }}
-                        className={`inline-flex items-center gap-2 rounded-[24px] border border-[#32c753] px-5 py-2.5 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#32c753] hover:text-white hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#32c753]/40 ${
-                          darkMode ? "text-[#7ce892]" : "text-[#32c753]"
-                        }`}
-                        data-customer-button={useApiServices ? '' : undefined}
-                      >
-                        <span>Book Now</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                        </svg>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+          {isLoadingServices ? (
+            <div className={`mx-auto max-w-2xl text-center ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
+              Loading services...
+            </div>
+          ) : orderedServices.length === 0 ? (
+            <div className={`mx-auto max-w-3xl text-center ${darkMode ? "text-slate-300" : "text-gray-500"}`}>
+              {servicesError || "No services available right now."}
+            </div>
+          ) : (
+            <div className="customer-home-landing overflow-x-hidden">
+              {renderServiceCards()}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

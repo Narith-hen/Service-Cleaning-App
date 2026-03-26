@@ -307,6 +307,29 @@
   font-size: 13px;
 }
 
+.map-fallback--embed {
+  justify-content: flex-start;
+  padding: 12px;
+  gap: 10px;
+}
+
+.map-fallback--embed p {
+  margin: 0;
+}
+
+.map-fallback-iframe {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  border-radius: 10px;
+}
+
+.map-fallback-note {
+  font-size: 12px;
+  color: #64748b;
+}
+
 .map-badge {
   position: absolute;
   bottom: 10px;
