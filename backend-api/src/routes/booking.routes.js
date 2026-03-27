@@ -33,7 +33,6 @@ router.use(authenticate);
 const createBookingValidation = [
   body('booking_date').isISO8601().withMessage('Valid booking date required'),
   body('service_id').isInt().withMessage('Service ID is required'),
-  body('promotion_id').optional().isInt(),
   body('address').optional({ values: 'falsy' }).isString().withMessage('Address must be a string'),
   body('start_time').optional({ values: 'falsy' }).isString().withMessage('Start time must be a string'),
   body('end_time').optional({ values: 'falsy' }).isString().withMessage('End time must be a string'),
@@ -68,8 +67,7 @@ const createBookingValidation = [
 const updateBookingValidation = [
   param('id').isInt(),
   body('booking_date').optional().isISO8601(),
-  body('service_id').optional().isInt(),
-  body('promotion_id').optional().isInt()
+  body('service_id').optional().isInt()
 ];
 
 const statusUpdateValidation = [

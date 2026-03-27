@@ -4,7 +4,6 @@ const baseBookingController = require('./base/booking.controller');
 const paymentController = require('./base/payment.controller');
 const notificationController = require('./base/notification.controller');
 const reviewController = require('./base/review.controller');
-const promotionController = require('./base/promotion.controller');
 const settingsController = require('./base/settings.controller');
 
 // Customer controllers
@@ -20,7 +19,6 @@ const adminCleanersController = require('./admin/cleaners.controller');
 const adminServicesController = require('./admin/services.controller');
 const adminBookingsController = require('./admin/bookings.controller');
 const adminReviewsController = require('./admin/reviews.controller');
-const adminPromotionsController = require('./admin/promotions.controller');
 const adminDashboardController = require('./admin/dashboard.controller');
 const adminReportsController = require('./admin/reports.controller');
 
@@ -40,9 +38,6 @@ module.exports = {
   
   // Review controllers
   ...reviewController,
-  
-  // Promotion controllers
-  ...promotionController,
   
   // Additional controller functions needed by routes
   getBookings: baseBookingController.getBookings,
@@ -215,11 +210,6 @@ module.exports = {
       getReviewStats: adminReviewsController.getReviewStats,
       deleteReview: adminReviewsController.deleteReview,
       
-      getAllPromotions: adminPromotionsController.getAllPromotions,
-    createPromotion: adminPromotionsController.createPromotion,
-    updatePromotion: adminPromotionsController.updatePromotion,
-    deletePromotion: adminPromotionsController.deletePromotion,
-
     getRevenueReport: adminReportsController.getRevenueReport,
     getPerformanceReport: adminReportsController.getPerformanceReport,
     

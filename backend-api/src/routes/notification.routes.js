@@ -36,7 +36,6 @@ router.put('/settings', [
   body('push_notifications').optional().isBoolean(),
   body('sms_notifications').optional().isBoolean(),
   body('booking_updates').optional().isBoolean(),
-  body('promotions').optional().isBoolean(),
   body('quiet_hours_start').optional().isString(),
   body('quiet_hours_end').optional().isString()
 ], validate, updateNotificationSettings);
@@ -70,7 +69,7 @@ router.post('/send', authorize('admin'), [
   body('user_ids').optional().isArray(),
   body('title').notEmpty().withMessage('Title required'),
   body('message').notEmpty().withMessage('Message required'),
-  body('type').isIn(['booking', 'promotion', 'system', 'alert']).withMessage('Invalid notification type'),
+  body('type').isIn(['booking', 'system', 'alert']).withMessage('Invalid notification type'),
   body('data').optional().isObject()
 ], validate, sendNotification);
 

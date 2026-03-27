@@ -427,7 +427,7 @@ const CustomerHistoryPage = () => {
         <div className="customer-history-filters">
           {[
             { key: 'all', label: 'All' },
-            { key: 'active', label: 'Active' },
+            { key: 'active', label: 'Booked' },
             { key: 'completed', label: 'Completed' },
             { key: 'cancelled', label: 'Cancelled' }
           ].map((item) => (

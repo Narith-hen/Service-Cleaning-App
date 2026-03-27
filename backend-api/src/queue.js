@@ -1,5 +1,5 @@
 const redis = require('./config/redis');
-const prisma = require('./config/database');
+const db = require('./config/db');
 const notificationService = require('./services/notification.service');
 
 class QueueProcessor {
@@ -104,16 +104,22 @@ class QueueProcessor {
   }
 
   async findAvailableCleaner() {
-    return await prisma.user.findFirst({
-      where: {
-        role: {
-          role_name: 'cleaner'
-        }
-      },
-      include: {
-        role: true
-      }
-    });
+    const [rows] = await db.promise().query(
+      `
+        SELECT
+          u.user_id,
+          u.email,
+          u.role_id,
+          r.role_name
+        FROM users u
+        LEFT JOIN roles r ON r.role_id = u.role_id
+        WHERE LOWER(COALESCE(r.role_name, '')) = 'cleaner'
+        ORDER BY u.user_id ASC
+        LIMIT 1
+      `
+    );
+
+    return rows?.[0] || null;
   }
 
   stop() {

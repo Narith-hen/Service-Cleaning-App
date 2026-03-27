@@ -573,11 +573,7 @@ const getBookingById = async (req, res, next) => {
             p.amount,
             r.review_id,
             r.rating,
-            r.comment AS review_comment,
-            promo.promotion_id,
-            promo.discount_price,
-            promo.start_date,
-            promo.end_date
+            r.comment AS review_comment
          FROM bookings b
          LEFT JOIN services s ON s.service_id = b.service_id
          JOIN users u ON u.user_id = b.user_id
@@ -585,7 +581,6 @@ const getBookingById = async (req, res, next) => {
          LEFT JOIN cleaner_profile cp ON cp.cleaner_id = b.cleaner_id
          LEFT JOIN payments p ON p.booking_id = b.booking_id
          LEFT JOIN reviews r ON r.booking_id = b.booking_id
-         LEFT JOIN promotions promo ON promo.promotion_id = b.promotion_id
          WHERE b.booking_id = ?`,
         [bookingId]
       );
@@ -638,7 +633,7 @@ const publishJobCreated = async (booking) => {
 const updateBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { booking_date, service_id, promotion_id } = req.body;
+    const { booking_date, service_id } = req.body;
 
     const [rows] = await db.promise().query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     if (!rows || rows.length === 0) {
@@ -648,7 +643,6 @@ const updateBooking = async (req, res, next) => {
     const payload = {};
     if (booking_date) payload.booking_date = new Date(booking_date);
     if (service_id) payload.service_id = parseInt(service_id);
-    if (promotion_id !== undefined) payload.promotion_id = promotion_id ? parseInt(promotion_id) : null;
 
     if (Object.keys(payload).length === 0) {
       return next(new AppError('No fields to update', 400));

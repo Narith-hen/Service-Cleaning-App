@@ -133,37 +133,6 @@ router.delete('/reviews/:id', [
   param('id').isInt()
 ], validate, admin.deleteReview);
 
-// Promotion management
-router.get('/promotions', [
-  query('page').optional().isInt(),
-  query('limit').optional().isInt(),
-  query('status').optional().isIn(['active', 'expired', 'upcoming'])
-], validate, admin.getAllPromotions);
-
-router.post('/promotions', [
-  body('code').notEmpty(),
-  body('discount_price').isFloat({ min: 0 }),
-  body('discount_type').isIn(['fixed', 'percentage']),
-  body('start_date').isISO8601(),
-  body('end_date').isISO8601(),
-  body('min_purchase').optional().isFloat({ min: 0 }),
-  body('max_discount').optional().isFloat({ min: 0 }),
-  body('usage_limit').optional().isInt()
-], validate, admin.createPromotion);
-
-router.put('/promotions/:id', [
-  param('id').isInt(),
-  body('code').optional(),
-  body('discount_price').optional().isFloat({ min: 0 }),
-  body('discount_type').optional().isIn(['fixed', 'percentage']),
-  body('start_date').optional().isISO8601(),
-  body('end_date').optional().isISO8601()
-], validate, admin.updatePromotion);
-
-router.delete('/promotions/:id', [
-  param('id').isInt()
-], validate, admin.deletePromotion);
-
 // Reports
 router.get('/reports/revenue', [
   query('range').optional().isIn(['week', 'month', 'total'])

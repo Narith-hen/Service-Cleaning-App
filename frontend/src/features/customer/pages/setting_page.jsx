@@ -4,7 +4,6 @@ const SettingPage = () => {
   const [notifications, setNotifications] = useState({
     email: true,
     sms: false,
-    promotions: true,
     bookingReminders: true,
     profileVisible: true,
     bookingHistoryVisible: false
@@ -61,14 +60,6 @@ const SettingPage = () => {
                 <span>Receive short reminders when your cleaner is on the way.</span>
               </div>
               <button type="button" className={`customer-switch ${notifications.sms ? 'active' : ''}`} onClick={() => handleNotificationChange('sms')} data-customer-button />
-            </div>
-
-            <div className="customer-toggle-row" data-customer-card>
-              <div className="customer-toggle-row__copy">
-                <strong>Promotions & Offers</strong>
-                <span>Seasonal deals and loyalty rewards from the platform.</span>
-              </div>
-              <button type="button" className={`customer-switch ${notifications.promotions ? 'active' : ''}`} onClick={() => handleNotificationChange('promotions')} data-customer-button />
             </div>
 
             <div className="customer-toggle-row" data-customer-card>

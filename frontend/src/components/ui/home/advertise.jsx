@@ -44,7 +44,7 @@ const Advertise = ({ visible, onClose, advertisements = [] }) => {
       description: "សម្រាប់សមាជិកថ្មី - រង្វាន់ពិសេសកំពុងរង់ចាំអ្នក",
       features: ["ប្រាក់រង្វាន់ចូល", "ការបញ្ចុះតម្លៃពិសេស", "សេវាកម្មដំបូងឥតគិតថ្លៃ"],
       buttonText: "ចូលរួមឥឡូវ",
-      link: "/promotion",
+      link: "/services",
       icon: <FireFilled />,
       color: "from-orange-500 to-pink-500"
     }

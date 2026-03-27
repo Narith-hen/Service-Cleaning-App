@@ -1,4 +1,4 @@
-const prisma = require('./config/database');
+const db = require('./config/database');
 const redis = require('./config/redis');
 
 class PaymentWorker {
@@ -8,13 +8,13 @@ class PaymentWorker {
   }
 
   async start() {
-    console.log('🚀 Payment worker started');
+    console.log('Payment worker started');
     this.processing = true;
-    
+
     while (this.processing) {
       try {
         const jobString = await redis.rpop(this.queueName);
-        
+
         if (jobString) {
           const job = JSON.parse(jobString);
           await this.processJob(job);
@@ -22,14 +22,14 @@ class PaymentWorker {
           await this.sleep(1000);
         }
       } catch (error) {
-        console.error('❌ Payment worker error:', error);
+        console.error('Payment worker error:', error);
         await this.sleep(5000);
       }
     }
   }
 
   async processJob(job) {
-    console.log(`📦 Processing payment job: ${job.id}`);
+    console.log(`Processing payment job: ${job.id}`);
 
     switch (job.data.type) {
       case 'process_payment':
@@ -48,12 +48,10 @@ class PaymentWorker {
 
   async processPayment(data) {
     const { bookingId, amount, paymentMethod } = data;
-    
+
     try {
-      // Simulate payment processing
       console.log(`Processing payment of $${amount} for booking #${bookingId}`);
-      
-      // Here you would integrate with actual payment gateway
+
       const paymentResult = {
         success: true,
         transactionId: `TXN-${Date.now()}`,
@@ -61,23 +59,32 @@ class PaymentWorker {
       };
 
       if (paymentResult.success) {
-        // Update booking and payment status
-        await prisma.$transaction([
-          prisma.booking.update({
-            where: { booking_id: bookingId },
-            data: { payment_status: 'paid' }
-          }),
-          prisma.payment.create({
-            data: {
-              amount,
-              payment_method: paymentMethod,
-              payment_status: 'completed',
-              booking_id: bookingId
-            }
-          })
-        ]);
+        const connection = await db.promise().getConnection();
+        try {
+          await connection.beginTransaction();
+          await connection.query(
+            'UPDATE bookings SET payment_status = ? WHERE booking_id = ?',
+            ['paid', bookingId]
+          );
+          await connection.query(
+            `
+              INSERT INTO payments (amount, payment_method, payment_status, booking_id)
+              VALUES (?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE
+                amount = VALUES(amount),
+                payment_method = VALUES(payment_method),
+                payment_status = VALUES(payment_status)
+            `,
+            [amount, paymentMethod, 'completed', bookingId]
+          );
+          await connection.commit();
+        } catch (transactionError) {
+          await connection.rollback();
+          throw transactionError;
+        } finally {
+          connection.release();
+        }
 
-        // Send confirmation
         await redis.publish('notification:new', JSON.stringify({
           bookingId,
           title: 'Payment Successful',
@@ -87,19 +94,20 @@ class PaymentWorker {
       }
     } catch (error) {
       console.error('Payment processing failed:', error);
-      
-      // Handle failed payment
-      await prisma.booking.update({
-        where: { booking_id: bookingId },
-        data: { payment_status: 'failed' }
-      });
 
-      // Re-queue for retry
-      if (data.attempts < 3) {
-        data.attempts = (data.attempts || 0) + 1;
+      await db.promise().query(
+        'UPDATE bookings SET payment_status = ? WHERE booking_id = ?',
+        ['failed', bookingId]
+      );
+
+      const attempts = Number(data.attempts || 0);
+      if (attempts < 3) {
         await redis.lpush(this.queueName, JSON.stringify({
           id: `payment-retry-${Date.now()}`,
-          data
+          data: {
+            ...data,
+            attempts: attempts + 1
+          }
         }));
       }
     }
@@ -107,20 +115,24 @@ class PaymentWorker {
 
   async processRefund(data) {
     const { bookingId } = data;
-    
-    const payment = await prisma.payment.findUnique({
-      where: { booking_id: bookingId }
-    });
+    const [rows] = await db.promise().query(
+      `
+        SELECT payment_id, amount
+        FROM payments
+        WHERE booking_id = ?
+        LIMIT 1
+      `,
+      [bookingId]
+    );
 
+    const payment = rows?.[0];
     if (payment) {
       console.log(`Processing refund of $${payment.amount} for booking #${bookingId}`);
-      
-      // Process refund with payment gateway
-      // Update payment status
-      await prisma.payment.update({
-        where: { payment_id: payment.payment_id },
-        data: { payment_status: 'refunded' }
-      });
+
+      await db.promise().query(
+        'UPDATE payments SET payment_status = ? WHERE payment_id = ?',
+        ['refunded', payment.payment_id]
+      );
 
       await redis.publish('notification:new', JSON.stringify({
         bookingId,
@@ -133,28 +145,24 @@ class PaymentWorker {
 
   async verifyPayment(data) {
     const { transactionId, bookingId } = data;
-    
-    // Verify payment with gateway
     console.log(`Verifying payment for transaction ${transactionId}`);
-    
-    // Update verification status
-    await prisma.booking.update({
-      where: { booking_id: bookingId },
-      data: { payment_status: 'verified' }
-    });
+
+    await db.promise().query(
+      'UPDATE bookings SET payment_status = ? WHERE booking_id = ?',
+      ['verified', bookingId]
+    );
   }
 
   sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   stop() {
     this.processing = false;
-    console.log('🛑 Payment worker stopped');
+    console.log('Payment worker stopped');
   }
 }
 
-// Start worker if run directly
 if (require.main === module) {
   const worker = new PaymentWorker();
   worker.start().catch(console.error);
