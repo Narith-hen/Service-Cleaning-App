@@ -204,7 +204,9 @@ const adminPhraseTranslations = {
 export const TranslationProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
     try {
-      return typeof window !== 'undefined' ? localStorage.getItem('language') || 'en' : 'en';
+      return typeof window !== 'undefined'
+        ? normalizeLanguage(localStorage.getItem('language') || 'en')
+        : 'en';
     } catch (error) {
       console.error('Failed to read language from storage:', error);
       return 'en';
@@ -251,6 +253,15 @@ export const TranslationProvider = ({ children }) => {
     }
   }, [darkMode]);
 
+  const t = useMemo(() => {
+    const currentTranslations = keyTranslations[language] || keyTranslations.en;
+
+    return (key) => {
+      if (typeof key !== 'string' || !key) return key;
+      return currentTranslations[key] || keyTranslations.en[key] || key;
+    };
+  }, [language]);
+
   const ta = useMemo(() => {
     const phraseMap = adminPhraseTranslations[language] || {};
     const entries = Object.entries(phraseMap).sort((left, right) => right[0].length - left[0].length);
@@ -281,7 +292,7 @@ export const TranslationProvider = ({ children }) => {
         t,
         ta,
         changeLanguage,
-        translations: keyTranslations
+        translations: keyTranslations[language] || keyTranslations.en
       }}
     >
       {children}

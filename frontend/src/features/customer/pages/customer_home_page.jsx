@@ -184,6 +184,7 @@ const CustomerHomePage = () => {
   const navigate = useNavigate();
   const [featuredCleaners, setFeaturedCleaners] = useState([]);
   const [loadingCleaners, setLoadingCleaners] = useState(true);
+  const [openFaqIndex, setOpenFaqIndex] = useState(1);
 
   useEffect(() => {
     const fetchTopCleaners = async () => {
