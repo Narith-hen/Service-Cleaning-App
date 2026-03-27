@@ -56,12 +56,42 @@ const toAbsoluteImageUrl = (imageUrl) => {
   return `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
 };
 
+const getJobServiceName = (job) => {
+  const directTitle = String(job?.title || '').trim();
+  if (directTitle && directTitle.toLowerCase() !== 'cleaning job') {
+    return directTitle;
+  }
+
+  return (
+    job?.serviceName ||
+    job?.service_name ||
+    job?.service?.name ||
+    directTitle ||
+    ''
+  );
+};
+
+const getJobServiceImage = (job) => (
+  job?.serviceImage ||
+  job?.service_image ||
+  job?.service?.image ||
+  job?.imageUrl ||
+  job?.image_url ||
+  ''
+);
+
 const pickJobImage = (job) => {
-  const apiImage = toAbsoluteImageUrl(job?.serviceImage || job?.imageUrl || '');
+  const apiImage = toAbsoluteImageUrl(getJobServiceImage(job));
   if (apiImage) return apiImage;
 
-  const title = String(job?.title || job?.serviceName || '').toLowerCase();
-  const serviceType = String(job?.serviceType || '').toLowerCase();
+  const title = String(getJobServiceName(job)).toLowerCase();
+  const serviceType = String(
+    job?.serviceType ||
+    job?.service_type ||
+    job?.service?.description ||
+    job?.service_description ||
+    ''
+  ).toLowerCase();
   
   if (title.includes('carpet') || serviceType.includes('carpet')) return carpetImage;
   if (title.includes('floor buff') || title.includes('pressure wash') || serviceType.includes('floor')) return floorBuffingImage;
@@ -77,6 +107,28 @@ const pickJobImage = (job) => {
   if (title.includes('customer') || serviceType.includes('customer')) return customerHomeImage;
   
   return homeImage;
+};
+
+const normalizeUiJobServiceMeta = (job) => {
+  const serviceName = getJobServiceName(job) || 'Cleaning Service';
+  const serviceImage = getJobServiceImage(job);
+  const serviceType =
+    job?.serviceType ||
+    job?.service_type ||
+    job?.service?.description ||
+    job?.service_description ||
+    serviceName;
+
+  return {
+    ...job,
+    title: serviceName,
+    serviceName,
+    serviceType,
+    serviceImage,
+    image: serviceImage
+      ? pickJobImage({ ...job, title: serviceName, serviceImage, serviceType })
+      : job?.image || pickJobImage({ ...job, title: serviceName, serviceType })
+  };
 };
 
 const getBookingIdFromJob = (job) => {
@@ -209,13 +261,15 @@ const mapApiJobToUiJob = (job) => {
   const bookingDate = job?.booking_date ? new Date(job.booking_date) : null;
   const hasValidDate = bookingDate instanceof Date && !Number.isNaN(bookingDate.getTime());
   const displayPrice = Number(job?.negotiated_price ?? job?.total_price ?? 0);
+  const serviceName = getJobServiceName(job) || 'Cleaning Service';
+  const serviceImage = getJobServiceImage(job);
 
-  return {
+  return normalizeUiJobServiceMeta({
     id: `confirmed-${job?.booking_id}`,
     sourceRequestId: String(job?.booking_id || ''),
     bookingId: String(job?.booking_id || ''),
     status: mapBookingStatusToJobStatus(job?.booking_status, job?.payment_status),
-    title: job?.service?.name || job?.service_name || 'Cleaning Job',
+    title: serviceName,
     jobId: job?.booking_id ? `#SOMA-${String(job.booking_id).padStart(5, '0')}` : '#SOMA-00000',
     price: `$${displayPrice.toFixed(2)}`,
     day: hasValidDate ? String(bookingDate.getDate()).padStart(2, '0') : '',
@@ -227,20 +281,46 @@ const mapApiJobToUiJob = (job) => {
     customer: job?.user?.username || 'Customer',
     customerId: String(job?.user_id || job?.user?.user_id || ''),
     customerPhone: job?.user?.phone_number || '',
-    customerEmail: job?.user?.email || '',
-    customerAvatar: job?.user?.avatar || '',
+    customerEmail: job?.user?.email || job?.customer_email || '',
+    customerAvatar: toAbsoluteImageUrl(job?.user?.avatar || job?.customer_avatar || ''),
     bedrooms: job?.bedrooms || '3 Bedrooms',
     floors: job?.floors || '2 Floors',
     serviceStatus: job?.service_status || 'booked',
     paymentStatus: String(job?.payment_status || '').toLowerCase(),
-    serviceType: job?.serviceType || 'home',
-    serviceImage: job?.serviceImage || '',
-    image: pickJobImage({
-      title: job?.service?.name || job?.service_name || 'Cleaning Job',
-      serviceImage: job?.serviceImage || ''
-    })
-  };
+    serviceType:
+      job?.serviceType ||
+      job?.service_type ||
+      job?.service?.description ||
+      job?.service_description ||
+      serviceName,
+    serviceImage,
+    bookingDateRaw: job?.booking_date || '',
+    updatedAtRaw: job?.updated_at || '',
+    createdAtRaw: job?.created_at || ''
+  });
 };
+
+const getJobSortTimestamp = (job) => {
+  const candidateValues = [
+    job?.createdAtRaw,
+    job?.updatedAtRaw,
+    job?.bookingDateRaw
+  ];
+
+  for (const value of candidateValues) {
+    const timestamp = new Date(value || '').getTime();
+    if (Number.isFinite(timestamp) && timestamp > 0) {
+      return timestamp;
+    }
+  }
+
+  const fallbackId = Number(getBookingIdFromJob(job));
+  return Number.isFinite(fallbackId) ? fallbackId : 0;
+};
+
+const sortJobsNewestFirst = (items = []) => (
+  [...items].sort((left, right) => getJobSortTimestamp(right) - getJobSortTimestamp(left))
+);
 
 const tabs = [
   { key: 'all', label: 'All Jobs' },
@@ -281,7 +361,11 @@ const MyJobsPage = () => {
         try {
           const raw = localStorage.getItem(confirmedMyJobsStorageKey);
           const parsed = raw ? JSON.parse(raw) : [];
-          setJobs(Array.isArray(parsed) ? parsed.filter(Boolean) : []);
+          setJobs(
+            Array.isArray(parsed)
+              ? parsed.filter(Boolean).map(normalizeUiJobServiceMeta)
+              : []
+          );
         } catch {
           setJobs([]);
         }
@@ -335,16 +419,16 @@ const MyJobsPage = () => {
   }, [jobs]);
 
   const visibleJobs = useMemo(() => {
-    if (activeTab === 'all') return jobs;
+    if (activeTab === 'all') return sortJobsNewestFirst(jobs);
     if (activeTab === 'payment') {
-      return jobs.filter((job) => {
+      return sortJobsNewestFirst(jobs.filter((job) => {
         const bookingId = getBookingIdFromJob(job);
         const paymentFlow = bookingId ? paymentWorkflowByBooking[String(bookingId)] : null;
         const paymentStatus = String(paymentFlow?.payment_status || job.paymentStatus || '').toLowerCase();
         return isPaymentReviewStatus(job.status) || isPaymentReviewStatus(paymentStatus);
-      });
+      }));
     }
-    return jobs.filter((job) => job.status === activeTab);
+    return sortJobsNewestFirst(jobs.filter((job) => job.status === activeTab));
   }, [jobs, activeTab, paymentWorkflowByBooking]);
 
   const activeMessageJob = useMemo(

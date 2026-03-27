@@ -38,6 +38,7 @@ const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
 
     const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     let currentTargets = collectRevealTargets(scope);
+    let scheduledRefresh = null;
 
     if (!currentTargets.length) {
       setMotionReady(false);
@@ -71,7 +72,7 @@ const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
       currentTargets.forEach((element) => observeRevealTarget(observer, element));
     });
 
-    const mutationObserver = new MutationObserver((mutations) => {
+    const refreshObservedTargets = (mutations) => {
       const nextTargets = collectRevealTargets(scope);
       if (!nextTargets.length) return;
 
@@ -92,6 +93,17 @@ const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
       });
 
       currentTargets = nextTargets;
+      scheduledRefresh = null;
+    };
+
+    const mutationObserver = new MutationObserver((mutations) => {
+      if (scheduledRefresh != null) {
+        window.cancelAnimationFrame(scheduledRefresh);
+      }
+
+      scheduledRefresh = window.requestAnimationFrame(() => {
+        refreshObservedTargets(mutations);
+      });
     });
 
     mutationObserver.observe(scope, {
@@ -101,9 +113,11 @@ const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
 
     return () => {
       window.cancelAnimationFrame(frame);
+      if (scheduledRefresh != null) {
+        window.cancelAnimationFrame(scheduledRefresh);
+      }
       mutationObserver.disconnect();
       observer.disconnect();
-      resetRevealState(currentTargets);
     };
   }, [enabled, scopeRef, ...deps]);
 

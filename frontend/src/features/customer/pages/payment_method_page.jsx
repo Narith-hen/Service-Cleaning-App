@@ -70,6 +70,7 @@ const PaymentMethodPage = () => {
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('bookingId');
   const fileInputRef = useRef(null);
+  const ratingPopupTimeoutRef = useRef(null);
 
   const [loadingFinalization, setLoadingFinalization] = useState(false);
   const [finalization, setFinalization] = useState(null);
@@ -77,20 +78,19 @@ const PaymentMethodPage = () => {
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [reviewBooking, setReviewBooking] = useState(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewFeedback, setReviewFeedback] = useState(null);
-  const hasShownSuccessModalRef = useRef(false);
   const hasLoadedFinalizationRef = useRef(false);
 
   const amountDue = Number(finalization?.amount_due || 186.5);
   const paymentStatus = String(finalization?.payment_status || '').toLowerCase();
   const isReceiptSubmitted = paymentStatus === 'receipt_submitted';
   const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
-  const canRateCleaner = isReceiptSubmitted || isPaymentConfirmed;
+  const canReviewService = isReceiptSubmitted || isPaymentConfirmed;
   const canSubmitReceipt = !isReceiptSubmitted && !isPaymentConfirmed;
   const isPdfReceipt = receiptFile?.type === 'application/pdf';
 
@@ -136,11 +136,9 @@ const PaymentMethodPage = () => {
           const payload = response?.data?.data || null;
           setFinalization(payload);
           hasLoadedFinalizationRef.current = true;
-          setStatusText((currentText) => (
-            payload?.payment_status === 'completed' || payload?.payment_status === 'paid'
-              ? 'Payment confirmed successfully.'
-              : currentText
-          ));
+          if (payload?.payment_status === 'completed' || payload?.payment_status === 'paid') {
+            setStatusText('');
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -179,43 +177,38 @@ const PaymentMethodPage = () => {
   }, [receiptFile]);
 
   useEffect(() => {
-    if (!bookingId || !canRateCleaner || hasShownSuccessModalRef.current) return;
-
-    const modalStorageKey = `customer-payment-success:${bookingId}`;
-    const loadBookingForReview = async () => {
-      try {
-        const response = await api.get(`/bookings/${bookingId}`);
-        const booking = response?.data?.data || null;
-        const normalized = normalizeReviewBooking(booking, bookingId, finalization?.service_name);
-
-        setReviewBooking(normalized);
-        setRating(normalized.reviewId ? normalized.reviewRating : 0);
-        setComment(normalized.reviewId ? normalized.reviewComment : '');
-      } catch {
-        setReviewBooking(
-          normalizeReviewBooking(null, bookingId, finalization?.service_name)
-        );
-      } finally {
-        hasShownSuccessModalRef.current = true;
-        if (window.sessionStorage.getItem(modalStorageKey) !== 'dismissed') {
-          setShowSuccessModal(true);
-        }
+    return () => {
+      if (ratingPopupTimeoutRef.current) {
+        window.clearTimeout(ratingPopupTimeoutRef.current);
       }
     };
+  }, []);
 
-    loadBookingForReview();
-  }, [bookingId, canRateCleaner, finalization?.service_name]);
+  const loadBookingForReview = async (fallbackServiceName) => {
+    if (!bookingId) return;
+
+    try {
+      const response = await api.get(`/bookings/${bookingId}`);
+      const booking = response?.data?.data || null;
+      const normalized = normalizeReviewBooking(booking, bookingId, fallbackServiceName);
+      setReviewBooking(normalized);
+      setRating(normalized.reviewId ? normalized.reviewRating : 0);
+      setComment(normalized.reviewId ? normalized.reviewComment : '');
+    } catch {
+      const fallback = normalizeReviewBooking(null, bookingId, fallbackServiceName);
+      setReviewBooking(fallback);
+      setRating(0);
+      setComment('');
+    }
+  };
 
   const handleOpenFileDialog = () => {
     if (isPaymentConfirmed) return;
     fileInputRef.current?.click();
   };
 
-  const handleCloseSuccessModal = () => {
-    if (bookingId) {
-      window.sessionStorage.setItem(`customer-payment-success:${bookingId}`, 'dismissed');
-    }
-    setShowSuccessModal(false);
+  const handleCloseRatingModal = () => {
+    setShowRatingModal(false);
   };
 
   const handleStarSelect = (value) => {
@@ -247,19 +240,20 @@ const PaymentMethodPage = () => {
 
       const payload = response?.data?.data || null;
       setFinalization(payload);
-      setStatusText('Payment submitted successfully. You can rate your cleaner now.');
+      setStatusText('');
       setReceiptFile(null);
+      setReviewFeedback(null);
+      void loadBookingForReview(payload?.service_name);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      if (!hasShownSuccessModalRef.current) {
-        hasShownSuccessModalRef.current = true;
-        setReviewBooking((current) => current || normalizeReviewBooking(null, bookingId, payload?.service_name));
-        setRating(0);
-        setComment('');
-        setReviewFeedback(null);
-        setShowSuccessModal(true);
+      if (ratingPopupTimeoutRef.current) {
+        window.clearTimeout(ratingPopupTimeoutRef.current);
       }
+      ratingPopupTimeoutRef.current = window.setTimeout(() => {
+        setStatusText('');
+        setShowRatingModal(true);
+      }, 5000);
     } catch (error) {
       setStatusText(error?.response?.data?.message || 'Failed to submit receipt.');
     } finally {
@@ -306,9 +300,8 @@ const PaymentMethodPage = () => {
           : current
       ));
       setReviewFeedback({ type: 'success', message: 'Thanks for rating your cleaner.' });
-      setStatusText('Payment confirmed successfully.');
       window.setTimeout(() => {
-        handleCloseSuccessModal();
+        setShowRatingModal(false);
       }, 1200);
     } catch (error) {
       const message =
@@ -453,7 +446,7 @@ const PaymentMethodPage = () => {
         )}
       </div>
 
-      {showSuccessModal && (
+      {showRatingModal && (
         <div className="payment-success-modal-backdrop" role="presentation">
           <section
             className="payment-success-modal"
@@ -464,8 +457,8 @@ const PaymentMethodPage = () => {
             <button
               type="button"
               className="payment-success-close"
-              onClick={handleCloseSuccessModal}
-              aria-label="Close payment success dialog"
+              onClick={handleCloseRatingModal}
+              aria-label="Close rating dialog"
             >
               <CloseOutlined />
             </button>
@@ -474,13 +467,13 @@ const PaymentMethodPage = () => {
               <CheckCircleOutlined />
             </div>
 
-            <p className="payment-success-kicker">Payment Successful</p>
+            <p className="payment-success-kicker">Rate Your Cleaner</p>
             <h2 id="payment-success-title">
-              {isPaymentConfirmed ? 'Your cleaner confirmed the payment.' : 'Your payment has been submitted.'}
+              Share your experience
             </h2>
             <p className="payment-success-copy">
-              {reviewBooking?.serviceName || finalization?.service_name || 'Cleaning service'} is now completed.
-              Please rate your cleaner now that you have already paid.
+              {reviewBooking?.serviceName || finalization?.service_name || 'Cleaning service'} is complete.
+              Your feedback helps us improve the service quality.
             </p>
 
             <div className="payment-success-cleaner">
@@ -514,6 +507,12 @@ const PaymentMethodPage = () => {
                   ))}
                 </div>
 
+                {reviewFeedback && (
+                  <p className={`payment-review-feedback is-${reviewFeedback.type}`}>
+                    {reviewFeedback.message}
+                  </p>
+                )}
+
                 <textarea
                   className="payment-success-textarea"
                   value={comment}
@@ -522,14 +521,8 @@ const PaymentMethodPage = () => {
                   maxLength={500}
                 />
 
-                {reviewFeedback && (
-                  <p className={`payment-review-feedback is-${reviewFeedback.type}`}>
-                    {reviewFeedback.message}
-                  </p>
-                )}
-
                 <div className="payment-success-actions">
-                  <button type="button" className="payment-review-skip" onClick={handleCloseSuccessModal}>
+                  <button type="button" className="payment-review-skip" onClick={handleCloseRatingModal}>
                     Maybe later
                   </button>
                   <button
@@ -548,7 +541,7 @@ const PaymentMethodPage = () => {
                   You already rated this cleaner. Thank you for your feedback.
                 </p>
                 <div className="payment-success-actions">
-                  <button type="button" className="payment-review-submit" onClick={handleCloseSuccessModal}>
+                  <button type="button" className="payment-review-submit" onClick={handleCloseRatingModal}>
                     Close
                   </button>
                 </div>

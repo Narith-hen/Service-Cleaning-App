@@ -22,6 +22,14 @@ import { useChatStore } from '../../../store/chatStore';
 import api from '../../../services/api';
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const toAbsoluteAvatarUrl = (avatarUrl) => {
+  if (!avatarUrl) return '';
+  if (/^https?:\/\//i.test(avatarUrl) || avatarUrl.startsWith('data:')) return avatarUrl;
+  return `${API_BASE_URL}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`;
+};
 
 const toDataUrl = (file) =>
   new Promise((resolve, reject) => {
@@ -63,6 +71,11 @@ const CleanerMessagePanel = ({
   const chatBodyRef = useRef(null);
   const lastReadReceiptRef = useRef({ threadId: null, messageId: null });
   const customerInitial = String(customerName || 'C').trim().charAt(0).toUpperCase() || 'C';
+  const normalizedCustomerAvatar = toAbsoluteAvatarUrl(customerAvatar);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [normalizedCustomerAvatar]);
 
   // Fetch block status on mount
   useEffect(() => {
@@ -257,11 +270,12 @@ const CleanerMessagePanel = ({
         <div className="my-jobs-chat-customer">
           <div className="my-jobs-chat-avatar-wrap">
             <div className="my-jobs-chat-avatar">
-              {customerAvatar ? (
+              {normalizedCustomerAvatar && !avatarError ? (
                 <img
-                  src={customerAvatar}
+                  src={normalizedCustomerAvatar}
                   alt={customerName}
                   className="my-jobs-chat-avatar-image"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 customerName.charAt(0)
@@ -315,9 +329,9 @@ const CleanerMessagePanel = ({
             <div key={message.id} className={`my-jobs-chat-row ${isCleaner ? 'right' : 'left'}`}>
               {!isCleaner && (
                 <div className="my-jobs-chat-mini-avatar">
-                  {customerAvatar && !avatarError ? (
+                  {normalizedCustomerAvatar && !avatarError ? (
                     <img
-                      src={customerAvatar}
+                      src={normalizedCustomerAvatar}
                       alt={customerName}
                       className="my-jobs-chat-avatar-image"
                       onError={() => setAvatarError(true)}
@@ -409,9 +423,9 @@ const CleanerMessagePanel = ({
         {isCustomerTyping && (
           <div className="my-jobs-chat-row left">
             <div className="my-jobs-chat-mini-avatar">
-              {customerAvatar && !avatarError ? (
+              {normalizedCustomerAvatar && !avatarError ? (
                 <img
-                  src={customerAvatar}
+                  src={normalizedCustomerAvatar}
                   alt={customerName}
                   className="my-jobs-chat-avatar-image"
                   onError={() => setAvatarError(true)}

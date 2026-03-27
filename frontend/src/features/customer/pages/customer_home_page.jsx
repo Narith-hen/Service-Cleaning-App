@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import narithImage from '../../../assets/narith.png';
 import meyImage from '../../../assets/mey.JPG';
@@ -185,6 +185,8 @@ const CustomerHomePage = () => {
   const [featuredCleaners, setFeaturedCleaners] = useState([]);
   const [loadingCleaners, setLoadingCleaners] = useState(true);
   const [openFaqIndex, setOpenFaqIndex] = useState(1);
+  const [motionEnhanced, setMotionEnhanced] = useState(false);
+  const pageRef = useRef(null);
 
   useEffect(() => {
     const fetchTopCleaners = async () => {
@@ -233,6 +235,49 @@ const CustomerHomePage = () => {
     fetchServices();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const scope = pageRef.current;
+    if (!scope) return undefined;
+
+    const revealTargets = Array.from(scope.querySelectorAll('.reveal'));
+    if (!revealTargets.length) return undefined;
+
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduceMotionQuery.matches) {
+      revealTargets.forEach((element) => element.classList.add('is-visible'));
+      setMotionEnhanced(false);
+      return undefined;
+    }
+
+    setMotionEnhanced(true);
+    revealTargets.forEach((element) => element.classList.remove('is-visible'));
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        threshold: 0.14,
+        rootMargin: '0px 0px -8% 0px'
+      }
+    );
+
+    const frame = window.requestAnimationFrame(() => {
+      revealTargets.forEach((element) => observer.observe(element));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
+
   const handleBookService = (service) => {
     navigate('/customer/bookings', {
       state: {
@@ -251,7 +296,10 @@ const CustomerHomePage = () => {
   const visibleServices = services.filter((service) => !hiddenServiceTitles.has(service.title));
 
   return (
-    <div className="customer-home-landing">
+    <div
+      ref={pageRef}
+      className={`customer-home-landing ${motionEnhanced ? 'motion-enhanced' : ''}`}
+    >
       <section className="editorial-hero reveal">
         <div className="hero-copy">
           <h1>
@@ -311,7 +359,7 @@ const CustomerHomePage = () => {
             visibleServices.slice(0, 3).map((service, index) => (
               <article key={service.id} className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}>
                 <div className="service-highlight-media">
-                  <img src={service.image} alt={service.title} />
+                  <img src={service.image} alt={service.title} loading="lazy" decoding="async" />
                   <span className={`service-status-badge ${service.status === 'active' ? 'active' : ''}`}>
                     {formatServiceStatus(service.status)}
                   </span>
@@ -329,7 +377,7 @@ const CustomerHomePage = () => {
             serviceHighlights.map((service, index) => (
               <article key={service.id} className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}>
                 <div className="service-highlight-media">
-                  <img src={service.image} alt={service.title} />
+                  <img src={service.image} alt={service.title} loading="lazy" decoding="async" />
                   <span className={`service-status-badge ${service.status === 'active' ? 'active' : ''}`}>
                     {formatServiceStatus(service.status)}
                   </span>
@@ -377,7 +425,7 @@ const CustomerHomePage = () => {
             featuredCleaners.map((cleaner, index) => (
               <article key={cleaner.id} className={`cleaner-card reveal stagger-${Math.min(index + 1, 3)}`}>
                 <div className="cleaner-photo-wrap">
-                  <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" />
+                  <img src={cleaner.photo} alt={cleaner.company} className="cleaner-photo" loading="lazy" decoding="async" />
                 </div>
                 <h3>{cleaner.company}</h3>
                 <p className="cleaner-rating">{'\u2605'.repeat(cleaner.rating)}</p>

@@ -232,6 +232,7 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
   const activeThreadRef = useRef(normalizedThreadId);
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const typingEmitCooldownRef = useRef(0);
   const lastTypingSoundRef = useRef(0);
 
   // Initialize socket connection
@@ -251,13 +252,11 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     };
 
     const onConnect = () => {
-      console.log('[useCustomerChat] Socket connected');
       setIsConnected(true);
       joinRoom();
     };
 
     const onDisconnect = () => {
-      console.log('[useCustomerChat] Socket disconnected');
       setIsConnected(false);
     };
 
@@ -543,10 +542,14 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     if (accessDenied) return;
     const socket = socketRef.current;
     if (socket && socket.connected) {
-      socket.emit('typing', {
-        bookingId: normalizedThreadId,
-        isTyping: true
-      });
+      const now = Date.now();
+      if (now - typingEmitCooldownRef.current > 900) {
+        socket.emit('typing', {
+          bookingId: normalizedThreadId,
+          isTyping: true
+        });
+        typingEmitCooldownRef.current = now;
+      }
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -590,10 +593,8 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
     };
 
     setMessages((prev) => [...prev, optimisticMessage]);
-    console.log('[useCustomerChat] Added optimistic message:', optimisticMessage);
 
     const token = getAuthToken();
-    console.log('[useCustomerChat] Auth token:', token ? 'exists' : 'missing');
 
     if (!token) {
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
@@ -624,17 +625,11 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
         receiver_id: receiverId || otherUserId
       });
 
-      console.log('[useCustomerChat] API Response:', response);
-
       const saved = response?.data?.data;
-      console.log('[useCustomerChat] Saved message:', saved);
       const currentUserId = getStoredUserId();
-      console.log('[useCustomerChat] Current user ID:', currentUserId);
       const mapped = saved ? mapApiMessage(saved, currentUserId) : optimisticMessage;
-      console.log('[useCustomerChat] Mapped message:', mapped);
       mapped.status = 'sent';
 
-      console.log('[useCustomerChat] Updating message with ID:', tempId);
       setMessages((prev) =>
         dedupeMessagesById(prev.map((msg) => (msg.id === tempId ? mapped : msg)))
       );
@@ -648,7 +643,6 @@ export const useCustomerChat = ({ threadId, receiverId }) => {
 
       return { success: true };
     } catch (error) {
-      console.error('[useCustomerChat] Send message error:', error);
       // Remove the optimistic message from the UI on failure
       setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
       const statusCode = Number(error?.response?.status || 0);

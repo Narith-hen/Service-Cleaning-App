@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckOutlined,
   ClockCircleOutlined,
@@ -207,11 +207,11 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
     return () => window.removeEventListener('click', close);
   }, [contextMenu]);
 
-  const handleBubbleContextMenu = (e, message) => {
+  const handleBubbleContextMenu = useCallback((e, message) => {
     if (message.sender !== 'customer' || !message.text) return;
     e.preventDefault();
     setContextMenu({ id: message.id, text: message.text, x: e.clientX, y: e.clientY });
-  };
+  }, []);
 
   const startEdit = (message) => {
     setContextMenu(null);
@@ -219,18 +219,158 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
     setEditDraft(message.text);
   };
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setEditingId(null);
     setEditDraft('');
-  };
+  }, []);
 
-  const commitEdit = () => {
+  const commitEdit = useCallback(() => {
     const trimmed = editDraft.trim();
     if (!trimmed) return;
     editMessage({ id: editingId, text: trimmed });
     setEditingId(null);
     setEditDraft('');
-  };
+  }, [editDraft, editingId, editMessage]);
+
+  const renderedMessages = useMemo(() => (
+    <>
+      {messages.map((message) => {
+        const isCustomer = message.sender === 'customer';
+        const isEditing = editingId === message.id;
+
+        return (
+          <div key={message.id} className={`my-jobs-chat-row ${isCustomer ? 'right' : 'left'}`}>
+            {!isCustomer && (
+              <div className="my-jobs-chat-mini-avatar">
+                {cleanerAvatar && !avatarFailed ? (
+                  <img
+                    src={cleanerAvatar}
+                    alt={cleanerName}
+                    className="my-jobs-chat-mini-avatar-image"
+                    onError={() => setAvatarFailed(true)}
+                  />
+                ) : (
+                  cleanerName.charAt(0)
+                )}
+              </div>
+            )}
+
+            <div className="my-jobs-chat-content">
+              {isEditing ? (
+                <div className="my-jobs-chat-edit-wrap">
+                  <input
+                    ref={editInputRef}
+                    className="my-jobs-chat-edit-input"
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEdit(); }
+                      if (e.key === 'Escape') cancelEdit();
+                    }}
+                  />
+                  <div className="my-jobs-chat-edit-actions">
+                    <button type="button" className="my-jobs-chat-edit-cancel" onClick={cancelEdit}>Cancel</button>
+                    <button
+                      type="button"
+                      className="my-jobs-chat-edit-save"
+                      onClick={commitEdit}
+                      disabled={!editDraft.trim()}
+                    >Save</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="my-jobs-chat-bubble-wrap">
+                  <div
+                    className="my-jobs-chat-bubble"
+                    onContextMenu={(e) => handleBubbleContextMenu(e, message)}
+                  >
+                    {message.imageUrl && (
+                      <div className="my-jobs-chat-image-wrap">
+                        <img
+                          src={message.imageUrl}
+                          alt={message.imageName || 'Message attachment'}
+                          className="my-jobs-chat-image"
+                        />
+                      </div>
+                    )}
+                    {message.text && <p className="my-jobs-chat-text">{message.text}</p>}
+                  </div>
+                </div>
+              )}
+
+              <div className="my-jobs-chat-meta">
+                {message.edited && (
+                  <span className="my-jobs-chat-edited">Edited</span>
+                )}
+                <span className="my-jobs-chat-time">{formatCustomerChatTime(message.createdAt)}</span>
+                {isCustomer && (() => {
+                  const st = message.status;
+                  if (st === 'sending') return (
+                    <span className="my-jobs-chat-ticks sending" aria-label="Sending">
+                      <ClockCircleOutlined />
+                    </span>
+                  );
+                  if (st === 'sent') return (
+                    <span className="my-jobs-chat-ticks sent" aria-label="Sent">
+                      <CheckOutlined />
+                    </span>
+                  );
+                  if (st === 'delivered') return (
+                    <span className="my-jobs-chat-ticks delivered" aria-label="Delivered">
+                      <CheckOutlined /><CheckOutlined />
+                    </span>
+                  );
+                  if (st === 'seen') return (
+                    <span className="my-jobs-chat-ticks seen" aria-label="Seen">
+                      <CheckOutlined /><CheckOutlined />
+                    </span>
+                  );
+                  return null;
+                })()}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {isCleanerTyping && (
+        <div className="my-jobs-chat-row left">
+          <div className="my-jobs-chat-mini-avatar">
+            {cleanerAvatar && !avatarFailed ? (
+              <img
+                src={cleanerAvatar}
+                alt={cleanerName}
+                className="my-jobs-chat-mini-avatar-image"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              cleanerName.charAt(0)
+            )}
+          </div>
+          <div className="my-jobs-chat-content">
+            <div className="my-jobs-chat-bubble-wrap">
+              <div className="my-jobs-chat-bubble typing-indicator">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  ), [
+    messages,
+    editingId,
+    editDraft,
+    isCleanerTyping,
+    cleanerAvatar,
+    avatarFailed,
+    cleanerName,
+    commitEdit,
+    cancelEdit,
+    handleBubbleContextMenu
+  ]);
 
   const handleSend = async () => {
     if (accessDenied) {
@@ -304,132 +444,7 @@ const CustomerMessagePanel = ({ threadId, cleanerName, cleanerAvatar, subtitle, 
               </div>
             )}
             <div className="my-jobs-chat-day-pill">TODAY</div>
-
-            {messages.map((message) => {
-              const isCustomer = message.sender === 'customer';
-              const isEditing = editingId === message.id;
-
-              return (
-                <div key={message.id} className={`my-jobs-chat-row ${isCustomer ? 'right' : 'left'}`}>
-                  {!isCustomer && (
-                    <div className="my-jobs-chat-mini-avatar">
-                      {cleanerAvatar && !avatarFailed ? (
-                        <img
-                          src={cleanerAvatar}
-                          alt={cleanerName}
-                          className="my-jobs-chat-mini-avatar-image"
-                          onError={() => setAvatarFailed(true)}
-                        />
-                      ) : (
-                        cleanerName.charAt(0)
-                      )}
-                    </div>
-                  )}
-
-                  <div className="my-jobs-chat-content">
-                    {isEditing ? (
-                      <div className="my-jobs-chat-edit-wrap">
-                        <input
-                          ref={editInputRef}
-                          className="my-jobs-chat-edit-input"
-                          value={editDraft}
-                          onChange={(e) => setEditDraft(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEdit(); }
-                            if (e.key === 'Escape') cancelEdit();
-                          }}
-                        />
-                        <div className="my-jobs-chat-edit-actions">
-                          <button type="button" className="my-jobs-chat-edit-cancel" onClick={cancelEdit}>Cancel</button>
-                          <button
-                            type="button"
-                            className="my-jobs-chat-edit-save"
-                            onClick={commitEdit}
-                            disabled={!editDraft.trim()}
-                          >Save</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="my-jobs-chat-bubble-wrap">
-                        <div
-                          className="my-jobs-chat-bubble"
-                          onContextMenu={(e) => handleBubbleContextMenu(e, message)}
-                        >
-                          {message.imageUrl && (
-                            <div className="my-jobs-chat-image-wrap">
-                              <img
-                                src={message.imageUrl}
-                                alt={message.imageName || 'Message attachment'}
-                                className="my-jobs-chat-image"
-                              />
-                            </div>
-                          )}
-                          {message.text && <p className="my-jobs-chat-text">{message.text}</p>}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="my-jobs-chat-meta">
-                      {message.edited && (
-                        <span className="my-jobs-chat-edited">Edited</span>
-                      )}
-                      <span className="my-jobs-chat-time">{formatCustomerChatTime(message.createdAt)}</span>
-                      {isCustomer && (() => {
-                        const st = message.status;
-                        if (st === 'sending') return (
-                          <span className="my-jobs-chat-ticks sending" aria-label="Sending">
-                            <ClockCircleOutlined />
-                          </span>
-                        );
-                        if (st === 'sent') return (
-                          <span className="my-jobs-chat-ticks sent" aria-label="Sent">
-                            <CheckOutlined />
-                          </span>
-                        );
-                        if (st === 'delivered') return (
-                          <span className="my-jobs-chat-ticks delivered" aria-label="Delivered">
-                            <CheckOutlined /><CheckOutlined />
-                          </span>
-                        );
-                        if (st === 'seen') return (
-                          <span className="my-jobs-chat-ticks seen" aria-label="Seen">
-                            <CheckOutlined /><CheckOutlined />
-                          </span>
-                        );
-                        return null;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {isCleanerTyping && (
-              <div className="my-jobs-chat-row left">
-                <div className="my-jobs-chat-mini-avatar">
-                  {cleanerAvatar && !avatarFailed ? (
-                    <img
-                      src={cleanerAvatar}
-                      alt={cleanerName}
-                      className="my-jobs-chat-mini-avatar-image"
-                      onError={() => setAvatarFailed(true)}
-                    />
-                  ) : (
-                    cleanerName.charAt(0)
-                  )}
-                </div>
-                <div className="my-jobs-chat-content">
-                  <div className="my-jobs-chat-bubble-wrap">
-                    <div className="my-jobs-chat-bubble typing-indicator">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
+            {renderedMessages}
           </>
         )}
       </div>

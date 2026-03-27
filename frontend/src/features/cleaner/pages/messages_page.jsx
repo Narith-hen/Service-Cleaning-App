@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   MessageOutlined,
@@ -168,27 +168,33 @@ const dedupeThreads = (items = []) => {
 
 const normalizeThread = (job, index) => {
   const canonicalThreadId = getCanonicalThreadId(job, index);
+  const derivedDateParts = formatThreadDateParts(job?.booking_date || job?.bookingDate);
+  const derivedPrice = job?.price || (
+    job?.negotiated_price || job?.total_price
+      ? `$${Number(job?.negotiated_price || job?.total_price || 0).toFixed(2)}`
+      : '$0.00'
+  );
 
   return {
   id: canonicalThreadId,
   sourceRequestId: canonicalThreadId,
   status: job?.status || 'upcoming',
-  title: job?.title || 'Cleaning Job',
+  title: job?.title || job?.service?.name || job?.service_name || 'Cleaning Job',
   jobId: job?.jobId || '#SOMA-00000',
-  price: job?.price || '$0.00',
-  day: job?.day || '01',
-  monthYear: job?.monthYear || 'June 2026',
-  timeRange: job?.timeRange || '09:00 AM - 12:00 PM',
-  location: job?.location || 'Phnom Penh, Cambodia',
-  customer: job?.customer || 'Customer',
+  price: derivedPrice,
+  day: job?.day || derivedDateParts.day,
+  monthYear: job?.monthYear || derivedDateParts.monthYear,
+  timeRange: job?.timeRange || job?.booking_time || '09:00 AM - 12:00 PM',
+  location: job?.location || job?.address || job?.customerAddress || 'Phnom Penh, Cambodia',
+  customer: job?.customer || job?.customer_name || job?.customer_username || job?.user?.username || 'Customer',
   customerId: job?.customerId || job?.customer_id || '3',
-  customerAvatar: normalizeAssetUrl(job?.customerAvatar || job?.customer_avatar || ''),
-  customerPhone: job?.customerPhone || job?.customer_phone || '',
-  customerEmail: job?.customerEmail || job?.customer_email || '',
-  customerAddress: job?.customerAddress || job?.customer_address || job?.location || '',
+  customerAvatar: normalizeAssetUrl(job?.customerAvatar || job?.customer_avatar || job?.user?.avatar || ''),
+  customerPhone: job?.customerPhone || job?.customer_phone || job?.user?.phone_number || '',
+  customerEmail: job?.customerEmail || job?.customer_email || job?.user?.email || '',
+  customerAddress: job?.customerAddress || job?.customer_address || job?.address || job?.location || '',
   bedrooms: job?.bedrooms || '3 Bedrooms',
   floors: job?.floors || '2 Floors',
-  image: job?.image || officeImage
+  image: job?.image || normalizeAssetUrl(job?.serviceImage || job?.service_image || job?.service?.image || '') || officeImage
 };
 };
 
@@ -273,9 +279,12 @@ const [activeThreadId, setActiveThreadId] = useState(
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedThreadIds, setSelectedThreadIds] = useState([]);
   const [priceInput, setPriceInput] = useState('');
+  const [isPriceInputFocused, setIsPriceInputFocused] = useState(false);
   const [priceStatus, setPriceStatus] = useState('');
   const unreadByThread = useChatStore((state) => state.unreadByThread);
   const incrementUnread = useChatStore((state) => state.incrementUnread);
+  const lastPriceSyncRef = useRef({ threadId: null, price: '' });
+  const hasPriceDraftRef = useRef(false);
 
   const visibleThreads = useMemo(() => {
     const hidden = new Set(hiddenThreadIds.map((id) => String(id)));
@@ -644,13 +653,35 @@ const [activeThreadId, setActiveThreadId] = useState(
   };
 
   useEffect(() => {
-    if (!activeThread?.price) {
+    const activeKey = String(activeThread?.sourceRequestId || activeThread?.id || '');
+    const normalizedPrice = activeThread?.price
+      ? String(activeThread.price).replace(/[^0-9.]/g, '')
+      : '';
+
+    const threadChanged = lastPriceSyncRef.current.threadId !== activeKey;
+    const priceChanged = lastPriceSyncRef.current.price !== normalizedPrice;
+
+    if (!activeKey) {
+      lastPriceSyncRef.current.threadId = null;
+      lastPriceSyncRef.current.price = '';
       setPriceInput('');
       return;
     }
-    const numeric = String(activeThread.price).replace(/[^0-9.]/g, '');
-    setPriceInput(numeric);
-  }, [activeThread]);
+
+    if (threadChanged) {
+      lastPriceSyncRef.current.threadId = activeKey;
+      lastPriceSyncRef.current.price = normalizedPrice;
+      hasPriceDraftRef.current = false;
+      setPriceInput(normalizedPrice);
+      setPriceStatus('');
+      return;
+    }
+
+    if (priceChanged && !isPriceInputFocused && !hasPriceDraftRef.current) {
+      lastPriceSyncRef.current.price = normalizedPrice;
+      setPriceInput(normalizedPrice);
+    }
+  }, [activeThread?.id, activeThread?.sourceRequestId, activeThread?.price, isPriceInputFocused]);
 
   const handleSubmitPrice = async () => {
     if (!activeThread) return;
@@ -677,6 +708,10 @@ const [activeThreadId, setActiveThreadId] = useState(
             : thread
         )
       );
+      lastPriceSyncRef.current.threadId = activeKey;
+      lastPriceSyncRef.current.price = String(formatted).replace(/[^0-9.]/g, '');
+      hasPriceDraftRef.current = false;
+      setPriceInput(lastPriceSyncRef.current.price);
 
       try {
         const raw = localStorage.getItem(getConfirmedMyJobsStorageKey());
@@ -946,7 +981,12 @@ const [activeThreadId, setActiveThreadId] = useState(
                       min="0"
                       step="0.01"
                       value={priceInput}
-                      onChange={(e) => setPriceInput(e.target.value)}
+                      onFocus={() => setIsPriceInputFocused(true)}
+                      onBlur={() => setIsPriceInputFocused(false)}
+                      onChange={(e) => {
+                        hasPriceDraftRef.current = true;
+                        setPriceInput(e.target.value);
+                      }}
                       placeholder="0.00"
                     />
                   </div>

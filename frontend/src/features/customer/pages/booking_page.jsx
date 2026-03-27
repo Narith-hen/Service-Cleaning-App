@@ -51,6 +51,7 @@ const BookingPage = () => {
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const placesServiceRef = useRef(null);
   const geocoderRef = useRef(null);
   const knownLocationCoordsCacheRef = useRef({});
   const mapWarningTimeoutRef = useRef(null);
@@ -112,6 +113,13 @@ const BookingPage = () => {
 
   const formatCoordinateAddress = (coords) =>
     `Current location (${Number(coords?.lat || 0).toFixed(5)}, ${Number(coords?.lng || 0).toFixed(5)})`;
+
+  const buildLocationDisplayLabel = ({ name = '', formattedAddress = '' }) => {
+    const trimmedName = String(name || '').trim();
+    const trimmedAddress = String(formattedAddress || '').trim();
+
+    return trimmedName || trimmedAddress;
+  };
 
   const getDistanceInMeters = (fromCoords, toCoords) => {
     const toRadians = (value) => (value * Math.PI) / 180;
@@ -249,6 +257,66 @@ const BookingPage = () => {
     setAddress(formatCoordinateAddress(normalizedCoords));
   };
 
+  const fetchPlaceNameFromPlaceId = (placeId, fallbackAddress = '') =>
+    new Promise((resolve) => {
+      if (!placeId || !placesServiceRef.current) {
+        resolve(fallbackAddress);
+        return;
+      }
+
+      placesServiceRef.current.getDetails(
+        {
+          placeId,
+          fields: ['name', 'formatted_address']
+        },
+        (place, status) => {
+          if (status === 'OK' && place) {
+            resolve(
+              buildLocationDisplayLabel({
+                name: place?.name,
+                formattedAddress: place?.formatted_address || fallbackAddress
+              })
+            );
+            return;
+          }
+
+          resolve(fallbackAddress);
+        }
+      );
+    });
+
+  const fetchNearbyPlaceLabel = (coords) =>
+    new Promise((resolve) => {
+      if (!coords || !placesServiceRef.current || !window.google?.maps?.places) {
+        resolve('');
+        return;
+      }
+
+      placesServiceRef.current.nearbySearch(
+        {
+          location: coords,
+          radius: 120,
+          type: 'establishment'
+        },
+        (results, status) => {
+          if (status !== window.google.maps.places.PlacesServiceStatus.OK || !Array.isArray(results) || !results.length) {
+            resolve('');
+            return;
+          }
+
+          const bestMatch = results.find((result) => String(result?.name || '').trim())
+            || results[0];
+
+          resolve(
+            buildLocationDisplayLabel({
+              name: bestMatch?.name,
+              formattedAddress: bestMatch?.vicinity || ''
+            })
+          );
+        }
+      );
+    });
+
   const fetchReverseGeocodeAddress = async (coords) => {
     if (!GOOGLE_MAPS_KEY) return '';
 
@@ -271,7 +339,19 @@ const BookingPage = () => {
         return '';
       }
 
-      return formatReadableGeocodeAddress(pickPreferredGeocodeResult(data.results));
+      const preferredResult = pickPreferredGeocodeResult(data.results);
+      const readableAddress = formatReadableGeocodeAddress(preferredResult);
+      const nearbyPlaceLabel = await fetchNearbyPlaceLabel(coords);
+
+      if (nearbyPlaceLabel) {
+        return nearbyPlaceLabel;
+      }
+
+      if (preferredResult?.place_id) {
+        return fetchPlaceNameFromPlaceId(preferredResult.place_id, readableAddress);
+      }
+
+      return readableAddress;
     } catch {
       return '';
     }
@@ -290,9 +370,20 @@ const BookingPage = () => {
         return;
       }
 
-      geocoderRef.current.geocode({ location: coords }, (results, status) => {
+      geocoderRef.current.geocode({ location: coords }, async (results, status) => {
         if (status === 'OK' && results?.[0]) {
-          resolve(formatReadableGeocodeAddress(pickPreferredGeocodeResult(results)));
+          const preferredResult = pickPreferredGeocodeResult(results);
+          const readableAddress = formatReadableGeocodeAddress(preferredResult);
+          const nearbyPlaceLabel = await fetchNearbyPlaceLabel(coords);
+          if (nearbyPlaceLabel) {
+            resolve(nearbyPlaceLabel);
+            return;
+          }
+          if (preferredResult?.place_id) {
+            resolve(await fetchPlaceNameFromPlaceId(preferredResult.place_id, readableAddress));
+            return;
+          }
+          resolve(readableAddress);
           return;
         }
 
@@ -590,6 +681,9 @@ const BookingPage = () => {
         map,
         position: defaultCenter
       });
+      if (window.google?.maps?.places?.PlacesService) {
+        placesServiceRef.current = new window.google.maps.places.PlacesService(map);
+      }
       if (window.google?.maps?.Geocoder) {
         geocoderRef.current = new window.google.maps.Geocoder();
       }
@@ -638,7 +732,7 @@ const BookingPage = () => {
     if (!isMapReady || !window.google?.maps?.places || !addressInputRef.current || autocompleteRef.current) return;
 
     const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-      fields: ['formatted_address', 'geometry']
+      fields: ['name', 'formatted_address', 'geometry', 'place_id']
     });
 
     autocompleteRef.current = autocomplete;
@@ -646,6 +740,10 @@ const BookingPage = () => {
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       const formattedAddress = place?.formatted_address || addressInputRef.current?.value || '';
+      const displayAddress = buildLocationDisplayLabel({
+        name: place?.name,
+        formattedAddress
+      });
 
       if (place?.geometry?.location && mapInstanceRef.current) {
         updateSelectedLocation({
@@ -653,11 +751,11 @@ const BookingPage = () => {
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng()
           },
-          nextAddress: formattedAddress,
+          nextAddress: displayAddress || formattedAddress,
           verified: true
         });
       } else {
-        setAddress(formattedAddress);
+        setAddress(displayAddress || formattedAddress);
         setSelectedCoords(null);
         setIsAddressVerified(false);
       }

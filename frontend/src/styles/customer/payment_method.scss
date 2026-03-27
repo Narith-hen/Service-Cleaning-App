@@ -229,7 +229,8 @@
 .receipt-link,
 .payment-status-text {
   margin: 8px 2px 0;
-  font-size: 17px;
+  font-size: 14px;
+
 }
 
 .receipt-link {
@@ -270,8 +271,8 @@
 }
 
 .payment-status-text {
-  color: #16a34a;
-  font-weight: 600;
+  color: rgba(255, 36, 36, 0.918);
+  font-weight: 400;
 }
 
 .final-payment-loading {

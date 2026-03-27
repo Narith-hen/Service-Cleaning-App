@@ -48,6 +48,17 @@ const getTableColumns = async (promiseDb, tableName) => {
   return new Set((rows || []).map((row) => String(row.Field || '').toLowerCase()));
 };
 
+const SERVICE_IMAGE_SELECT_SQL = `COALESCE(
+          (
+            SELECT si.image_url
+            FROM service_images si
+            WHERE si.service_id = s.service_id
+            ORDER BY si.id DESC
+            LIMIT 1
+          ),
+          s.image
+        )`;
+
 const buildUserNameExpression = (alias, columns, fallbackSql) => {
   const parts = [];
   if (columns.has('first_name')) parts.push(`${alias}.first_name`);
@@ -88,20 +99,28 @@ const mapCleanerJobRow = (row) => ({
   booking_date: row?.booking_date || null,
   booking_time: row?.booking_time || '',
   booking_status: row?.booking_status || null,
+  created_at: row?.created_at || null,
+  updated_at: row?.updated_at || null,
   total_price: Number(row?.total_price || 0),
   negotiated_price: row?.negotiated_price == null ? null : Number(row?.negotiated_price || 0),
   payment_status: row?.payment_status || null,
   service_id: Number(row?.service_id || 0),
+  service_name: row?.service_name || 'Cleaning Service',
+  service_image: row?.service_image || '',
+  service_description: row?.service_description || '',
   user_id: Number(row?.user_id || 0),
   user: {
     username: row?.customer_name || `Customer #${row?.user_id || ''}`,
     phone_number: row?.customer_phone || '',
+    email: row?.customer_email || '',
+    avatar: row?.customer_avatar || '',
     address: row?.address || ''
   },
   service: {
     service_id: Number(row?.service_id || 0),
     name: row?.service_name || 'Cleaning Service',
-    description: row?.service_description || ''
+    description: row?.service_description || '',
+    image: row?.service_image || ''
   }
 });
 
@@ -452,6 +471,8 @@ const getCleanerJobs = async (req, res, next) => {
           b.booking_date,
           b.booking_time,
           b.booking_status,
+          b.created_at,
+          b.updated_at,
           b.total_price,
           b.negotiated_price,
           b.payment_status,
@@ -460,7 +481,10 @@ const getCleanerJobs = async (req, res, next) => {
           b.service_id,
           ${customerNameExpr} AS customer_name,
           u.phone_number AS customer_phone,
+          u.email AS customer_email,
+          u.avatar AS customer_avatar,
           s.name AS service_name,
+          ${SERVICE_IMAGE_SELECT_SQL} AS service_image,
           s.description AS service_description
         FROM bookings b
         LEFT JOIN users u ON u.user_id = b.user_id

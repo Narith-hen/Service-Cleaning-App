@@ -15,6 +15,10 @@
   background: transparent;
 }
 
+.customer-home-landing img {
+  display: block;
+}
+
 // Skeleton loader styles
 .skeleton-loader {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -227,6 +231,16 @@
   padding: 28px 24px 30px;
   background: linear-gradient(135deg, #f7fff7 0%, #ffffff 65%);
   width: 90%;
+}
+
+.customer-home-landing .how-it-works,
+.customer-home-landing .our-services,
+.customer-home-landing .top-cleaners,
+.customer-home-landing .why-choose,
+.customer-home-landing .dashboard-faq,
+.customer-home-landing .cta-banner {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 720px;
 }
 
 .customer-home-landing .how-head {
@@ -1157,6 +1171,7 @@
     opacity 0.72s var(--motion-ease),
     transform 0.72s var(--motion-ease);
   will-change: opacity, transform;
+  backface-visibility: hidden;
 }
 
 .customer-home-landing.motion-enhanced .reveal.is-visible {

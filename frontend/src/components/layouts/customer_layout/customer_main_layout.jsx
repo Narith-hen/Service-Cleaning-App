@@ -24,21 +24,51 @@ const MainLayout = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const mainContentRef = React.useRef(null);
+  const scrollFrameRef = React.useRef(null);
+  const resizeFrameRef = React.useRef(null);
+  const scrolledRef = React.useRef(false);
+  const viewportWidthRef = React.useRef(
+    typeof window === 'undefined' ? TARGET_SCREEN_BREAKPOINT : window.innerWidth
+  );
   const drawerWidth = viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420;
   const motionReady = useCustomerPageMotion(mainContentRef, isCustomerArea, [location.pathname]);
 
   React.useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
+      if (scrollFrameRef.current != null) return;
+
+      scrollFrameRef.current = window.requestAnimationFrame(() => {
+        scrollFrameRef.current = null;
+        const nextScrolled = window.scrollY > 10;
+        if (scrolledRef.current === nextScrolled) return;
+        scrolledRef.current = nextScrolled;
+        setScrolled(nextScrolled);
+      });
     };
     const handleResize = () => {
-      setViewportWidth(window.innerWidth);
+      if (resizeFrameRef.current != null) return;
+
+      resizeFrameRef.current = window.requestAnimationFrame(() => {
+        resizeFrameRef.current = null;
+        const nextWidth = window.innerWidth;
+        if (viewportWidthRef.current === nextWidth) return;
+        viewportWidthRef.current = nextWidth;
+        setViewportWidth(nextWidth);
+      });
     };
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleResize);
+    handleScroll();
+    handleResize();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
+      if (scrollFrameRef.current != null) {
+        window.cancelAnimationFrame(scrollFrameRef.current);
+      }
+      if (resizeFrameRef.current != null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
     };
   }, []);
 
