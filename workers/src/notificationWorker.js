@@ -1,6 +1,5 @@
-const prisma = require('./config/database');
+const db = require('./config/database');
 const redis = require('./config/redis');
-const axios = require('axios');
 
 class NotificationWorker {
   constructor() {
@@ -9,13 +8,13 @@ class NotificationWorker {
   }
 
   async start() {
-    console.log('🚀 Notification worker started');
+    console.log('Notification worker started');
     this.processing = true;
-    
+
     while (this.processing) {
       try {
         const jobString = await redis.rpop(this.queueName);
-        
+
         if (jobString) {
           const job = JSON.parse(jobString);
           await this.processJob(job);
@@ -23,14 +22,14 @@ class NotificationWorker {
           await this.sleep(1000);
         }
       } catch (error) {
-        console.error('❌ Notification worker error:', error);
+        console.error('Notification worker error:', error);
         await this.sleep(5000);
       }
     }
   }
 
   async processJob(job) {
-    console.log(`📦 Processing notification job: ${job.id}`);
+    console.log(`Processing notification job: ${job.id}`);
 
     switch (job.data.type) {
       case 'push':
@@ -50,33 +49,32 @@ class NotificationWorker {
     }
   }
 
+  async hasUserPushTokensColumn() {
+    const [rows] = await db.promise().query("SHOW COLUMNS FROM users LIKE 'push_tokens'");
+    return Boolean(rows?.length);
+  }
+
   async sendPushNotification(data) {
     const { userId, notification } = data;
-    
-    // Get user's push tokens
-    const user = await prisma.user.findUnique({
-      where: { user_id: userId },
-      select: { push_tokens: true }
-    });
+    const hasPushTokens = await this.hasUserPushTokensColumn();
+    if (!hasPushTokens) return;
 
+    const [rows] = await db.promise().query(
+      'SELECT push_tokens FROM users WHERE user_id = ? LIMIT 1',
+      [userId]
+    );
+
+    const user = rows?.[0];
     if (user?.push_tokens) {
-      // Send to push notification service (Firebase, OneSignal, etc.)
       console.log(`Sending push notification to user ${userId}:`, notification);
-      
-      // Here you would integrate with your push notification service
     }
   }
 
   async sendEmail(data) {
-    const { to, subject, html } = data;
-    
+    const { to, subject } = data;
+
     try {
-      // Use your email service (SendGrid, AWS SES, etc.)
       console.log(`Sending email to ${to}: ${subject}`);
-      
-      // Example using a mock email service
-      // await emailService.send(to, subject, html);
-      
     } catch (error) {
       console.error('Failed to send email:', error);
       throw error;
@@ -85,11 +83,9 @@ class NotificationWorker {
 
   async sendSMS(data) {
     const { phoneNumber, message } = data;
-    
+
     try {
-      // Use SMS service (Twilio, etc.)
       console.log(`Sending SMS to ${phoneNumber}: ${message}`);
-      
     } catch (error) {
       console.error('Failed to send SMS:', error);
       throw error;
@@ -98,46 +94,56 @@ class NotificationWorker {
 
   async sendReviewRequest(data) {
     const { bookingId, userId } = data;
-    
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: bookingId },
-      include: { service: true }
-    });
+    const [rows] = await db.promise().query(
+      `
+        SELECT
+          b.booking_id,
+          s.name AS service_name
+        FROM bookings b
+        LEFT JOIN services s ON s.service_id = b.service_id
+        WHERE b.booking_id = ?
+        LIMIT 1
+      `,
+      [bookingId]
+    );
 
-    if (booking) {
-      // Create notification in database
-      await prisma.notification.create({
-        data: {
-          title: 'How was your service?',
-          message: `Please rate your ${booking.service.name} experience`,
-          type_notification: 'review',
-          user_id: userId,
-          booking_id: bookingId
-        }
-      });
+    const booking = rows?.[0];
+    if (!booking) return;
 
-      // Send real-time notification
-      await redis.publish('notification:new', JSON.stringify({
+    const serviceName = booking.service_name || 'cleaning';
+    await db.promise().query(
+      `
+        INSERT INTO notifications (title, message, type_notification, user_id, booking_id)
+        VALUES (?, ?, ?, ?, ?)
+      `,
+      [
+        'How was your service?',
+        `Please rate your ${serviceName} experience`,
+        'review',
         userId,
-        title: 'How was your service?',
-        message: `Please rate your ${booking.service.name} experience`,
-        type: 'review',
         bookingId
-      }));
-    }
+      ]
+    );
+
+    await redis.publish('notification:new', JSON.stringify({
+      userId,
+      title: 'How was your service?',
+      message: `Please rate your ${serviceName} experience`,
+      type: 'review',
+      bookingId
+    }));
   }
 
   sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   stop() {
     this.processing = false;
-    console.log('🛑 Notification worker stopped');
+    console.log('Notification worker stopped');
   }
 }
 
-// Start worker if run directly
 if (require.main === module) {
   const worker = new NotificationWorker();
   worker.start().catch(console.error);
