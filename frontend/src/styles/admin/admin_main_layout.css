@@ -11,7 +11,7 @@
 
 /* Dark mode */
 .admin-layout.dark {
-  background: #111827;
+  background: radial-gradient(circle at top left, #111827 0%, #0f172a 45%, #0b1220 100%);
 }
 
 /* Right side - contains header and content */
@@ -40,8 +40,8 @@
 }
 
 .dark .admin-header {
-  background: #1a1a1a;
-  border-bottom-color: #2d2d2d;
+  background: #0f172a;
+  border-bottom-color: #1f2937;
 }
 
 /* Main content area - scrollable */
@@ -61,7 +61,7 @@
 }
 
 .dark .admin-content {
-  background: #111827;
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
 }
 
 /* Shared admin page heading style */
@@ -175,8 +175,8 @@
 }
 
 .dark .admin-footer {
-  background: #1a1a1a;
-  border-top-color: #2d2d2d;
+  background: #0f172a;
+  border-top-color: #1f2937;
 }
 
 .footer-content {

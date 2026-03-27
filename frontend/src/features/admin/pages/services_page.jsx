@@ -7,6 +7,7 @@ import officeImage from '../../../assets/office.png';
 import windowImage from '../../../assets/window.png';
 import shopImage from '../../../assets/shop.png';
 import { serviceService } from '../services/serviceService';
+import { useTranslation } from '../../../contexts/translation_context';
 
 const INVENTORY_PAGE_SIZE = 5;
 const INVENTORY_CATEGORIES = ['LIQUID SUPPLIES', 'EQUIPMENT', 'CONSUMABLES', 'TOOLS', 'CHEMICALS'];
@@ -59,6 +60,7 @@ const sampleInventory = [
 ];
 
 const ServicesPage = () => {
+  const { ta } = useTranslation();
   const [services, setServices] = useState([]);
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceStatusFilter, setServiceStatusFilter] = useState('All');
@@ -394,12 +396,12 @@ const ServicesPage = () => {
     <div className="admin-services-page">
       <header className="services-page-intro">
         <div>
-          <h1 className="admin-page-title">Manage Services</h1>
-          <p className="admin-page-subtitle">Configure and manage your service offerings and pricing tiers.</p>
+          <h1 className="admin-page-title">{ta('Manage Services')}</h1>
+          <p className="admin-page-subtitle">{ta('Configure and manage your service offerings and pricing tiers.')}</p>
         </div>
         <button className="svc-btn svc-btn-primary roboto roboto-600" type="button" onClick={openServiceForm}>
           <i className="bi bi-plus-circle" aria-hidden="true" />
-          Add New Service
+          {ta('Add New Service')}
         </button>
       </header>
 

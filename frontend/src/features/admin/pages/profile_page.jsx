@@ -1,17 +1,19 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { CameraOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../hooks/useAuth';
+import { useTranslation } from '../../../contexts/translation_context';
 import '../../../styles/admin/profile_page.css';
 
 const AdminProfilePage = () => {
   const { user, updateUser } = useAuth();
+  const { ta } = useTranslation();
   const fileInputRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   const fullName = useMemo(
-    () => user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Admin User',
-    [user]
+    () => user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || ta('Admin User'),
+    [ta, user]
   );
   const email = user?.email || '';
   const avatar = user?.avatar || '';
@@ -31,7 +33,7 @@ const AdminProfilePage = () => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setMessage('Please choose an image file.');
+      setMessage(ta('Please choose an image file.'));
       return;
     }
 
@@ -45,9 +47,9 @@ const AdminProfilePage = () => {
       });
 
       if (result.success) {
-        setMessage('Profile image updated successfully.');
+        setMessage(ta('Profile image updated successfully.'));
       } else {
-        setMessage(result.error || 'Unable to update profile image.');
+        setMessage(result.error || ta('Unable to update profile image.'));
       }
       setSaving(false);
     };
@@ -57,8 +59,8 @@ const AdminProfilePage = () => {
   return (
     <section className="admin-profile-page">
       <header className="admin-profile-header">
-        <h1 className="admin-page-title">My Profile</h1>
-        <p className="admin-page-subtitle">Manage your admin profile image and account details.</p>
+        <h1 className="admin-page-title">{ta('My Profile')}</h1>
+        <p className="admin-page-subtitle">{ta('Manage your admin profile image and account details.')}</p>
       </header>
 
       <div className="admin-profile-card">
@@ -79,7 +81,7 @@ const AdminProfilePage = () => {
             onClick={handlePickImage}
             disabled={saving}
             className="admin-profile-upload-btn"
-            aria-label="Upload profile image"
+            aria-label={ta('Upload profile image')}
           >
             <CameraOutlined />
           </button>

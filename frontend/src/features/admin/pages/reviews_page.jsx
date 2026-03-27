@@ -11,6 +11,7 @@ import {
 import { Modal, Select, notification } from 'antd';
 import '../../../styles/admin/reviews_page.css';
 import { reviewService } from '../services/reviewService';
+import { useTranslation } from '../../../contexts/translation_context';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -125,6 +126,7 @@ const RatingStars = ({ rating }) => (
 );
 
 const ReviewsPage = () => {
+  const { ta } = useTranslation();
   const [notificationApi, contextHolder] = notification.useNotification();
   const [reviews, setReviews] = useState([]);
   const [stats, setStats] = useState(() => normalizeStats());
@@ -280,8 +282,8 @@ const ReviewsPage = () => {
       {contextHolder}
       <header className="admin-reviews-header">
         <div>
-          <h1 className="admin-page-title">Manage Reviews</h1>
-          <p className="admin-page-subtitle">Monitor customer feedback and service quality trends.</p>
+          <h1 className="admin-page-title">{ta('Manage Reviews')}</h1>
+          <p className="admin-page-subtitle">{ta('Monitor customer feedback and service quality trends.')}</p>
         </div>
       </header>
 

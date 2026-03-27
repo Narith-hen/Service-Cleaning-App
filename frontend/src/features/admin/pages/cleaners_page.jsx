@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import { cleanerService } from '../services/cleanerService';
+import { useTranslation } from '../../../contexts/translation_context';
 import '../../../styles/admin/cleaners_page.css';
 
 const statusFilters = ['All', 'Active', 'Suspended', 'Inactive'];
@@ -111,6 +112,7 @@ const mapCleanerFromApi = (item) => ({
 });
 
 const CleanersPage = () => {
+  const { ta } = useTranslation();
   const [notificationApi, contextHolder] = notification.useNotification();
   const [cleaners, setCleaners] = useState([]);
   const [cleanersLoading, setCleanersLoading] = useState(false);
@@ -420,11 +422,11 @@ const CleanersPage = () => {
       {contextHolder}
       <header className="cleaners-header">
         <div>
-          <h1 className="admin-page-title">Manage Cleaners</h1>
-          <p className="admin-page-subtitle">Manage your cleaning staff, monitor performance and verify statuses.</p>
+          <h1 className="admin-page-title">{ta('Manage Cleaners')}</h1>
+          <p className="admin-page-subtitle">{ta('Manage your cleaning staff, monitor performance and verify statuses.')}</p>
         </div>
         <Button type="primary" icon={<PlusOutlined />} className="add-cleaner-btn" onClick={openAddModal}>
-          Add Cleaner
+          {ta('Add Cleaner')}
         </Button>
       </header>
 

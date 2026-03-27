@@ -9,6 +9,7 @@ import {
 import { Select } from 'antd';
 import { Line } from '@ant-design/charts';
 import '../../../styles/admin/analytics_page.css';
+import { useTranslation } from '../../../contexts/translation_context';
 import { reportService } from '../services/reportService';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -56,6 +57,7 @@ const getInitials = (name) => (
 );
 
 const AnalyticsPage = () => {
+  const { ta } = useTranslation();
   const [range, setRange] = useState('month');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -183,18 +185,18 @@ const AnalyticsPage = () => {
     <section className="admin-analytics-page">
       <header className="admin-analytics-header">
         <div>
-          <h1 className="admin-page-title">Performance</h1>
-          <p className="admin-page-subtitle">Monitor booking execution, cleaner output, and operational status trends.</p>
+          <h1 className="admin-page-title">{ta('Performance')}</h1>
+          <p className="admin-page-subtitle">{ta('Monitor booking execution, cleaner output, and operational status trends.')}</p>
         </div>
 
         <label className="admin-analytics-range-select">
-          <span>Performance Window</span>
+          <span>{ta('Performance Window')}</span>
           <Select
             value={range}
             onChange={setRange}
             options={rangeOptions.map((option) => ({
               value: option.value,
-              label: option.label
+              label: ta(option.label)
             }))}
             popupMatchSelectWidth={false}
           />

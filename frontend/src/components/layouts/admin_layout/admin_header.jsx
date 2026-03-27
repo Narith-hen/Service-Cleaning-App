@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   BellOutlined,
-  SunOutlined,
-  MoonOutlined,
   CheckOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -12,14 +10,16 @@ import {
 } from '@ant-design/icons';
 import { useTheme } from "../../../contexts/theme_context";
 import { useAuth } from "../../../hooks/useAuth";
+import { useTranslation } from "../../../contexts/translation_context";
 import { useNotificationStore } from "../../../features/admin/stores/notification.store";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from 'date-fns';
 import "../../../styles/admin/header.css";
 
 const AdminHeader = () => {
-  const { darkMode, toggleTheme } = useTheme();
+  const { darkMode } = useTheme();
   const { user, logout } = useAuth();
+  const { ta } = useTranslation();
   const navigate = useNavigate();
 
   const {
@@ -40,7 +40,7 @@ const AdminHeader = () => {
   const notificationButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
 
-  const fullName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || 'Admin User';
+  const fullName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || ta('Admin User');
   const firstInitial = String(user?.first_name || '').trim().charAt(0).toUpperCase();
   const lastInitial = String(user?.last_name || '').trim().charAt(0).toUpperCase();
   const avatarInitials = (firstInitial + lastInitial) || String(fullName).trim().charAt(0).toUpperCase() || 'A';
@@ -100,6 +100,8 @@ const AdminHeader = () => {
   };
 
   const handleLogout = async () => {
+    const confirmed = window.confirm(ta('Are you sure want to logout?'));
+    if (!confirmed) return;
     await logout();
     navigate('/auth/login', { replace: true });
     setIsProfileOpen(false);
@@ -140,20 +142,12 @@ const AdminHeader = () => {
   return (
     <header className={`admin-header ${darkMode ? 'dark-mode' : ''}`}>
       <div className="header-controls">
-        <button
-          className="header-icon-btn"
-          onClick={toggleTheme}
-          title={darkMode ? 'Light mode' : 'Dark mode'}
-        >
-          {darkMode ? <SunOutlined /> : <MoonOutlined />}
-        </button>
-
         <div className="dropdown-wrapper">
           <button
             ref={notificationButtonRef}
             className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
             onClick={handleBellClick}
-            title="Notifications"
+            title={ta('Notifications')}
           >
             <BellOutlined />
             {unreadCount > 0 && (
@@ -164,21 +158,21 @@ const AdminHeader = () => {
           {isNotificationOpen && (
             <div className="dropdown-menu notifications-dropdown" ref={notificationRef}>
               <div className="dropdown-header">
-                <h3>Notifications</h3>
+                <h3>{ta('Notifications')}</h3>
                 {unreadCount > 0 && (
                   <button className="mark-read-btn" onClick={handleMarkAllAsRead}>
-                    <CheckOutlined /> Mark all read
+                    <CheckOutlined /> {ta('Mark all read')}
                   </button>
                 )}
               </div>
 
               <div className="dropdown-list">
                 {loading ? (
-                  <div className="dropdown-empty">Loading...</div>
+                  <div className="dropdown-empty">{ta('Loading...')}</div>
                 ) : notifications.length === 0 ? (
                   <div className="dropdown-empty">
                     <BellOutlined />
-                    <p>No notifications</p>
+                    <p>{ta('No notifications')}</p>
                   </div>
                 ) : (
                   notifications.slice(0, 5).map((notification) => (
@@ -214,7 +208,7 @@ const AdminHeader = () => {
                       setIsNotificationOpen(false);
                     }}
                   >
-                    View all notifications
+                    {ta('View all notifications')}
                   </button>
                 </div>
               )}
@@ -231,7 +225,7 @@ const AdminHeader = () => {
             )}
             <div className="profile-info">
               <span className="profile-name">{fullName}</span>
-              <span className="profile-role">{user?.role || 'Administrator'}</span>
+              <span className="profile-role">{user?.role || ta('Administrator')}</span>
             </div>
           </button>
 
@@ -251,16 +245,16 @@ const AdminHeader = () => {
 
               <div className="dropdown-list">
                 <button className="dropdown-item-btn" onClick={() => navigate('/admin/profile')}>
-                  <UserOutlined /> My Profile
+                  <UserOutlined /> {ta('My Profile')}
                 </button>
                 <button className="dropdown-item-btn" onClick={() => navigate('/admin/settings')}>
-                  <span className="icon">Settings</span>
+                  <span className="icon">{ta('Settings')}</span>
                 </button>
               </div>
 
               <div className="dropdown-footer">
                 <button className="logout-btn" onClick={handleLogout}>
-                  Sign Out
+                  {ta('Sign Out')}
                 </button>
               </div>
             </div>

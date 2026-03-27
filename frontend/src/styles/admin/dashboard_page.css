@@ -112,7 +112,7 @@
   font-size: 16px;
 }
 
-.tone-blue .kpi-card-icon { background: #dbeafe; color: #2563eb; }
+.tone-blue .kpi-card-icon { background: #dcfce7; color: #16a34a; }
 .tone-green .kpi-card-icon { background: #dcfce7; color: #16a34a; }
 .tone-amber .kpi-card-icon { background: #fef3c7; color: #d97706; }
 .tone-red .kpi-card-icon { background: #fee2e2; color: #dc2626; }
@@ -403,6 +403,11 @@
   min-height: 320px;
 }
 
+.dashboard-chart-shell [stroke='#5B8FF9'],
+.dashboard-chart-shell [stroke='#5b8ff9'] {
+  stroke: #16a34a !important;
+}
+
 .dashboard-insights-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -440,7 +445,7 @@
 }
 
 .service-icon.tone-green { background: #dcfce7; color: #15803d; }
-.service-icon.tone-blue { background: #dbeafe; color: #1d4ed8; }
+.service-icon.tone-blue { background: #dcfce7; color: #15803d; }
 .service-icon.tone-amber { background: #fef3c7; color: #b45309; }
 
 .service-metrics {
@@ -482,7 +487,7 @@
 }
 
 .service-bar-fill.tone-green { background: #22c55e; }
-.service-bar-fill.tone-blue { background: #3b82f6; }
+.service-bar-fill.tone-blue { background: #22c55e; }
 .service-bar-fill.tone-amber { background: #f59e0b; }
 
 .latest-review-list {
@@ -644,6 +649,11 @@
 
 .admin-dashboard-page.dark-mode .panel-head a {
   color: #86efac;
+}
+
+.admin-dashboard-page.dark-mode .booking-head p,
+.admin-dashboard-page.dark-mode .review-row p {
+  color: #c1cfe2;
 }
 
 .admin-dashboard-page.dark-mode .service-bar {

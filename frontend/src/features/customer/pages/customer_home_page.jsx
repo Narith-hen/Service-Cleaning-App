@@ -41,32 +41,62 @@ const serviceHighlights = [
     title: 'Home Deep Cleaning',
     description: 'Complete cleaning for kitchen, bathroom, bedroom, and living areas.',
     image: homeServiceImage,
-    cta: 'Book Deep Clean'
+    cta: 'Book Deep Clean',
+    status: 'active'
   },
   {
     id: 's2',
     title: 'Regular Home Cleaning',
     description: 'Weekly or daily cleaning to maintain a tidy home.',
     image: moveServiceImage,
-    cta: 'Set a Schedule'
+    cta: 'Set a Schedule',
+    status: 'active'
   },
   {
     id: 's3',
     title: 'Office Cleaning',
     description: 'Professional cleaning service for offices and workplaces.',
     image: officeServiceImage,
-    cta: 'Clean My Office'
+    cta: 'Clean My Office',
+    status: 'active'
   },
   {
     id: 's4',
     title: 'Window Cleaning',
     description: 'Streak-free window cleaning for a brighter home.',
     image: windowServiceImage,
-    cta: 'View Window Care'
+    cta: 'View Window Care',
+    status: 'active'
   }
 ];
 
 const fallbackImages = [homeServiceImage, officeServiceImage, windowServiceImage, moveServiceImage, shopServiceImage, proServiceImage];
+const fallbackTopCleaners = [
+  {
+    id: 'c1',
+    photo: narithImage,
+    company: 'FreshNest Cleaning Co.',
+    rating: 5,
+    reviews: 186,
+    totalJobs: 0
+  },
+  {
+    id: 'c2',
+    photo: meyImage,
+    company: 'Sparkle Pro Services',
+    rating: 5,
+    reviews: 241,
+    totalJobs: 0
+  },
+  {
+    id: 'c3',
+    photo: molikaImage,
+    company: 'PrimeCare Cleaners',
+    rating: 5,
+    reviews: 203,
+    totalJobs: 0
+  }
+];
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -85,13 +115,31 @@ const mapServiceFromApi = (item, index) => ({
   status: String(item?.status || 'active').toLowerCase(),
 });
 
+const formatServiceStatus = (status) => {
+  const normalized = String(status || 'active').trim().toLowerCase();
+  return normalized === 'active'
+    ? 'Active'
+    : normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
 const mapFeaturedCleanerFromApi = (cleaner, index) => ({
   id: String(cleaner?.id || cleaner?.cleaner_id || `cleaner-${index}`),
   photo: toAbsoluteImageUrl(cleaner?.profileImage || cleaner?.profile_image || cleaner?.photo || '') || fallbackImages[index % fallbackImages.length],
   company: cleaner?.name || cleaner?.username || cleaner?.company_name || 'Cleaning Company',
   rating: Math.max(1, Math.round(Number(cleaner?.rating) || 0)),
-  reviews: Number(cleaner?.reviews || cleaner?.total_reviews || 0)
+  reviews: Number(cleaner?.reviews || cleaner?.total_reviews || 0),
+  totalJobs: Number(cleaner?.totalJobs || cleaner?.total_jobs || 0)
 });
+
+const getTopCleanerRows = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.cleaners)) return payload.cleaners;
+  if (Array.isArray(payload?.data?.cleaners)) return payload.data.cleaners;
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
 
 const truncateWords = (text, wordLimit = 25) => {
   if (!text) return '';
@@ -117,37 +165,22 @@ const CustomerHomePage = () => {
   useEffect(() => {
     const fetchTopCleaners = async () => {
       try {
-        const response = await api.get('/dashboard/top-cleaners?limit=3');
-        if (response.data.success) {
-          const cleaners = (response.data.data || []).map(mapFeaturedCleanerFromApi);
-          setFeaturedCleaners(cleaners);
-        }
+        const response = await api.get('/dashboard/top-cleaners', { params: { limit: 20 } });
+        const rows = getTopCleanerRows(response?.data);
+        const cleaners = rows
+          .map(mapFeaturedCleanerFromApi)
+          .filter((cleaner) => cleaner.id && cleaner.company)
+          .sort((a, b) => {
+            if (b.rating !== a.rating) return b.rating - a.rating;
+            if (b.reviews !== a.reviews) return b.reviews - a.reviews;
+            return b.totalJobs - a.totalJobs;
+          })
+          .slice(0, 3);
+
+        setFeaturedCleaners(cleaners.length ? cleaners : fallbackTopCleaners);
       } catch (error) {
         console.error('Failed to fetch top cleaners:', error);
-        // Use fallback data if API fails
-        setFeaturedCleaners([
-          {
-            id: 'c1',
-            photo: narithImage,
-            company: 'FreshNest Cleaning Co.',
-            rating: 5,
-            reviews: 186
-          },
-          {
-            id: 'c2',
-            photo: meyImage,
-            company: 'Sparkle Pro Services',
-            rating: 5,
-            reviews: 241
-          },
-          {
-            id: 'c3',
-            photo: molikaImage,
-            company: 'PrimeCare Cleaners',
-            rating: 5,
-            reviews: 203
-          }
-        ]);
+        setFeaturedCleaners(fallbackTopCleaners);
       } finally {
         setLoadingCleaners(false);
       }
@@ -210,7 +243,7 @@ const CustomerHomePage = () => {
       window.cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [loadingServices, services.length]);
+  }, [loadingServices, services.length, loadingCleaners, featuredCleaners.length]);
 
   const handleBookService = (service) => {
     navigate('/customer/bookings', {
@@ -287,9 +320,13 @@ const CustomerHomePage = () => {
           ) : services.length > 0 ? (
             services.slice(0, 4).map((service, index) => (
               <article key={service.id} className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}>
-                <img src={service.image} alt={service.title} />
+                <div className="service-highlight-media">
+                  <img src={service.image} alt={service.title} />
+                  <span className={`service-status-badge ${service.status === 'active' ? 'active' : ''}`}>
+                    {formatServiceStatus(service.status)}
+                  </span>
+                </div>
                 <div className="service-highlight-body">
-                  <span className="service-index">{index + 1}</span>
                   <h3>{service.title}</h3>
                   <p>{truncateWords(service.description, 25)}</p>
                   <button type="button" className="service-card-btn" onClick={() => handleBookService(service)}>
@@ -301,9 +338,13 @@ const CustomerHomePage = () => {
           ) : (
             serviceHighlights.map((service, index) => (
               <article key={service.id} className={`service-highlight-item reveal stagger-${Math.min(index + 1, 4)}`}>
-                <img src={service.image} alt={service.title} />
+                <div className="service-highlight-media">
+                  <img src={service.image} alt={service.title} />
+                  <span className={`service-status-badge ${service.status === 'active' ? 'active' : ''}`}>
+                    {formatServiceStatus(service.status)}
+                  </span>
+                </div>
                 <div className="service-highlight-body">
-                  <span className="service-index">{index + 1}</span>
                   <h3>{service.title}</h3>
                   <p>{truncateWords(service.description, 25)}</p>
                   <button type="button" className="service-card-btn" onClick={() => handleBookService(service)}>

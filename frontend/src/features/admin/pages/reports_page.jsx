@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CalendarOutlined,
+  CloseCircleOutlined,
   DollarOutlined,
-  RiseOutlined,
-  ShoppingCartOutlined,
 } from '@ant-design/icons';
 import { Select } from 'antd';
 import { Line } from '@ant-design/charts';
 import '../../../styles/admin/reports_page.css';
+import { useTranslation } from '../../../contexts/translation_context';
+import { useTheme } from '../../../contexts/theme_context';
 import { reportService } from '../services/reportService';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -66,6 +67,8 @@ const formatDateTime = (value) => {
 };
 
 const ReportsPage = () => {
+  const { ta } = useTranslation();
+  const { darkMode } = useTheme();
   const [range, setRange] = useState('month');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -109,7 +112,6 @@ const ReportsPage = () => {
     (max, item) => Math.max(max, toSafeNumber(item?.total_revenue)),
     0
   );
-  const revenueGrowth = toSafeNumber(stats?.revenue_growth);
   const serviceImageByName = useMemo(() => {
     const imageMap = new Map();
     recentTransactions.forEach((transaction) => {
@@ -135,32 +137,50 @@ const ReportsPage = () => {
     smooth: true,
     autoFit: true,
     height: 300,
+    theme: darkMode ? 'classicDark' : 'classic',
     color: '#16a34a',
+    scale: {
+      color: {
+        range: ['#16a34a']
+      }
+    },
+    lineStyle: {
+      lineWidth: 2,
+      stroke: '#16a34a'
+    },
+    line: {
+      style: {
+        lineWidth: 2,
+        stroke: '#16a34a'
+      }
+    },
     padding: [24, 20, 48, 48],
     point: {
       size: 4,
       shape: 'circle',
       style: {
-        fill: '#ffffff',
+        fill: darkMode ? '#0f1b33' : '#ffffff',
         stroke: '#16a34a',
         lineWidth: 2
       }
     },
     area: {
       style: {
-        fill: 'l(270) 0:#dcfce7 1:#ffffff'
+        fill: darkMode
+          ? 'l(270) 0:rgba(34,197,94,0.28) 1:rgba(14,23,42,0)'
+          : 'l(270) 0:#dcfce7 1:#ffffff'
       }
     },
     xAxis: {
       label: {
         style: {
-          fill: '#64748b',
+          fill: darkMode ? '#a9b7cc' : '#64748b',
           fontSize: 12
         }
       },
       line: {
         style: {
-          stroke: '#dbe5f0'
+          stroke: darkMode ? '#2b4a37' : '#cfe9d7'
         }
       }
     },
@@ -168,14 +188,14 @@ const ReportsPage = () => {
       label: {
         formatter: (value) => `$${Number(value).toLocaleString('en-US')}`,
         style: {
-          fill: '#64748b',
+          fill: darkMode ? '#a9b7cc' : '#64748b',
           fontSize: 12
         }
       },
       grid: {
         line: {
           style: {
-            stroke: '#eef4fb',
+            stroke: darkMode ? '#2b4a37' : '#e5f5ea',
             lineDash: [4, 4]
           }
         }
@@ -188,7 +208,7 @@ const ReportsPage = () => {
       })
     },
     animation: false
-  }), [revenueChartData]);
+  }), [revenueChartData, darkMode]);
 
   const kpiCards = [
     {
@@ -206,37 +226,30 @@ const ReportsPage = () => {
       icon: <CalendarOutlined />
     },
     {
-      title: 'AVERAGE ORDER VALUE',
-      value: formatCurrency(stats?.average_order_value),
-      note: 'Average paid booking size',
-      tone: 'amber',
-      icon: <ShoppingCartOutlined />
-    },
-    {
-      title: 'REVENUE GROWTH',
-      value: `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toFixed(1)}%`,
-      note: 'Compared with previous period',
-      tone: revenueGrowth >= 0 ? 'emerald' : 'rose',
-      icon: <RiseOutlined />
+      title: 'CANCELLED BOOKINGS',
+      value: String(toSafeNumber(stats?.cancelled_bookings)),
+      note: 'Bookings cancelled in this range',
+      tone: 'rose',
+      icon: <CloseCircleOutlined />
     }
   ];
 
   return (
-    <section className="admin-reports-page">
+    <section className={`admin-reports-page ${darkMode ? 'dark-mode' : ''}`}>
       <header className="admin-reports-header">
         <div>
-          <h1 className="admin-page-title">Revenue Analysis</h1>
-          <p className="admin-page-subtitle">Track revenue flow, paid bookings, and the services driving income.</p>
+          <h1 className="admin-page-title">{ta('Revenue Analysis')}</h1>
+          <p className="admin-page-subtitle">{ta('Track revenue flow, paid bookings, and the services driving income.')}</p>
         </div>
 
         <label className="admin-report-range-select">
-          <span>Report Range</span>
+          <span>{ta('Report Range')}</span>
           <Select
             value={range}
             onChange={setRange}
             options={rangeOptions.map((option) => ({
               value: option.value,
-              label: option.label
+              label: ta(option.label)
             }))}
             popupMatchSelectWidth={false}
           />
@@ -261,9 +274,6 @@ const ReportsPage = () => {
               <h3>Revenue Trend</h3>
               <p>Income generated across the selected reporting window.</p>
             </div>
-            <span className={`trend-chip ${revenueGrowth >= 0 ? 'positive' : 'negative'}`}>
-              {revenueGrowth >= 0 ? '+' : ''}{revenueGrowth.toFixed(1)}%
-            </span>
           </div>
 
           {loading ? (

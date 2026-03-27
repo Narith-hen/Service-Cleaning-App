@@ -237,10 +237,18 @@ const getRevenueReport = async (req, res, next) => {
     const cleanerEmailExpr = userColumns.has('email') ? 'c.email' : 'NULL';
     const customerAvatarExpr = userColumns.has('avatar') ? 'u.avatar' : 'NULL';
     const cleanerAvatarExpr = userColumns.has('avatar') ? 'c.avatar' : 'NULL';
+    const cancellationExpr = `
+      CASE
+        WHEN LOWER(COALESCE(b.service_status, '')) IN ('cancelled', 'canceled') THEN 1
+        WHEN LOWER(COALESCE(b.booking_status, '')) IN ('cancelled', 'canceled') THEN 1
+        ELSE 0
+      END
+    `;
 
     const [
       [currentSummaryRows],
       [previousSummaryRows],
+      [cancelledSummaryRows],
       [timelineRows],
       [topServiceRows],
       [recentTransactionRows]
@@ -268,6 +276,15 @@ const getRevenueReport = async (req, res, next) => {
             AND ${paymentDateExpression} BETWEEN ? AND ?
         `,
         [ADMIN_EARNING_PER_PAID_BOOKING, rangeConfig.previousStart, rangeConfig.previousEnd]
+      ),
+      promiseDb.query(
+        `
+          SELECT
+            COALESCE(SUM(${cancellationExpr}), 0) AS cancelled_bookings
+          FROM bookings b
+          WHERE b.created_at BETWEEN ? AND ?
+        `,
+        [rangeConfig.currentStart, rangeConfig.currentEnd]
       ),
       promiseDb.query(
         `
@@ -347,6 +364,7 @@ const getRevenueReport = async (req, res, next) => {
 
     const currentRevenue = Number(currentSummaryRows?.[0]?.total_revenue || 0);
     const currentBookings = Number(currentSummaryRows?.[0]?.paid_bookings || 0);
+    const cancelledBookings = Number(cancelledSummaryRows?.[0]?.cancelled_bookings || 0);
     const previousRevenue = Number(previousSummaryRows?.[0]?.total_revenue || 0);
 
     res.status(200).json({
@@ -356,6 +374,7 @@ const getRevenueReport = async (req, res, next) => {
         stats: {
           total_revenue: currentRevenue,
           paid_bookings: currentBookings,
+          cancelled_bookings: cancelledBookings,
           average_order_value: currentBookings > 0 ? Number((currentRevenue / currentBookings).toFixed(2)) : 0,
           revenue_growth: calculateGrowth(currentRevenue, previousRevenue)
         },

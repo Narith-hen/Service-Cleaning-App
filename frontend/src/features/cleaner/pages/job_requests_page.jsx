@@ -17,6 +17,17 @@ import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import { getCleanerScopedStorageKey } from '../utils/storageKeys';
 
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
+
+const normalizeAssetUrl = (value) => {
+  if (!value) return '';
+  const normalizedValue = String(value).replace(/\\/g, '/').trim();
+  if (!normalizedValue) return '';
+  if (/^https?:\/\//i.test(normalizedValue) || normalizedValue.startsWith('data:')) return normalizedValue;
+  if (normalizedValue.startsWith('/')) return `${API_BASE_URL}${normalizedValue}`;
+  return normalizedValue;
+};
 
 // Create a shared socket instance
 let socketInstance = null;
@@ -33,12 +44,48 @@ const getSocket = () => {
 const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 const getCleanerChatStorageKey = () => getCleanerScopedStorageKey('cleaner_message_threads_v1');
 
+const formatSingleTimeLabel = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return 'TBD';
+
+  const normalized = text.toUpperCase();
+  if (normalized.includes('AM') || normalized.includes('PM')) return text;
+
+  const timeMatch = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (timeMatch) {
+    const hours24 = Number(timeMatch[1]);
+    const minutes = timeMatch[2];
+    if (!Number.isFinite(hours24)) return text;
+    const meridiem = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${minutes} ${meridiem}`;
+  }
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return text;
+  return parsed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
+
+const formatScheduleLabel = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return 'TBD';
+
+  const segments = text.split('-').map((segment) => segment.trim()).filter(Boolean);
+  if (segments.length > 1) {
+    return segments.map((segment) => formatSingleTimeLabel(segment)).join(' - ');
+  }
+
+  return formatSingleTimeLabel(text);
+};
+
 const mapBookingToRequest = (booking) => {
   const date = booking?.booking_date ? new Date(booking.booking_date) : null;
   const { month, day } = formatDateParts(date?.toISOString());
-  const startTime = booking?.booking_time || (date
-    ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : 'TBD');
+  const startTime = formatScheduleLabel(
+    booking?.booking_time || (date
+      ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'TBD')
+  );
   return {
     id: booking.booking_id,
     service: booking.service_name || booking.service?.name || 'Cleaning',
@@ -49,7 +96,14 @@ const mapBookingToRequest = (booking) => {
       [booking.first_name, booking.last_name].filter(Boolean).join(' ').trim() ||
       booking.user?.username ||
       'Customer',
-    customerAvatar: booking.customer_avatar || booking.user?.avatar || '',
+    customerAvatar: normalizeAssetUrl(
+      booking.customer_avatar ||
+      booking.customerAvatar ||
+      booking.user_avatar ||
+      booking.user?.avatar ||
+      booking.avatar ||
+      ''
+    ),
     customerPhone: booking.phone_number || '',
     address: booking.address || 'Address shared after accept',
     timeRange: startTime,
@@ -105,6 +159,9 @@ const JobRequestsPage = () => {
   const socketRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
+  const [avatarLoadFailures, setAvatarLoadFailures] = useState({});
+  const [requestImagesById, setRequestImagesById] = useState({});
+  const [requestImagesLoadingById, setRequestImagesLoadingById] = useState({});
   const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
   const CANCELLED_BOOKING_KEY = 'cancelled_booking_id';
 
@@ -250,6 +307,8 @@ const JobRequestsPage = () => {
     () => requests.find((job) => job.id === detailRequestId) || null,
     [requests, detailRequestId]
   );
+  const detailRequestImages = detailRequest ? (requestImagesById[detailRequest.id] || []) : [];
+  const isDetailRequestImagesLoading = detailRequest ? Boolean(requestImagesLoadingById[detailRequest.id]) : false;
 
   useEffect(() => {
     if (!detailRequestId) return;
@@ -257,6 +316,55 @@ const JobRequestsPage = () => {
       setDetailRequestId(null);
     }
   }, [requests, detailRequestId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!detailRequestId || requestImagesById[detailRequestId]) return;
+
+    setRequestImagesLoadingById((prev) => ({ ...prev, [detailRequestId]: true }));
+
+    api.get(`/bookings/${detailRequestId}`)
+      .then((response) => {
+        if (cancelled) return;
+
+        const bookingData = response?.data?.data || {};
+        const nextImages = Array.isArray(bookingData.images)
+          ? bookingData.images
+            .map((image) => normalizeAssetUrl(image?.url || image?.image_url || image))
+            .filter(Boolean)
+          : [];
+
+        setRequestImagesById((prev) => ({ ...prev, [detailRequestId]: nextImages }));
+
+        const nextCustomerAvatar = normalizeAssetUrl(
+          bookingData.customer_avatar ||
+          bookingData.customerAvatar ||
+          bookingData.user?.avatar ||
+          bookingData.avatar ||
+          ''
+        );
+
+        if (nextCustomerAvatar) {
+          setRequests((prev) => prev.map((job) => (
+            String(job.id) === String(detailRequestId)
+              ? { ...job, customerAvatar: nextCustomerAvatar }
+              : job
+          )));
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRequestImagesById((prev) => ({ ...prev, [detailRequestId]: [] }));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setRequestImagesLoadingById((prev) => ({ ...prev, [detailRequestId]: false }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailRequestId, requestImagesById]);
 
   const markRequestAccepted = (id) => {
     setRequests((prev) => prev.map((job) => (job.id === id ? { ...job, status: 'accepted' } : job)));
@@ -561,8 +669,15 @@ const JobRequestsPage = () => {
 
             <div className="request-detail-customer-profile">
               <div className="customer-avatar-section">
-                {detailRequest.customerAvatar ? (
-                  <img src={detailRequest.customerAvatar} alt={detailRequest.customer} className="customer-avatar" />
+                {detailRequest.customerAvatar && !avatarLoadFailures[detailRequest.id] ? (
+                  <img
+                    src={detailRequest.customerAvatar}
+                    alt={detailRequest.customer}
+                    className="customer-avatar"
+                    onError={() => {
+                      setAvatarLoadFailures((prev) => ({ ...prev, [detailRequest.id]: true }));
+                    }}
+                  />
                 ) : (
                   <div className="customer-avatar-placeholder">{detailRequest.customer.charAt(0).toUpperCase()}</div>
                 )}
@@ -596,16 +711,22 @@ const JobRequestsPage = () => {
               </div>
             </div>
 
-            <div className="request-detail-checklist">
-              <h4>Cleaning Checklist</h4>
-              <ul>
-                {getRequestChecklist(detailRequest).map((item) => (
-                  <li key={item}>
-                    <CheckCircleOutlined /> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {(isDetailRequestImagesLoading || detailRequestImages.length > 0) && (
+              <div className="request-detail-gallery">
+                <h4>Uploaded Photos</h4>
+                {isDetailRequestImagesLoading ? (
+                  <p className="request-detail-gallery-empty">Loading customer photos...</p>
+                ) : (
+                  <div className="request-detail-gallery-grid">
+                    {detailRequestImages.map((imageUrl, index) => (
+                      <div key={`${detailRequest.id}-image-${index}`} className="request-detail-gallery-card">
+                        <img src={imageUrl} alt={`${detailRequest.customer} upload ${index + 1}`} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="request-detail-actions">
               <button

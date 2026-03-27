@@ -115,6 +115,8 @@ const CleanerHeader = () => {
   };
 
   const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure want to logout?');
+    if (!confirmed) return;
     await logout();
     navigate('/auth/login', { replace: true });
     setIsProfileOpen(false);
