@@ -131,17 +131,17 @@ If you will use ElastiCache instead of local Redis, installing `redis-server` is
 Option A: clone with Git
 
 ```bash
-git clone <your-repository-url> service-cleaning-app
-cd service-cleaning-app
+git clone <your-repository-url>  Service-Cleaning-App
+cd  Service-Cleaning-App
 ```
 
 Option B: upload from MobaXterm
 
-- Upload the full project folder to `/home/ubuntu/service-cleaning-app`
+- Upload the full project folder to `/home/ubuntu/ Service-Cleaning-App`
 - Then SSH into that folder:
 
 ```bash
-cd /home/ubuntu/service-cleaning-app
+cd /home/ubuntu/ Service-Cleaning-App
 ```
 
 ## Step 5: Configure Environment Variables
@@ -201,8 +201,8 @@ If you use ElastiCache, replace `REDIS_HOST`.
 ### `frontend/.env`
 
 ```env
-VITE_API_BASE_URL=https://api.yourdomain.com
-VITE_REALTIME_SERVER_URL=https://rt.yourdomain.com
+VITE_API_BASE_URL=http://localhost:5000
+VITE_REALTIME_SERVER_URL=http://localhost:3000
 VITE_GOOGLE_MAPS_API_KEY=
 ```
 
@@ -213,7 +213,7 @@ The frontend already adds `/api` internally.
 
 ```env
 NODE_ENV=development
-DATABASE_URL="mysql://root:@localhost:3306/samaeat"
+DATABASE_URL="mysql://root:@localhost:3306/cleaning_service_db"
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 ```
@@ -225,7 +225,7 @@ From the project root on EC2:
 ### Backend
 
 ```bash
-cd /home/ubuntu/service-cleaning-app/backend-api
+cd /home/ubuntu/ Service-Cleaning-App/backend-api
 npm install
 npm run prisma:generate
 npm run prisma:migrate:deploy
@@ -234,14 +234,14 @@ npm run prisma:migrate:deploy
 ### Realtime server
 
 ```bash
-cd /home/ubuntu/service-cleaning-app/realtime-server
+cd /home/ubuntu/ Service-Cleaning-App/realtime-server
 npm install
 ```
 
 ### Frontend
 
 ```bash
-cd /home/ubuntu/service-cleaning-app/frontend
+cd /home/ubuntu/ Service-Cleaning-App/frontend
 npm install
 npm run build
 ```
@@ -249,7 +249,7 @@ npm run build
 ### Optional workers
 
 ```bash
-cd /home/ubuntu/service-cleaning-app/workers
+cd /home/ubuntu/ Service-Cleaning-App/workers
 npm install
 ```
 
@@ -258,7 +258,7 @@ npm install
 Start all app services:
 
 ```bash
-cd /home/ubuntu/service-cleaning-app
+cd /home/ubuntu/ Service-Cleaning-App
 pm2 start backend-api/src/server.js --name backend-api
 pm2 start realtime-server/src/server.js --name realtime-server
 pm2 start workers/src/index.js --name workers
@@ -285,7 +285,7 @@ pm2 restart workers
 Create an Nginx site file:
 
 ```bash
-sudo nano /etc/nginx/sites-available/service-cleaning-app
+sudo nano /etc/nginx/sites-available/ Service-Cleaning-App
 ```
 
 Example config:
@@ -294,7 +294,7 @@ Example config:
 server {
     server_name app.yourdomain.com;
 
-    root /home/ubuntu/service-cleaning-app/frontend/dist;
+    root /home/ubuntu/ Service-Cleaning-App/frontend/dist;
     index index.html;
 
     location / {
@@ -343,7 +343,7 @@ server {
 Enable it:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/service-cleaning-app /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/ Service-Cleaning-App /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 ```
@@ -449,7 +449,7 @@ Check:
 Retry:
 
 ```bash
-cd /home/ubuntu/service-cleaning-app/backend-api
+cd /home/ubuntu/ Service-Cleaning-App/backend-api
 npm run prisma:migrate:deploy
 ```
 
@@ -492,19 +492,19 @@ If you want the least risky path, deploy in this order:
 ## Minimal Command Checklist
 
 ```bash
-cd /home/ubuntu/service-cleaning-app/backend-api
+cd /home/ubuntu/ Service-Cleaning-App/backend-api
 npm install
 npm run prisma:generate
 npm run prisma:migrate:deploy
 
-cd /home/ubuntu/service-cleaning-app/realtime-server
+cd /home/ubuntu/ Service-Cleaning-App/realtime-server
 npm install
 
-cd /home/ubuntu/service-cleaning-app/frontend
+cd /home/ubuntu/ Service-Cleaning-App/frontend
 npm install
 npm run build
 
-cd /home/ubuntu/service-cleaning-app
+cd /home/ubuntu/ Service-Cleaning-App
 pm2 start backend-api/src/server.js --name backend-api
 pm2 start realtime-server/src/server.js --name realtime-server
 pm2 start workers/src/index.js --name workers
