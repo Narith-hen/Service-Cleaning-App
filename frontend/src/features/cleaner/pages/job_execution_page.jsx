@@ -150,7 +150,7 @@ const JobExecutionPage = () => {
     };
   }, [bookingId]);
 
-  const handleFinishJob = async () => {
+const handleFinishJob = async () => {
     setFinishStatus('Sending final payment request...');
     try {
       const ok = await requestFinalPaymentOnServer(currentJob);
@@ -159,7 +159,8 @@ const JobExecutionPage = () => {
         return;
       }
 
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const confirmedMyJobsStorageKey = getConfirmedMyJobsStorageKey();
+      const raw = localStorage.getItem(confirmedMyJobsStorageKey);
       if (!raw) {
         setFinishStatus('Final payment requested. Waiting for customer receipt.');
         navigate('/cleaner/my-jobs');
@@ -177,7 +178,7 @@ const JobExecutionPage = () => {
           ? { ...job, status: 'payment-required', serviceStatus: 'completed', paymentStatus: 'awaiting_receipt' }
           : job
       );
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(confirmedMyJobsStorageKey, JSON.stringify(updated));
       dispatchCleanerNotificationsUpdated();
       setFinishStatus('Final payment requested. Waiting for customer receipt.');
     } catch {
