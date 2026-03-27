@@ -501,6 +501,74 @@
   cursor: not-allowed;
 }
 
+@media (max-width: 1280px) {
+  .admin-settings-page {
+    gap: 14px;
+  }
+
+  .admin-settings-header h1 {
+    font-size: 36px;
+  }
+
+  .admin-settings-header p {
+    font-size: 14px;
+  }
+
+  .admin-settings-hero,
+  .admin-settings-summary-card,
+  .settings-panel {
+    border-radius: 20px;
+  }
+
+  .admin-settings-hero {
+    padding: 18px;
+  }
+
+  .settings-avatar-button {
+    width: 78px;
+    height: 78px;
+    border-radius: 22px;
+  }
+
+  .settings-avatar-fallback {
+    font-size: 26px;
+  }
+
+  .settings-hero-copy h2 {
+    font-size: 24px;
+  }
+
+  .settings-hero-copy p,
+  .settings-hero-note span,
+  .settings-panel-head p,
+  .settings-summary-label,
+  .settings-summary-card p,
+  .settings-field input,
+  .settings-field select,
+  .settings-field textarea,
+  .security-note span {
+    font-size: 12px;
+  }
+
+  .admin-settings-summary-card h3 {
+    font-size: 28px;
+  }
+
+  .settings-panel-head h3 {
+    font-size: 18px;
+  }
+
+  .settings-field span {
+    font-size: 11px;
+  }
+
+  .settings-primary-button,
+  .settings-secondary-button,
+  .settings-cancel-button {
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 1240px) {
   .admin-settings-grid {
     grid-template-columns: 1fr;

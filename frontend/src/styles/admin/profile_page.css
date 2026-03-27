@@ -112,3 +112,32 @@
 .admin-layout.dark .admin-profile-message.error {
   color: #f87171;
 }
+
+@media (max-width: 1280px) {
+  .admin-profile-page {
+    padding: 18px;
+  }
+
+  .admin-profile-card {
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .admin-profile-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .admin-profile-avatar-fallback {
+    font-size: 24px;
+  }
+
+  .admin-profile-info h3 {
+    font-size: 20px;
+  }
+
+  .admin-profile-email,
+  .admin-profile-message {
+    font-size: 13px;
+  }
+}

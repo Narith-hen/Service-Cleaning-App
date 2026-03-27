@@ -667,6 +667,67 @@
   color: #dbeafe;
 }
 
+@media (max-width: 1280px) {
+  .admin-customers-page {
+    gap: 14px;
+  }
+
+  .customers-header h1 {
+    font-size: 36px;
+  }
+
+  .customers-header p {
+    font-size: 14px;
+  }
+
+  .customers-kpi-card,
+  .customers-table-panel {
+    border-radius: 18px;
+  }
+
+  .customers-kpi-card {
+    padding: 16px;
+  }
+
+  .customers-kpi-card h3 {
+    font-size: 34px;
+  }
+
+  .kpi-label,
+  .kpi-note {
+    font-size: 11px;
+  }
+
+  .customers-filter-row {
+    padding: 12px;
+  }
+
+  .customers-search-box input,
+  .customers-filter-select .ant-select-selection-item,
+  .customers-filter-select .ant-select-selection-placeholder {
+    font-size: 12px;
+  }
+
+  .customers-table {
+    min-width: 920px;
+  }
+
+  .customers-table th,
+  .customers-table td {
+    padding: 10px 8px;
+  }
+
+  .customers-table th {
+    font-size: 0.68rem;
+  }
+
+  .customers-table td,
+  .table-footer,
+  .table-footer .rows-label {
+    font-size: 0.78rem;
+  }
+}
+
 @media (max-width: 1200px) {
   .customers-kpi-grid {
     grid-template-columns: 1fr;

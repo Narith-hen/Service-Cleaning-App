@@ -1042,6 +1042,80 @@ body.dark-mode .service-form-modal .ant-btn-default:hover {
   border-color: #475569 !important;
 }
 
+@media (max-width: 1280px) {
+  .admin-services-page {
+    padding: 18px;
+  }
+
+  .admin-services-page .admin-page-title {
+    font-size: 36px;
+  }
+
+  .admin-services-page .admin-page-subtitle {
+    font-size: 14px;
+  }
+
+  .services-page-intro,
+  .services-kpi-grid,
+  .services-filter-row {
+    gap: 12px;
+  }
+
+  .services-kpi-card,
+  .services-table-wrap,
+  .inventory-table-wrap,
+  .service-view-card {
+    border-radius: 18px;
+  }
+
+  .services-kpi-card {
+    padding: 16px;
+  }
+
+  .services-kpi-card h3 {
+    font-size: 34px;
+  }
+
+  .admin-services-page .kpi-label,
+  .services-kpi-note,
+  .services-table-footer,
+  .pagination-info,
+  .pagination-page-label {
+    font-size: 11px;
+  }
+
+  .services-search-box input,
+  .services-filter-select .ant-select-selection-item,
+  .services-filter-select .ant-select-selection-placeholder {
+    font-size: 12px;
+  }
+
+  .services-table {
+    min-width: 760px;
+  }
+
+  .services-table thead th {
+    font-size: 11px;
+  }
+
+  .services-table tbody td,
+  .inventory-table tbody td {
+    font-size: 12px;
+  }
+
+  .inventory-table {
+    min-width: 680px;
+  }
+
+  .service-view-card-title {
+    font-size: 20px;
+  }
+
+  .service-view-card-description {
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 1240px) {
   .services-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -2,10 +2,12 @@
 .admin-layout {
   display: flex;
   width: 100vw;
+  min-width: 1180px;
   height: 100vh;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: #f8fafc;
 }
 
@@ -46,7 +48,7 @@
 /* Main content area - scrollable */
 .admin-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   padding: 24px;
   background: #f8fafc;
   scrollbar-width: none;
@@ -112,6 +114,20 @@
 
 /* Responsive: mobile, tablet, laptop-L */
 @media (max-width: 1280px) {
+  .admin-layout {
+    min-width: 1120px;
+  }
+
+  .admin-header {
+    padding: 0 18px;
+  }
+
+  .admin-content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 768px) {
   .compact-layout .cleaner-sidebar {
     transform: translateX(-100%);
     transition: transform 0.25s ease;

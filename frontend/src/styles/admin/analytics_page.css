@@ -298,6 +298,88 @@
   padding: 20px 0;
 }
 
+@media (max-width: 1280px) {
+  .admin-analytics-page {
+    gap: 18px;
+  }
+
+  .admin-analytics-header {
+    padding: 22px 24px;
+    border-radius: 24px;
+  }
+
+  .admin-analytics-page .admin-page-title {
+    font-size: 34px;
+  }
+
+  .admin-analytics-page .admin-page-subtitle {
+    font-size: 14px;
+  }
+
+  .admin-analytics-range-select {
+    min-width: 190px;
+  }
+
+  .admin-analytics-range-select span {
+    font-size: 11px;
+  }
+
+  .admin-analytics-kpi-grid,
+  .admin-analytics-main-grid,
+  .admin-analytics-insight-grid {
+    gap: 14px;
+  }
+
+  .admin-analytics-kpi-card,
+  .analytics-panel {
+    border-radius: 20px;
+  }
+
+  .admin-analytics-kpi-card {
+    padding: 18px;
+  }
+
+  .analytics-kpi-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .admin-analytics-kpi-card span {
+    font-size: 11px;
+  }
+
+  .admin-analytics-kpi-card strong {
+    font-size: 1.7rem;
+  }
+
+  .admin-analytics-kpi-card p {
+    font-size: 0.86rem;
+  }
+
+  .analytics-panel-head h3 {
+    font-size: 1.35rem;
+  }
+
+  .analytics-panel-head p {
+    font-size: 0.86rem;
+  }
+
+  .analytics-table {
+    min-width: 700px;
+  }
+
+  .analytics-table th {
+    padding: 12px 8px;
+    font-size: 0.78rem;
+  }
+
+  .analytics-table td {
+    padding: 14px 8px;
+    font-size: 0.84rem;
+  }
+}
+
 @media (max-width: 1200px) {
   .admin-analytics-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

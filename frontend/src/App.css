@@ -6,6 +6,8 @@
   text-align: center;
   background: #fff;
   font-family: 'Noto Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+  min-height: 100vh;
 }
 
 .logo {
@@ -72,5 +74,66 @@ h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, label {
 /* Force Ant Design Typography to use Noto Sans */
 .ant-typography {
   font-family: 'Noto Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* App-wide medium-screen typography tightening so pages fit without hiding content */
+@media (max-width: 1366px) and (min-width: 769px) {
+  html {
+    font-size: 15px;
+  }
+
+  #root {
+    zoom: 0.97;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 769px) {
+  html {
+    font-size: 14px;
+  }
+
+  #root {
+    zoom: 0.93;
+  }
+}
+
+@media (max-width: 1366px) and (min-width: 769px) {
+  #root .ant-btn,
+  #root .ant-input,
+  #root .ant-input-affix-wrapper,
+  #root .ant-select-selector,
+  #root .ant-picker,
+  #root .ant-form-item-label > label,
+  #root .ant-menu-title-content,
+  #root .ant-dropdown-menu-title-content,
+  #root .ant-table,
+  #root .ant-modal-content,
+  #root .ant-card,
+  #root button,
+  #root input,
+  #root select,
+  #root textarea {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 769px) {
+  #root .ant-btn,
+  #root .ant-input,
+  #root .ant-input-affix-wrapper,
+  #root .ant-select-selector,
+  #root .ant-picker,
+  #root .ant-form-item-label > label,
+  #root .ant-menu-title-content,
+  #root .ant-dropdown-menu-title-content,
+  #root .ant-table,
+  #root .ant-modal-content,
+  #root .ant-card,
+  #root button,
+  #root input,
+  #root select,
+  #root textarea {
+    font-size: 0.92rem;
+  }
 }
 

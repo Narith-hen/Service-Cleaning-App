@@ -591,6 +591,77 @@
   color: #bbf7d0;
 }
 
+@media (max-width: 1280px) {
+  .admin-reviews-page {
+    gap: 14px;
+  }
+
+  .admin-reviews-header h1 {
+    font-size: 36px;
+  }
+
+  .admin-reviews-header p {
+    font-size: 14px;
+  }
+
+  .admin-reviews-kpi-card,
+  .reviews-panel,
+  .review-detail-card {
+    border-radius: 16px;
+  }
+
+  .admin-reviews-kpi-card {
+    padding: 16px;
+  }
+
+  .admin-reviews-kpi-card h3 {
+    font-size: 34px;
+  }
+
+  .admin-reviews-kpi-card p,
+  .reviews-kpi-label,
+  .detail-meta-item small,
+  .detail-meta-item span {
+    font-size: 11px;
+  }
+
+  .panel-head h3 {
+    font-size: 1rem;
+  }
+
+  .panel-head p {
+    font-size: 0.82rem;
+  }
+
+  .admin-reviews-filter-row {
+    padding: 12px;
+  }
+
+  .reviews-search-field input,
+  .reviews-filter-select .ant-select-selection-item,
+  .reviews-filter-select .ant-select-selection-placeholder {
+    font-size: 12px;
+  }
+
+  .reviews-table {
+    min-width: 1080px;
+  }
+
+  .reviews-table th,
+  .reviews-table td {
+    padding: 10px 8px;
+  }
+
+  .reviews-table th {
+    font-size: 0.68rem;
+  }
+
+  .reviews-table td,
+  .detail-meta-item strong {
+    font-size: 0.78rem;
+  }
+}
+
 @media (max-width: 1220px) {
   .admin-reviews-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

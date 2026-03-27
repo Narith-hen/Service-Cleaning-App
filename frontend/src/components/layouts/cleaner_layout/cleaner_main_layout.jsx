@@ -6,7 +6,7 @@ import { useTheme } from "../../../contexts/theme_context";
 import '../../../styles/cleaner/cleaner_main_layout.css';
 import Footer from '../admin_layout/admin_footer';
 
-const TARGET_SCREEN_BREAKPOINT = 1280;
+const TARGET_SCREEN_BREAKPOINT = 768;
 
 const CleanerMainLayout = () => {
   const { darkMode } = useTheme();

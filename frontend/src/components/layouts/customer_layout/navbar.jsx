@@ -19,7 +19,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { loadCustomerNotifications } from '../../../utils/bookingSync';
 
 const { Text } = Typography;
-const TARGET_SCREEN_BREAKPOINT = 1280;
+const TARGET_SCREEN_BREAKPOINT = 992;
 const TARGET_SCREEN_CONTAINER_WIDTH = 1280;
 
 const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, setMobileOpen }) => {
@@ -49,7 +49,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
       if (width < 576) setBreakpoint('xs');
       else if (width < 768) setBreakpoint('sm');
       else if (width < 992) setBreakpoint('md');
-      else if (width <= TARGET_SCREEN_BREAKPOINT) setBreakpoint('lg');
+      else if (width <= TARGET_SCREEN_CONTAINER_WIDTH) setBreakpoint('lg');
       else setBreakpoint('xl');
     };
 
@@ -75,9 +75,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
 
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
   const isTablet = breakpoint === 'md';
-  const isLaptopL = breakpoint === 'lg';
-  const isCompactNav = isMobile || isTablet || isLaptopL;
-  const navLinkGap = isCustomerArea ? 26 : 18;
+  const isTightDesktop = breakpoint === 'lg';
+  const isCompactNav = isMobile || isTablet;
+  const navLinkGap = isCustomerArea ? (isTightDesktop ? 18 : 26) : (isTightDesktop ? 14 : 18);
   const leftColProps = isCompactNav
     ? { xs: 10, sm: 8, md: 6, lg: 4, xl: 4 }
     : { flex: 'none' };
@@ -161,7 +161,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
         style={{
           maxWidth: `${TARGET_SCREEN_CONTAINER_WIDTH}px`,
           margin: '0 auto',
-          padding: isMobile ? '0 16px' : '0 24px'
+          padding: isMobile ? '0 16px' : isTightDesktop ? '0 18px' : '0 24px'
         }}
       >
         <Row align="middle" justify="space-between" wrap={false} gutter={[16, 0]}>
@@ -203,10 +203,10 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       type="text"
                       onClick={() => handleNavigation(item.path)}
                       style={{
-                        fontSize: 16,
+                        fontSize: isTightDesktop ? 14 : 16,
                         fontWeight: 500,
                         color: darkMode ? '#e5e7eb' : '#374151',
-                        padding: '8px 12px',
+                        padding: isTightDesktop ? '8px 8px' : '8px 12px',
                         height: 'auto',
                         fontFamily: "'Noto Sans', sans-serif",
                         borderBottom: location.pathname === item.path ? '2px solid green' : 'none',
@@ -230,9 +230,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                       background: '#008000',
                       borderColor: '#008000',
                       borderRadius: 24,
-                      height: 40,
-                      paddingInline: isCompactNav ? 12 : 18,
-                      fontSize: 14,
+                      height: isTightDesktop ? 38 : 40,
+                      paddingInline: isCompactNav ? 12 : isTightDesktop ? 14 : 18,
+                      fontSize: isTightDesktop ? 13 : 14,
                       fontWeight: 600,
                       fontFamily: "'Noto Sans', sans-serif"
                     }}
@@ -252,8 +252,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   title="Messages"
                   onClick={() => handleNavigation('/customer/messages')}
                   style={{
-                    width: 38,
-                    height: 38,
+                    width: isTightDesktop ? 36 : 38,
+                    height: isTightDesktop ? 36 : 38,
                     borderRadius: 999,
                     background: isCustomerMessagesPage
                       ? 'rgba(0, 128, 0, 0.14)'
@@ -271,8 +271,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                   title="History"
                   onClick={() => handleNavigation('/customer/history')}
                   style={{
-                    width: 38,
-                    height: 38,
+                    width: isTightDesktop ? 36 : 38,
+                    height: isTightDesktop ? 36 : 38,
                     borderRadius: 999,
                     background: isCustomerHistoryPage
                       ? 'rgba(0, 128, 0, 0.14)'
@@ -291,8 +291,8 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                     title="Notifications"
                     onClick={() => handleNavigation('/customer/notifications')}
                     style={{
-                      width: 38,
-                      height: 38,
+                      width: isTightDesktop ? 36 : 38,
+                      height: isTightDesktop ? 36 : 38,
                       borderRadius: 999,
                       background: isCustomerNotificationsPage
                         ? 'rgba(0, 128, 0, 0.14)'
@@ -380,9 +380,9 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         display: 'flex',
                         alignItems: 'center',
                         gap: 7,
-                        height: 40,
+                        height: isTightDesktop ? 38 : 40,
                         borderRadius: 999,
-                        paddingInline: isCompactNav ? 8 : 13,
+                        paddingInline: isCompactNav ? 8 : isTightDesktop ? 10 : 13,
                         boxShadow: 'none',
                         // backgroundColor: '#fff9c3',
                       }}
@@ -439,7 +439,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         display: 'flex',
                         alignItems: 'center',
                         gap: 4,
-                        padding: isCompactNav ? 0 : '18px 16px',
+                        padding: isCompactNav ? 0 : isTightDesktop ? '16px 12px' : '18px 16px',
                         borderRadius: 24,
                         ...(isCompactNav
                           ? {
@@ -460,7 +460,7 @@ const ModernResponsiveNavbar = ({ darkMode, setDarkMode, navigate, scrolled, set
                         gap: 4,
                         borderColor: 'green',
                         color: 'green',
-                        padding: isCompactNav ? 0 : '18px 14px',
+                        padding: isCompactNav ? 0 : isTightDesktop ? '16px 10px' : '18px 14px',
                         borderRadius: 24,
                         ...(isCompactNav
                           ? {

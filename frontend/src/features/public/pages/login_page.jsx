@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Alert, Checkbox, Divider } from 'antd';
-import { LockOutlined, MailOutlined, GoogleOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, Typography, Alert, Checkbox, Grid } from 'antd';
+import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import logoSomaet from '../../../assets/Logo_somaet.png';
 import imgRegister from '../../../assets/imgRegister.png';
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const LoginPage = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
+    const screens = useBreakpoint();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -46,14 +48,11 @@ const LoginPage = () => {
         }
     };
 
-    const handleGoogleLogin = () => {
-        setLoading(true);
-        // Implement Google login logic here
-        console.log('Google login');
-        setTimeout(() => {
-            setLoading(false);
-        }, 1000);
-    };
+    const isCompactAuth = !screens.md;
+    const controlHeight = isCompactAuth ? 38 : 40;
+    const buttonFontSize = isCompactAuth ? 14 : 15;
+    const helperFontSize = isCompactAuth ? 12 : 13;
+    const cardWidth = screens.xl ? '400px' : screens.lg ? '378px' : screens.md ? '360px' : 'min(92vw, 360px)';
 
     return (
         <div style={{
@@ -61,9 +60,9 @@ const LoginPage = () => {
             width: '100%',
             minHeight: '100dvh',
             margin: 0,
-            padding: '8px 0',
+            padding: screens.lg ? '8px 0' : '10px 0',
             overflowX: 'hidden',
-            overflowY: 'hidden',
+            overflowY: screens.lg ? 'hidden' : 'auto',
             justifyContent: 'center',
             alignItems: 'center',
             backgroundImage: `linear-gradient(rgba(18, 11, 28, 0.58), rgba(6, 17, 33, 0.68)), url(${imgRegister})`,
@@ -75,38 +74,38 @@ const LoginPage = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                padding: '8px',
-                overflowY: 'hidden',
+                padding: isCompactAuth ? '10px' : '8px',
+                overflowY: 'auto',
                 position: 'relative',
                 zIndex: 1
             }}>
                 <Card style={{
-                    width: 'min(92vw, 400px)',
-                    padding: '14px clamp(10px, 2vw, 14px)',
-                    boxShadow: '0 24px 70px rgba(8, 12, 28, 0.48)',
-                    borderRadius: 16,
+                    width: `min(92vw, ${cardWidth})`,
+                    padding: isCompactAuth ? '10px' : '14px clamp(10px, 2vw, 14px)',
+                    boxShadow: isCompactAuth ? '0 18px 42px rgba(8, 12, 28, 0.42)' : '0 24px 70px rgba(8, 12, 28, 0.48)',
+                    borderRadius: isCompactAuth ? 14 : 16,
                     border: '1px solid rgba(255,255,255,0.22)',
                     background: 'linear-gradient(145deg, rgba(35, 40, 58, 0.62), rgba(26, 31, 48, 0.50))',
                     backdropFilter: 'blur(14px)',
                     WebkitBackdropFilter: 'blur(14px)'
                 }}>
                     {/* Logo/Icon */}
-                    <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ textAlign: 'center', marginBottom: isCompactAuth ? 10 : 12 }}>
                         <img
                             src={logoSomaet}
                             alt="Somaet logo"
                             onClick={() => navigate('/')}
                             style={{
-                                width: 'clamp(52px, 10vw, 66px)',
-                                height: 'clamp(52px, 10vw, 66px)',
+                                width: isCompactAuth ? '54px' : 'clamp(52px, 10vw, 66px)',
+                                height: isCompactAuth ? '54px' : 'clamp(52px, 10vw, 66px)',
                                 objectFit: 'contain',
                                 margin: '0 auto 8px',
                                 display: 'block',
                                 cursor: 'pointer'
                             }}
                         />
-                        <Title level={2} style={{ marginBottom: 2, fontWeight: 600, fontSize: 'clamp(20px, 3vw, 30px)', color: '#f8fafc' }}>Welcome Back</Title>
-                        <Text style={{ fontSize: 13, color: '#dbe4f0' }}>Login to your Somaet account</Text>
+                        <Title level={2} style={{ marginBottom: 2, fontWeight: 600, fontSize: isCompactAuth ? '22px' : 'clamp(20px, 3vw, 30px)', color: '#f8fafc' }}>Welcome Back</Title>
+                        <Text style={{ fontSize: helperFontSize, color: '#dbe4f0' }}>Login to your Somaet account</Text>
                     </div>
 
                     {/* Error Alert */}
@@ -115,7 +114,7 @@ const LoginPage = () => {
                             message={error}
                             type="error"
                             showIcon
-                            style={{ marginBottom: 24 }}
+                            style={{ marginBottom: isCompactAuth ? 14 : 24, fontSize: helperFontSize }}
                             closable
                             onClose={() => setError('')}
                         />
@@ -140,7 +139,7 @@ const LoginPage = () => {
                                 prefix={<MailOutlined style={{ color: '#cbd5e1', height: 22}} />}
                                 placeholder="Enter your email"
                                 disabled={loading}
-                                style={{ borderRadius: 24, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
+                                style={{ borderRadius: 24, height: controlHeight, fontSize: buttonFontSize, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
                             />
                         </Form.Item>
 
@@ -153,23 +152,20 @@ const LoginPage = () => {
                                 prefix={<LockOutlined style={{ color: '#cbd5e1', height: 22}} />}
                                 placeholder="Enter your password"
                                 disabled={loading}
-                                style={{ borderRadius: 24, height: 40, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
+                                style={{ borderRadius: 24, height: controlHeight, fontSize: buttonFontSize, background: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.30)', color: '#f8fafc' }}
                             />
                         </Form.Item>
 
                         <div style={{
                             display: 'flex',
-                            justifyContent: 'space-between',
+                            justifyContent: 'flex-start',
                             alignItems: 'center',
-                            marginBottom: 12,
+                            marginBottom: isCompactAuth ? 10 : 12,
                             gap: 8
                         }}>
                             <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox disabled={loading} style={{ color: '#e2e8f0' }}>Remember me</Checkbox>
+                                <Checkbox disabled={loading} style={{ color: '#e2e8f0', fontSize: helperFontSize }}>Remember me</Checkbox>
                             </Form.Item>
-                            <Link to="/forgot-password" style={{ color: '#46BA5A' }}>
-                                Forgot password?
-                            </Link>
                         </div>
 
                         <Form.Item>
@@ -181,41 +177,20 @@ const LoginPage = () => {
                                 loading={loading}
                                 style={{
                                     borderRadius: 24,
-                                    height: 40,
+                                    height: controlHeight,
                                     background: 'linear-gradient(135deg, #49C15D 0%, #3c9c4c 100%)',
                                     border: 'none',
                                     fontWeight: 500,
-                                    fontSize: 15
+                                    fontSize: buttonFontSize
                                 }}
                             >
                                 Log In
                             </Button>
                         </Form.Item>
 
-                        <Divider style={{ margin: '10px 0', borderColor: 'rgba(255,255,255,0.22)' }}>
-                            <Text style={{ fontSize: 14, color: '#cbd5e1' }}>OR</Text>
-                        </Divider>
-
-                        <Button
-                            className="google-login-btn"
-                            icon={<GoogleOutlined />}
-                            size="large"
-                            block
-                            onClick={handleGoogleLogin}
-                            disabled={loading}
-                            style={{
-                                borderRadius: 24,
-                                height: 40,
-                                marginBottom: 10,
-                                borderColor: '#d9d9d9'
-                            }}
-                        >
-                            Continue with Google
-                        </Button>
-
-                        <div style={{ textAlign: 'center', marginBottom: 10 }}>
-                            <Text style={{ color: '#dbe4f0' }}>Don't have an account? </Text>
-                            <Link to="/auth/register" style={{ color: '#32c753', fontWeight: 500 }}>
+                        <div style={{ textAlign: 'center', marginBottom: isCompactAuth ? 8 : 10 }}>
+                            <Text style={{ color: '#dbe4f0', fontSize: helperFontSize }}>Don't have an account? </Text>
+                            <Link to="/auth/register" style={{ color: '#32c753', fontWeight: 500, fontSize: helperFontSize }}>
                                 Sign up
                             </Link>
                         </div>
@@ -227,15 +202,15 @@ const LoginPage = () => {
                             onClick={() => navigate('/')}
                             style={{
                                 borderRadius: 24,
-                                height: 40,
+                                height: controlHeight,
                                 border: '1px solid rgba(226, 232, 240, 0.8)',
                                 fontWeight: 500,
-                                fontSize: 15,
+                                fontSize: buttonFontSize,
                                 color: '#f8fafc'
                                 
                             }}
                         >
-                            {'< Back to Home'}
+                            {'Back to Home'}
                         </Button>
                     </Form>
                 </Card>
@@ -245,6 +220,7 @@ const LoginPage = () => {
                     .login-glass-form .ant-input,
                     .login-glass-form .ant-input-password input {
                         color: #f8fafc !important;
+                        font-size: ${buttonFontSize}px !important;
                     }
                     .login-glass-form .ant-input::placeholder,
                     .login-glass-form .ant-input-password input::placeholder {
@@ -256,16 +232,6 @@ const LoginPage = () => {
                     }
                     .login-glass-form .ant-input-password-icon:hover {
                         color: #f8fafc !important;
-                    }
-                    .google-login-btn:hover,
-                    .google-login-btn:focus,
-                    .google-login-btn:active {
-                        color: #008000 !important;
-                    }
-                    .google-login-btn:hover .anticon,
-                    .google-login-btn:focus .anticon,
-                    .google-login-btn:active .anticon {
-                        color: #008000 !important;
                     }
                     .login-glass-form .ant-checkbox-checked .ant-checkbox-inner {
                         background-color: #46BA5A !important;
@@ -280,10 +246,15 @@ const LoginPage = () => {
                         color: #46BA5A !important;
                     }
                     .login-glass-form .ant-form-item {
-                        margin-bottom: 12px !important;
+                        margin-bottom: ${isCompactAuth ? 10 : 12}px !important;
                     }
                     .login-glass-form .ant-form-item-label {
                         padding-bottom: 4px !important;
+                    }
+                    .login-glass-form .ant-form-item-label > label,
+                    .login-glass-form .ant-btn,
+                    .login-glass-form .ant-checkbox-wrapper {
+                        font-size: ${buttonFontSize}px !important;
                     }
                 `}
             </style>

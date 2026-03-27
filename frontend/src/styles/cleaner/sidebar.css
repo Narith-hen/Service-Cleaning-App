@@ -204,7 +204,7 @@
   background: #111827;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 768px) {
   .sidebar-close-btn {
     display: inline-flex;
     align-items: center;

@@ -217,6 +217,7 @@
 .dashboard-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 720px;
 }
 
 .dashboard-table th,
@@ -574,30 +575,105 @@
   font-size: 0.88rem;
 }
 
-@media (max-width: 1200px) {
-  .dashboard-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-insights-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 860px) {
-  .dashboard-content-grid,
-  .dashboard-quick-actions {
-    grid-template-columns: 1fr;
+@media (max-width: 1280px) {
+  .admin-dashboard-page {
+    gap: 16px;
   }
 
   .dashboard-header-row {
-    padding: 16px;
+    padding: 16px 18px;
+    border-radius: 20px;
+  }
+
+  .dashboard-header-row h1 {
+    font-size: clamp(1.55rem, 2vw, 1.9rem);
+  }
+
+  .dashboard-header-row .admin-page-subtitle {
+    font-size: 0.92rem;
+  }
+
+  .dashboard-earnings-select span {
+    font-size: 11px;
+  }
+
+  .dashboard-earnings-select .ant-select {
+    min-width: 190px;
+  }
+
+  .dashboard-kpi-grid,
+  .dashboard-content-grid,
+  .dashboard-insights-grid {
+    gap: 12px;
+  }
+
+  .dashboard-kpi-card,
+  .dashboard-panel {
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .kpi-card-title {
+    font-size: 0.68rem;
+  }
+
+  .kpi-card-value {
+    font-size: clamp(1.2rem, 2vw, 1.45rem);
+  }
+
+  .kpi-card-subtitle,
+  .cleaner-identity span,
+  .cleaner-stats span,
+  .review-user span,
+  .service-meta span,
+  .review-row p {
+    font-size: 0.78rem;
+  }
+
+  .panel-head h3 {
+    font-size: 0.94rem;
+  }
+
+  .panel-head a {
+    font-size: 0.68rem;
+  }
+
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 10px 7px;
+    font-size: 0.76rem;
+  }
+
+  .dashboard-table th {
+    font-size: 0.62rem;
+  }
+
+  .status-chip {
+    font-size: 0.64rem;
+    padding: 4px 8px;
+  }
+
+  .cleaner-row {
+    padding: 9px;
+  }
+
+  .cleaner-name,
+  .service-meta strong {
+    font-size: 0.88rem;
+  }
+
+  .booking-head h3 {
+    font-size: 1.35rem;
+  }
+
+  .booking-head p {
+    font-size: 0.88rem;
   }
 }
 
 @media (max-width: 580px) {
-  .dashboard-kpi-grid {
-    grid-template-columns: 1fr;
+  .dashboard-header-row {
+    padding: 16px;
   }
 
   .dashboard-panel {

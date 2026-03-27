@@ -7,7 +7,7 @@ import Sidebar from './sidebar';
 import '../../../styles/customer/customer_main_layout.css'; 
 import useCustomerPageMotion from '../../../features/customer/hooks/useCustomerPageMotion';
 
-const TARGET_SCREEN_BREAKPOINT = 1280;
+const TARGET_SCREEN_BREAKPOINT = 992;
 
 const MainLayout = () => {
   const location = useLocation();

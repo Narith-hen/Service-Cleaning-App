@@ -2,10 +2,12 @@
 .admin-layout {
   display: flex;
   width: 100vw;
+  min-width: 1180px;
   height: 100vh;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: #f8fafc;
 }
 
@@ -47,7 +49,7 @@
 /* Main content area - scrollable */
 .admin-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   padding: 24px;
   background: #f8fafc;
   font-family: Arial, sans-serif;
@@ -131,8 +133,35 @@
   border-right-color: #2d2d2d;
 }
 
-/* Responsive: mobile, tablet, laptop-L */
 @media (max-width: 1280px) {
+  .admin-layout {
+    min-width: 1120px;
+  }
+
+  .admin-header {
+    padding: 0 18px;
+  }
+
+  .admin-content {
+    padding: 18px;
+  }
+
+  .admin-content .admin-page-title {
+    font-size: 28px;
+  }
+
+  .admin-content .admin-page-subtitle {
+    font-size: 14px;
+  }
+
+  .footer-content {
+    gap: 14px;
+    font-size: 11px;
+  }
+}
+
+/* Responsive: mobile, tablet, laptop-L */
+@media (max-width: 768px) {
   .compact-layout .admin-sidebar {
     transform: translateX(-100%);
     transition: transform 0.25s ease;
