@@ -12,7 +12,12 @@ const safeParse = (raw, fallback) => {
 };
 
 export const loadCleanerRequests = (fallback = []) => {
-  const raw = typeof window !== 'undefined' ? localStorage.getItem(JOB_REQUESTS_STORAGE_KEY) : null;
+  let raw = null;
+  try {
+    raw = typeof window !== 'undefined' ? localStorage.getItem(JOB_REQUESTS_STORAGE_KEY) : null;
+  } catch {
+    raw = null;
+  }
   const parsed = safeParse(raw, []);
   if (Array.isArray(parsed) && parsed.length) return parsed;
   return fallback;
@@ -36,7 +41,12 @@ export const appendCleanerRequest = (request, fallback = []) => {
 };
 
 export const loadCustomerNotifications = (fallback = []) => {
-  const raw = typeof window !== 'undefined' ? localStorage.getItem(CUSTOMER_NOTIFICATIONS_KEY) : null;
+  let raw = null;
+  try {
+    raw = typeof window !== 'undefined' ? localStorage.getItem(CUSTOMER_NOTIFICATIONS_KEY) : null;
+  } catch {
+    raw = null;
+  }
   const parsed = safeParse(raw, []);
   if (Array.isArray(parsed) && parsed.length) return parsed;
   return fallback;

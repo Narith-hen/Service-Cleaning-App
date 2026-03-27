@@ -8,7 +8,7 @@ const normalizeDate = (value) => {
 
 const normalizeView = (value) => {
   const normalized = String(value || 'month').trim().toLowerCase();
-  if (['week', 'month', 'total'].includes(normalized)) return normalized;
+  if (['day', 'week', 'month', 'month_days', 'total'].includes(normalized)) return normalized;
   return 'month';
 };
 
@@ -36,6 +36,19 @@ const buildCleanerEarningsWhere = ({ cleanerId, from, to }) => {
 };
 
 const buildSummaryQuery = ({ view }) => {
+  if (view === 'day') {
+    return {
+      dateExpr: 'COALESCE(b.booking_date, b.created_at)',
+      groupExpr: 'HOUR(COALESCE(b.booking_date, b.created_at))',
+      orderExpr: 'HOUR(COALESCE(b.booking_date, b.created_at))',
+      startDate: (() => {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        return start;
+      })()
+    };
+  }
+
   if (view === 'week') {
     return {
       dateExpr: 'DATE(COALESCE(b.booking_date, b.created_at))',
@@ -62,6 +75,20 @@ const buildSummaryQuery = ({ view }) => {
         start.setMonth(0, 1);
         start.setHours(0, 0, 0, 0);
         start.setFullYear(start.getFullYear() - 6);
+        return start;
+      })()
+    };
+  }
+
+  if (view === 'month_days') {
+    return {
+      dateExpr: 'COALESCE(b.booking_date, b.created_at)',
+      groupExpr: 'DAY(COALESCE(b.booking_date, b.created_at))',
+      orderExpr: 'DAY(COALESCE(b.booking_date, b.created_at))',
+      startDate: (() => {
+        const start = new Date();
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
         return start;
       })()
     };

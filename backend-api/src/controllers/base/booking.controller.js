@@ -732,7 +732,6 @@ const updateBookingStatus = async (req, res, next) => {
     const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
-
     const roleName = String(req.user?.role?.role_name || '').trim().toLowerCase();
     if (roleName !== 'admin') {
       const accountSource = String(req.user?.account_source || '').toLowerCase();
@@ -1448,7 +1447,6 @@ const addBookingImages = async (req, res, next) => {
 
     const promiseDb = db.promise();
     await ensureBookingImagesTable(promiseDb);
-
     const [bookingRows] = await promiseDb.query(
       'SELECT booking_id FROM bookings WHERE booking_id = ? LIMIT 1',
       [bookingId]

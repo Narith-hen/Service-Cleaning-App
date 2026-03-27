@@ -13,7 +13,13 @@ const AUTH_INVALIDATION_MESSAGES = new Set([
 ]);
 
 const readStoredUser = () => {
-  const savedUser = localStorage.getItem('user');
+  let savedUser = null;
+  try {
+    savedUser = localStorage.getItem('user');
+  } catch (error) {
+    console.error('Failed to read saved user:', error);
+    return null;
+  }
   if (!savedUser) return null;
 
   try {
@@ -26,11 +32,15 @@ const readStoredUser = () => {
 };
 
 const persistUser = (nextUser) => {
-  if (nextUser) {
-    localStorage.setItem('user', JSON.stringify(nextUser));
-  } else {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+  try {
+    if (nextUser) {
+      localStorage.setItem('user', JSON.stringify(nextUser));
+    } else {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    }
+  } catch (error) {
+    console.error('Failed to persist user:', error);
   }
 
   window.dispatchEvent(new Event(AUTH_USER_UPDATED_EVENT));

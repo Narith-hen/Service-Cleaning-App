@@ -628,8 +628,9 @@
 .customer-home-landing .cta-banner {
   margin: 34px auto 0;
   margin-bottom: 50px;
-  width: 90%;
-  height: 50vh;
+  width: 70%;
+  min-height: 320px;
+  height: 38vh;
   padding: 0;
   border-radius: 18px;
   overflow: hidden;
@@ -663,15 +664,15 @@
 }
 
 .customer-home-landing .cta-content {
-  padding: 32px 28px;
+  padding: 22px 24px;
   text-align: center;
   color: #f6fff7;
   
 }
 
 .customer-home-landing .cta-content h2 {
-  margin: 0 0 10px;
-  font-size: clamp(28px, 4.2vw, 46px);
+  margin: 0 0 8px;
+  font-size: clamp(26px, 3.8vw, 42px);
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
@@ -730,8 +731,9 @@
 .customer-home-landing .service-highlight-grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(280px, 360px));
+  justify-content: center;
+  gap: 70px;
 }
 
 .customer-home-landing .service-highlight-item {
@@ -1028,51 +1030,124 @@
   flex-wrap: wrap;
 }
 
-.customer-home-landing .faq-list {
-  display: grid;
-  gap: 10px;
+.customer-home-landing .dashboard-faq {
+  margin: 34px auto 0;
+  width: min(90%, 1024px);
+  padding: 46px 24px 34px;
+  background: linear-gradient(135deg, #f7fff7 0%, #ffffff 65%);
 }
 
-.customer-home-landing .faq-item {
-  border: 1px solid #dbe7f2;
-  border-radius: 10px;
-  background: #fff;
-  padding: 0 12px;
+.customer-home-landing .faq-head {
+  text-align: center;
 }
 
-.customer-home-landing .faq-item summary {
-  list-style: none;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 12px 20px 12px 0;
-  position: relative;
-}
-
-.customer-home-landing .faq-item summary::-webkit-details-marker {
-  display: none;
-}
-
-.customer-home-landing .faq-item summary::after {
-  content: '+';
-  position: absolute;
-  right: 0;
-  top: 10px;
-  color: var(--green);
-  font-size: 22px;
-  line-height: 1;
-}
-
-.customer-home-landing .faq-item[open] summary::after {
-  content: '-';
-}
-
-.customer-home-landing .faq-item p {
+.customer-home-landing .faq-kicker {
   margin: 0;
-  padding: 0 0 12px;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.65;
+  color: #32c753;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.customer-home-landing .faq-head h2 {
+  margin: 12px 0 0;
+  color: #0f172a;
+  font-size: clamp(36px, 4.8vw, 56px);
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.customer-home-landing .faq-head p {
+  margin: 16px auto 0;
+  max-width: 42rem;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.customer-home-landing .faq-accordion {
+  display: grid;
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.customer-home-landing .faq-card {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease;
+}
+
+.customer-home-landing .faq-card:hover {
+  border-color: #d8e1ec;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.customer-home-landing .faq-card.is-open {
+  border-color: #9be06f;
+  box-shadow: 0 20px 50px rgba(50, 199, 83, 0.12);
+}
+
+.customer-home-landing .faq-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  min-height: 72px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.customer-home-landing .faq-trigger span:first-child {
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.customer-home-landing .faq-chevron {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #64748b;
+  transition: background-color 0.2s ease;
+}
+
+.customer-home-landing .faq-chevron svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s ease;
+}
+
+.customer-home-landing .faq-card.is-open .faq-chevron svg {
+  transform: rotate(180deg);
+}
+
+.customer-home-landing .faq-answer {
+  border-top: 1px solid #f1f5f9;
+  padding: 8px 20px 16px;
+}
+
+.customer-home-landing .faq-answer p {
+  margin: 0;
+  max-width: 48rem;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .customer-home-landing.motion-enhanced .reveal {
@@ -1256,6 +1331,11 @@
     padding: 18px 14px 20px;
   }
 
+  .customer-home-landing .dashboard-faq {
+    margin-top: 24px;
+    padding: 18px 14px 20px;
+  }
+
   .customer-home-landing .cleaners-head h2 {
     font-size: clamp(28px, 7vw, 38px);
   }
@@ -1306,10 +1386,12 @@
   .customer-home-landing .cta-banner {
     margin-top: 24px;
     border-radius: 16px;
+    min-height: 260px;
+    height: 32vh;
   }
 
   .customer-home-landing .cta-content {
-    padding: 26px 18px;
+    padding: 18px 16px;
   }
 
   .customer-home-landing .how-head h2 {
@@ -1400,6 +1482,24 @@
 
   .customer-home-landing .service-highlight-item img {
     height: 200px;
+  }
+
+  .customer-home-landing .faq-trigger {
+    padding: 14px 14px;
+  }
+
+  .customer-home-landing .faq-trigger span:first-child {
+    font-size: 15px;
+  }
+
+  .customer-home-landing .faq-chevron {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+  }
+
+  .customer-home-landing .faq-answer {
+    padding: 0 14px 14px;
   }
 
   .customer-home-landing .why-media img {

@@ -604,11 +604,11 @@ const deleteCleaner = async (req, res, next) => {
       'DELETE FROM cleaner_profile WHERE cleaner_id = ?',
       [cleanerId]
     );
-
     if (!profileDeleteResult?.affectedRows && !userDeleteResult?.affectedRows) {
       await connection.rollback();
       connection.release();
       return next(new AppError('Cleaner not found', 404));
+
     }
 
     await connection.commit();
@@ -623,7 +623,7 @@ const deleteCleaner = async (req, res, next) => {
       try {
         await connection.rollback();
       } catch (_) {
-        // Ignore rollback failures.
+
       }
       connection.release();
     }

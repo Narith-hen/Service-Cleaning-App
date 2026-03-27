@@ -30,8 +30,6 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
   ];
 
   const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure want to logout?');
-    if (!confirmed) return;
     await logout();
     navigate('/auth/login', { replace: true });
   };
@@ -71,7 +69,13 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
 
       {/* Logout Button */}
       <div className="sidebar-footer">
-        <button className="logout-btn" onClick={async () => { if (isCompact) onClose(); await handleLogout(); }}>
+        <button
+          className="logout-btn"
+          onClick={async () => {
+            if (isCompact) onClose();
+            await handleLogout();
+          }}
+        >
           <LogoutOutlined className="nav-icon" />
           <span>Logout</span>
         </button>

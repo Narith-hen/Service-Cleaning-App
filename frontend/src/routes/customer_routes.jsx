@@ -27,7 +27,9 @@ export const customerRoutes = {
   path: '/customer',
   element: (
     <ProtectedRoute allowedRoles={['customer']}>
-      <CustomerLayout />
+      <ErrorBoundary fallbackTitle="Customer portal failed to load.">
+        <CustomerLayout />
+      </ErrorBoundary>
     </ProtectedRoute>
   ),
   children: [
@@ -41,7 +43,11 @@ export const customerRoutes = {
     },
     {
       path: 'dashboard',
-      element: <CustomerDashboard />
+      element: (
+        <ErrorBoundary fallbackTitle="Customer dashboard failed to load.">
+          <CustomerDashboard />
+        </ErrorBoundary>
+      )
     },
     {
       path: 'services',

@@ -48,13 +48,18 @@ export const cleanerTransactions = [
 ];
 
 export const cleanerMonthlyEarningsData = [
-  { month: 'Apr', earnings: 320 },
-  { month: 'May', earnings: 450 },
-  { month: 'Jun', earnings: 380 },
+  { month: 'Jan', earnings: 860 },
+  { month: 'Feb', earnings: 760 },
+  { month: 'Mar', earnings: 920 },
+  { month: 'Apr', earnings: 390 },
+  { month: 'May', earnings: 470 },
+  { month: 'Jun', earnings: 430 },
   { month: 'Jul', earnings: 520 },
   { month: 'Aug', earnings: 480 },
-  { month: 'Sep', earnings: 610 },
-  { month: 'Oct', earnings: 515 }
+  { month: 'Sep', earnings: 340 },
+  { month: 'Oct', earnings: 360 },
+  { month: 'Nov', earnings: 350 },
+  { month: 'Dec', earnings: 380 }
 ];
 
 export const parseMoneyAmount = (value) => Number(String(value).replace(/[^0-9.-]/g, '')) || 0;

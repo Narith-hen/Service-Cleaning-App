@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -17,6 +18,8 @@ const staggerContainer = {
 };
 
 export default function HomePage() {
+  const [openFaqIndex, setOpenFaqIndex] = useState(1);
+
   const testimonials = [
     {
      
@@ -47,17 +50,17 @@ export default function HomePage() {
   const processSteps = [
     {
       number: "1",
-      title: "Book Online",
+      title: "Book a Service",
       description: "Choose your service, date, and time that fits your busy schedule."
     },
     {
       number: "2",
-      title: "We Clean",
+      title: "Cleaning Process",
       description: "Our certified professional arrives and makes your home sparkle."
     },
     {
       number: "3",
-      title: "Enjoy Life",
+      title: "Enjoy a Spotless Space",
       description: "Step into a fresh, clean home and spend your time on what matters."
     }
   ];
@@ -80,6 +83,34 @@ export default function HomePage() {
       description: "Get in touch for questions, quotes, and booking support.",
       to: "/contact",
       cta: "Contact Now"
+    }
+  ];
+
+  const faqItems = [
+    {
+      question: "What cleaning services do you offer?",
+      answer:
+        "We provide home cleaning, office cleaning, deep cleaning, move-in or move-out cleaning, and shop cleaning services."
+    },
+    {
+      question: "Do you bring your own cleaning supplies?",
+      answer:
+        "Yes. Our cleaners arrive with standard supplies and equipment, so you do not need to prepare anything unless you prefer specific products."
+    },
+    {
+      question: "Do I need to stay at home during the service?",
+      answer:
+        "No. Many customers give access instructions in advance, but you can stay if you prefer to be present while the cleaning is done."
+    },
+    {
+      question: "How can I reschedule or cancel a booking?",
+      answer:
+        "You can manage your booking from your account dashboard or contact our support team if you need help changing the date and time."
+    },
+    {
+      question: "How fast can I book a cleaning appointment?",
+      answer:
+        "You can book online in a few minutes, and available time slots depend on your location, service type, and cleaner availability."
     }
   ];
 
@@ -185,21 +216,48 @@ export default function HomePage() {
           </motion.div>
 
           <motion.div 
-            className="relative mt-14 grid gap-10 md:grid-cols-3"
+            className="relative mt-14 grid gap-12 md:grid-cols-3"
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
           >
-            <div className="absolute left-1/2 top-7 hidden h-px w-[60%] -translate-x-1/2 bg-slate-200 md:block" />
+            {processSteps.map((step, index) => (
+              <motion.article
+                key={step.number}
+                variants={fadeUpVariant}
+                className="relative text-center"
+              >
+                {index < processSteps.length - 1 && (
+                  <div className="absolute left-[68%] top-[44px] hidden items-center gap-2 md:flex lg:left-[72%]">
+                    <div className="h-px w-12 bg-[#9be06f]" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      className="h-5 w-5 text-[#76cf65]"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m13 6 6 6-6 6" />
+                    </svg>
+                  </div>
+                )}
 
-            {processSteps.map((step) => (
-              <motion.article key={step.number} variants={fadeUpVariant} className="relative text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32c753] text-2xl font-black text-white shadow-lg">
-                  {step.number}
+                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#cfeec4] bg-[radial-gradient(circle_at_35%_30%,#f5fff1_0%,#ebf9e4_58%,#dff1d7_100%)] shadow-[inset_0_0_0_10px_rgba(255,255,255,0.5)]">
+                  <span className="text-[34px] font-black leading-none text-[#1f9a29]">
+                    {step.number}
+                  </span>
                 </div>
-                <h3 className="mt-100 text-2xl font-extrabold text-slate-900">{step.title}</h3>
-                <p className="mx-auto mt-3 max-w-xs text-slate-500">{step.description}</p>
+                <h3 className="mx-auto mt-5 max-w-[16rem] text-[clamp(1.9rem,2.7vw,2.7rem)] font-black leading-[1.02] text-slate-900">
+                  {step.title}
+                </h3>
+                <p className="mx-auto mt-3 max-w-xs text-sm leading-7 text-slate-500">
+                  {step.description}
+                </p>
               </motion.article>
             ))}
           </motion.div>
@@ -294,6 +352,86 @@ export default function HomePage() {
                 Contact Sales
               </Link>
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <section className="bg-[#f2f4f3] py-20">
+        <div className="mx-auto max-w-4xl px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#32c753]">
+              FAQ
+            </p>
+            <h2 className="mt-3 text-4xl font-black text-slate-900 md:text-5xl">
+              Frequently Asked Questions
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-500">
+              Everything customers usually ask before booking a cleaning service with us.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="mt-12 space-y-4"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            {faqItems.map((item, index) => {
+              const isOpen = openFaqIndex === index;
+
+              return (
+                <motion.article
+                  key={item.question}
+                  variants={fadeUpVariant}
+                  className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
+                    isOpen
+                      ? "border-[#9be06f] shadow-[0_20px_50px_rgba(50,199,83,0.12)]"
+                      : "border-slate-200"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? -1 : index)}
+                    className="flex min-h-[72px] w-full items-center justify-between gap-4 px-5 py-3.5 text-left"
+                  >
+                    <span className="text-base font-semibold text-slate-900">
+                      {item.question}
+                    </span>
+                    <span
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className={`h-3 w-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.25"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-slate-100 px-5 pb-4 pt-2">
+                      <p className="max-w-3xl text-sm leading-6 text-slate-500">
+                        {item.answer}
+                      </p>
+                    </div>
+                  )}
+                </motion.article>
+              );
+            })}
           </motion.div>
         </div>
       </section>

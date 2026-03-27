@@ -9,6 +9,7 @@ import ravel from "../../assets/ravel.png";
 import book from "../../assets/book.png";
 import vet from "../../assets/vet.png";
 import larryta from "../../assets/larryta.png";
+import "../../styles/public/Aboutpage.css";
 
 export default function AboutPage({ embedded = false, darkMode = false }) {
   const partnerLogos = [
@@ -19,10 +20,14 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
     { src: easybook, name: "easybook" },
     { src: agoda, name: "agoda" },
     { src: ravel, name: "Travel Book" },
-    { src: book, name: " Book cambodia" },
-    { src: vet, name: " VirakBuntham cambodia" },
-    { src: larryta, name: " Larryta cambodia" },
+    { src: book, name: "Book Cambodia" },
+    { src: vet, name: "Virak Buntham Cambodia" },
+    { src: larryta, name: "Larryta Cambodia" },
   ];
+
+  const valuesSectionClassName = `about-values-section${darkMode ? " about-values-section-dark" : ""}`;
+  const valuesCardClassName = `about-values-card${darkMode ? " about-values-card-dark" : ""}`;
+  const valuesTextClassName = `about-values-text${darkMode ? " about-values-text-dark" : ""}`;
 
   return (
     <div className={`${darkMode ? "bg-[#0b1220] text-slate-100" : "bg-slate-50 text-slate-800"} font-sans`}>
@@ -52,8 +57,8 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
 
             <p className={`mb-4 text-lg ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
               Somaet has been delivering professional cleaning services for over 10
-              years. We specialize in residential and commercial
-              cleaning solutions that create healthier and happier environments.
+              years. We specialize in residential and commercial cleaning solutions
+              that create healthier and happier environments.
             </p>
 
             <p className={`mb-7 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
@@ -64,21 +69,21 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
             <ul className="space-y-3">
               <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
-                  ✓
+                  OK
                 </span>
                 Experienced and Certified Team
               </li>
 
               <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
-                  ✓
+                  OK
                 </span>
                 Eco-Friendly Products
               </li>
 
               <li className={`flex items-center gap-3 rounded-xl px-3 py-2 ${darkMode ? "bg-slate-800 text-slate-100" : "bg-slate-50"}`}>
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
-                  ✓
+                  OK
                 </span>
                 100% Satisfaction Guarantee
               </li>
@@ -87,6 +92,28 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
             <button className="mt-8 rounded-full bg-emerald-500 px-8 py-3 font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:bg-emerald-600" data-customer-button={embedded ? '' : undefined}>
               Learn More
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className={valuesSectionClassName} data-customer-reveal={embedded ? '' : undefined}>
+        <div className="about-values-container">
+          <div className={valuesCardClassName}>
+            <div className="about-values-icon" aria-hidden="true">👁️</div>
+            <h2>OUR VISION</h2>
+            <p className={valuesTextClassName}>
+              To become the trusted leader in modern, sustainable cleaning by making
+              healthier spaces accessible for every home and business.
+            </p>
+          </div>
+
+          <div className={valuesCardClassName}>
+            <div className="about-values-icon" aria-hidden="true">🚀</div>
+            <h2>OUR MISSION</h2>
+            <p className={valuesTextClassName}>
+              Our mission is to deliver high-quality, eco-friendly cleaning services
+              through trained professionals, reliable scheduling, and customer-first care.
+            </p>
           </div>
         </div>
       </section>
@@ -148,7 +175,7 @@ export default function AboutPage({ embedded = false, darkMode = false }) {
         </div>
       </section>
       {!embedded && (
-        <footer className="bg-gray-900 text-gray-400 text-center py-8 text-sm">
+        <footer className="bg-gray-900 py-8 text-center text-sm text-gray-400">
           (c) 2026 CleaningPro. All rights reserved.
         </footer>
       )}

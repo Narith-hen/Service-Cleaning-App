@@ -337,22 +337,23 @@ const CleanersPage = () => {
       title: `Delete ${cleaner.name}?`,
       content: 'This action cannot be undone.',
       okText: 'Delete',
+      cancelText: 'Cancel',
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
           await cleanerService.deleteCleaner(cleaner.id);
-          setCleaners((prev) => prev.filter((item) => item.id !== cleaner.id));
+          await fetchCleaners({ silent: true, clearOnError: false });
           notificationApi.success({
             placement: 'bottomRight',
             message: 'Cleaner deleted',
-            description: `${cleaner.name} was removed successfully.`,
+            description: `${cleaner.name} has been removed from the cleaner list.`,
             duration: 2,
           });
         } catch (error) {
           notificationApi.error({
             placement: 'bottomRight',
             message: 'Failed to delete cleaner',
-            description: error?.response?.data?.message || 'Could not delete cleaner from database.',
+            description: error?.response?.data?.message || 'Could not delete cleaner from the database.',
             duration: 3,
           });
           throw error;
