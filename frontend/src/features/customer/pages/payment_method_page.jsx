@@ -446,7 +446,7 @@ const PaymentMethodPage = () => {
         )}
       </div>
 
-      {showRatingModal && (
+      {/* {showRatingModal && (
         <div className="payment-success-modal-backdrop" role="presentation">
           <section
             className="payment-success-modal"
@@ -549,7 +549,7 @@ const PaymentMethodPage = () => {
             )}
           </section>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
