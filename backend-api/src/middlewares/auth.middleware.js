@@ -2,13 +2,29 @@ const { verifyToken } = require('../utils/jwt.util');
 const db = require('../config/db');
 const AppError = require('../utils/error.util');
 
-const getUserAccountById = async (promiseDb, userId) => {
+const getTableColumnsSafe = async (promiseDb, tableName) => {
+  try {
+    const [columns] = await promiseDb.query(`SHOW COLUMNS FROM \`${tableName}\``);
+    return new Set((columns || []).map((column) => column.Field));
+  } catch (error) {
+    if (error?.code === 'ER_NO_SUCH_TABLE') {
+      return new Set();
+    }
+    throw error;
+  }
+};
+
+const getUserAccountById = async (promiseDb, userId, columns) => {
+  if (!columns?.has('user_id')) {
+    return null;
+  }
+
   const [rows] = await promiseDb.query(
     `
       SELECT
         u.user_id,
-        u.email,
-        u.role_id,
+        ${columns.has('email') ? 'u.email' : 'NULL'} AS email,
+        ${columns.has('role_id') ? 'u.role_id' : 'NULL'} AS role_id,
         r.role_name
       FROM users u
       LEFT JOIN roles r ON r.role_id = u.role_id
@@ -21,13 +37,17 @@ const getUserAccountById = async (promiseDb, userId) => {
   return rows?.[0] || null;
 };
 
-const getCleanerAccountById = async (promiseDb, userId) => {
+const getCleanerAccountById = async (promiseDb, userId, columns) => {
+  if (!columns?.has('cleaner_id')) {
+    return null;
+  }
+
   const [rows] = await promiseDb.query(
     `
       SELECT
         cp.cleaner_id AS user_id,
-        cp.company_email AS email,
-        cp.role_id,
+        ${columns.has('company_email') ? 'cp.company_email' : 'NULL'} AS email,
+        ${columns.has('role_id') ? 'cp.role_id' : 'NULL'} AS role_id,
         r.role_name
       FROM cleaner_profile cp
       LEFT JOIN roles r ON r.role_id = cp.role_id
@@ -73,12 +93,16 @@ const authenticate = async (req, res, next) => {
           : '';
 
     const promiseDb = db.promise();
+    const [userColumns, cleanerColumns] = await Promise.all([
+      getTableColumnsSafe(promiseDb, 'users'),
+      getTableColumnsSafe(promiseDb, 'cleaner_profile'),
+    ]);
     const normalizedAccountSource = normalizeAccountSource(accountSource);
     const preferredRole = String(tokenRole || roleFromTokenId || '').trim().toLowerCase();
 
     const [userRow, cleanerRow] = await Promise.all([
-      getUserAccountById(promiseDb, decoded.user_id),
-      getCleanerAccountById(promiseDb, decoded.user_id),
+      getUserAccountById(promiseDb, decoded.user_id, userColumns),
+      getCleanerAccountById(promiseDb, decoded.user_id, cleanerColumns),
     ]);
 
     let row = null;

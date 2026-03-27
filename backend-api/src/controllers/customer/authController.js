@@ -12,9 +12,20 @@ const toNullableString = (value) => {
   return text === '' ? null : text;
 };
 
+const getTableColumnsSafe = async (tableName) => {
+  try {
+    const [columns] = await db.promise().query(`SHOW COLUMNS FROM \`${tableName}\``);
+    return new Set((columns || []).map((column) => column.Field));
+  } catch (error) {
+    if (error?.code === 'ER_NO_SUCH_TABLE') {
+      return new Set();
+    }
+    throw error;
+  }
+};
+
 const getUserTableColumns = async () => {
-  const [columns] = await db.promise().query("SHOW COLUMNS FROM users");
-  return new Set((columns || []).map((column) => column.Field));
+  return getTableColumnsSafe('users');
 };
 
 const ensureAvatarColumnExists = async () => {
@@ -28,8 +39,7 @@ const ensureAvatarColumnExists = async () => {
 };
 
 const getCleanerProfileColumns = async () => {
-  const [columns] = await db.promise().query('SHOW COLUMNS FROM cleaner_profile');
-  return new Set((columns || []).map((column) => column.Field));
+  return getTableColumnsSafe('cleaner_profile');
 };
 
 const getCleanerStatusEnumValues = async () => {
@@ -54,6 +64,116 @@ const normalizeCleanerStatusInput = (status, allowedValues = []) => {
 
   const activeMatch = allowedValues.find((value) => value.toLowerCase() === 'active');
   return activeMatch || null;
+};
+
+const buildUserLoginQuery = (columns) => {
+  if (!columns?.has('user_id') || !columns?.has('password')) {
+    return null;
+  }
+
+  const conditions = [];
+  const params = [];
+
+  if (columns.has('email')) {
+    conditions.push('LOWER(u.email) = ?');
+    params.push('loginId');
+  }
+
+  if (columns.has('user_code')) {
+    conditions.push('LOWER(u.user_code) = ?');
+    params.push('loginId');
+  }
+
+  if (columns.has('username')) {
+    conditions.push('LOWER(u.username) = ?');
+    params.push('loginId');
+  }
+
+  if (conditions.length === 0) {
+    return null;
+  }
+
+  return {
+    sql: `
+      SELECT
+        u.user_id AS user_id,
+        ${columns.has('user_code') ? 'u.user_code' : 'NULL'} AS user_code,
+        ${
+          columns.has('first_name')
+            ? 'u.first_name'
+            : columns.has('username')
+              ? 'u.username'
+              : 'NULL'
+        } AS first_name,
+        ${columns.has('last_name') ? 'u.last_name' : 'NULL'} AS last_name,
+        ${columns.has('email') ? 'u.email' : 'NULL'} AS email,
+        ${columns.has('phone_number') ? 'u.phone_number' : 'NULL'} AS phone_number,
+        ${columns.has('avatar') ? 'u.avatar' : 'NULL'} AS avatar,
+        u.password AS password,
+        ${columns.has('role_id') ? 'u.role_id' : 'NULL'} AS role_id,
+        r.role_name
+      FROM users u
+      LEFT JOIN roles r ON r.role_id = u.role_id
+      WHERE ${conditions.join(' OR ')}
+      LIMIT 1
+    `,
+    params,
+  };
+};
+
+const buildCleanerLoginQuery = (columns) => {
+  if (!columns?.has('cleaner_id')) {
+    return null;
+  }
+
+  const passwordColumn = columns.has('password')
+    ? 'password'
+    : columns.has('cleaner_password')
+      ? 'cleaner_password'
+      : '';
+
+  if (!passwordColumn) {
+    return null;
+  }
+
+  const conditions = [];
+  const params = [];
+
+  if (columns.has('company_email')) {
+    conditions.push('LOWER(cp.company_email) = ?');
+    params.push('loginId');
+  }
+
+  if (columns.has('cleaner_code')) {
+    conditions.push('LOWER(cp.cleaner_code) = ?');
+    params.push('loginId');
+  }
+
+  if (conditions.length === 0) {
+    return null;
+  }
+
+  return {
+    sql: `
+      SELECT
+        cp.cleaner_id AS user_id,
+        ${columns.has('cleaner_code') ? 'cp.cleaner_code' : 'NULL'} AS user_code,
+        ${columns.has('company_name') ? 'cp.company_name' : 'NULL'} AS first_name,
+        NULL AS last_name,
+        ${columns.has('company_email') ? 'cp.company_email' : 'NULL'} AS email,
+        ${columns.has('phone_number') ? 'cp.phone_number' : 'NULL'} AS phone_number,
+        ${columns.has('profile_image') ? 'cp.profile_image' : 'NULL'} AS avatar,
+        cp.${passwordColumn} AS password,
+        ${columns.has('role_id') ? 'cp.role_id' : 'NULL'} AS role_id,
+        r.role_name
+      FROM cleaner_profile cp
+      LEFT JOIN roles r ON r.role_id = cp.role_id
+      WHERE ${conditions.join(' OR ')}
+      LIMIT 1
+    `,
+    params,
+    passwordColumn,
+  };
 };
 
 const buildProfileResponse = async (userId) => {
@@ -272,48 +392,17 @@ exports.login = async (req, res) => {
     });
   }
 
-  const findUserSql = `
-    SELECT
-      u.user_id,
-      u.user_code,
-      u.first_name,
-      u.last_name,
-      u.email,
-      u.phone_number,
-      u.password,
-      u.role_id,
-      r.role_name
-    FROM users u
-    LEFT JOIN roles r ON r.role_id = u.role_id
-    WHERE LOWER(u.email) = ? OR LOWER(u.user_code) = ?
-    LIMIT 1
-  `;
-  const findCleanerSql = `
-    SELECT
-      cp.*,
-      r.role_name
-    FROM cleaner_profile cp
-    LEFT JOIN roles r ON r.role_id = cp.role_id
-    WHERE LOWER(cp.company_email) = ? OR LOWER(cp.cleaner_code) = ?
-    LIMIT 1
-  `;
-
   try {
     const promiseDb = db.promise();
-
-    const normalizeCleanerRow = (row) => {
-      if (!row) return null;
-      return {
-        ...row,
-        user_id: row.user_id ?? row.cleaner_id,
-        user_code: row.user_code ?? row.cleaner_code,
-        first_name: row.first_name ?? row.company_name ?? null,
-        last_name: row.last_name ?? null,
-        email: row.email ?? row.company_email ?? null,
-        phone_number: row.phone_number ?? null,
-        avatar: row.avatar ?? row.profile_image ?? null,
-      };
-    };
+    const [userColumns, cleanerColumns] = await Promise.all([
+      getUserTableColumns(),
+      getCleanerProfileColumns(),
+    ]);
+    const userLoginQuery = buildUserLoginQuery(userColumns);
+    const cleanerLoginQuery = buildCleanerLoginQuery(cleanerColumns);
+    const resolveParams = (queryDef) => (queryDef?.params || []).map((value) => (
+      value === 'loginId' ? normalizedLoginId : value
+    ));
 
     const verifyPasswordAndMaybeUpgrade = async (accountSource, candidate) => {
       const storedPassword = String(
@@ -339,9 +428,9 @@ exports.login = async (req, res) => {
               "UPDATE users SET password = ? WHERE user_id = ?",
               [upgradedHash, candidate.user_id]
             );
-          } else {
+          } else if (cleanerLoginQuery?.passwordColumn) {
             await promiseDb.query(
-              "UPDATE cleaner_profile SET password = ? WHERE cleaner_id = ?",
+              `UPDATE cleaner_profile SET ${cleanerLoginQuery.passwordColumn} = ? WHERE cleaner_id = ?`,
               [upgradedHash, candidate.user_id]
             );
           }
@@ -352,15 +441,21 @@ exports.login = async (req, res) => {
     };
 
     let accountSource = "users";
-    let [rows] = await promiseDb.query(findUserSql, [normalizedLoginId, normalizedLoginId]);
+    let rows = [];
+    if (userLoginQuery) {
+      [rows] = await promiseDb.query(userLoginQuery.sql, resolveParams(userLoginQuery));
+    }
     let user = rows?.[0] || null;
 
     if (user) {
       const userCheck = await verifyPasswordAndMaybeUpgrade("users", user);
       if (!userCheck.ok) {
         // If a cleaner shares the same email/code, try that account too.
-        [rows] = await promiseDb.query(findCleanerSql, [normalizedLoginId, normalizedLoginId]);
-        const cleanerCandidate = normalizeCleanerRow(rows?.[0] || null);
+        rows = [];
+        if (cleanerLoginQuery) {
+          [rows] = await promiseDb.query(cleanerLoginQuery.sql, resolveParams(cleanerLoginQuery));
+        }
+        const cleanerCandidate = rows?.[0] || null;
         if (cleanerCandidate) {
           const cleanerCheck = await verifyPasswordAndMaybeUpgrade("cleaner_profile", cleanerCandidate);
           if (cleanerCheck.ok) {
@@ -380,8 +475,11 @@ exports.login = async (req, res) => {
         }
       }
     } else {
-      [rows] = await promiseDb.query(findCleanerSql, [normalizedLoginId, normalizedLoginId]);
-      user = normalizeCleanerRow(rows?.[0] || null);
+      rows = [];
+      if (cleanerLoginQuery) {
+        [rows] = await promiseDb.query(cleanerLoginQuery.sql, resolveParams(cleanerLoginQuery));
+      }
+      user = rows?.[0] || null;
       accountSource = "cleaner_profile";
 
       if (!user) {
