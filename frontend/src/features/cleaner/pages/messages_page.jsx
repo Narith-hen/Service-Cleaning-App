@@ -23,6 +23,7 @@ import '../../../styles/cleaner/messages.scss';
 const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
 const getCleanerHiddenChatStorageKey = () => getCleanerScopedStorageKey('cleaner_hidden_message_threads_v1');
+const getCleanerChatMessagesStorageKey = () => getCleanerScopedStorageKey('cleaner_message_threads_v1');
 const fallbackThreads = [];
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -105,6 +106,25 @@ const writeHiddenThreadIds = (threadIds) => {
     localStorage.setItem(getCleanerHiddenChatStorageKey(), JSON.stringify(threadIds));
   } catch {
     // Ignore storage issues for hidden chat state.
+  }
+};
+
+const readStoredMessageThreads = () => {
+  try {
+    const raw = localStorage.getItem(getCleanerChatMessagesStorageKey());
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeStoredMessageThreads = (threads) => {
+  try {
+    localStorage.setItem(getCleanerChatMessagesStorageKey(), JSON.stringify(threads));
+  } catch {
+    // Ignore storage failures for local chat cleanup.
   }
 };
 
@@ -250,6 +270,8 @@ const [activeThreadId, setActiveThreadId] = useState(
   );
   const [threadPreviews, setThreadPreviews] = useState({});
   const [hiddenThreadIds, setHiddenThreadIds] = useState(() => readHiddenThreadIds());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedThreadIds, setSelectedThreadIds] = useState([]);
   const [priceInput, setPriceInput] = useState('');
   const [priceStatus, setPriceStatus] = useState('');
   const unreadByThread = useChatStore((state) => state.unreadByThread);
@@ -263,6 +285,14 @@ const [activeThreadId, setActiveThreadId] = useState(
   useEffect(() => {
     writeHiddenThreadIds(hiddenThreadIds);
   }, [hiddenThreadIds]);
+
+  useEffect(() => {
+    const visibleIds = new Set(visibleThreads.map((thread) => String(thread.sourceRequestId || thread.id)));
+    setSelectedThreadIds((prev) => prev.filter((id) => visibleIds.has(String(id))));
+    if (selectionMode && visibleIds.size === 0) {
+      setSelectionMode(false);
+    }
+  }, [visibleThreads, selectionMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -528,6 +558,91 @@ const [activeThreadId, setActiveThreadId] = useState(
     );
   }, [visibleThreads, activeThreadId]);
 
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) {
+      setSelectionMode(false);
+      setSelectedThreadIds([]);
+      return;
+    }
+
+    setSelectionMode(true);
+  };
+
+  const handleToggleThreadSelection = (threadId, event) => {
+    event?.stopPropagation();
+    const normalizedThreadId = String(threadId);
+
+    setSelectedThreadIds((prev) => (
+      prev.includes(normalizedThreadId)
+        ? prev.filter((id) => id !== normalizedThreadId)
+        : [...prev, normalizedThreadId]
+    ));
+  };
+
+  const handleSelectAllThreads = () => {
+    const visibleIds = visibleThreads.map((thread) => String(thread.sourceRequestId || thread.id));
+    if (!visibleIds.length) return;
+
+    setSelectedThreadIds((prev) => (
+      prev.length === visibleIds.length ? [] : visibleIds
+    ));
+  };
+
+  const deleteThreads = (threadIds) => {
+    const normalizedIds = [...new Set(threadIds.map((id) => String(id)).filter(Boolean))];
+    if (!normalizedIds.length) return;
+
+    const targetIds = new Set(normalizedIds);
+
+    setHiddenThreadIds((prev) => [...new Set([...prev, ...normalizedIds])]);
+    setThreads((prev) => {
+      const nextThreads = prev.filter((item) => !targetIds.has(String(item.sourceRequestId || item.id)));
+      saveChatThreads(nextThreads);
+      return nextThreads;
+    });
+    setThreadPreviews((prev) => {
+      const next = { ...prev };
+      normalizedIds.forEach((threadId) => {
+        delete next[threadId];
+      });
+      return next;
+    });
+
+    const storedMessageThreads = readStoredMessageThreads();
+    if (Object.keys(storedMessageThreads).some((threadId) => targetIds.has(String(threadId)))) {
+      const nextStoredMessageThreads = { ...storedMessageThreads };
+      normalizedIds.forEach((threadId) => {
+        delete nextStoredMessageThreads[threadId];
+      });
+      writeStoredMessageThreads(nextStoredMessageThreads);
+    }
+
+    normalizedIds.forEach((threadId) => {
+      useChatStore.getState().clearUnread(threadId);
+    });
+
+    setSelectedThreadIds((prev) => prev.filter((id) => !targetIds.has(String(id))));
+    if (selectionMode) {
+      setSelectionMode(false);
+    }
+
+    if (targetIds.has(String(activeThreadId || ''))) {
+      const remaining = visibleThreads.filter((item) => !targetIds.has(String(item.sourceRequestId || item.id)));
+      const params = new URLSearchParams(searchParams);
+      if (remaining.length > 0) {
+        const nextId = String(remaining[0].sourceRequestId || remaining[0].id);
+        params.set('thread', nextId);
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(nextId);
+      } else {
+        params.delete('thread');
+        params.delete('booking');
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(null);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!activeThread?.price) {
       setPriceInput('');
@@ -602,31 +717,20 @@ const [activeThreadId, setActiveThreadId] = useState(
     const confirmed = window.confirm(`Delete this chat with ${customerLabel}?`);
     if (!confirmed) return;
 
-    setHiddenThreadIds((prev) => (prev.includes(threadId) ? prev : [...prev, threadId]));
-    setThreads((prev) => prev.filter((item) => String(item.sourceRequestId || item.id) !== threadId));
-    setThreadPreviews((prev) => {
-      const next = { ...prev };
-      delete next[threadId];
-      return next;
-    });
+    deleteThreads([threadId]);
+  };
 
-    useChatStore.getState().clearUnread(threadId);
+  const handleDeleteSelectedThreads = () => {
+    if (!selectedThreadIds.length) return;
 
-    if (String(activeThreadId || '') === threadId) {
-      const remaining = visibleThreads.filter((item) => String(item.sourceRequestId || item.id) !== threadId);
-      const params = new URLSearchParams(searchParams);
-      if (remaining.length > 0) {
-        const nextId = String(remaining[0].sourceRequestId || remaining[0].id);
-        params.set('thread', nextId);
-        setSearchParams(params, { replace: true });
-        setActiveThreadId(nextId);
-      } else {
-        params.delete('thread');
-        params.delete('booking');
-        setSearchParams(params, { replace: true });
-        setActiveThreadId(null);
-      }
-    }
+    const confirmed = window.confirm(
+      selectedThreadIds.length === visibleThreads.length
+        ? 'Delete all chats?'
+        : `Delete ${selectedThreadIds.length} selected chats?`
+    );
+    if (!confirmed) return;
+
+    deleteThreads(selectedThreadIds);
   };
 
   if (!visibleThreads.length) {
@@ -644,6 +748,7 @@ const [activeThreadId, setActiveThreadId] = useState(
   const dateLabel = activeThread
     ? `${activeThread.monthYear} ${activeThread.day}, ${formatTimeRangeLabel(activeThread.timeRange, 'Time pending')}`
     : '';
+  const allVisibleSelected = visibleThreads.length > 0 && selectedThreadIds.length === visibleThreads.length;
 
   return (
     <div className="cleaner-messages-page">
@@ -658,24 +763,85 @@ const [activeThreadId, setActiveThreadId] = useState(
       <div className="cleaner-messages-shell">
         <aside className="cleaner-messages-list">
           <div className="cleaner-messages-list-header">
-            <strong>All chats</strong>
-            <MessageOutlined />
+            <div className="cleaner-messages-list-header-copy">
+              <strong>All chats</strong>
+              {selectionMode && (
+                <span>{selectedThreadIds.length} selected</span>
+              )}
+            </div>
+            <div className="cleaner-messages-list-actions">
+              {selectionMode ? (
+                <>
+                  <button
+                    type="button"
+                    className="cleaner-messages-list-action"
+                    onClick={handleSelectAllThreads}
+                  >
+                    {allVisibleSelected ? 'Clear all' : 'Select all'}
+                  </button>
+                  <button
+                    type="button"
+                    className="cleaner-messages-list-action cleaner-messages-list-action-danger"
+                    onClick={handleDeleteSelectedThreads}
+                    disabled={!selectedThreadIds.length}
+                  >
+                    Delete selected
+                  </button>
+                  <button
+                    type="button"
+                    className="cleaner-messages-list-action"
+                    onClick={handleToggleSelectionMode}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="cleaner-messages-list-action"
+                    onClick={handleToggleSelectionMode}
+                  >
+                    Select
+                  </button>
+                  <MessageOutlined />
+                </>
+              )}
+            </div>
           </div>
           <div className="cleaner-messages-thread-list">
             {visibleThreads.map((thread) => {
               const threadId = String(thread.sourceRequestId || thread.id);
               const isActive = String(activeThread?.sourceRequestId || activeThread?.id) === threadId;
+              const isSelected = selectedThreadIds.includes(threadId);
               const preview = threadPreviews[threadId] || 'Tap to open conversation.';
               const unreadCount = unreadByThread[threadId] || 0;
               return (
                 <div
                   key={threadId}
-                  className={`cleaner-messages-thread-row ${isActive ? 'active' : ''}`}
+                  className={`cleaner-messages-thread-row ${isActive ? 'active' : ''} ${selectionMode ? 'selecting' : ''} ${isSelected ? 'selected' : ''}`}
                 >
+                  {selectionMode && (
+                    <button
+                      type="button"
+                      className={`cleaner-messages-thread-check ${isSelected ? 'selected' : ''}`}
+                      onClick={(event) => handleToggleThreadSelection(threadId, event)}
+                      aria-label={`${isSelected ? 'Deselect' : 'Select'} chat with ${thread.customer || 'Customer'}`}
+                      title={isSelected ? 'Deselect chat' : 'Select chat'}
+                    >
+                      <span />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`cleaner-messages-thread ${isActive ? 'active' : ''}`}
-                    onClick={() => handleSelectThread(thread)}
+                    onClick={() => {
+                      if (selectionMode) {
+                        handleToggleThreadSelection(threadId);
+                        return;
+                      }
+                      handleSelectThread(thread);
+                    }}
                   >
                     <div className="thread-avatar">
                       {thread.customerAvatar ? (
@@ -694,15 +860,17 @@ const [activeThreadId, setActiveThreadId] = useState(
                       )}
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    className="cleaner-messages-thread-delete"
-                    onClick={(event) => handleDeleteThread(thread, event)}
-                    aria-label={`Delete chat with ${thread.customer || 'Customer'}`}
-                    title="Delete chat"
-                  >
-                    <DeleteOutlined />
-                  </button>
+                  {!selectionMode && (
+                    <button
+                      type="button"
+                      className="cleaner-messages-thread-delete"
+                      onClick={(event) => handleDeleteThread(thread, event)}
+                      aria-label={`Delete chat with ${thread.customer || 'Customer'}`}
+                      title="Delete chat"
+                    >
+                      <DeleteOutlined />
+                    </button>
+                  )}
                 </div>
               );
             })}

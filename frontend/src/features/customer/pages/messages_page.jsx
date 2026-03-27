@@ -191,6 +191,8 @@ const CustomerMessagesPage = () => {
     searchParams.get('thread') || searchParams.get('booking')
   );
   const [hiddenThreadIds, setHiddenThreadIds] = useState(() => readHiddenThreadIds());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedThreadIds, setSelectedThreadIds] = useState([]);
   const contentRef = useRef(null);
   const unreadByThread = useChatStore((state) => state.unreadByThread);
   const incrementUnread = useChatStore((state) => state.incrementUnread);
@@ -247,6 +249,14 @@ const CustomerMessagesPage = () => {
   useEffect(() => {
     writeHiddenThreadIds(hiddenThreadIds);
   }, [hiddenThreadIds]);
+
+  useEffect(() => {
+    const visibleIds = new Set(visibleBookings.map((booking) => String(booking.booking_id)));
+    setSelectedThreadIds((prev) => prev.filter((id) => visibleIds.has(String(id))));
+    if (selectionMode && visibleIds.size === 0) {
+      setSelectionMode(false);
+    }
+  }, [visibleBookings, selectionMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -508,6 +518,89 @@ const CustomerMessagesPage = () => {
     const activeId = String(activeThreadId || '');
     return visibleBookings.find((b) => b.booking_id === activeId) || visibleBookings[0];
   }, [visibleBookings, activeThreadId]);
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) {
+      setSelectionMode(false);
+      setSelectedThreadIds([]);
+      return;
+    }
+
+    setSelectionMode(true);
+  };
+
+  const handleToggleThreadSelection = (threadId, event) => {
+    event?.stopPropagation();
+    const normalizedThreadId = String(threadId);
+
+    setSelectedThreadIds((prev) => (
+      prev.includes(normalizedThreadId)
+        ? prev.filter((id) => id !== normalizedThreadId)
+        : [...prev, normalizedThreadId]
+    ));
+  };
+
+  const handleSelectAllThreads = () => {
+    const visibleIds = visibleBookings.map((booking) => String(booking.booking_id));
+    if (!visibleIds.length) return;
+
+    setSelectedThreadIds((prev) => (
+      prev.length === visibleIds.length ? [] : visibleIds
+    ));
+  };
+
+  const deleteThreads = (threadIds) => {
+    const normalizedIds = [...new Set(threadIds.map((id) => String(id)).filter(Boolean))];
+    if (!normalizedIds.length) return;
+
+    const targetIds = new Set(normalizedIds);
+
+    setHiddenThreadIds((prev) => [...new Set([...prev, ...normalizedIds])]);
+    setBookings((prev) => prev.filter((item) => !targetIds.has(String(item.booking_id))));
+    setThreadPreviews((prev) => {
+      const next = { ...prev };
+      normalizedIds.forEach((threadId) => {
+        delete next[threadId];
+      });
+      return next;
+    });
+
+    const storedThreads = readStoredThreads();
+    if (Object.keys(storedThreads).some((threadId) => targetIds.has(String(threadId)))) {
+      const nextStoredThreads = { ...storedThreads };
+      normalizedIds.forEach((threadId) => {
+        delete nextStoredThreads[threadId];
+      });
+      writeStoredThreads(nextStoredThreads);
+    }
+
+    normalizedIds.forEach((threadId) => {
+      useChatStore.getState().clearUnread(threadId);
+    });
+
+    setSelectedThreadIds((prev) => prev.filter((id) => !targetIds.has(String(id))));
+    if (selectionMode) {
+      setSelectionMode(false);
+    }
+
+    if (targetIds.has(String(activeThreadId || ''))) {
+      const remaining = visibleBookings.filter((item) => !targetIds.has(String(item.booking_id)));
+      const params = new URLSearchParams(searchParams);
+      if (remaining.length > 0) {
+        const nextId = String(remaining[0].booking_id);
+        params.set('thread', nextId);
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(nextId);
+      } else {
+        params.delete('thread');
+        params.delete('booking');
+        params.delete('cleaner');
+        setSearchParams(params, { replace: true });
+        setActiveThreadId(null);
+      }
+    }
+  };
+
   const handleSelectThread = (booking) => {
     const nextId = String(booking.booking_id);
     const params = new URLSearchParams(searchParams);
@@ -529,43 +622,20 @@ const CustomerMessagesPage = () => {
     const confirmed = window.confirm(`Delete this chat with ${cleanerLabel}?`);
     if (!confirmed) return;
 
-    setHiddenThreadIds((prev) => {
-      const next = prev.includes(threadId) ? prev : [...prev, threadId];
-      return next;
-    });
+    deleteThreads([threadId]);
+  };
 
-    setBookings((prev) => prev.filter((item) => String(item.booking_id) !== threadId));
-    setThreadPreviews((prev) => {
-      const next = { ...prev };
-      delete next[threadId];
-      return next;
-    });
+  const handleDeleteSelectedThreads = () => {
+    if (!selectedThreadIds.length) return;
 
-    const storedThreads = readStoredThreads();
-    if (storedThreads[threadId]) {
-      const nextStoredThreads = { ...storedThreads };
-      delete nextStoredThreads[threadId];
-      writeStoredThreads(nextStoredThreads);
-    }
+    const confirmed = window.confirm(
+      selectedThreadIds.length === visibleBookings.length
+        ? 'Delete all chats?'
+        : `Delete ${selectedThreadIds.length} selected chats?`
+    );
+    if (!confirmed) return;
 
-    useChatStore.getState().clearUnread(threadId);
-
-    if (String(activeThreadId || '') === threadId) {
-      const remaining = visibleBookings.filter((item) => String(item.booking_id) !== threadId);
-      const params = new URLSearchParams(searchParams);
-      if (remaining.length > 0) {
-        const nextId = String(remaining[0].booking_id);
-        params.set('thread', nextId);
-        setSearchParams(params, { replace: true });
-        setActiveThreadId(nextId);
-      } else {
-        params.delete('thread');
-        params.delete('booking');
-        params.delete('cleaner');
-        setSearchParams(params, { replace: true });
-        setActiveThreadId(null);
-      }
-    }
+    deleteThreads(selectedThreadIds);
   };
 
   if (loading) {
@@ -612,6 +682,8 @@ const CustomerMessagesPage = () => {
   const negotiatedPrice = activeBooking?.negotiated_price != null
     ? formatMoney(activeBooking.negotiated_price)
     : '';
+  const allVisibleSelected = visibleBookings.length > 0 && selectedThreadIds.length === visibleBookings.length;
+
   return (
     <div className="customer-messages-page" style={{ padding: '24px', minHeight: '100%' }}>
       <div className="customer-messages-header" data-customer-reveal>
@@ -630,25 +702,86 @@ const CustomerMessagesPage = () => {
           style={{ '--customer-reveal-delay': 1 }}
         >
           <div className="customer-messages-list-header">
-            <strong>All chats</strong>
-            <MessageOutlined />
+            <div className="customer-messages-list-header-copy">
+              <strong>All chats</strong>
+              {selectionMode && (
+                <span>{selectedThreadIds.length} selected</span>
+              )}
+            </div>
+            <div className="customer-messages-list-actions">
+              {selectionMode ? (
+                <>
+                  <button
+                    type="button"
+                    className="customer-messages-list-action"
+                    onClick={handleSelectAllThreads}
+                  >
+                    {allVisibleSelected ? 'Clear all' : 'Select all'}
+                  </button>
+                  <button
+                    type="button"
+                    className="customer-messages-list-action customer-messages-list-action-danger"
+                    onClick={handleDeleteSelectedThreads}
+                    disabled={!selectedThreadIds.length}
+                  >
+                    Delete selected
+                  </button>
+                  <button
+                    type="button"
+                    className="customer-messages-list-action"
+                    onClick={handleToggleSelectionMode}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="customer-messages-list-action"
+                    onClick={handleToggleSelectionMode}
+                  >
+                    Select
+                  </button>
+                  <MessageOutlined />
+                </>
+              )}
+            </div>
           </div>
           <div className="customer-messages-thread-list">
             {visibleBookings.map((booking, index) => {
               const threadId = String(booking.booking_id);
               const isActive = String(activeBooking?.booking_id) === threadId;
+              const isSelected = selectedThreadIds.includes(threadId);
               const preview = threadPreviews[threadId] || emptyPreviewText;
               const unreadCount = unreadByThread[threadId] || 0;
               return (
                 <div
                   key={threadId}
-                  className={`customer-messages-thread-row ${isActive ? 'active' : ''}`}
+                  className={`customer-messages-thread-row ${isActive ? 'active' : ''} ${selectionMode ? 'selecting' : ''} ${isSelected ? 'selected' : ''}`}
                   style={{ '--customer-reveal-delay': Math.min(index % 4, 3) }}
                 >
+                  {selectionMode && (
+                    <button
+                      type="button"
+                      className={`customer-messages-thread-check ${isSelected ? 'selected' : ''}`}
+                      onClick={(event) => handleToggleThreadSelection(threadId, event)}
+                      aria-label={`${isSelected ? 'Deselect' : 'Select'} chat with ${booking.cleaner?.username || 'Cleaner'}`}
+                      title={isSelected ? 'Deselect chat' : 'Select chat'}
+                    >
+                      <span />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`customer-messages-thread ${isActive ? 'active' : ''}`}
-                    onClick={() => handleSelectThread(booking)}
+                    onClick={() => {
+                      if (selectionMode) {
+                        handleToggleThreadSelection(threadId);
+                        return;
+                      }
+                      handleSelectThread(booking);
+                    }}
                     data-customer-button
                   >
                     <div className="thread-avatar">
@@ -668,15 +801,17 @@ const CustomerMessagesPage = () => {
                       )}
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    className="customer-messages-thread-delete"
-                    onClick={(event) => handleDeleteThread(booking, event)}
-                    aria-label={`Delete chat with ${booking.cleaner?.username || 'Cleaner'}`}
-                    title="Delete chat"
-                  >
-                    <DeleteOutlined />
-                  </button>
+                  {!selectionMode && (
+                    <button
+                      type="button"
+                      className="customer-messages-thread-delete"
+                      onClick={(event) => handleDeleteThread(booking, event)}
+                      aria-label={`Delete chat with ${booking.cleaner?.username || 'Cleaner'}`}
+                      title="Delete chat"
+                    >
+                      <DeleteOutlined />
+                    </button>
+                  )}
                 </div>
               );
             })}
