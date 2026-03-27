@@ -10,6 +10,7 @@ import moveServiceImage from '../../../assets/move.png';
 import shopServiceImage from '../../../assets/shop.png';
 import proServiceImage from '../../../assets/pro.png';
 import api from '../../../services/api';
+import useCustomerPageMotion from '../hooks/useCustomerPageMotion';
 import '../../../styles/customer/home.scss';
 
 
@@ -185,7 +186,6 @@ const CustomerHomePage = () => {
   const [featuredCleaners, setFeaturedCleaners] = useState([]);
   const [loadingCleaners, setLoadingCleaners] = useState(true);
   const [openFaqIndex, setOpenFaqIndex] = useState(1);
-  const [motionEnhanced, setMotionEnhanced] = useState(false);
   const pageRef = useRef(null);
 
   useEffect(() => {
@@ -234,49 +234,7 @@ const CustomerHomePage = () => {
 
     fetchServices();
   }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const scope = pageRef.current;
-    if (!scope) return undefined;
-
-    const revealTargets = Array.from(scope.querySelectorAll('.reveal'));
-    if (!revealTargets.length) return undefined;
-
-    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (reduceMotionQuery.matches) {
-      revealTargets.forEach((element) => element.classList.add('is-visible'));
-      setMotionEnhanced(false);
-      return undefined;
-    }
-
-    setMotionEnhanced(true);
-    revealTargets.forEach((element) => element.classList.remove('is-visible'));
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        });
-      },
-      {
-        threshold: 0.14,
-        rootMargin: '0px 0px -8% 0px'
-      }
-    );
-
-    const frame = window.requestAnimationFrame(() => {
-      revealTargets.forEach((element) => observer.observe(element));
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, []);
+  const motionEnhanced = useCustomerPageMotion(pageRef);
 
   const handleBookService = (service) => {
     navigate('/customer/bookings', {

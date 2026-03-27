@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
 
-const REVEAL_SELECTOR = '[data-customer-reveal]';
+const REVEAL_SELECTOR = '[data-customer-reveal], .reveal';
 const VISIBLE_CLASS = 'customer-reveal-visible';
+const LEGACY_REVEAL_CLASS = 'reveal';
+const LEGACY_VISIBLE_CLASS = 'is-visible';
+
+const toggleRevealVisibility = (element, isVisible) => {
+  if (!(element instanceof HTMLElement)) return;
+
+  if (element.matches('[data-customer-reveal]')) {
+    element.classList.toggle(VISIBLE_CLASS, isVisible);
+  }
+
+  if (element.classList.contains(LEGACY_REVEAL_CLASS)) {
+    element.classList.toggle(LEGACY_VISIBLE_CLASS, isVisible);
+  }
+};
 
 const observeRevealTarget = (observer, element) => {
   if (!(element instanceof HTMLElement)) return;
@@ -14,11 +28,11 @@ const collectRevealTargets = (root) => {
 };
 
 const revealImmediately = (elements) => {
-  elements.forEach((element) => element.classList.add(VISIBLE_CLASS));
+  elements.forEach((element) => toggleRevealVisibility(element, true));
 };
 
 const resetRevealState = (elements) => {
-  elements.forEach((element) => element.classList.remove(VISIBLE_CLASS));
+  elements.forEach((element) => toggleRevealVisibility(element, false));
 };
 
 const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
@@ -58,7 +72,7 @@ const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
       (entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
-          entry.target.classList.add(VISIBLE_CLASS);
+          toggleRevealVisibility(entry.target, true);
           observer.unobserve(entry.target);
         });
       },
@@ -81,12 +95,12 @@ const useCustomerPageMotion = (scopeRef, enabled = true, deps = []) => {
           if (!(node instanceof HTMLElement)) return;
 
           if (node.matches(REVEAL_SELECTOR)) {
-            node.classList.remove(VISIBLE_CLASS);
+            toggleRevealVisibility(node, false);
             observeRevealTarget(observer, node);
           }
 
           node.querySelectorAll?.(REVEAL_SELECTOR).forEach((element) => {
-            element.classList.remove(VISIBLE_CLASS);
+            toggleRevealVisibility(element, false);
             observeRevealTarget(observer, element);
           });
         });
