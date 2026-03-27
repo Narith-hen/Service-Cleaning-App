@@ -92,7 +92,6 @@ const fs = require("fs");
 require("dotenv").config();
 const app = express();
 const arcjetMiddleware = require("./middlewares/arcjet.middleware");
-const prisma = require("./config/database");
 
 const JSON_BODY_LIMIT = process.env.JSON_BODY_LIMIT || '25mb';
 
@@ -101,24 +100,6 @@ app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: JSON_BODY_LIMIT }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use(arcjetMiddleware);
-
-app.get("/health", async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({
-      status: "healthy",
-      database: "connected",
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(503).json({
-      status: "unhealthy",
-      database: "disconnected",
-      message: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
 
 // Backward-compatible fallback:
 // Some earlier uploads were saved in /uploads/misc while DB stored /uploads/services/<file>.
@@ -177,13 +158,4 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT} 🚀`);
-});
-process.on("SIGTERM", async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-  await prisma.$disconnect();
-  process.exit(0);
 });

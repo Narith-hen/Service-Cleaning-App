@@ -92,16 +92,16 @@ const getBookingIdFromJob = (job) => {
 
 const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
   const bookingId = getBookingIdFromJob(job);
-  if (!bookingId) return null;
+  if (!bookingId) return false;
   try {
-    const response = await api.patch(`/bookings/${bookingId}/status`, {
+    await api.patch(`/bookings/${bookingId}/status`, {
       ...(bookingStatus ? { booking_status: bookingStatus } : {}),
       ...(serviceStatus ? { service_status: serviceStatus } : {})
     });
-    return response?.data?.data || null;
+    return true;
   } catch (error) {
     console.error('Failed to update booking status', error);
-    return null;
+    return false;
   }
 };
 
@@ -375,7 +375,7 @@ const MyJobsPage = () => {
 
     if (selectedJob) {
       try {
-        const statusPayload = await updateJobStatusOnServer(selectedJob, {
+        await updateJobStatusOnServer(selectedJob, {
           bookingStatus: 'in_progress',
           serviceStatus: 'in_progress'
         });
@@ -385,12 +385,7 @@ const MyJobsPage = () => {
           if (Array.isArray(parsed)) {
             const updated = parsed.map((job) =>
               (job.id === selectedJob.id || job.sourceRequestId === selectedJob.sourceRequestId)
-                ? {
-                    ...job,
-                    status: 'in-progress',
-                    serviceStatus: 'in_progress',
-                    startedAt: statusPayload?.started_at || job.startedAt || new Date().toISOString()
-                  }
+                ? { ...job, status: 'in-progress', serviceStatus: 'in_progress' }
                 : job
             );
             localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));

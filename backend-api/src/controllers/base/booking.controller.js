@@ -46,14 +46,6 @@ const ensureBookingServiceStatusColumn = async (promiseDb) => {
   );
 };
 
-const ensureBookingStartedAtColumn = async (promiseDb) => {
-  const [rows] = await promiseDb.query("SHOW COLUMNS FROM bookings LIKE 'started_at'");
-  if (rows && rows.length > 0) return;
-  await promiseDb.query(
-    'ALTER TABLE bookings ADD COLUMN started_at DATETIME NULL AFTER service_status'
-  );
-};
-
 const ensureBookingImagesTable = async (promiseDb) => {
   await promiseDb.query(`
     CREATE TABLE IF NOT EXISTS booking_images (
@@ -554,7 +546,6 @@ const getBookingById = async (req, res, next) => {
 
     const promiseDb = db.promise();
     await ensureBookingImagesTable(promiseDb);
-    await ensureBookingStartedAtColumn(promiseDb);
 
     const [rows] = await promiseDb
       .query(
@@ -738,7 +729,6 @@ const updateBookingStatus = async (req, res, next) => {
 
     const promiseDb = db.promise();
     await ensureBookingServiceStatusColumn(promiseDb);
-    await ensureBookingStartedAtColumn(promiseDb);
     const [rows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ?', [id]);
     const booking = rows?.[0];
     if (!booking) return next(new AppError('Booking not found', 404));
@@ -767,14 +757,6 @@ const updateBookingStatus = async (req, res, next) => {
       updates.push('service_status = ?');
       params.push(normalizedServiceStatus);
     }
-    if (
-      normalizedServiceStatus
-      && ['started', 'in_progress'].includes(normalizedServiceStatus)
-      && bookingColumns.has('started_at')
-      && !booking.started_at
-    ) {
-      updates.push('started_at = NOW()');
-    }
 
     if (!updates.length) {
       return next(new AppError('No status column found on bookings table', 500));
@@ -802,18 +784,14 @@ const updateBookingStatus = async (req, res, next) => {
       )
       .catch(() => {});
 
-    const [updatedRows] = await promiseDb.query('SELECT * FROM bookings WHERE booking_id = ? LIMIT 1', [id]);
-    const updatedBooking = updatedRows?.[0] || booking;
-
     res.status(200).json({
       success: true,
       message: 'Booking status updated',
       data: {
         booking_id: id,
-        booking_status: updatedBooking.booking_status,
-        service_status: updatedBooking.service_status || null,
-        started_at: updatedBooking.started_at || null,
-        ...getBookingTrackingMeta(updatedBooking.service_status || updatedBooking.booking_status)
+        booking_status: normalizedBookingStatus || booking.booking_status,
+        service_status: normalizedServiceStatus || booking.service_status || null,
+        ...getBookingTrackingMeta(normalizedServiceStatus || normalizedBookingStatus)
       }
     });
   } catch (error) {

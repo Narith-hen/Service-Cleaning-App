@@ -34,36 +34,6 @@ const normalizeAssetUrl = (value) => {
   return String(value);
 };
 
-const getCurrentUserId = () => {
-  try {
-    const stored = JSON.parse(localStorage.getItem('user') || 'null');
-    return stored?.id || stored?.user_id || null;
-  } catch {
-    return null;
-  }
-};
-
-const formatThreadDateParts = (bookingDate) => {
-  const dateValue = bookingDate ? new Date(bookingDate) : null;
-  if (!dateValue || Number.isNaN(dateValue.getTime())) {
-    return {
-      day: '01',
-      monthYear: 'June 2026'
-    };
-  }
-
-  return {
-    day: String(dateValue.getDate()).padStart(2, '0'),
-    monthYear: dateValue.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  };
-};
-
-const isCleanerMessageEligibleBooking = (booking, currentUserId) => {
-  if (!booking || !currentUserId) return false;
-  if (String(booking.cleaner_id || '') !== String(currentUserId)) return false;
-  return String(booking.booking_status || '').trim().toLowerCase() !== 'cancelled';
-};
-
 // Helper to save chat threads to localStorage
 const saveChatThreads = (threads) => {
   try {
@@ -311,19 +281,29 @@ const [activeThreadId, setActiveThreadId] = useState(
     // Poll for new confirmed jobs every 3 seconds
     const pollInterval = setInterval(async () => {
       try {
-        const currentUserId = getCurrentUserId();
+        // Get current user ID
+        const currentUserId = (() => {
+          try {
+            const stored = JSON.parse(localStorage.getItem('user') || 'null');
+            return stored?.id || stored?.user_id || null;
+          } catch {
+            return null;
+          }
+        })();
         
         if (!currentUserId) return;
         
         // Fetch bookings assigned to this cleaner
-        const response = await api.get(`/bookings/cleaner/${currentUserId}`, {
+        const response = await api.get('/bookings', {
           params: { page: 1, limit: 100 }
         });
         if (cancelled) return;
         
         const bookingsData = response?.data?.data || [];
-        const cleanerConfirmedBookings = bookingsData.filter((booking) =>
-          isCleanerMessageEligibleBooking(booking, currentUserId)
+        // Filter to only confirmed bookings assigned to this cleaner
+        const cleanerConfirmedBookings = bookingsData.filter(
+          (b) => b.cleaner_id && String(b.cleaner_id) === String(currentUserId) && 
+                 (b.booking_status === 'confirmed' || b.booking_status === 'accepted')
         );
         
         if (cleanerConfirmedBookings.length > 0) {
