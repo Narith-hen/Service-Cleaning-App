@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   EnvironmentOutlined,
   UserOutlined,
@@ -38,6 +38,7 @@ import '../../../styles/cleaner/my_jobs.scss';
 
 const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
+const ACCEPTED_BOOKING_KEY = 'accepted_booking_id';
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const API_BASE_URL = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
 
@@ -141,19 +142,64 @@ const getBookingIdFromJob = (job) => {
   return normalized;
 };
 
+const getPriorityBookingId = (search = '') => {
+  const queryBookingId = new URLSearchParams(search).get('bookingId');
+  if (queryBookingId) {
+    return String(queryBookingId).trim();
+  }
+
+  try {
+    return String(localStorage.getItem(ACCEPTED_BOOKING_KEY) || '').trim();
+  } catch {
+    return '';
+  }
+};
+
+const sortJobsForDisplay = (jobs = [], priorityBookingId = '') => {
+  const pinnedBookingId = String(priorityBookingId || '').trim();
+  const statusRank = {
+    'in-progress': 0,
+    'payment-required': 1,
+    upcoming: 2,
+    completed: 3
+  };
+
+  return [...jobs].sort((left, right) => {
+    const leftBookingId = String(getBookingIdFromJob(left) || '');
+    const rightBookingId = String(getBookingIdFromJob(right) || '');
+    const leftPinned = Boolean(pinnedBookingId) && leftBookingId === pinnedBookingId;
+    const rightPinned = Boolean(pinnedBookingId) && rightBookingId === pinnedBookingId;
+
+    if (leftPinned !== rightPinned) {
+      return leftPinned ? -1 : 1;
+    }
+
+    const leftRank = statusRank[String(left?.status || '').toLowerCase()] ?? 99;
+    const rightRank = statusRank[String(right?.status || '').toLowerCase()] ?? 99;
+
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    const leftNumericId = Number.parseInt(leftBookingId, 10) || 0;
+    const rightNumericId = Number.parseInt(rightBookingId, 10) || 0;
+    return rightNumericId - leftNumericId;
+  });
+};
+
 
 const updateJobStatusOnServer = async (job, { bookingStatus, serviceStatus }) => {
   const bookingId = getBookingIdFromJob(job);
-  if (!bookingId) return null;
+  if (!bookingId) return false;
   try {
-    const response = await api.patch(`/bookings/${bookingId}/status`, {
+    await api.patch(`/bookings/${bookingId}/status`, {
       ...(bookingStatus ? { booking_status: bookingStatus } : {}),
       ...(serviceStatus ? { service_status: serviceStatus } : {})
     });
-    return response?.data?.data || null;
+    return true;
   } catch (error) {
     console.error('Failed to update booking status', error);
-    return null;
+    return false;
   }
 };
 
@@ -332,6 +378,7 @@ const tabs = [
 
 const MyJobsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('all');
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -346,6 +393,7 @@ const MyJobsPage = () => {
 
     const loadJobs = async () => {
       setLoadingJobs(true);
+      const priorityBookingId = getPriorityBookingId(location.search);
       try {
         const response = await api.get('/dashboard/cleaner/jobs', {
           params: { page: 1, limit: 100 }
@@ -353,7 +401,10 @@ const MyJobsPage = () => {
         if (cancelled) return;
 
         const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
-        const normalized = rows.filter(Boolean).map(mapApiJobToUiJob);
+        const normalized = sortJobsForDisplay(
+          rows.filter(Boolean).map(mapApiJobToUiJob),
+          priorityBookingId
+        );
         setJobs(normalized);
         localStorage.setItem(confirmedMyJobsStorageKey, JSON.stringify(normalized));
       } catch {
@@ -363,13 +414,20 @@ const MyJobsPage = () => {
           const parsed = raw ? JSON.parse(raw) : [];
           setJobs(
             Array.isArray(parsed)
-              ? parsed.filter(Boolean).map(normalizeUiJobServiceMeta)
+              ? sortJobsForDisplay(parsed.filter(Boolean), priorityBookingId)
               : []
           );
         } catch {
           setJobs([]);
         }
       } finally {
+        if (!new URLSearchParams(location.search).get('bookingId')) {
+          try {
+            localStorage.removeItem(ACCEPTED_BOOKING_KEY);
+          } catch {
+            // Ignore storage errors.
+          }
+        }
         if (!cancelled) {
           setLoadingJobs(false);
         }
@@ -381,7 +439,7 @@ const MyJobsPage = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [location.search]);
 
 
   useEffect(() => {
@@ -459,7 +517,7 @@ const MyJobsPage = () => {
 
     if (selectedJob) {
       try {
-        const statusPayload = await updateJobStatusOnServer(selectedJob, {
+        await updateJobStatusOnServer(selectedJob, {
           bookingStatus: 'in_progress',
           serviceStatus: 'in_progress'
         });
@@ -469,12 +527,7 @@ const MyJobsPage = () => {
           if (Array.isArray(parsed)) {
             const updated = parsed.map((job) =>
               (job.id === selectedJob.id || job.sourceRequestId === selectedJob.sourceRequestId)
-                ? {
-                    ...job,
-                    status: 'in-progress',
-                    serviceStatus: 'in_progress',
-                    startedAt: statusPayload?.started_at || job.startedAt || new Date().toISOString()
-                  }
+                ? { ...job, status: 'in-progress', serviceStatus: 'in_progress' }
                 : job
             );
             localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
@@ -493,6 +546,12 @@ const MyJobsPage = () => {
     navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
+  const handleOpenPaymentPage = (job) => {
+    const bookingId = getBookingIdFromJob(job);
+    if (!bookingId) return;
+    navigate(`/cleaner/payment-methods?bookingId=${encodeURIComponent(String(bookingId))}`);
+  };
+
   const handleViewReceipt = (job) => {
     const bookingId = getBookingIdFromJob(job);
     if (!bookingId) return;
@@ -507,7 +566,6 @@ const MyJobsPage = () => {
   const handleConfirmReceipt = async (job) => {
     const bookingId = getBookingIdFromJob(job);
     if (!bookingId) return;
-
 
     const bookingKey = String(bookingId);
     setPaymentActionByBooking((prev) => ({ ...prev, [bookingKey]: 'confirming' }));
@@ -750,6 +808,19 @@ const MyJobsPage = () => {
                   </button>
                 )}
 
+                {bookingId && isPaymentConfirmed && (
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleOpenPaymentPage(job);
+                    }}
+                  >
+                    <DollarOutlined /> Payment
+                  </button>
+                )}
+
                 {paymentBadge && (
                   <span className={`job-payment-badge ${paymentBadge.tone}`}>
                     {paymentBadge.icon}
@@ -790,7 +861,6 @@ const MyJobsPage = () => {
                     )}
                   </>
                 )}
-
 
                 <button
                   type="button"

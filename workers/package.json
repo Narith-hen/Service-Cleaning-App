@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/bookingWorker.js"
   },
   "keywords": [],
   "author": "",
@@ -13,7 +12,6 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^7.4.1",
-    "axios": "^1.13.6",
     "bullmq": "^5.70.0",
     "dotenv": "^17.3.1",
     "redis": "^5.11.0"

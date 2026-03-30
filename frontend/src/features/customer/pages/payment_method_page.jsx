@@ -110,9 +110,7 @@ export const CustomerPaymentExperience = ({
     let cancelled = false;
 
     const loadFinalization = async () => {
-      if (!cancelled && !hasLoadedFinalizationRef.current) {
-        setLoadingFinalization(true);
-      }
+      setLoadingFinalization(true);
       try {
         const response = await api.get(`/payments/booking/${bookingId}/finalization`);
         if (!cancelled) {
@@ -135,16 +133,74 @@ export const CustomerPaymentExperience = ({
     };
 
     loadFinalization();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId]);
 
-    const intervalId = window.setInterval(() => {
-      loadFinalization();
-    }, 10000);
+  useEffect(() => {
+    reviewAutoPromptedRef.current = false;
+    setReviewModalOpen(false);
+    setReviewBooking(null);
+    setReviewRating(0);
+    setReviewComment('');
+    setReviewFeedback(null);
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (!bookingId || isCleanerPortal) return;
+
+    let cancelled = false;
+
+    const loadReviewBooking = async () => {
+      setLoadingReviewBooking(true);
+      try {
+        const response = await api.get(`/bookings/history/${bookingId}`);
+        if (cancelled) return;
+
+        const booking = normalizeReviewBooking(response?.data?.data || null, bookingId);
+        setReviewBooking(booking);
+        setReviewRating(booking.reviewRating || 0);
+        setReviewComment(booking.reviewComment || '');
+      } catch {
+        if (!cancelled) {
+          setReviewBooking(normalizeReviewBooking(null, bookingId));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingReviewBooking(false);
+        }
+      }
+    };
+
+    loadReviewBooking();
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
     };
-  }, [bookingId]);
+  }, [bookingId, isCleanerPortal]);
+
+  useEffect(() => {
+    if (isCleanerPortal || !bookingId || !isPaymentConfirmed || !reviewBooking || hasSubmittedReview || reviewAutoPromptedRef.current) {
+      return;
+    }
+
+    reviewAutoPromptedRef.current = true;
+    setReviewFeedback(null);
+    setReviewModalOpen(true);
+  }, [bookingId, isPaymentConfirmed, reviewBooking, hasSubmittedReview, isCleanerPortal]);
+
+  const primaryButtonLabel = isCleanerPortal
+    ? (isPaymentConfirmed ? 'Payment Confirmed' : 'Payment Pending')
+    : (uploadingReceipt ? 'Submitting...' : isPaymentConfirmed ? 'Payment Confirmed' : 'Submit');
+
+  const primaryButtonDisabled = isCleanerPortal
+    ? true
+    : (!canSubmitReceipt || uploadingReceipt);
+
+  const backTarget = isCleanerPortal
+    ? (bookingId ? `/cleaner/my-jobs?bookingId=${encodeURIComponent(String(bookingId))}` : '/cleaner/my-jobs')
+    : '/customer/history';
 
   useEffect(() => {
     if (!receiptFile || !String(receiptFile.type || '').startsWith('image/')) {
@@ -295,7 +351,7 @@ export const CustomerPaymentExperience = ({
         )}
 
         <header className="final-payment-header">
-          <h1>Final Payment</h1>
+          <h1>{isCleanerPortal ? 'Payment Details' : 'Final Payment'}</h1>
           <p>Invoice # {invoiceNumber}</p>
         </header>
 
@@ -340,36 +396,45 @@ export const CustomerPaymentExperience = ({
             </section>
 
             <section className="receipt-upload-section">
-              <h3>Upload Payment Receipt</h3>
-              <button
-                type="button"
-                className={`receipt-dropzone ${isPaymentConfirmed ? 'disabled' : ''} ${receiptPreviewUrl ? 'has-preview' : ''}`}
-                onClick={handleOpenFileDialog}
-                disabled={isPaymentConfirmed}
-              >
-                {receiptPreviewUrl ? (
-                  <img className="receipt-preview-image" src={receiptPreviewUrl} alt="Receipt preview" />
-                ) : (
-                  <>
-                    <span className="upload-icon"><CloudUploadOutlined /></span>
-                    <strong>Click to upload receipt</strong>
-                    <small>PNG, JPG, PDF</small>
-                    {isPdfReceipt && <span className="receipt-pdf-tag">PDF selected</span>}
-                  </>
-                )}
-              </button>
+              <h3>{isCleanerPortal ? 'Payment Receipt' : 'Upload Payment Receipt'}</h3>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,application/pdf"
-                className="hidden-receipt-input"
-                onChange={(event) => setReceiptFile(event.target.files?.[0] || null)}
-                disabled={isPaymentConfirmed}
-              />
+              {!isCleanerPortal && (
+                <>
+                  <button
+                    type="button"
+                    className={`receipt-dropzone ${isPaymentConfirmed ? 'disabled' : ''} ${receiptPreviewUrl ? 'has-preview' : ''}`}
+                    onClick={handleOpenFileDialog}
+                    disabled={isPaymentConfirmed}
+                  >
+                    {receiptPreviewUrl ? (
+                      <img className="receipt-preview-image" src={receiptPreviewUrl} alt="Receipt preview" />
+                    ) : (
+                      <>
+                        <span className="upload-icon"><CloudUploadOutlined /></span>
+                        <strong>Click to upload receipt</strong>
+                        <small>PNG, JPG, PDF</small>
+                        {isPdfReceipt && <span className="receipt-pdf-tag">PDF selected</span>}
+                      </>
+                    )}
+                  </button>
 
-              {receiptFile && !receiptPreviewUrl && (
-                <p className="receipt-selected">Selected file: {receiptFile.name}</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,application/pdf"
+                    className="hidden-receipt-input"
+                    onChange={(event) => setReceiptFile(event.target.files?.[0] || null)}
+                    disabled={isPaymentConfirmed}
+                  />
+
+                  {receiptFile && !receiptPreviewUrl && (
+                    <p className="receipt-selected">Selected file: {receiptFile.name}</p>
+                  )}
+                </>
+              )}
+
+              {isCleanerPortal && !finalization?.receipt_image_url && (
+                <p className="receipt-selected">No receipt image available for this booking.</p>
               )}
 
               {(finalization?.receipt_image_url || canDownloadReceiptDocument) && (
@@ -439,7 +504,15 @@ export const CustomerPaymentExperience = ({
               </button>
             </div>
 
-            {statusText && <p className="payment-status-text">{statusText}</p>}
+            {hasSubmittedReview && (
+              <div className="payment-review-complete">
+                <strong>Review Submitted</strong>
+                <span>
+                  {Number(reviewBooking?.reviewRating || 0).toFixed(1)}
+                  /5 rating saved for this booking.
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -458,11 +531,15 @@ export const CustomerPaymentExperience = ({
               onClick={handleCloseCongratsModal}
               aria-label="Close congratulations dialog"
             >
-              <CloseOutlined />
+              <FiX size={20} />
             </button>
 
-            <div className="payment-success-badge">
-              <CheckCircleOutlined />
+            <div className="payment-rating-avatar">
+              {reviewBooking?.cleanerAvatar ? (
+                <img src={reviewBooking.cleanerAvatar} alt={reviewBooking.cleanerName} />
+              ) : (
+                <span>{getInitials(reviewBooking?.cleanerName)}</span>
+              )}
             </div>
 
             <p className="payment-success-kicker">Payment Submitted</p>

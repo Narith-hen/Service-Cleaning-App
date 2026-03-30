@@ -13,3 +13,8 @@ export const fetchCleanerEarningsSummary = async (params) => {
   });
   return response.data?.data || [];
 };
+
+export const fetchCleanerEarningsRollups = async () => {
+  const response = await api.get('/dashboard/cleaner/earnings/rollups');
+  return response.data?.data || {};
+};

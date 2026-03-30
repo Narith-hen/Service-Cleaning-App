@@ -71,22 +71,8 @@ const normalizeConfirmedJob = (job) => ({
   timeRange: job.timeRange || fallbackJob.timeRange,
   location: job.location || fallbackJob.location,
   customer: job.customer || fallbackJob.customer,
-  serviceStatus: job.serviceStatus || 'started',
-  startedAt: job.startedAt || job.started_at || null
+  serviceStatus: job.serviceStatus || 'started'
 });
-
-const formatElapsedParts = (totalSeconds) => {
-  const safe = Math.max(0, totalSeconds);
-  const hours = Math.floor(safe / 3600);
-  const minutes = Math.floor((safe % 3600) / 60);
-  const seconds = safe % 60;
-
-  return {
-    hours: String(hours).padStart(2, '0'),
-    minutes: String(minutes).padStart(2, '0'),
-    seconds: String(seconds).padStart(2, '0')
-  };
-};
 
 const JobExecutionPage = () => {
   const navigate = useNavigate();
@@ -122,13 +108,10 @@ const JobExecutionPage = () => {
   const [customerImages, setCustomerImages] = useState([]);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(null);
-  const [jobStartedAt, setJobStartedAt] = useState(currentJob.startedAt || null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const priceValue = Number(String(currentJob.price || '$0').replace(/[^0-9.]/g, '')) || 0;
   const totalEarning = priceValue;
   const bookingId = getBookingIdFromJob(currentJob);
   const activeImage = activeImageIndex != null ? customerImages[activeImageIndex] || null : null;
-  const elapsed = useMemo(() => formatElapsedParts(elapsedSeconds), [elapsedSeconds]);
 
   useEffect(() => {
     setIsFinishingJob(false);
@@ -153,8 +136,6 @@ const JobExecutionPage = () => {
         const response = await api.get(`/bookings/${bookingId}`);
         if (cancelled) return;
 
-        const bookingData = response?.data?.data || {};
-        setJobStartedAt(bookingData?.started_at || currentJob.startedAt || null);
         const images = Array.isArray(response?.data?.data?.images) ? response.data.data.images : [];
         setCustomerImages(
           images
@@ -307,9 +288,9 @@ const JobExecutionPage = () => {
         <div className="elapsed-box">
           <small>ELAPSED</small>
           <div className="elapsed-grid">
-            <div><strong>{elapsed.hours}</strong><span>HR</span></div>
-            <div><strong>{elapsed.minutes}</strong><span>MIN</span></div>
-            <div><strong>{elapsed.seconds}</strong><span>SEC</span></div>
+            <div><strong>01</strong><span>HR</span></div>
+            <div><strong>24</strong><span>MIN</span></div>
+            <div><strong>45</strong><span>SEC</span></div>
           </div>
         </div>
 

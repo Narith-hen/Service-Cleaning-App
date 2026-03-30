@@ -16,46 +16,39 @@ import {
   formatMoney,
   parseMoneyAmount
 } from '../data/earnings_data';
-import { fetchCleanerEarnings, fetchCleanerEarningsSummary } from '../services/earningsService';
+import {
+  fetchCleanerEarnings,
+  fetchCleanerEarningsRollups,
+  fetchCleanerEarningsSummary
+} from '../services/earningsService';
 
+const AUTO_REFRESH_INTERVAL_MS = 15 * 1000;
 const MIN_CHART_BAR_HEIGHT = 18;
-const DAY_VIEW_HIGHLIGHT_BUCKET = 16;
-const daySlotDefinitions = [
-  { label: '8 AM', periodLabel: 'Morning', bucket: 8, hours: [8, 9, 10, 11] },
-  { label: '12 PM', periodLabel: 'Afternoon', bucket: 12, hours: [12, 13, 14, 15] },
-  { label: '4 PM', periodLabel: 'Evening', bucket: 16, hours: [16, 17, 18, 19] },
-  { label: '8 PM', periodLabel: 'Night', bucket: 20, hours: [20, 21, 22, 23] }
-];
-const weekdayDefinitions = [
-  { label: 'Mon', bucket: 2 },
-  { label: 'Tue', bucket: 3 },
-  { label: 'Wed', bucket: 4 },
-  { label: 'Thu', bucket: 5 },
-  { label: 'Fri', bucket: 6 },
-  { label: 'Sat', bucket: 7 },
-  { label: 'Sun', bucket: 1 }
-];
+const DAILY_HISTORY_LENGTH = 7;
+const WEEKLY_HISTORY_LENGTH = 4;
+const DAYS_PER_WEEK = 7;
+
 const earningsViewOptions = [
   {
     value: 'day',
     label: 'Day',
     title: 'Daily Earnings',
-    subtitle: "Today's earnings by time",
-    note: 'Today'
+    subtitle: 'Hourly totals for jobs completed today',
+    note: 'Updates when you finish a job'
   },
   {
     value: 'week',
     label: 'Week',
     title: 'Weekly Earnings',
-    subtitle: 'This week from Monday to Sunday',
-    note: 'This week'
+    subtitle: 'Latest 7 daily totals from completed jobs',
+    note: 'Rolling 7 days'
   },
   {
     value: 'month',
     label: 'Month',
     title: 'Monthly Earnings',
-    subtitle: 'This month by calendar day',
-    note: 'This month'
+    subtitle: 'Latest 4 weekly totals from completed jobs',
+    note: 'Rolling 4 weeks'
   },
   {
     value: 'total',
@@ -66,45 +59,93 @@ const earningsViewOptions = [
   }
 ];
 
-const buildDailySeries = (rows = []) => {
-  const totalsByHour = new Map(
-    (rows || []).map((row) => [Number(row?.bucket ?? -1), Number(row?.total || 0)])
-  );
-
-  return daySlotDefinitions.map((slot) => ({
-    label: slot.label,
-    periodLabel: slot.periodLabel,
-    bucket: slot.bucket,
-    earnings: slot.hours.reduce((sum, hour) => sum + Number(totalsByHour.get(hour) || 0), 0)
-  }));
-};
-
-const buildWeeklySeries = (rows = []) => {
-  const totalsByBucket = new Map(
-    (rows || []).map((row) => [Number(row?.bucket ?? 0), Number(row?.total || 0)])
-  );
-
-  return weekdayDefinitions.map((dayItem) => ({
-    label: dayItem.label,
-    bucket: dayItem.bucket,
-    earnings: Number(totalsByBucket.get(dayItem.bucket) || 0)
-  }));
-};
-
-const buildMonthlySeries = (rows = []) => {
-  const totalsByDay = new Map(
-    (rows || []).map((row) => [Number(row?.bucket ?? 0), Number(row?.total || 0)])
-  );
-  const daysInMonth = dayjs().daysInMonth();
-
-  return Array.from({ length: daysInMonth }, (_, index) => {
-    const dayNumber = index + 1;
+const buildDefaultDailyBreakdown = () => {
+  return Array.from({ length: 24 }, (_, index) => {
+    const hour = index;
     return {
-      label: String(dayNumber),
-      bucket: dayNumber,
-      earnings: Number(totalsByDay.get(dayNumber) || 0)
+      bucket: hour,
+      label: dayjs().hour(hour).minute(0).second(0).format('h A'),
+      total: 0
     };
   });
+};
+
+const buildDefaultWeeklyBreakdown = () => {
+  return Array.from({ length: DAILY_HISTORY_LENGTH }, (_, index) => {
+    const day = dayjs().startOf('day').subtract(DAILY_HISTORY_LENGTH - 1 - index, 'day');
+    return {
+      bucket: index + 1,
+      label: day.format('ddd'),
+      period_label: day.format('MMM D'),
+      total: 0
+    };
+  });
+};
+
+const buildDefaultMonthlyBreakdown = () => {
+  const firstDay = dayjs().startOf('day').subtract((DAILY_HISTORY_LENGTH * WEEKLY_HISTORY_LENGTH) - 1, 'day');
+
+  return Array.from({ length: WEEKLY_HISTORY_LENGTH }, (_, index) => {
+    const weekStart = firstDay.add(index * DAYS_PER_WEEK, 'day');
+    const weekEnd = weekStart.add(DAYS_PER_WEEK - 1, 'day');
+
+    return {
+      bucket: index + 1,
+      label: `Week ${index + 1}`,
+      period_label: `${weekStart.format('MMM D')} - ${weekEnd.format('MMM D')}`,
+      total: 0
+    };
+  });
+};
+
+const getDefaultRollupData = () => ({
+  collection_window: {
+    start_label: '12:00 AM',
+    end_label: '11:59 PM',
+    is_active: true
+  },
+  daily_total: 0,
+  today_window_total: 0,
+  weekly_total: 0,
+  monthly_total: 0,
+  daily_breakdown: buildDefaultDailyBreakdown(),
+  weekly_breakdown: buildDefaultWeeklyBreakdown(),
+  monthly_breakdown: buildDefaultMonthlyBreakdown(),
+  last_updated_at: null
+});
+
+const normalizeRollupData = (data = {}) => {
+  const defaults = getDefaultRollupData();
+
+  return {
+    ...defaults,
+    ...data,
+    collection_window: {
+      ...defaults.collection_window,
+      ...(data?.collection_window || {})
+    },
+    daily_breakdown:
+      Array.isArray(data?.daily_breakdown) && data.daily_breakdown.length
+        ? data.daily_breakdown
+        : defaults.daily_breakdown,
+    weekly_breakdown:
+      Array.isArray(data?.weekly_breakdown) && data.weekly_breakdown.length
+        ? data.weekly_breakdown
+        : defaults.weekly_breakdown,
+    monthly_breakdown:
+      Array.isArray(data?.monthly_breakdown) && data.monthly_breakdown.length
+        ? data.monthly_breakdown
+        : defaults.monthly_breakdown
+  };
+};
+
+const buildSeriesFromRows = (rows = []) => {
+  return (rows || []).map((row, index) => ({
+    label: String(row?.label || ''),
+    periodLabel: String(row?.period_label || ''),
+    bucket: Number(row?.bucket ?? index + 1),
+    earnings: Number(row?.total || 0)
+  }));
 };
 
 const buildTotalSeries = (rows = []) => {
@@ -123,52 +164,157 @@ const buildTotalSeries = (rows = []) => {
   });
 };
 
-const buildChartSeries = (view, rows = []) => {
-  if (view === 'day') return buildDailySeries(rows);
-  if (view === 'week') return buildWeeklySeries(rows);
-  if (view === 'total') return buildTotalSeries(rows);
-  return buildMonthlySeries(rows);
+const buildChartSeries = (view, rollupData, totalSeries) => {
+  if (view === 'day') return buildSeriesFromRows(rollupData?.daily_breakdown);
+  if (view === 'week') return buildSeriesFromRows(rollupData?.weekly_breakdown);
+  if (view === 'month') return buildSeriesFromRows(rollupData?.monthly_breakdown);
+  return totalSeries;
 };
 
-const getChartMeta = (view) => {
+const getSelectedTotalForView = (view, rollupData, allTimeTotal) => {
+  if (view === 'day') return Number(rollupData?.daily_total || 0);
+  if (view === 'week') return Number(rollupData?.weekly_total || 0);
+  if (view === 'month') return Number(rollupData?.monthly_total || 0);
+  return Number(allTimeTotal || 0);
+};
+
+const getChartMeta = (view, rollupData) => {
   const activeView = earningsViewOptions.find((option) => option.value === view) || earningsViewOptions[2];
+  const windowStart = rollupData?.collection_window?.start_label || '12:00 AM';
+  const windowEnd = rollupData?.collection_window?.end_label || '11:59 PM';
+
+  if (view === 'day') {
+    return {
+      title: activeView.title,
+      subtitle: `Hourly totals from ${windowStart} to ${windowEnd}. Completed jobs are added immediately, then this total resets for the next day.`,
+      note: 'Resets daily'
+    };
+  }
+
   return {
     title: activeView.title,
     subtitle: activeView.subtitle,
-    note: activeView.note,
-    series: buildChartSeries(view)
+    note: activeView.note
   };
-};
-
-const getRangeStartForView = (view) => {
-  const start = dayjs().startOf('day');
-
-  if (view === 'day') return start.toDate();
-
-  if (view === 'week') {
-    const weekdayOffset = start.day() === 0 ? 6 : start.day() - 1;
-    return start.subtract(weekdayOffset, 'day').toDate();
-  }
-
-  if (view === 'month') return start.startOf('month').toDate();
-
-  return null;
 };
 
 const getActiveChartBucket = (view) => {
   const now = dayjs();
 
-  if (view === 'day') return DAY_VIEW_HIGHLIGHT_BUCKET;
-
-  if (view === 'week') {
-    const dayOfWeekBucket = now.day() === 0 ? 1 : now.day() + 1;
-    return dayOfWeekBucket;
+  if (view === 'day') {
+    return now.hour();
   }
 
-  if (view === 'month') return now.date();
+  if (view === 'week') return DAILY_HISTORY_LENGTH;
+  if (view === 'month') return WEEKLY_HISTORY_LENGTH;
   if (view === 'total') return now.year();
 
   return null;
+};
+
+const buildSummaryCards = (rollupData) => {
+  const windowStart = rollupData?.collection_window?.start_label || '12:00 AM';
+  const windowEnd = rollupData?.collection_window?.end_label || '11:59 PM';
+  const dailyNote = `Counts completed jobs from ${windowStart} to ${windowEnd}, then starts again from 0`;
+
+  return [
+    {
+      key: 'daily',
+      tone: 'completed',
+      label: 'Daily Total',
+      value: formatMoney(rollupData?.daily_total || 0),
+      note: dailyNote
+    },
+    {
+      key: 'weekly',
+      tone: 'pending',
+      label: 'Weekly Total',
+      value: formatMoney(rollupData?.weekly_total || 0),
+      note: 'Rolling total of the latest 7 completed days'
+    },
+    {
+      key: 'monthly',
+      tone: 'monthly',
+      label: 'Monthly Total',
+      value: formatMoney(rollupData?.monthly_total || 0),
+      note: 'Rolling total of the latest 4 completed weeks'
+    }
+  ];
+};
+
+const printRollupTotals = (rollupData) => {
+  const windowStart = rollupData?.collection_window?.start_label || '12:00 AM';
+  const windowEnd = rollupData?.collection_window?.end_label || '11:59 PM';
+  const timestamp = rollupData?.last_updated_at
+    ? dayjs(rollupData.last_updated_at).format('YYYY-MM-DD HH:mm:ss')
+    : dayjs().format('YYYY-MM-DD HH:mm:ss');
+
+  console.log(`[Cleaner Earnings] Updated at ${timestamp}`);
+  console.log(`[Cleaner Earnings] Daily total (${windowStart} - ${windowEnd}): ${formatMoney(rollupData?.daily_total || 0)}`);
+  console.log(`[Cleaner Earnings] Weekly total (latest 7 days): ${formatMoney(rollupData?.weekly_total || 0)}`);
+  console.log(`[Cleaner Earnings] Monthly total (latest 4 weeks): ${formatMoney(rollupData?.monthly_total || 0)}`);
+};
+
+const getTransactionStatusMeta = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (normalized === 'completed' || normalized === 'paid') {
+    return {
+      status: 'PAID',
+      statusType: 'completed',
+      payoutMethod: 'Confirmed Payment',
+      amountType: 'positive'
+    };
+  }
+
+  if (normalized === 'receipt_submitted' || normalized === 'awaiting_receipt' || normalized === 'payment_required') {
+    return {
+      status: 'PENDING',
+      statusType: 'pending',
+      payoutMethod: 'Pending Receipt Review',
+      amountType: 'default'
+    };
+  }
+
+  return {
+    status: 'COMPLETED',
+    statusType: 'completed',
+    payoutMethod: 'Service Completed',
+    amountType: 'positive'
+  };
+};
+
+const mapRecentEarningsToTransactions = (rows = []) => {
+  return (rows || []).map((row, index) => {
+    const bookingId = Number(row?.booking?.booking_id || row?.booking_id || index + 1);
+    const amount = Number(row?.amount || 0);
+    const recordedAt = row?.created_at || row?.booking?.booking_date || null;
+    const statusMeta = getTransactionStatusMeta(row?.payment_status);
+    const fallbackImage = cleanerTransactions[index % cleanerTransactions.length]?.image || cleanerTransactions[0]?.image || '';
+
+    return {
+      id: `earning-${bookingId}-${index}`,
+      date: recordedAt ? dayjs(recordedAt).format('YYYY-MM-DD') : '',
+      status: statusMeta.status,
+      statusType: statusMeta.statusType,
+      transactionId: `#BOOK-${String(bookingId).padStart(5, '0')}`,
+      title: row?.booking?.service?.name || 'Cleaning Service',
+      subtitle: row?.booking?.user?.username
+        ? `Customer: ${row.booking.user.username}`
+        : 'Completed cleaner service',
+      amount: `+${formatMoney(amount)}`,
+      amountType: statusMeta.amountType,
+      image: fallbackImage,
+      payoutMethod: statusMeta.payoutMethod,
+      serviceAddress: row?.booking?.address || 'Address unavailable',
+      meta: [
+        {
+          label: 'DATE',
+          value: recordedAt ? dayjs(recordedAt).format('MMM D, YYYY h:mm A') : '-'
+        }
+      ]
+    };
+  });
 };
 
 const EarningsPage = () => {
@@ -184,47 +330,87 @@ const EarningsPage = () => {
     dateTo: ''
   });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [selectedEarningsTotal, setSelectedEarningsTotal] = useState(cleanerEarningsSummary.total);
-  const [earningsSeries, setEarningsSeries] = useState(() => getChartMeta('month').series);
+  const [earningsRollups, setEarningsRollups] = useState(() => getDefaultRollupData());
+  const [allTimeTotal, setAllTimeTotal] = useState(cleanerEarningsSummary.total);
+  const [allTimeSeries, setAllTimeSeries] = useState(() => buildTotalSeries());
+  const [transactionHistory, setTransactionHistory] = useState(() => cleanerTransactions);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadEarnings = async () => {
-      const from = getRangeStartForView(earningsView);
-      const earningsParams = from
-        ? {
-            from: from.toISOString(),
-            to: new Date().toISOString()
-          }
-        : undefined;
+      const requests = [
+        fetchCleanerEarningsRollups(),
+        fetchCleanerEarnings(),
+        earningsView === 'total'
+          ? fetchCleanerEarningsSummary({ view: 'total' })
+          : Promise.resolve(null)
+      ];
 
-      try {
-        const [earningsData, summaryData] = await Promise.all([
-          fetchCleanerEarnings(earningsParams),
-          fetchCleanerEarningsSummary({ view: earningsView === 'month' ? 'month_days' : earningsView })
-        ]);
+      const [rollupResult, earningsResult, totalSummaryResult] = await Promise.allSettled(requests);
 
-        if (!isMounted) return;
+      if (!isMounted) return;
 
-        setSelectedEarningsTotal(Number(earningsData?.total_earnings) || 0);
-        setEarningsSeries(buildChartSeries(earningsView, summaryData));
-      } catch (error) {
-        console.error('Failed to fetch cleaner earnings page data:', error);
-        if (!isMounted) return;
-        setSelectedEarningsTotal(cleanerEarningsSummary.total);
-        setEarningsSeries(getChartMeta(earningsView).series);
+      if (rollupResult.status === 'fulfilled') {
+        const normalizedRollups = normalizeRollupData(rollupResult.value);
+        setEarningsRollups(normalizedRollups);
+        printRollupTotals(normalizedRollups);
+      } else {
+        console.error('Failed to fetch cleaner earnings rollups:', rollupResult.reason);
+        setEarningsRollups(getDefaultRollupData());
+      }
+
+      if (earningsResult.status === 'fulfilled') {
+        const earningsData = earningsResult.value || {};
+        setAllTimeTotal(Number(earningsData?.total_earnings) || 0);
+        const liveTransactions = mapRecentEarningsToTransactions(earningsData?.recent_payments);
+        setTransactionHistory(liveTransactions.length ? liveTransactions : cleanerTransactions);
+      } else {
+        console.error('Failed to fetch cleaner earnings totals:', earningsResult.reason);
+        setAllTimeTotal(cleanerEarningsSummary.total);
+        setTransactionHistory(cleanerTransactions);
+      }
+
+      if (earningsView === 'total') {
+        if (totalSummaryResult.status === 'fulfilled') {
+          setAllTimeSeries(buildTotalSeries(totalSummaryResult.value));
+        } else {
+          console.error('Failed to fetch all-time cleaner earnings summary:', totalSummaryResult.reason);
+          setAllTimeSeries(buildTotalSeries());
+        }
       }
     };
 
-    loadEarnings();
+    loadEarnings().catch((error) => {
+      console.error('Failed to fetch cleaner earnings page data:', error);
+      if (!isMounted) return;
+      setEarningsRollups(getDefaultRollupData());
+      setAllTimeTotal(cleanerEarningsSummary.total);
+      setAllTimeSeries(buildTotalSeries());
+      setTransactionHistory(cleanerTransactions);
+    });
+
+    const intervalId = window.setInterval(() => {
+      loadEarnings().catch((error) => {
+        console.error('Failed to refresh cleaner earnings page data:', error);
+      });
+    }, AUTO_REFRESH_INTERVAL_MS);
 
     return () => {
       isMounted = false;
+      window.clearInterval(intervalId);
     };
   }, [earningsView]);
 
-  const chartMeta = useMemo(() => getChartMeta(earningsView), [earningsView]);
+  const selectedEarningsTotal = useMemo(() => {
+    return getSelectedTotalForView(earningsView, earningsRollups, allTimeTotal);
+  }, [earningsView, earningsRollups, allTimeTotal]);
+
+  const earningsSeries = useMemo(() => {
+    return buildChartSeries(earningsView, earningsRollups, allTimeSeries);
+  }, [earningsView, earningsRollups, allTimeSeries]);
+
+  const chartMeta = useMemo(() => getChartMeta(earningsView, earningsRollups), [earningsView, earningsRollups]);
 
   const chartBarItems = useMemo(() => {
     const peakEarnings = earningsSeries.reduce(
@@ -233,11 +419,13 @@ const EarningsPage = () => {
     );
     const chartScale = peakEarnings > 0 ? peakEarnings : 1;
     const activeBucket = getActiveChartBucket(earningsView);
-    const hasActiveBucket = earningsSeries.some((item) => item?.bucket === activeBucket);
+    const hasActiveBucket =
+      activeBucket !== null && earningsSeries.some((item) => item?.bucket === activeBucket);
 
     return earningsSeries.map((item, index) => {
       const earningsValue = Number(item?.earnings) || 0;
       const heightPercentage = (earningsValue / chartScale) * 100;
+      const titlePrefix = item?.periodLabel ? `${item.periodLabel} ${item.label}` : item?.label;
 
       return {
         key: `${earningsView}-${item?.bucket ?? index}-${index}`,
@@ -245,10 +433,19 @@ const EarningsPage = () => {
         periodLabel: String(item?.periodLabel || ''),
         earnings: earningsValue,
         barHeight: `${Math.max(heightPercentage, earningsValue > 0 ? MIN_CHART_BAR_HEIGHT : 8)}%`,
-        isCurrentPeriod: hasActiveBucket ? item?.bucket === activeBucket : index === earningsSeries.length - 1
+        isCurrentPeriod: hasActiveBucket ? item?.bucket === activeBucket : index === earningsSeries.length - 1,
+        title: `${titlePrefix}: ${formatMoney(earningsValue)}`
       };
     });
   }, [earningsSeries, earningsView]);
+
+  const summaryCards = useMemo(() => buildSummaryCards(earningsRollups), [earningsRollups]);
+
+  const lastUpdatedLabel = useMemo(() => {
+    return earningsRollups?.last_updated_at
+      ? dayjs(earningsRollups.last_updated_at).format('MMM D, YYYY h:mm:ss A')
+      : 'Waiting for first refresh';
+  }, [earningsRollups]);
 
   const handleApplyFilters = () => {
     setAppliedFilters({
@@ -260,10 +457,15 @@ const EarningsPage = () => {
   };
 
   const filteredTransactions = useMemo(() => {
-    const filtered = cleanerTransactions.filter((item) => {
+    const filtered = transactionHistory.filter((item) => {
+      const normalizedStatus = String(item.status || '').toLowerCase();
+      const matchesCompleted =
+        appliedFilters.paymentStatus === 'completed'
+          && ['completed', 'paid'].includes(normalizedStatus);
       const statusMatch =
         appliedFilters.paymentStatus === 'all' ||
-        item.status.toLowerCase() === appliedFilters.paymentStatus;
+        matchesCompleted ||
+        normalizedStatus === appliedFilters.paymentStatus;
 
       const fromMatch = !appliedFilters.dateFrom || item.date >= appliedFilters.dateFrom;
       const toMatch = !appliedFilters.dateTo || item.date <= appliedFilters.dateTo;
@@ -284,13 +486,19 @@ const EarningsPage = () => {
 
       return new Date(b.date) - new Date(a.date);
     });
-  }, [appliedFilters]);
+  }, [appliedFilters, transactionHistory]);
 
   return (
     <div className="cleaner-earnings-page">
       <div className="earnings-headline">
         <h1>Earnings Overview</h1>
-        <p>Track your income and payment history.</p>
+        <p>Track your income and payment history. Completed jobs are added automatically, daily totals reset each new day, weekly totals roll across 7 days, and monthly totals roll across 4 weeks.</p>
+        <div className="earnings-live-meta">
+          <span>
+            Completed Jobs Counted: {earningsRollups?.collection_window?.start_label || '12:00 AM'} to {earningsRollups?.collection_window?.end_label || '11:59 PM'}
+          </span>
+          <span>Last Updated: {lastUpdatedLabel}</span>
+        </div>
       </div>
 
       <section className="earnings-stats-panel">
@@ -298,6 +506,16 @@ const EarningsPage = () => {
           <span className="earnings-total-label">{chartMeta.title}</span>
           <span className="earnings-total-value">{formatMoney(selectedEarningsTotal)}</span>
           <span className="earnings-total-note">{chartMeta.note}</span>
+        </div>
+
+        <div className="earnings-stat-cards">
+          {summaryCards.map((item) => (
+            <article key={item.key} className={`earnings-stat-card ${item.tone}`}>
+              <span className="stat-label">{item.label}</span>
+              <span className="stat-value">{item.value}</span>
+              <span className="stat-note">{item.note}</span>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -338,10 +556,10 @@ const EarningsPage = () => {
                   <div
                     className={`earnings-bar${item.isCurrentPeriod ? ' current' : ''}`}
                     style={{ height: item.barHeight }}
-                    title={`${item.label}: ${formatMoney(item.earnings)}`}
+                    title={item.title}
                   />
                 </div>
-                {earningsView === 'day' && item.periodLabel ? (
+                {item.periodLabel ? (
                   <div className="earnings-bar-label-group">
                     <span className="earnings-bar-period">{item.periodLabel}</span>
                     <span className="earnings-bar-label">{item.label}</span>
