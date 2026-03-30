@@ -1195,3 +1195,87 @@ body.dark-mode .service-form-modal .ant-btn-default:hover {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 1024px) {
+  .services-page-intro,
+  .inventory-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .services-filter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .services-search-box {
+    grid-column: 1 / -1;
+  }
+
+  .services-table {
+    min-width: 760px;
+  }
+
+  .inventory-table {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 768px) {
+  .services-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .services-filter-select,
+  .service-filter-select {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .services-compact-filter-btn {
+    width: 100%;
+  }
+
+  .services-table-footer,
+  .inventory-footer,
+  .pagination-actions,
+  .service-view-meta {
+    flex-wrap: wrap;
+  }
+
+  .services-table {
+    min-width: 680px;
+  }
+
+  .inventory-table {
+    min-width: 660px;
+  }
+
+  .service-view-content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-services-page .admin-page-title,
+  .svc-section-title {
+    font-size: 28px;
+  }
+
+  .services-table {
+    min-width: 620px;
+  }
+
+  .inventory-table {
+    min-width: 600px;
+  }
+
+  .service-list-cell,
+  .product-cell {
+    min-width: 200px;
+  }
+
+  .service-view-hero {
+    height: 200px;
+  }
+}

@@ -6,13 +6,14 @@ import { useTheme } from "../../../contexts/theme_context";
 import '../../../styles/cleaner/cleaner_main_layout.css';
 import Footer from '../admin_layout/admin_footer';
 
-const TARGET_SCREEN_BREAKPOINT = 768;
+const TARGET_SCREEN_BREAKPOINT = 1024;
 
 const CleanerMainLayout = () => {
   const { darkMode } = useTheme();
   const location = useLocation();
-  const [isCompactLayout, setIsCompactLayout] = useState(window.innerWidth <= TARGET_SCREEN_BREAKPOINT);
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > TARGET_SCREEN_BREAKPOINT);
+  const initialWidth = typeof window === 'undefined' ? TARGET_SCREEN_BREAKPOINT : window.innerWidth;
+  const [isCompactLayout, setIsCompactLayout] = useState(initialWidth <= TARGET_SCREEN_BREAKPOINT);
+  const [sidebarOpen, setSidebarOpen] = useState(initialWidth > TARGET_SCREEN_BREAKPOINT);
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,7 +40,7 @@ const CleanerMainLayout = () => {
       
       {/* Main content area - everything on the right */}
       <div className="admin-right">
-        {isCompactLayout && (
+        {isCompactLayout && !sidebarOpen && (
           <button className="layout-sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
             {sidebarOpen ? 'X' : '|||'}
           </button>

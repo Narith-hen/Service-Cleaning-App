@@ -13,3 +13,10 @@ export const fetchCleanerEarningsSummary = async (params) => {
   });
   return response.data?.data || [];
 };
+
+export const fetchCleanerPaymentHistory = async (params) => {
+  const response = await api.get('/payments/history', {
+    params
+  });
+  return response.data?.data || [];
+};

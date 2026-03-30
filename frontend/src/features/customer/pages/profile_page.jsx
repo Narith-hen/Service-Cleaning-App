@@ -182,7 +182,7 @@ const ProfilePage = () => {
         </button>
       </div>
 
-      <div className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-md" data-customer-reveal data-customer-panel style={{ '--customer-reveal-delay': 1 }}>
+      <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md" data-customer-reveal data-customer-panel style={{ '--customer-reveal-delay': 1 }}>
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
           <aside className="border-b border-slate-200 p-6 lg:border-b-0 lg:border-r" data-customer-reveal style={{ '--customer-reveal-delay': 1 }}>
             <div className="mx-auto relative w-fit">
@@ -226,31 +226,31 @@ const ProfilePage = () => {
             </div>
           </aside>
 
-          <main data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
-            <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-4xl font-semibold text-slate-900">
+          <main className="min-w-0" data-customer-reveal style={{ '--customer-reveal-delay': 2 }}>
+            <div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
                   {[
                     isEditing ? draft.first_name : profile.first_name,
                     isEditing ? draft.last_name : profile.last_name,
                   ].filter(Boolean).join(' ') || profile.name || 'Customer'}
                 </h1>
-                <p className="mt-1 text-lg text-slate-500">Member since {profile.joinDate}</p>
+                <p className="mt-1 text-base text-slate-500 sm:text-lg">Member since {profile.joinDate}</p>
               </div>
 
               {!isEditing ? (
                 <button
                   onClick={startEditing}
-                  className="inline-flex items-center gap-2 rounded bg-[#008000] px-5 py-2.5 font-semibold text-white hover:bg-[#006d00] " style={{borderRadius: '24px'}}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded bg-[#008000] px-5 py-2.5 font-semibold text-white hover:bg-[#006d00] sm:w-auto" style={{borderRadius: '24px'}}
                   data-customer-button
                 >
                   <EditOutlined /> EDIT
                 </button>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     onClick={cancelEdit}
-                    className="inline-flex items-center gap-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                    className="inline-flex items-center justify-center gap-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
                     data-customer-button
                   >
                     <CloseOutlined /> Cancel
@@ -258,7 +258,7 @@ const ProfilePage = () => {
                   <button
                     onClick={saveChanges}
                     disabled={saving}
-                    className="inline-flex items-center gap-2 rounded bg-[#008000] px-4 py-2 font-medium text-white hover:bg-[#006d00] disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded bg-[#008000] px-4 py-2 font-medium text-white hover:bg-[#006d00] disabled:opacity-60"
                     data-customer-button
                   >
                     <SaveOutlined /> {saving ? 'Saving...' : 'Save'}
@@ -267,19 +267,19 @@ const ProfilePage = () => {
               )}
             </div>
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-5 p-5 sm:space-y-6 sm:p-6">
               {detailRows.map((row) => (
-                <div key={row.key} className="grid grid-cols-[210px_1fr] items-center gap-6 text-lg">
-                  <span className="justify-self-start text-left text-slate-500">{row.label}</span>
+                <div key={row.key} className="grid grid-cols-1 gap-2 border-b border-slate-100 pb-4 text-base last:border-b-0 last:pb-0 sm:grid-cols-[170px_1fr] sm:items-center sm:gap-4 sm:text-lg lg:grid-cols-[210px_1fr] lg:gap-6">
+                  <span className="justify-self-start text-left font-medium text-slate-500">{row.label}</span>
                   {isEditing && row.editable ? (
                     <input
                       type={row.type || 'text'}
                       value={draft[row.key] || ''}
                       onChange={(e) => setDraft((p) => ({ ...p, [row.key]: e.target.value }))}
-                      className="w-full rounded border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-cyan-500"
+                      className="min-w-0 w-full rounded border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-cyan-500"
                     />
                   ) : (
-                    <strong className="justify-self-start text-left font-semibold text-slate-900">
+                    <strong className="min-w-0 justify-self-start text-left font-semibold text-slate-900 break-words sm:break-normal">
                       {profile[row.key] || '-'}
                     </strong>
                   )}

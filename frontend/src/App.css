@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap');
 @import './styles/fonts.css';
 
+html,
+body,
 #root {
   margin: 0 auto;
   text-align: center;
@@ -8,6 +10,23 @@
   font-family: 'Noto Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   width: 100%;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
 }
 
 .logo {
@@ -81,19 +100,11 @@ h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, label {
   html {
     font-size: 15px;
   }
-
-  #root {
-    zoom: 0.97;
-  }
 }
 
 @media (max-width: 1180px) and (min-width: 769px) {
   html {
     font-size: 14px;
-  }
-
-  #root {
-    zoom: 0.93;
   }
 }
 

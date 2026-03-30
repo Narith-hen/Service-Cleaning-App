@@ -510,3 +510,53 @@
     min-width: 0;
   }
 }
+
+@media (max-width: 1024px) {
+  .admin-reports-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-report-range-select,
+  .admin-report-range-select .ant-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .reports-panel-head,
+  .revenue-service-topline {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-reports-page {
+    gap: 16px;
+  }
+
+  .admin-reports-header {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .admin-reports-page .admin-page-title {
+    font-size: 28px;
+  }
+
+  .admin-reports-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-reports-kpi-card,
+  .reports-panel {
+    padding: 16px;
+  }
+
+  .reports-panel-head {
+    flex-direction: column;
+  }
+
+  .reports-table {
+    min-width: 640px;
+  }
+}

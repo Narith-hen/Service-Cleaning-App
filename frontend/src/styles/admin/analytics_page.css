@@ -415,3 +415,61 @@
     padding: 16px;
   }
 }
+
+@media (max-width: 1024px) {
+  .admin-analytics-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-analytics-range-select,
+  .admin-analytics-range-select .ant-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .analytics-panel-head,
+  .analytics-status-topline {
+    flex-wrap: wrap;
+  }
+
+  .analytics-chart-shell {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-analytics-page {
+    gap: 14px;
+  }
+
+  .admin-analytics-header {
+    padding: 18px;
+  }
+
+  .admin-analytics-page .admin-page-title {
+    font-size: 28px;
+  }
+
+  .admin-analytics-kpi-card,
+  .analytics-panel {
+    padding: 16px;
+  }
+
+  .analytics-panel-head {
+    flex-direction: column;
+  }
+
+  .analytics-cleaner-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .analytics-cleaner-stats {
+    gap: 10px 12px;
+  }
+
+  .analytics-table {
+    min-width: 560px;
+  }
+}

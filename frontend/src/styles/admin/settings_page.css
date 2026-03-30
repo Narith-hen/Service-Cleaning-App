@@ -603,3 +603,49 @@
     flex-direction: column;
   }
 }
+
+@media (max-width: 1024px) {
+  .settings-panel-head,
+  .settings-toggle-card {
+    flex-wrap: wrap;
+  }
+
+  .settings-toggle-card p {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-settings-hero,
+  .settings-panel,
+  .admin-settings-summary-card {
+    padding: 16px;
+  }
+
+  .settings-panel-actions {
+    flex-direction: column;
+  }
+
+  .settings-primary-button,
+  .settings-secondary-button,
+  .settings-cancel-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-settings-hero {
+    gap: 14px;
+  }
+
+  .settings-hero-note {
+    flex-direction: column;
+  }
+
+  .settings-avatar-button {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+  }
+}

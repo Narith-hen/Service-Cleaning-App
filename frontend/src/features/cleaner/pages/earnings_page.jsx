@@ -12,11 +12,11 @@ import { Select, DatePicker, Button } from 'antd';
 import '../../../styles/cleaner/earnings.scss';
 import {
   cleanerEarningsSummary,
-  cleanerTransactions,
   formatMoney,
   parseMoneyAmount
 } from '../data/earnings_data';
-import { fetchCleanerEarnings, fetchCleanerEarningsSummary } from '../services/earningsService';
+import { fetchCleanerEarnings, fetchCleanerEarningsSummary, fetchCleanerPaymentHistory } from '../services/earningsService';
+import summaryImage from '../../../assets/image.png';
 
 const MIN_CHART_BAR_HEIGHT = 18;
 const DAY_VIEW_HIGHLIGHT_BUCKET = 16;
@@ -171,6 +171,28 @@ const getActiveChartBucket = (view) => {
   return null;
 };
 
+const mapPaymentRowToTransaction = (row, index) => {
+  const normalizedStatus = String(row?.payment_status || 'pending').trim().toLowerCase();
+  const isCompleted = normalizedStatus === 'completed' || normalizedStatus === 'paid';
+  const amountValue = Number(row?.amount || row?.negotiated_price || row?.total_price || 0);
+  const bookingDate = row?.booking_date || row?.booking_created_at || '';
+
+  return {
+    id: String(row?.payment_id || row?.booking_id || `payment-${index + 1}`),
+    date: bookingDate ? dayjs(bookingDate).format('YYYY-MM-DD') : '',
+    status: normalizedStatus.replace(/_/g, ' ').toUpperCase(),
+    statusType: isCompleted ? 'completed' : 'pending',
+    transactionId: row?.payment_id ? `#TRN-${String(row.payment_id).padStart(4, '0')}` : `#BOOK-${String(row?.booking_id || index + 1)}`,
+    title: row?.service_name || 'Cleaning Service',
+    subtitle: isCompleted ? 'Payment received successfully.' : 'Payment is still processing.',
+    amount: `+$${amountValue.toFixed(2)}`,
+    amountType: isCompleted ? 'positive' : 'default',
+    image: summaryImage,
+    payoutMethod: row?.payment_method ? String(row.payment_method).replace(/_/g, ' ') : 'Not available',
+    serviceAddress: row?.address || 'Address unavailable'
+  };
+};
+
 const EarningsPage = () => {
   const [earningsView, setEarningsView] = useState('month');
   const [sortBy, setSortBy] = useState('most_recent');
@@ -186,6 +208,7 @@ const EarningsPage = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [selectedEarningsTotal, setSelectedEarningsTotal] = useState(cleanerEarningsSummary.total);
   const [earningsSeries, setEarningsSeries] = useState(() => getChartMeta('month').series);
+  const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -224,6 +247,28 @@ const EarningsPage = () => {
     };
   }, [earningsView]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTransactions = async () => {
+      try {
+        const rows = await fetchCleanerPaymentHistory();
+        if (!isMounted) return;
+        setTransactions(Array.isArray(rows) ? rows.map(mapPaymentRowToTransaction) : []);
+      } catch (error) {
+        console.error('Failed to fetch cleaner payment history:', error);
+        if (!isMounted) return;
+        setTransactions([]);
+      }
+    };
+
+    loadTransactions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const chartMeta = useMemo(() => getChartMeta(earningsView), [earningsView]);
 
   const chartBarItems = useMemo(() => {
@@ -260,7 +305,7 @@ const EarningsPage = () => {
   };
 
   const filteredTransactions = useMemo(() => {
-    const filtered = cleanerTransactions.filter((item) => {
+    const filtered = transactions.filter((item) => {
       const statusMatch =
         appliedFilters.paymentStatus === 'all' ||
         item.status.toLowerCase() === appliedFilters.paymentStatus;
@@ -284,7 +329,7 @@ const EarningsPage = () => {
 
       return new Date(b.date) - new Date(a.date);
     });
-  }, [appliedFilters]);
+  }, [appliedFilters, transactions]);
 
   return (
     <div className="cleaner-earnings-page">
@@ -397,7 +442,7 @@ const EarningsPage = () => {
             ))
           ) : (
             <div className="transactions-empty">
-              <p>No transactions found matching your filters.</p>
+              <p>Don't have transaction history yet.</p>
             </div>
           )}
         </div>

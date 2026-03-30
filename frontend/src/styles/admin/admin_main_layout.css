@@ -1,13 +1,14 @@
 /* Main layout container */
 .admin-layout {
   display: flex;
-  width: 100vw;
-  min-width: 1180px;
-  height: 100vh;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   margin: 0;
   padding: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   background: #f8fafc;
 }
 
@@ -19,13 +20,14 @@
 /* Right side - contains header and content */
 .admin-right {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   margin-left: 280px;
-  /* Same as sidebar width */
-  width: calc(100% - 280px);
+  width: auto;
   position: relative;
 }
 
@@ -55,6 +57,7 @@
   font-family: Arial, sans-serif;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  min-width: 0;
 }
 
 .admin-content::-webkit-scrollbar {
@@ -96,6 +99,7 @@
 .admin-sidebar {
   width: 280px;
   height: 100vh;
+  max-width: 100%;
   position: fixed;
   left: 0;
   top: 0;
@@ -134,8 +138,12 @@
 }
 
 @media (max-width: 1280px) {
-  .admin-layout {
-    min-width: 1120px;
+  .admin-right {
+    margin-left: 260px;
+  }
+
+  .admin-sidebar {
+    width: 260px;
   }
 
   .admin-header {
@@ -160,11 +168,12 @@
   }
 }
 
-/* Responsive: mobile, tablet, laptop-L */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .compact-layout .admin-sidebar {
     transform: translateX(-100%);
     transition: transform 0.25s ease;
+    width: min(82vw, 280px);
+    max-width: 320px;
   }
 
   .compact-layout .admin-sidebar.open {
@@ -176,16 +185,47 @@
     margin-left: 0;
     width: 100%;
   }
-}
 
-@media (max-width: 768px) {
-  .admin-sidebar {
-    width: 260px;
+  .compact-layout .admin-header {
+    padding-left: 64px;
+  }
+
+  .compact-layout .admin-content {
+    padding: 20px 16px 24px;
+  }
+
+  .compact-layout .admin-content .admin-page-title {
+    font-size: 26px;
   }
 
   .layout-sidebar-toggle {
     top: 14px;
     left: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-sidebar-toggle {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .admin-header {
+    height: 64px;
+    padding: 0 14px;
+  }
+
+  .admin-content {
+    padding: 16px 14px 22px;
+  }
+
+  .admin-content .admin-page-title {
+    font-size: 24px;
+  }
+
+  .admin-content .admin-page-subtitle {
+    font-size: 13px;
   }
 }
 
@@ -303,6 +343,13 @@ body.dark-mode .ant-modal .ant-btn-default {
 
   .admin-footer {
     height: 60px;
-    /* Slightly taller for mobile */
+  }
+
+  .compact-layout .admin-header {
+    padding-left: 58px;
+  }
+
+  .compact-layout .admin-sidebar {
+    width: min(88vw, 280px);
   }
 }

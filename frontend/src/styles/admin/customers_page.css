@@ -788,3 +788,52 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .customers-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customers-filter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .customers-search-box {
+    grid-column: 1 / -1;
+  }
+
+  .customers-table {
+    min-width: 840px;
+  }
+}
+
+@media (max-width: 768px) {
+  .customers-header h1 {
+    font-size: 30px;
+  }
+
+  .customers-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .customers-table {
+    min-width: 720px;
+  }
+
+  .customer-view-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 576px) {
+  .customers-table {
+    min-width: 680px;
+  }
+
+  .customers-table th,
+  .customers-table td {
+    padding: 10px 8px;
+  }
+}
+

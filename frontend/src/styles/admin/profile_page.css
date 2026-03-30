@@ -141,3 +141,29 @@
     font-size: 13px;
   }
 }
+
+@media (max-width: 768px) {
+  .admin-profile-page {
+    padding: 16px;
+  }
+
+  .admin-profile-card {
+    padding: 18px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  .admin-profile-card {
+    flex-direction: column;
+  }
+
+  .admin-profile-avatar {
+    width: 70px;
+    height: 70px;
+  }
+
+  .admin-profile-avatar-fallback {
+    font-size: 22px;
+  }
+}

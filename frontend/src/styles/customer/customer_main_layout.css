@@ -428,6 +428,25 @@
   }
 }
 
+@media (max-width: 992px) {
+  .customer-motion-scope .main-contents {
+    overflow-x: clip;
+  }
+}
+
+@media (max-width: 576px) {
+  .customer-simple-page {
+    padding: 20px 14px 32px;
+  }
+
+  .customer-simple-card,
+  .customer-danger-card,
+  .customer-qr-box {
+    padding: 18px;
+    border-radius: 18px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .customer-motion-scope .main-contents *,
   .customer-motion-scope .main-contents *::before,

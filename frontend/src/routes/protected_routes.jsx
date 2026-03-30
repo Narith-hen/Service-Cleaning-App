@@ -1,51 +1,54 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+
+const getDashboardPath = (role) => {
+  switch (String(role || '').toLowerCase()) {
+    case 'customer':
+      return '/customer/dashboard';
+    case 'cleaner':
+      return '/cleaner/dashboard';
+    case 'admin':
+      return '/admin/dashboard';
+    default:
+      return '/';
+  }
+};
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  let user = null;
-  try {
-    user = JSON.parse(localStorage.getItem('user') || 'null');
-  } catch {
-    user = null;
+  const location = useLocation();
+  const { user, isAuthenticated, loading } = useAuth();
+  const userRole = String(user?.role || '').toLowerCase();
+
+  if (loading) {
+    return null;
   }
 
-  const isAuthenticated = !!user;
-  const userRole = String(user?.role || '').toLowerCase();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/auth/login" state={{ from: window.location.pathname }} replace />;
+  if (!isAuthenticated || !userRole) {
+    return (
+      <Navigate
+        to="/auth/login"
+        state={{ from: `${location.pathname}${location.search}${location.hash}` }}
+        replace
+      />
+    );
   }
-  
+
   if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
-    if (userRole === 'customer') return <Navigate to="/customer/dashboard" replace />;
-    if (userRole === 'cleaner') return <Navigate to="/cleaner/dashboard" replace />;
-    if (userRole === 'admin') return <Navigate to="/admin/dashboard" replace />;
-    return <Navigate to="/" replace />;
+    return <Navigate to={getDashboardPath(userRole)} replace />;
   }
-  
+
   return children;
 };
 
 export const RoleBasedRedirect = () => {
-  let user = null;
-  try {
-    user = JSON.parse(localStorage.getItem('user') || 'null');
-  } catch {
-    user = null;
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
   }
 
-  const userRole = String(user?.role || '').toLowerCase();
-  
-  switch(userRole) {
-    case 'customer':
-      return <Navigate to="/customer/dashboard" replace />;
-    case 'cleaner':
-      return <Navigate to="/cleaner/dashboard" replace />;
-    case 'admin':
-      return <Navigate to="/admin/dashboard" replace />;
-    default:
-      return <Navigate to="/" replace />;
-  }
+  return <Navigate to={getDashboardPath(user?.role)} replace />;
 };
 
 export default ProtectedRoute;

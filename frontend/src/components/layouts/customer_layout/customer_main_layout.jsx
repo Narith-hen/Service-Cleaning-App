@@ -31,6 +31,14 @@ const MainLayout = () => {
     typeof window === 'undefined' ? TARGET_SCREEN_BREAKPOINT : window.innerWidth
   );
   const drawerWidth = viewportWidth < 576 ? '100%' : viewportWidth <= TARGET_SCREEN_BREAKPOINT ? 380 : 420;
+  const resolvedDrawerWidth = viewportWidth < 576
+    ? '100%'
+    : viewportWidth < 768
+      ? 'min(94vw, 360px)'
+      : viewportWidth <= TARGET_SCREEN_BREAKPOINT
+        ? 'min(86vw, 390px)'
+        : drawerWidth;
+  const headerOffset = isCustomerDashboard ? 0 : viewportWidth < 576 ? 74 : viewportWidth < 992 ? 82 : 90;
   const motionReady = useCustomerPageMotion(mainContentRef, isCustomerArea, [location.pathname]);
 
   React.useEffect(() => {
@@ -130,7 +138,7 @@ const MainLayout = () => {
         flex: 1,
         background: darkMode ? '#0b1220' : 'white',
         minHeight: 'calc(100vh - 140px)',
-        paddingTop: isCustomerDashboard ? 0 : 90
+        paddingTop: headerOffset
       }}
       >
         <Outlet context={{ darkMode }} />
@@ -145,7 +153,7 @@ const MainLayout = () => {
         styles={{
           body: { padding: 0 },
           header: { display: 'none' },
-          section: { width: drawerWidth },
+          section: { width: resolvedDrawerWidth, maxWidth: '100vw' },
           mask: {
             backdropFilter: 'blur(4px)',
             backgroundColor: 'rgba(0, 0, 0, 0.25)'

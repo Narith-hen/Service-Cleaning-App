@@ -215,3 +215,37 @@
     justify-content: center;
   }
 }
+
+@media (max-width: 1024px) {
+  .cleaner-sidebar {
+    width: min(82vw, 280px);
+    padding: 20px 0;
+  }
+
+  .sidebar-logo {
+    margin-bottom: 22px;
+    padding: 0 16px;
+  }
+
+  .sidebar-nav {
+    padding: 0 12px;
+  }
+
+  .nav-item,
+  .logout-btn {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cleaner-sidebar {
+    width: min(88vw, 280px);
+  }
+}

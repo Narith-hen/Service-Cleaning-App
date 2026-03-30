@@ -274,11 +274,34 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    width: min(82vw, 280px);
+  }
+
+  .sidebar-logo {
+    margin-bottom: 18px;
+  }
+
+  .sidebar-nav {
+    padding: 0 12px;
+  }
+
+  .nav-item,
+  .logout-btn {
+    padding: 10px 14px;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar-close-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .admin-sidebar {
+    width: min(88vw, 280px);
   }
 }
 

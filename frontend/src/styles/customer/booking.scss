@@ -76,6 +76,11 @@
   color: #768095;
 }
 
+.summary-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .uploaded-images-display {
   margin-top: 16px;
   padding-top: 16px;
@@ -643,6 +648,12 @@ textarea::placeholder {
   color: #111827;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .time-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -706,6 +717,28 @@ textarea::placeholder {
   background: #16a34a;
 }
 
+@media (max-width: 1024px) {
+  .booking-request-card {
+    padding: 28px;
+  }
+
+  .booking-service-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summary-thumb {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 220px;
+  }
+
+  .map-shell {
+    height: 360px;
+  }
+}
+
 @media (max-width: 720px) {
   .booking-request-card {
     padding: 24px;
@@ -726,6 +759,10 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
   .booking-actions {
     flex-direction: column;
   }
@@ -742,11 +779,24 @@ textarea::placeholder {
     padding: 28px 12px 48px;
   }
 
-  .booking-request-header h1 {
-    font-size: 17px;
+  .booking-request-card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .section-heading {
+    margin-bottom: 18px;
+  }
+
+  .section-heading h3 {
+    font-size: 18px;
   }
 
   .summary-thumb {
     height: 160px;
+  }
+
+  .map-shell {
+    height: 300px;
   }
 }

@@ -703,3 +703,55 @@
     align-items: flex-start;
   }
 }
+
+@media (max-width: 1024px) {
+  .summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-reviews-filter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .reviews-search-field {
+    grid-column: 1 / -1;
+  }
+
+  .reviews-table {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel-head {
+    flex-direction: column;
+  }
+
+  .admin-reviews-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .reviews-filter-select.reviews-filter-rating,
+  .reviews-filter-select.reviews-filter-sort {
+    width: 100%;
+  }
+
+  .reviews-table {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 576px) {
+  .summary-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .reviews-table {
+    min-width: 700px;
+  }
+
+  .reviews-table th,
+  .reviews-table td {
+    padding: 10px 8px;
+  }
+}

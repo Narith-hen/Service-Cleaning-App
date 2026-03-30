@@ -884,9 +884,9 @@ const BookingPage = () => {
     ) || summaryImage;
 
   useEffect(() => {
-    if (!stateService) return;
-    if (!(stateService?.title || stateService?.description || stateService?.image)) return;
     try {
+      if (!stateService) return;
+      if (!(stateService?.title || stateService?.description || stateService?.image)) return;
       localStorage.setItem('selectedService', JSON.stringify(stateService));
     } catch (error) {
       // Ignore storage failures (private mode, quotas).
@@ -909,7 +909,6 @@ const BookingPage = () => {
         }));
         setServices(mapped);
 
-        // Try to keep current selection; otherwise default to first.
         const incoming =
           selectedService?.service_id ||
           selectedService?.id ||
