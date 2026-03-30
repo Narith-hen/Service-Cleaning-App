@@ -8,12 +8,15 @@ import {
   PictureOutlined,
   LeftOutlined,
   RightOutlined,
-  CloseOutlined
+  CloseOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import '../../../styles/cleaner/job_execution.scss';
+import '../../../styles/cleaner/my_jobs.scss';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import api from '../../../services/api';
 import { getCleanerScopedStorageKey } from '../utils/storageKeys';
+import CleanerMessagePanel from '../components/cleaner_message_panel';
 
 const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 
@@ -64,6 +67,7 @@ const requestFinalPaymentOnServer = async (job) => {
 const normalizeConfirmedJob = (job) => ({
   id: job.id || job.sourceRequestId || 'default-1',
   sourceRequestId: job.sourceRequestId || job.id || 'default-1',
+  bookingId: job.bookingId || job.sourceRequestId || job.id || '',
   status: job.status || 'in-progress',
   title: job.title || fallbackJob.title,
   jobId: job.jobId || fallbackJob.jobId,
@@ -71,8 +75,23 @@ const normalizeConfirmedJob = (job) => ({
   timeRange: job.timeRange || fallbackJob.timeRange,
   location: job.location || fallbackJob.location,
   customer: job.customer || fallbackJob.customer,
+  customerId: job.customerId || '',
+  customerPhone: job.customerPhone || '',
+  customerEmail: job.customerEmail || '',
+  customerAvatar: job.customerAvatar || '',
+  bookingDateRaw: job.bookingDateRaw || '',
+  createdAtRaw: job.createdAtRaw || '',
+  updatedAtRaw: job.updatedAtRaw || '',
+  completedAtRaw: job.completedAtRaw || '',
   serviceStatus: job.serviceStatus || 'started'
 });
+
+const formatElapsedValue = (value) => String(Math.max(0, value)).padStart(2, '0');
+const parseTimestampValue = (value) => {
+  if (!value) return null;
+  const parsedValue = new Date(value).getTime();
+  return Number.isNaN(parsedValue) ? null : parsedValue;
+};
 
 const JobExecutionPage = () => {
   const navigate = useNavigate();
@@ -105,13 +124,34 @@ const JobExecutionPage = () => {
     || currentJob.status === 'payment-required'
     || currentJob.serviceStatus === 'completed'
   );
+  const [bookingDetails, setBookingDetails] = useState(null);
   const [customerImages, setCustomerImages] = useState([]);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [elapsedStoppedAtMs, setElapsedStoppedAtMs] = useState(
+    () => parseTimestampValue(currentJob.completedAtRaw)
+  );
   const priceValue = Number(String(currentJob.price || '$0').replace(/[^0-9.]/g, '')) || 0;
   const totalEarning = priceValue;
   const bookingId = getBookingIdFromJob(currentJob);
   const activeImage = activeImageIndex != null ? customerImages[activeImageIndex] || null : null;
+  const jobStartedAt =
+    currentJob.updatedAtRaw
+    || currentJob.createdAtRaw
+    || bookingDetails?.updated_at
+    || bookingDetails?.created_at
+    || null;
+  const elapsedHours = Math.floor(elapsedSeconds / 3600);
+  const elapsedMinutes = Math.floor((elapsedSeconds % 3600) / 60);
+  const elapsedDisplaySeconds = elapsedSeconds % 60;
+  const customerName = bookingDetails?.customer_full_name || bookingDetails?.customer_name || currentJob.customer;
+  const customerId = String(bookingDetails?.user_id || currentJob.customerId || '');
+  const customerPhone = bookingDetails?.customer_phone || currentJob.customerPhone || '';
+  const customerEmail = bookingDetails?.customer_email || currentJob.customerEmail || '';
+  const customerAvatar = toAbsoluteImageUrl(
+    bookingDetails?.customer_avatar || currentJob.customerAvatar || ''
+  );
 
   useEffect(() => {
     setIsFinishingJob(false);
@@ -120,13 +160,15 @@ const JobExecutionPage = () => {
       || currentJob.status === 'payment-required'
       || currentJob.serviceStatus === 'completed'
     );
-  }, [currentJob.id, currentJob.sourceRequestId, currentJob.status, currentJob.serviceStatus]);
+    setElapsedStoppedAtMs(parseTimestampValue(currentJob.completedAtRaw));
+  }, [currentJob.id, currentJob.sourceRequestId, currentJob.status, currentJob.serviceStatus, currentJob.completedAtRaw]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadBookingImages = async () => {
       if (!bookingId) {
+        setBookingDetails(null);
         setCustomerImages([]);
         return;
       }
@@ -136,7 +178,9 @@ const JobExecutionPage = () => {
         const response = await api.get(`/bookings/${bookingId}`);
         if (cancelled) return;
 
-        const images = Array.isArray(response?.data?.data?.images) ? response.data.data.images : [];
+        const bookingData = response?.data?.data || null;
+        const images = Array.isArray(bookingData?.images) ? bookingData.images : [];
+        setBookingDetails(bookingData);
         setCustomerImages(
           images
             .map((image, index) => ({
@@ -148,6 +192,7 @@ const JobExecutionPage = () => {
         );
       } catch {
         if (!cancelled) {
+          setBookingDetails(null);
           setCustomerImages([]);
         }
       } finally {
@@ -178,6 +223,11 @@ const JobExecutionPage = () => {
       return undefined;
     }
 
+    if (elapsedStoppedAtMs) {
+      setElapsedSeconds(Math.max(0, Math.floor((elapsedStoppedAtMs - parsedStartedAt) / 1000)));
+      return undefined;
+    }
+
     const updateElapsed = () => {
       setElapsedSeconds(Math.max(0, Math.floor((Date.now() - parsedStartedAt) / 1000)));
     };
@@ -188,16 +238,20 @@ const JobExecutionPage = () => {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [jobStartedAt]);
+  }, [jobStartedAt, elapsedStoppedAtMs]);
 
   const handleFinishJob = async () => {
     if (isFinishingJob || isJobCompleted) return;
 
+    const completedAtRaw = new Date().toISOString();
+
+    setElapsedStoppedAtMs(parseTimestampValue(completedAtRaw));
     setIsFinishingJob(true);
     setFinishStatus('Sending final payment request...');
     try {
       const ok = await requestFinalPaymentOnServer(currentJob);
       if (!ok) {
+        setElapsedStoppedAtMs(null);
         setFinishStatus('Could not send final payment request. Please try again.');
         setIsFinishingJob(false);
         return;
@@ -207,6 +261,7 @@ const JobExecutionPage = () => {
       if (!raw) {
         setIsJobCompleted(true);
         setFinishStatus('Final payment requested. Waiting for customer receipt.');
+        setIsFinishingJob(false);
         return;
       }
 
@@ -214,12 +269,19 @@ const JobExecutionPage = () => {
       if (!Array.isArray(parsed)) {
         setIsJobCompleted(true);
         setFinishStatus('Final payment requested. Waiting for customer receipt.');
+        setIsFinishingJob(false);
         return;
       }
 
       const updated = parsed.map((job) =>
         (job.id === currentJob.id || job.sourceRequestId === currentJob.sourceRequestId)
-          ? { ...job, status: 'payment-required', serviceStatus: 'completed', paymentStatus: 'awaiting_receipt' }
+          ? {
+            ...job,
+            status: 'payment-required',
+            serviceStatus: 'completed',
+            paymentStatus: 'awaiting_receipt',
+            completedAtRaw
+          }
           : job
       );
       localStorage.setItem(confirmedMyJobsStorageKey, JSON.stringify(updated));
@@ -227,6 +289,7 @@ const JobExecutionPage = () => {
       setIsJobCompleted(true);
       setFinishStatus('Final payment requested. Waiting for customer receipt.');
     } catch {
+      setElapsedStoppedAtMs(null);
       setFinishStatus('Could not send final payment request. Please try again.');
       setIsFinishingJob(false);
       return;
@@ -288,9 +351,9 @@ const JobExecutionPage = () => {
         <div className="elapsed-box">
           <small>ELAPSED</small>
           <div className="elapsed-grid">
-            <div><strong>01</strong><span>HR</span></div>
-            <div><strong>24</strong><span>MIN</span></div>
-            <div><strong>45</strong><span>SEC</span></div>
+            <div><strong>{formatElapsedValue(elapsedHours)}</strong><span>HR</span></div>
+            <div><strong>{formatElapsedValue(elapsedMinutes)}</strong><span>MIN</span></div>
+            <div><strong>{formatElapsedValue(elapsedDisplaySeconds)}</strong><span>SEC</span></div>
           </div>
         </div>
 
@@ -322,41 +385,43 @@ const JobExecutionPage = () => {
       </section>
 
       <div className="execution-main-grid">
-        <section className="execution-checklist-panel">
-          <div className="panel-head">
-            <h2>Customer Uploaded Images</h2>
-            <span>{customerImages.length} Photo{customerImages.length === 1 ? '' : 's'}</span>
-          </div>
+        <div className="execution-main-column">
+          <section className="execution-checklist-panel">
+            <div className="panel-head">
+              <h2>Customer Uploaded Images</h2>
+              <span>{customerImages.length} Photo{customerImages.length === 1 ? '' : 's'}</span>
+            </div>
 
-          {imagesLoading ? (
-            <div className="booking-images-empty">
-              <PictureOutlined />
-              <p>Loading customer photos...</p>
-            </div>
-          ) : customerImages.length ? (
-            <div className="booking-images-grid">
-              {customerImages.map((image, index) => (
-                <button
-                  key={image.id}
-                  type="button"
-                  className="booking-image-card"
-                  onClick={() => openImageModal(index)}
-                >
-                  <img
-                    src={image.url}
-                    alt={`Customer upload ${index + 1}`}
-                    className="booking-image-preview"
-                  />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="booking-images-empty">
-              <PictureOutlined />
-              <p>No customer images were uploaded for this booking.</p>
-            </div>
-          )}
-        </section>
+            {imagesLoading ? (
+              <div className="booking-images-empty">
+                <PictureOutlined />
+                <p>Loading customer photos...</p>
+              </div>
+            ) : customerImages.length ? (
+              <div className="booking-images-grid">
+                {customerImages.map((image, index) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    className="booking-image-card"
+                    onClick={() => openImageModal(index)}
+                  >
+                    <img
+                      src={image.url}
+                      alt={`Customer upload ${index + 1}`}
+                      className="booking-image-preview"
+                    />
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="booking-images-empty">
+                <PictureOutlined />
+                <p>No customer images were uploaded for this booking.</p>
+              </div>
+            )}
+          </section>
+        </div>
 
         <aside className="execution-side-column">
           <section className="job-summary-panel">

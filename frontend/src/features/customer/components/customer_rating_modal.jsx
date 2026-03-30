@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircleOutlined, CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined } from '@ant-design/icons';
 import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
 import api from '../../../services/api';
 import '../../../styles/customer/payment_method.scss';
@@ -187,12 +187,12 @@ const CustomerRatingModal = ({
 
   return (
     <div
-      className="payment-success-modal-backdrop"
+      className="payment-rating-overlay"
       role="presentation"
       onClick={() => typeof onClose === 'function' && onClose()}
     >
       <section
-        className="payment-success-modal"
+        className="payment-rating-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="payment-success-title"
@@ -230,12 +230,12 @@ const CustomerRatingModal = ({
 
         {!reviewBooking?.reviewId ? (
           <>
-            <div className="payment-success-stars" role="radiogroup" aria-label="Rate your cleaner">
+            <div className="payment-rating-stars" role="radiogroup" aria-label="Rate your cleaner">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
                   key={value}
                   type="button"
-                  className={`payment-star-button${value <= rating ? ' is-active' : ''}`}
+                  className={`payment-rating-star${value <= rating ? ' is-active' : ''}`}
                   onClick={() => handleStarSelect(value)}
                   aria-label={`${value} star${value > 1 ? 's' : ''}`}
                 >
@@ -245,7 +245,7 @@ const CustomerRatingModal = ({
             </div>
 
             {reviewFeedback && (
-              <p className={`payment-review-feedback is-${reviewFeedback.type}`}>
+              <p className={`payment-rating-feedback ${reviewFeedback.type}`}>
                 {reviewFeedback.message}
               </p>
             )}
@@ -258,17 +258,17 @@ const CustomerRatingModal = ({
               maxLength={500}
             />
 
-            <div className="payment-success-actions">
+            <div className="payment-rating-actions">
               <button
                 type="button"
-                className="payment-review-skip"
+                className="payment-rating-secondary"
                 onClick={() => typeof onClose === 'function' && onClose()}
               >
                 Maybe later
               </button>
               <button
                 type="button"
-                className="payment-review-submit"
+                className="payment-rating-primary"
                 onClick={handleSubmitReview}
                 disabled={submittingReview}
               >
@@ -278,13 +278,13 @@ const CustomerRatingModal = ({
           </>
         ) : (
           <>
-            <p className="payment-review-feedback is-success">
+            <p className="payment-rating-feedback success">
               You already rated this cleaner. Thank you for your feedback.
             </p>
-            <div className="payment-success-actions">
+            <div className="payment-rating-actions">
               <button
                 type="button"
-                className="payment-review-submit"
+                className="payment-rating-primary"
                 onClick={() => typeof onClose === 'function' && onClose()}
               >
                 Close

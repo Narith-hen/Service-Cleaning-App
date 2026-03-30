@@ -442,8 +442,10 @@ const getCleanerJobs = async (req, res, next) => {
     const promiseDb = db.promise();
     const identity = await resolveCleanerIdentity(promiseDb, req.user);
     const cleanerIds = identity.cleanerIds.length ? identity.cleanerIds : [toPositiveInt(req.user?.user_id)].filter(Boolean);
+    const bookingColumns = await getTableColumns(promiseDb, 'bookings');
     const userColumns = await getTableColumns(promiseDb, 'users');
     const customerNameExpr = buildUserNameExpression('u', userColumns, `CONCAT('Customer #', b.user_id)`);
+    const updatedAtSelect = bookingColumns.has('updated_at') ? 'b.updated_at' : 'NULL AS updated_at';
 
     if (!cleanerIds.length) {
       return res.status(200).json({
@@ -472,7 +474,7 @@ const getCleanerJobs = async (req, res, next) => {
           b.booking_time,
           b.booking_status,
           b.created_at,
-          b.updated_at,
+          ${updatedAtSelect},
           b.total_price,
           b.negotiated_price,
           b.payment_status,

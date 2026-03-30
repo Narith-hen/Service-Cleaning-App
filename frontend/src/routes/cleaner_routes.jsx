@@ -18,7 +18,6 @@ import CleanerProfilePage from '../features/cleaner/pages/profile_page';
 import HelpPage from '../features/cleaner/pages/help_page';
 import JobExecutionPage from '../features/cleaner/pages/job_execution_page';
 import CancelDuringWorkPage from '../features/cleaner/pages/Cancel-during-work';
-import PaymentMethodPage from '../features/customer/pages/payment_method_page';
 
 export const cleanerRoutes = {
   path: '/cleaner',
@@ -70,7 +69,7 @@ export const cleanerRoutes = {
     },
     {
       path: 'payment-methods',
-      element: <PaymentMethodPage />
+      element: <Navigate to="/cleaner/my-jobs" replace />
     },
     {
       path: 'messages',

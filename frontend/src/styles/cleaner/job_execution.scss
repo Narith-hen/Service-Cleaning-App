@@ -155,11 +155,48 @@
   gap: 12px;
 }
 
+.execution-main-column {
+  display: grid;
+  gap: 12px;
+}
+
 .execution-checklist-panel {
   border: 1px solid #dbe3ed;
   border-radius: 14px;
   background: #fff;
   padding: 14px;
+}
+
+.execution-chat-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.execution-chat-panel > .my-jobs-chat-panel {
+  min-height: 520px;
+}
+
+.execution-chat-empty {
+  border: 1px dashed #dbe3ed;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+}
+
+.execution-chat-empty .anticon {
+  margin-bottom: 10px;
+  font-size: 26px;
+  color: #94a3b8;
+}
+
+.execution-chat-empty p {
+  margin: 0;
+  font-size: 14px;
 }
 
 .panel-head {

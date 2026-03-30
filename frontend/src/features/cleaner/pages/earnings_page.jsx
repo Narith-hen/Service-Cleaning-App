@@ -493,12 +493,6 @@ const EarningsPage = () => {
       <div className="earnings-headline">
         <h1>Earnings Overview</h1>
         <p>Track your income and payment history. Completed jobs are added automatically, daily totals reset each new day, weekly totals roll across 7 days, and monthly totals roll across 4 weeks.</p>
-        <div className="earnings-live-meta">
-          <span>
-            Completed Jobs Counted: {earningsRollups?.collection_window?.start_label || '12:00 AM'} to {earningsRollups?.collection_window?.end_label || '11:59 PM'}
-          </span>
-          <span>Last Updated: {lastUpdatedLabel}</span>
-        </div>
       </div>
 
       <section className="earnings-stats-panel">

@@ -546,12 +546,6 @@ const MyJobsPage = () => {
     navigate('/cleaner/job-execution', { state: { jobId } });
   };
 
-  const handleOpenPaymentPage = (job) => {
-    const bookingId = getBookingIdFromJob(job);
-    if (!bookingId) return;
-    navigate(`/cleaner/payment-methods?bookingId=${encodeURIComponent(String(bookingId))}`);
-  };
-
   const handleViewReceipt = (job) => {
     const bookingId = getBookingIdFromJob(job);
     if (!bookingId) return;
@@ -805,19 +799,6 @@ const MyJobsPage = () => {
                 {actionState === 'completed' && (
                   <button type="button" className="completed-btn" disabled>
                     <CheckCircleOutlined /> Completed
-                  </button>
-                )}
-
-                {bookingId && isPaymentConfirmed && (
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleOpenPaymentPage(job);
-                    }}
-                  >
-                    <DollarOutlined /> Payment
                   </button>
                 )}
 

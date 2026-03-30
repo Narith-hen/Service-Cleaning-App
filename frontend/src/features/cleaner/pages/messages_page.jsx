@@ -12,6 +12,7 @@ import officeImage from '../../../assets/office.png';
 import api from '../../../services/api';
 import { useChatStore } from '../../../store/chatStore';
 import { formatTimeRangeLabel } from '../../../utils/timeFormat';
+import { formatDateParts } from '../../../utils/bookingSync';
 import {
   ensureRealtimeSocketConnected,
   getRealtimeSocket
@@ -96,6 +97,26 @@ const writeStoredMessageThreads = (threads) => {
   } catch {
     // Ignore storage failures for local chat cleanup.
   }
+};
+
+const formatThreadDateParts = (value) => {
+  if (!value) {
+    return { day: '??', monthYear: 'Date pending' };
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return { day: '??', monthYear: 'Date pending' };
+  }
+
+  const { day } = formatDateParts(parsedDate.toISOString());
+  return {
+    day,
+    monthYear: parsedDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    })
+  };
 };
 
 const getCanonicalThreadId = (job, index = 0) => {

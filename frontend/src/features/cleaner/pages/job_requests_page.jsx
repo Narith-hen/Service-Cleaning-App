@@ -43,6 +43,7 @@ const getSocket = () => {
 
 const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
 const getCleanerChatStorageKey = () => getCleanerScopedStorageKey('cleaner_message_threads_v1');
+const getCleanerChatThreadsStorageKey = () => getCleanerScopedStorageKey('cleaner_chat_threads_history');
 
 const formatSingleTimeLabel = (value) => {
   const text = String(value || '').trim();
@@ -177,6 +178,7 @@ const JobRequestsPage = () => {
     const confirmedJob = {
       id: `confirmed-${request.id}`,
       sourceRequestId: request.id,
+      bookingId: String(request.id),
       status: 'upcoming',
       title: request.serviceTone === 'deep' ? 'Deep House Cleaning' : request.service,
       jobId: `#SOMA-${request.id}`,
@@ -195,23 +197,63 @@ const JobRequestsPage = () => {
       floors: '2 Floors'
     };
 
+    const threadData = {
+      id: String(request.id),
+      sourceRequestId: String(request.id),
+      bookingId: String(request.id),
+      status: 'upcoming',
+      title: confirmedJob.title,
+      jobId: confirmedJob.jobId,
+      price: confirmedJob.price,
+      day: confirmedJob.day,
+      monthYear: confirmedJob.monthYear,
+      timeRange: confirmedJob.timeRange,
+      location: confirmedJob.location,
+      customer: confirmedJob.customer,
+      customerId: confirmedJob.customerId,
+      customerAvatar: confirmedJob.customerAvatar,
+      customerPhone: confirmedJob.customerPhone,
+      customerEmail: confirmedJob.customerEmail,
+      serviceImage: confirmedJob.serviceImage || '',
+      bedrooms: confirmedJob.bedrooms,
+      floors: confirmedJob.floors
+    };
+
     try {
       // Get existing jobs
       const existingRaw = localStorage.getItem(getConfirmedMyJobsStorageKey());
       const existingJobs = existingRaw ? JSON.parse(existingRaw) : [];
       
       // Add new job to the beginning
-      const updatedJobs = [confirmedJob, ...existingJobs];
+      const updatedJobs = [
+        confirmedJob,
+        ...existingJobs.filter((job) => String(job?.sourceRequestId || job?.id || '') !== String(request.id))
+      ];
       localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updatedJobs));
-      
-      // Also save to chat threads for history
+
+      // Save visible chat thread history used by /cleaner/messages
+      const threadHistoryRaw = localStorage.getItem(getCleanerChatThreadsStorageKey());
+      const existingThreadHistory = threadHistoryRaw ? JSON.parse(threadHistoryRaw) : [];
+      const nextThreadHistory = [
+        threadData,
+        ...((Array.isArray(existingThreadHistory) ? existingThreadHistory : []).filter(
+          (thread) => String(thread?.sourceRequestId || thread?.id || '') !== String(request.id)
+        ))
+      ];
+      localStorage.setItem(getCleanerChatThreadsStorageKey(), JSON.stringify(nextThreadHistory));
+
+      // Initialize per-thread message storage used by the chat hook
       const chatRaw = localStorage.getItem(getCleanerChatStorageKey());
       const existingThreads = chatRaw ? JSON.parse(chatRaw) : {};
-      existingThreads[request.id] = []; // Initialize empty messages for this thread
+      existingThreads[String(request.id)] = Array.isArray(existingThreads[String(request.id)])
+        ? existingThreads[String(request.id)]
+        : [];
       localStorage.setItem(getCleanerChatStorageKey(), JSON.stringify(existingThreads));
       dispatchCleanerNotificationsUpdated();
     } catch {
       localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify([confirmedJob]));
+      localStorage.setItem(getCleanerChatThreadsStorageKey(), JSON.stringify([threadData]));
+      localStorage.setItem(getCleanerChatStorageKey(), JSON.stringify({ [String(request.id)]: [] }));
       dispatchCleanerNotificationsUpdated();
     }
   };

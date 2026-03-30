@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   CalendarOutlined,
@@ -624,7 +625,7 @@ const CustomerHistoryPage = () => {
         </div>
       )}
 
-      {paymentModalBookingId && (
+      {paymentModalBookingId && createPortal(
         <div
           className="final-payment-modal-backdrop"
           onClick={() => setPaymentModalBookingId(null)}
@@ -645,7 +646,8 @@ const CustomerHistoryPage = () => {
               onReviewSubmitted={handleReviewSubmitted}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <CustomerRatingModal
