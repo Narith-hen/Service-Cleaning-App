@@ -413,6 +413,21 @@
   box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
 }
 
+.customer-history-receipt-btn {
+  gap: 8px;
+  border-radius: 24px;
+  border-color: #0f766e;
+  background: #f0fdfa;
+  color: #0f766e;
+  box-shadow: 0 10px 20px rgba(13, 148, 136, 0.12);
+}
+
+.customer-history-receipt-btn:hover {
+  background: #ccfbf1;
+  border-color: #0f766e;
+  color: #115e59;
+}
+
 .customer-history-empty {
   border: 1px dashed #dbe3ed;
   border-radius: 22px;

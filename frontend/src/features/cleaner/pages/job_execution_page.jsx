@@ -92,6 +92,7 @@ const JobExecutionPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedJobId = location.state?.jobId || null;
+  const confirmedMyJobsStorageKey = getConfirmedMyJobsStorageKey();
 
   const currentJob = useMemo(() => {
     try {
@@ -112,6 +113,12 @@ const JobExecutionPage = () => {
   }, [selectedJobId]);
 
   const [finishStatus, setFinishStatus] = useState('');
+  const [isFinishingJob, setIsFinishingJob] = useState(false);
+  const [isJobCompleted, setIsJobCompleted] = useState(
+    currentJob.status === 'completed'
+    || currentJob.status === 'payment-required'
+    || currentJob.serviceStatus === 'completed'
+  );
   const [customerImages, setCustomerImages] = useState([]);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(null);
@@ -122,6 +129,15 @@ const JobExecutionPage = () => {
   const bookingId = getBookingIdFromJob(currentJob);
   const activeImage = activeImageIndex != null ? customerImages[activeImageIndex] || null : null;
   const elapsed = useMemo(() => formatElapsedParts(elapsedSeconds), [elapsedSeconds]);
+
+  useEffect(() => {
+    setIsFinishingJob(false);
+    setIsJobCompleted(
+      currentJob.status === 'completed'
+      || currentJob.status === 'payment-required'
+      || currentJob.serviceStatus === 'completed'
+    );
+  }, [currentJob.id, currentJob.sourceRequestId, currentJob.status, currentJob.serviceStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,24 +210,29 @@ const JobExecutionPage = () => {
   }, [jobStartedAt]);
 
   const handleFinishJob = async () => {
+    if (isFinishingJob || isJobCompleted) return;
+
+    setIsFinishingJob(true);
     setFinishStatus('Sending final payment request...');
     try {
       const ok = await requestFinalPaymentOnServer(currentJob);
       if (!ok) {
         setFinishStatus('Could not send final payment request. Please try again.');
+        setIsFinishingJob(false);
         return;
       }
 
-      const raw = localStorage.getItem(CONFIRMED_MY_JOBS_STORAGE_KEY);
+      const raw = localStorage.getItem(confirmedMyJobsStorageKey);
       if (!raw) {
+        setIsJobCompleted(true);
         setFinishStatus('Final payment requested. Waiting for customer receipt.');
-        navigate('/cleaner/my-jobs');
         return;
       }
 
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) {
-        navigate('/cleaner/my-jobs');
+        setIsJobCompleted(true);
+        setFinishStatus('Final payment requested. Waiting for customer receipt.');
         return;
       }
 
@@ -220,15 +241,16 @@ const JobExecutionPage = () => {
           ? { ...job, status: 'payment-required', serviceStatus: 'completed', paymentStatus: 'awaiting_receipt' }
           : job
       );
-      localStorage.setItem(CONFIRMED_MY_JOBS_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(confirmedMyJobsStorageKey, JSON.stringify(updated));
       dispatchCleanerNotificationsUpdated();
+      setIsJobCompleted(true);
       setFinishStatus('Final payment requested. Waiting for customer receipt.');
     } catch {
       setFinishStatus('Could not send final payment request. Please try again.');
+      setIsFinishingJob(false);
       return;
     }
-
-    navigate('/cleaner/my-jobs');
+    setIsFinishingJob(false);
   };
 
   const openImageModal = (index) => {
@@ -367,10 +389,15 @@ const JobExecutionPage = () => {
               <strong>${totalEarning.toFixed(2)}</strong>
             </div>
 
-            <button type="button" className="finish-job-btn" onClick={handleFinishJob}>
-              <CheckCircleFilled /> Finish Job
+            <button
+              type="button"
+              className={`finish-job-btn ${isJobCompleted ? 'completed' : ''}`}
+              onClick={handleFinishJob}
+              disabled={isFinishingJob || isJobCompleted}
+            >
+              {isFinishingJob ? 'Completing...' : isJobCompleted ? 'Completed' : 'Complete'}
             </button>
-            <p>Complete all tasks to finish</p>
+            <p>{isJobCompleted ? 'Job marked as completed' : 'Complete all tasks to finish'}</p>
             {finishStatus && <p>{finishStatus}</p>}
           </section>
 

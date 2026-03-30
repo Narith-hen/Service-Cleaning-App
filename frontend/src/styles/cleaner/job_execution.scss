@@ -395,9 +395,21 @@
 }
 
 .finish-job-btn {
-  border: none;
+  border: 1px solid #22c55e;
   border-radius: 12px;
-  background: linear-gradient(180deg, #3569ea, #2e59d7);
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+  color: #ffffff;
+}
+
+.finish-job-btn.completed {
+  background: #ffffff;
+  color: #22c55e;
+  box-shadow: none;
+}
+
+.finish-job-btn:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .job-summary-panel p {

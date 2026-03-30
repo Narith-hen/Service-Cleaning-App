@@ -7,6 +7,7 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
+  FileTextOutlined,
   HistoryOutlined,
   MessageOutlined,
   SearchOutlined,
@@ -15,6 +16,9 @@ import {
 } from '@ant-design/icons';
 import api from '../../../services/api';
 import '../../../styles/customer/history.scss';
+import { CustomerPaymentExperience } from './payment_method_page';
+import CustomerRatingModal from '../components/customer_rating_modal';
+import CustomerReceiptModal from '../components/customer_receipt_modal';
 import officeImage from '../../../assets/office.png';
 import homeImage from '../../../assets/home.png';
 import windowImage from '../../../assets/window.png';
@@ -261,38 +265,6 @@ const fetchCustomerHistoryRows = async () => {
   return Array.isArray(rows) ? rows.slice(0, 5) : [];
 };
 
-const toReviewNavigationBooking = (booking) => ({
-  id: booking?.id || '',
-  booking_id: booking?.id || '',
-  serviceName: booking?.serviceName || 'Cleaning Service',
-  service_name: booking?.serviceName || 'Cleaning Service',
-  bookingDate: booking?.bookingDate || '',
-  booking_date: booking?.bookingDate || '',
-  bookingTime: booking?.bookingTime || '',
-  booking_time: booking?.bookingTime || '',
-  serviceImage: booking?.serviceImage || '',
-  service_image: booking?.serviceImage || '',
-  cleanerName: booking?.cleanerName || 'Assigned cleaner',
-  cleaner_name: booking?.cleanerName || 'Assigned cleaner',
-  location: booking?.location || 'Location unavailable',
-  address: booking?.location || 'Location unavailable',
-  totalPrice: booking?.totalPrice ?? null,
-  total_price: booking?.totalPrice ?? null,
-  bedrooms: booking?.bedrooms || '3 Bedrooms',
-  floors: booking?.floors || '2 Floors',
-  cleanerId: booking?.cleanerId || null,
-  cleaner_id: booking?.cleanerId || null,
-  cleanerAvatar: booking?.cleanerAvatar || '',
-  cleaner_avatar: booking?.cleanerAvatar || '',
-  rawStatus: booking?.rawStatus || 'completed',
-  paymentStatus: booking?.paymentStatus || '',
-  payment_status: booking?.paymentStatus || '',
-  reviewComment: booking?.reviewComment || '',
-  review_comment: booking?.reviewComment || '',
-  reviewRating: booking?.reviewRating || 0,
-  rating: booking?.reviewRating || 0
-});
-
 const canCancelHistoryBooking = (item) => {
   const rawStatus = String(item?.rawStatus || '').toLowerCase();
   const bookingStatus = String(item?.bookingStatus || '').toLowerCase();
@@ -332,19 +304,43 @@ const CustomerHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [paymentModalBookingId, setPaymentModalBookingId] = useState(null);
+  const [reviewModalBooking, setReviewModalBooking] = useState(null);
+  const [receiptModalBooking, setReceiptModalBooking] = useState(null);
   const hasLoadedRef = useRef(false);
-
-  const openRatingPage = (booking) => {
-    navigate(`/customer/write-review/${booking.id}`, {
-      state: {
-        booking: toReviewNavigationBooking(booking),
-        from: '/customer/history'
-      }
-    });
-  };
 
   const openChatPage = (booking) => {
     navigate(`/customer/chat?booking=${encodeURIComponent(String(booking.id))}`);
+  };
+
+  const handlePaymentUpdated = ({ bookingId, finalization }) => {
+    if (!bookingId) return;
+
+    setHistory((prev) => prev.map((item) => (
+      String(item.id) === String(bookingId)
+        ? {
+            ...item,
+            paymentStatus: String(finalization?.payment_status || item.paymentStatus || '').toLowerCase(),
+            bookingStatus: String(finalization?.booking_status || item.bookingStatus || '').toLowerCase(),
+            rawStatus: String(finalization?.booking_status || item.rawStatus || '').toLowerCase()
+          }
+        : item
+    )));
+  };
+
+  const handleReviewSubmitted = ({ bookingId, reviewId, rating, comment }) => {
+    if (!bookingId) return;
+
+    setHistory((prev) => prev.map((item) => (
+      String(item.id) === String(bookingId)
+        ? {
+            ...item,
+            reviewId: reviewId || item.reviewId || -1,
+            reviewRating: Number(rating || item.reviewRating || 0),
+            reviewComment: comment ?? item.reviewComment ?? ''
+          }
+        : item
+    )));
   };
 
   useEffect(() => {
@@ -380,6 +376,17 @@ const CustomerHistoryPage = () => {
       window.clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    if (!paymentModalBookingId && !reviewModalBooking && !receiptModalBooking) return undefined;
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [paymentModalBookingId, reviewModalBooking, receiptModalBooking]);
 
   const filteredHistory = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -473,13 +480,18 @@ const CustomerHistoryPage = () => {
             const statusButton = getHistoryStatusButton(item.rawStatus, item.status);
             const paymentBadge = getPaymentStatusBadge(item.paymentStatus, item.bookingStatus);
             const reviewBadge = getReviewStatusBadge(item.reviewId, item.reviewRating);
-            const needsPayment =
+            const canPayNow =
               item.bookingStatus === 'payment_required'
               || item.paymentStatus === 'awaiting_receipt'
-              || item.paymentStatus === 'receipt_submitted';
+              || item.paymentStatus === 'payment_required'
+              || item.paymentStatus === 'pending'
+              || item.paymentStatus === 'unpaid';
             const paymentConfirmed =
               item.paymentStatus === 'completed'
               || item.paymentStatus === 'paid';
+            const canViewReceipt =
+              item.paymentStatus === 'receipt_submitted'
+              || paymentConfirmed;
             const canRateService = canReviewHistoryBooking(item);
 
             return (
@@ -532,10 +544,6 @@ const CustomerHistoryPage = () => {
                     </div>
 
                     <div className="customer-history-footer">
-                      <span className={`customer-history-status customer-history-status-button ${statusButton.tone}`}>
-                        {statusButton.icon}
-                        {statusButton.label}
-                      </span>
                       {paymentBadge && (
                         <span className={`customer-history-status ${paymentBadge.tone}`}>
                           {paymentBadge.icon}
@@ -575,21 +583,32 @@ const CustomerHistoryPage = () => {
                           Cancel Booking
                         </button>
                       )}
-                      {needsPayment && !paymentConfirmed && (
+                      {canPayNow && !paymentConfirmed && (
                         <button
                           type="button"
                           className="customer-secondary-button customer-history-action-button customer-history-payment-button"
-                          onClick={() => navigate(`/customer/payment-methods?bookingId=${item.id}`)}
+                          onClick={() => setPaymentModalBookingId(String(item.id))}
                           data-customer-button
                         >
                           Pay Now
+                        </button>
+                      )}
+                      {canViewReceipt && (
+                        <button
+                          type="button"
+                          className="customer-history-action-btn customer-history-action-btn--secondary customer-history-receipt-btn"
+                          onClick={() => setReceiptModalBooking(item)}
+                          data-customer-button
+                        >
+                          <FileTextOutlined />
+                          Receipt
                         </button>
                       )}
                       {canRateService && (
                         <button
                           type="button"
                           className="customer-history-action-btn customer-history-review-btn"
-                          onClick={() => openRatingPage(item)}
+                          onClick={() => setReviewModalBooking(item)}
                           data-customer-button
                         >
                           <StarFilled />
@@ -604,6 +623,46 @@ const CustomerHistoryPage = () => {
           })}
         </div>
       )}
+
+      {paymentModalBookingId && (
+        <div
+          className="final-payment-modal-backdrop"
+          onClick={() => setPaymentModalBookingId(null)}
+          role="presentation"
+        >
+          <div
+            className="final-payment-modal-shell"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Payment details"
+          >
+            <CustomerPaymentExperience
+              bookingId={paymentModalBookingId}
+              mode="modal"
+              onClose={() => setPaymentModalBookingId(null)}
+              onPaymentUpdated={handlePaymentUpdated}
+              onReviewSubmitted={handleReviewSubmitted}
+            />
+          </div>
+        </div>
+      )}
+
+      <CustomerRatingModal
+        open={Boolean(reviewModalBooking)}
+        bookingId={reviewModalBooking?.id || ''}
+        initialBooking={reviewModalBooking}
+        fallbackServiceName={reviewModalBooking?.serviceName || 'Cleaning Service'}
+        onClose={() => setReviewModalBooking(null)}
+        onSubmitted={handleReviewSubmitted}
+      />
+
+      <CustomerReceiptModal
+        open={Boolean(receiptModalBooking)}
+        bookingId={receiptModalBooking?.id || ''}
+        initialBooking={receiptModalBooking}
+        onClose={() => setReceiptModalBooking(null)}
+      />
     </div>
   );
 };

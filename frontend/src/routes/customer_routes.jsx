@@ -12,7 +12,6 @@ import CustomerFavorites from '../features/customer/pages/favourite_page';
 import CustomerNotifications from '../features/customer/pages/notification_page';
 import CustomerHistoryPage from '../features/customer/pages/history_page';
 import CancelWorkPage from '../features/customer/pages/cancel-work';
-import WriteReviewPage from '../features/customer/pages/write_review_page';
 import SettingsPage from '../features/customer/pages/setting_page';
 import BookingMatchPage from '../features/customer/pages/booking_match_page';
 import BookingQuotesPage from '../features/customer/pages/booking_quotes_page';
@@ -147,11 +146,11 @@ export const customerRoutes = {
     },
     {
       path: 'write-review',
-      element: <WriteReviewPage />
+      element: <Navigate to="/customer/history" replace />
     },
     {
       path: 'write-review/:bookingId',
-      element: <WriteReviewPage />
+      element: <Navigate to="/customer/history" replace />
     },
     {
       path: 'settings',
