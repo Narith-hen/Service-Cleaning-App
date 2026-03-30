@@ -186,7 +186,8 @@ module.exports = {
     getCleanerJobs: cleanerDashboardController.getCleanerJobs,
     updateJobStatus: cleanerDashboardController.updateJobStatus,
     getEarnings: earningsController.getEarnings,
-    getEarningsSummary: earningsController.getEarningsSummary
+    getEarningsSummary: earningsController.getEarningsSummary,
+    getEarningsRollups: earningsController.getEarningsRollups
   },
   
   // Admin namespace

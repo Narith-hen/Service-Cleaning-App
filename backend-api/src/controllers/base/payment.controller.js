@@ -137,6 +137,11 @@ const resolveRequestUserIds = async (promiseDb, req) => {
 };
 
 const ensurePaymentWorkflowColumns = async (promiseDb) => {
+  const bookingColumns = await getBookingTableColumns(promiseDb);
+  if (!bookingColumns.has('completed_at')) {
+    await promiseDb.query('ALTER TABLE bookings ADD COLUMN completed_at DATETIME NULL AFTER payment_status');
+  }
+
   const paymentColumns = await getPaymentTableColumns(promiseDb);
   if (!paymentColumns.has('receipt_image_url')) {
     await promiseDb.query('ALTER TABLE payments ADD COLUMN receipt_image_url VARCHAR(255) NULL AFTER payment_status');
@@ -308,7 +313,7 @@ const updateBookingState = async (
     params.push(paymentStatus);
   }
   if (markCompletedAt && bookingColumns.has('completed_at')) {
-    updates.push('completed_at = NOW()');
+    updates.push('completed_at = COALESCE(completed_at, NOW())');
   }
 
   if (!updates.length) return;
@@ -793,6 +798,7 @@ const requestFinalPayment = async (req, res, next) => {
       bookingStatus: 'payment_required',
       serviceStatus: 'completed',
       paymentStatus: 'awaiting_receipt',
+      markCompletedAt: true,
     });
 
     await sendBookingNotification(promiseDb, {
