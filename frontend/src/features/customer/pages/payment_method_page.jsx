@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
 import { FiX } from 'react-icons/fi';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import '../../../styles/customer/payment_method.scss';
 import localQrImage from '../../../images/QR.png';
@@ -73,10 +73,12 @@ const normalizeReviewBooking = (booking, bookingId) => ({
 
 const PaymentMethodPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get('bookingId');
   const fileInputRef = useRef(null);
   const reviewAutoPromptedRef = useRef(false);
+  const isCleanerPortal = location.pathname.startsWith('/cleaner/');
 
   const [loadingFinalization, setLoadingFinalization] = useState(false);
   const [finalization, setFinalization] = useState(null);
@@ -96,8 +98,12 @@ const PaymentMethodPage = () => {
   const paymentStatus = String(finalization?.payment_status || '').toLowerCase();
   const isReceiptSubmitted = paymentStatus === 'receipt_submitted';
   const isPaymentConfirmed = paymentStatus === 'completed' || paymentStatus === 'paid';
-  const canReviewService = isReceiptSubmitted || isPaymentConfirmed;
-  const canSubmitReceipt = !isReceiptSubmitted && !isPaymentConfirmed;
+  const isWaitingForReceipt =
+    paymentStatus === 'awaiting_receipt'
+    || paymentStatus === 'payment_required'
+    || (!paymentStatus && String(finalization?.booking_status || '').toLowerCase() === 'payment_required');
+  const canReviewService = !isCleanerPortal && (isReceiptSubmitted || isPaymentConfirmed);
+  const canSubmitReceipt = !isCleanerPortal && !isReceiptSubmitted && !isPaymentConfirmed;
   const isPdfReceipt = receiptFile?.type === 'application/pdf';
 
   const invoiceNumber = useMemo(() => {
@@ -132,6 +138,18 @@ const PaymentMethodPage = () => {
   const reviewScoreLabel = reviewRating ? `${reviewRating.toFixed(1)} / 5` : '0.0 / 5';
   const paymentSummaryText = useMemo(() => {
     if (statusText) return statusText;
+    if (isCleanerPortal) {
+      if (isPaymentConfirmed) {
+        return 'Payment confirmed successfully for this booking.';
+      }
+      if (isReceiptSubmitted) {
+        return 'Customer submitted a receipt. Payment is waiting for confirmation.';
+      }
+      if (isWaitingForReceipt) {
+        return 'Waiting for the customer to upload a payment receipt.';
+      }
+      return '';
+    }
     if (hasSubmittedReview) {
       const ratedValue = Number(reviewBooking?.reviewRating || 0);
       return Number.isFinite(ratedValue) && ratedValue > 0
@@ -145,7 +163,15 @@ const PaymentMethodPage = () => {
       return 'Receipt submitted successfully. Waiting for cleaner confirmation.';
     }
     return '';
-  }, [statusText, hasSubmittedReview, reviewBooking?.reviewRating, isPaymentConfirmed, isReceiptSubmitted]);
+  }, [
+    statusText,
+    hasSubmittedReview,
+    reviewBooking?.reviewRating,
+    isPaymentConfirmed,
+    isReceiptSubmitted,
+    isCleanerPortal,
+    isWaitingForReceipt
+  ]);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -187,7 +213,7 @@ const PaymentMethodPage = () => {
   }, [bookingId]);
 
   useEffect(() => {
-    if (!bookingId) return;
+    if (!bookingId || isCleanerPortal) return;
 
     let cancelled = false;
 
@@ -217,17 +243,29 @@ const PaymentMethodPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [bookingId]);
+  }, [bookingId, isCleanerPortal]);
 
   useEffect(() => {
-    if (!bookingId || !isPaymentConfirmed || !reviewBooking || hasSubmittedReview || reviewAutoPromptedRef.current) {
+    if (isCleanerPortal || !bookingId || !isPaymentConfirmed || !reviewBooking || hasSubmittedReview || reviewAutoPromptedRef.current) {
       return;
     }
 
     reviewAutoPromptedRef.current = true;
     setReviewFeedback(null);
     setReviewModalOpen(true);
-  }, [bookingId, isPaymentConfirmed, reviewBooking, hasSubmittedReview]);
+  }, [bookingId, isPaymentConfirmed, reviewBooking, hasSubmittedReview, isCleanerPortal]);
+
+  const primaryButtonLabel = isCleanerPortal
+    ? (isPaymentConfirmed ? 'Payment Confirmed' : 'Payment Pending')
+    : (uploadingReceipt ? 'Submitting...' : isPaymentConfirmed ? 'Payment Confirmed' : 'Submit');
+
+  const primaryButtonDisabled = isCleanerPortal
+    ? true
+    : (!canSubmitReceipt || uploadingReceipt);
+
+  const backTarget = isCleanerPortal
+    ? (bookingId ? `/cleaner/my-jobs?bookingId=${encodeURIComponent(String(bookingId))}` : '/cleaner/my-jobs')
+    : '/customer/history';
 
   useEffect(() => {
     if (!receiptFile || !String(receiptFile.type || '').startsWith('image/')) {
@@ -371,7 +409,7 @@ const PaymentMethodPage = () => {
     <div className="final-payment-page">
       <div className="final-payment-card">
         <header className="final-payment-header">
-          <h1>Final Payment</h1>
+          <h1>{isCleanerPortal ? 'Payment Details' : 'Final Payment'}</h1>
           <p>Invoice # {invoiceNumber}</p>
         </header>
 
@@ -416,36 +454,45 @@ const PaymentMethodPage = () => {
             </section>
 
             <section className="receipt-upload-section">
-              <h3>Upload Payment Receipt</h3>
-              <button
-                type="button"
-                className={`receipt-dropzone ${isPaymentConfirmed ? 'disabled' : ''} ${receiptPreviewUrl ? 'has-preview' : ''}`}
-                onClick={handleOpenFileDialog}
-                disabled={isPaymentConfirmed}
-              >
-                {receiptPreviewUrl ? (
-                  <img className="receipt-preview-image" src={receiptPreviewUrl} alt="Receipt preview" />
-                ) : (
-                  <>
-                    <span className="upload-icon"><CloudUploadOutlined /></span>
-                    <strong>Click to upload receipt</strong>
-                    <small>PNG, JPG, PDF</small>
-                    {isPdfReceipt && <span className="receipt-pdf-tag">PDF selected</span>}
-                  </>
-                )}
-              </button>
+              <h3>{isCleanerPortal ? 'Payment Receipt' : 'Upload Payment Receipt'}</h3>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,application/pdf"
-                className="hidden-receipt-input"
-                onChange={(event) => setReceiptFile(event.target.files?.[0] || null)}
-                disabled={isPaymentConfirmed}
-              />
+              {!isCleanerPortal && (
+                <>
+                  <button
+                    type="button"
+                    className={`receipt-dropzone ${isPaymentConfirmed ? 'disabled' : ''} ${receiptPreviewUrl ? 'has-preview' : ''}`}
+                    onClick={handleOpenFileDialog}
+                    disabled={isPaymentConfirmed}
+                  >
+                    {receiptPreviewUrl ? (
+                      <img className="receipt-preview-image" src={receiptPreviewUrl} alt="Receipt preview" />
+                    ) : (
+                      <>
+                        <span className="upload-icon"><CloudUploadOutlined /></span>
+                        <strong>Click to upload receipt</strong>
+                        <small>PNG, JPG, PDF</small>
+                        {isPdfReceipt && <span className="receipt-pdf-tag">PDF selected</span>}
+                      </>
+                    )}
+                  </button>
 
-              {receiptFile && !receiptPreviewUrl && (
-                <p className="receipt-selected">Selected file: {receiptFile.name}</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,application/pdf"
+                    className="hidden-receipt-input"
+                    onChange={(event) => setReceiptFile(event.target.files?.[0] || null)}
+                    disabled={isPaymentConfirmed}
+                  />
+
+                  {receiptFile && !receiptPreviewUrl && (
+                    <p className="receipt-selected">Selected file: {receiptFile.name}</p>
+                  )}
+                </>
+              )}
+
+              {isCleanerPortal && !finalization?.receipt_image_url && (
+                <p className="receipt-selected">No receipt image available for this booking.</p>
               )}
 
               {finalization?.receipt_image_url && (
@@ -470,18 +517,18 @@ const PaymentMethodPage = () => {
             <button
               type="button"
               className="submit-payment-button"
-              onClick={handleSubmitReceipt}
-              disabled={!canSubmitReceipt || uploadingReceipt}
+              onClick={isCleanerPortal ? undefined : handleSubmitReceipt}
+              disabled={primaryButtonDisabled}
             >
-              {uploadingReceipt ? 'Submitting...' : isPaymentConfirmed ? 'Payment Confirmed' : 'Submit'}
+              {primaryButtonLabel}
             </button>
 
             <button
               type="button"
               className="back-history-button"
-              onClick={() => navigate('/customer/history')}
+              onClick={() => navigate(backTarget)}
             >
-              Back To History
+              {isCleanerPortal ? 'Back To My Jobs' : 'Back To History'}
             </button>
 
             {bookingId && canReviewService && !hasSubmittedReview && (
@@ -507,7 +554,7 @@ const PaymentMethodPage = () => {
         )}
       </div>
 
-      {reviewModalOpen && (
+      {!isCleanerPortal && reviewModalOpen && (
         <div className="payment-rating-overlay" role="presentation">
           <section
             className="payment-rating-modal"

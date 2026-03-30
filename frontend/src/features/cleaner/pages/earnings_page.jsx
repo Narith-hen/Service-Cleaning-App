@@ -186,8 +186,8 @@ const getChartMeta = (view, rollupData) => {
   if (view === 'day') {
     return {
       title: activeView.title,
-      subtitle: `Hourly totals from ${windowStart} to ${windowEnd}. Completed jobs are added immediately.`,
-      note: 'Today'
+      subtitle: `Hourly totals from ${windowStart} to ${windowEnd}. Completed jobs are added immediately, then this total resets for the next day.`,
+      note: 'Resets daily'
     };
   }
 
@@ -215,7 +215,7 @@ const getActiveChartBucket = (view) => {
 const buildSummaryCards = (rollupData) => {
   const windowStart = rollupData?.collection_window?.start_label || '12:00 AM';
   const windowEnd = rollupData?.collection_window?.end_label || '11:59 PM';
-  const dailyNote = `Completed jobs are counted immediately from ${windowStart} to ${windowEnd}`;
+  const dailyNote = `Counts completed jobs from ${windowStart} to ${windowEnd}, then starts again from 0`;
 
   return [
     {
@@ -230,14 +230,14 @@ const buildSummaryCards = (rollupData) => {
       tone: 'pending',
       label: 'Weekly Total',
       value: formatMoney(rollupData?.weekly_total || 0),
-      note: 'Latest 7 completed-day totals'
+      note: 'Rolling total of the latest 7 completed days'
     },
     {
       key: 'monthly',
       tone: 'monthly',
       label: 'Monthly Total',
       value: formatMoney(rollupData?.monthly_total || 0),
-      note: 'Latest 4 completed-week totals'
+      note: 'Rolling total of the latest 4 completed weeks'
     }
   ];
 };
@@ -492,7 +492,7 @@ const EarningsPage = () => {
     <div className="cleaner-earnings-page">
       <div className="earnings-headline">
         <h1>Earnings Overview</h1>
-        <p>Track your income and payment history. Completed jobs are added automatically and the page refreshes every 15 seconds.</p>
+        <p>Track your income and payment history. Completed jobs are added automatically, daily totals reset each new day, weekly totals roll across 7 days, and monthly totals roll across 4 weeks.</p>
         <div className="earnings-live-meta">
           <span>
             Completed Jobs Counted: {earningsRollups?.collection_window?.start_label || '12:00 AM'} to {earningsRollups?.collection_window?.end_label || '11:59 PM'}
