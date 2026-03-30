@@ -13,7 +13,7 @@
   --earnings-text-muted: #5b6f64;
   --earnings-chart-navy: #16824f;
   --earnings-chart-teal: #22c55e;
-  --earnings-chart-border-soft: #d7eadc;
+  --earnings-chart-border-soft: #d7eadc;  
   --earnings-chart-text: #123524;
   --earnings-chart-muted: #5b6f64;
 
@@ -83,19 +83,26 @@
 
   .chart-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
     margin-bottom: 18px;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 18px;
+    // background: #000;
 
     .chart-heading {
+      width: 100%;
+      max-width: 920px;
+      margin: 0 auto;
+      text-align: center;
+      // background: #000;
+
       h2 {
         font-size: 20px;
         font-weight: 800;
         color: var(--earnings-chart-text);
         margin: 0;
         letter-spacing: -0.02em;
+        // background: #000;
       }
     }
 
@@ -104,6 +111,16 @@
       color: var(--earnings-chart-muted);
       font-size: 14px;
       line-height: 1.45;
+      // background: #000;
+    }
+
+    .chart-toolbar {
+      width: 100%;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      // background: #000;
+      margin-left: 785px;
     }
 
     .chart-range-select {
@@ -1029,8 +1046,6 @@
 
   .earnings-chart-panel {
     .chart-header {
-      flex-direction: column;
-      align-items: flex-start;
       gap: 12px;
     }
 
@@ -1038,8 +1053,12 @@
       padding: 24px 20px 20px;
     }
 
+    .chart-toolbar {
+      width: 100%;
+    }
+
     .chart-range-select {
-      align-self: flex-end;
+      align-self: flex-start;
     }
   }
 

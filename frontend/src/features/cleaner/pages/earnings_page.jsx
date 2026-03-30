@@ -52,7 +52,7 @@ const earningsViewOptions = [
   },
   {
     value: 'total',
-    label: 'Total All',
+    label: 'Total',
     title: 'Total Earnings',
     subtitle: 'All-time earnings trend',
     note: 'All time'
@@ -525,18 +525,20 @@ const EarningsPage = () => {
             <h2>{chartMeta.title}</h2>
             <p className="chart-description">{chartMeta.subtitle}</p>
           </div>
-          <label className="chart-range-select">
-            <span>View</span>
-            <Select
-              value={earningsView}
-              onChange={setEarningsView}
-              options={earningsViewOptions.map((option) => ({
-                value: option.value,
-                label: option.label
-              }))}
-              popupMatchSelectWidth={false}
-            />
-          </label>
+          <div className="chart-toolbar">
+            <label className="chart-range-select">
+              <span>View</span>
+              <Select
+                value={earningsView}
+                onChange={setEarningsView}
+                options={earningsViewOptions.map((option) => ({
+                  value: option.value,
+                  label: option.label
+                }))}
+                popupMatchSelectWidth={false}
+              />
+            </label>
+          </div>
         </div>
         <div
           className="chart-container earnings-chart-canvas"
