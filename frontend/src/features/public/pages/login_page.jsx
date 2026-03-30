@@ -163,9 +163,6 @@ const LoginPage = () => {
                             marginBottom: isCompactAuth ? 10 : 12,
                             gap: 8
                         }}>
-                            <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox disabled={loading} style={{ color: '#e2e8f0', fontSize: helperFontSize }}>Remember me</Checkbox>
-                            </Form.Item>
                         </div>
 
                         <Form.Item>

@@ -226,17 +226,6 @@ const ReviewPage = () => {
 
       <div className="review-list-header">
         <h2>Recent Reviews</h2>
-        <div className="actions">
-          <select value="most-recent" disabled aria-label="Review sort order">
-            <option value="most-recent">Most Recent</option>
-          </select>
-          <button type="button" className="review-filter-btn" disabled>
-            <svg className="review-filter-icon" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M2 4h12M4 8h8M6 12h4" />
-            </svg>
-            Filter
-          </button>
-        </div>
       </div>
 
       {error ? <div className="review-feedback-message review-feedback-message--error">{error}</div> : null}

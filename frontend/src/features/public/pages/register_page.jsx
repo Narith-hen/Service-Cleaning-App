@@ -167,9 +167,21 @@ export default function RegisterPage() {
                 <Form.Item label={<span style={{ color: "#e2e8f0" }}>Email</span>} name="email" rules={[{ required: true, message: "Please enter your email" }, { type: "email", message: "Please enter a valid email" }]}>
                   <Input prefix={<MailOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Email" disabled={loading} style={{ borderRadius: 24, height: controlHeight, fontSize: buttonFontSize, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
                 </Form.Item>
-                {/* <Form.Item label={<span style={{ color: "#e2e8f0" }}>Phone number</span>} name="phone" rules={[{ required: true, message: "Please enter your phone number" }, { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }]}>
-                  <Input prefix={<PhoneOutlined style={{ color: "#cbd5e1", height: 22 }} />} placeholder="Phone number" disabled={loading} style={{ borderRadius: 24, height: controlHeight, fontSize: buttonFontSize, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }} />
-                </Form.Item> */}
+                <Form.Item
+                  label={<span style={{ color: "#e2e8f0" }}>Phone number</span>}
+                  name="phone"
+                  rules={[
+                    { required: true, message: "Please enter your phone number" },
+                    { pattern: /^[+]?[(]?[0-9\s-]{7,20}$/, message: "Please enter a valid phone number" }
+                  ]}
+                >
+                  <Input
+                    prefix={<PhoneOutlined style={{ color: "#cbd5e1", height: 22 }} />}
+                    placeholder="Phone number"
+                    disabled={loading}
+                    style={{ borderRadius: 24, height: controlHeight, fontSize: buttonFontSize, background: "rgba(255,255,255,0.16)", borderColor: "rgba(255,255,255,0.30)", color: "#f8fafc" }}
+                  />
+                </Form.Item>
               </>
             )}
 

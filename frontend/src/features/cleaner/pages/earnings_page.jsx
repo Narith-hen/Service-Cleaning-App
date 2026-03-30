@@ -355,47 +355,6 @@ const EarningsPage = () => {
         </div>
       </section>
 
-      <section className="earnings-filters-panel">
-        <div className="filter-group">
-          <FilterOutlined />
-          <Select
-            value={paymentStatus}
-            onChange={setPaymentStatus}
-            options={[
-              { value: 'all', label: 'All Status' },
-              { value: 'completed', label: 'Completed' },
-              { value: 'pending', label: 'Pending' }
-            ]}
-          />
-        </div>
-        <div className="filter-group">
-          <SortAscendingOutlined />
-          <Select
-            value={sortBy}
-            onChange={setSortBy}
-            options={[
-              { value: 'most_recent', label: 'Most Recent' },
-              { value: 'oldest', label: 'Oldest' },
-              { value: 'highest_amount', label: 'Highest Amount' }
-            ]}
-          />
-        </div>
-        <div className="filter-group date-range">
-          <DatePicker
-            placeholder="From Date"
-            value={dateFrom ? dayjs(dateFrom) : null}
-            onChange={(date, dateString) => setDateFrom(dateString)}
-          />
-          <span>to</span>
-          <DatePicker
-            placeholder="To Date"
-            value={dateTo ? dayjs(dateTo) : null}
-            onChange={(date, dateString) => setDateTo(dateString)}
-          />
-        </div>
-        <Button type="primary" onClick={handleApplyFilters}>Apply Filters</Button>
-      </section>
-
       <section className="transactions-list-panel">
         <h2>Transaction History</h2>
         <div className="transactions-list">

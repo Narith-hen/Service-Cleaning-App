@@ -577,10 +577,6 @@ const JobRequestsPage = () => {
           <p className="requests-kicker">Incoming Cleaning Services</p>
           <h1>New Requests <span>({totalCount})</span></h1>
         </div>
-        <div className="requests-actions">
-          <button type="button" className="header-btn">Filter</button>
-          <button type="button" className="header-btn">Sort by Date</button>
-        </div>
       </div>
 
       <div className="request-list">

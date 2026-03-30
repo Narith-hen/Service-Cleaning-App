@@ -167,6 +167,8 @@ const dedupeThreads = (items = []) => {
 };
 
 const normalizeThread = (job, index) => {
+  const negotiatedPriceValue = job?.negotiatedPrice ?? job?.negotiated_price ?? null;
+  const hasNegotiatedPrice = negotiatedPriceValue != null && String(negotiatedPriceValue).trim() !== '';
   const canonicalThreadId = getCanonicalThreadId(job, index);
   const derivedDateParts = formatThreadDateParts(job?.booking_date || job?.bookingDate);
   const derivedPrice = job?.price || (
@@ -182,6 +184,8 @@ const normalizeThread = (job, index) => {
   title: job?.title || job?.service?.name || job?.service_name || 'Cleaning Job',
   jobId: job?.jobId || '#SOMA-00000',
   price: derivedPrice,
+  negotiatedPrice: hasNegotiatedPrice ? Number(negotiatedPriceValue) : null,
+  hasNegotiatedPrice,
   day: job?.day || derivedDateParts.day,
   monthYear: job?.monthYear || derivedDateParts.monthYear,
   timeRange: job?.timeRange || job?.booking_time || '09:00 AM - 12:00 PM',
@@ -236,6 +240,7 @@ const extractRealtimeMessage = (payload) => {
 };
 
 const mergeThreadWithBooking = (thread, bookingData = {}) => {
+  const negotiatedPriceValue = bookingData.negotiated_price ?? thread.negotiatedPrice ?? thread.negotiated_price ?? null;
   const customerName = bookingData.customer_full_name || bookingData.customer_name || thread.customer;
   const dateValue = bookingData.booking_date ? new Date(bookingData.booking_date) : null;
   const formattedDay = dateValue && !Number.isNaN(dateValue.getTime())
@@ -251,9 +256,10 @@ const mergeThreadWithBooking = (thread, bookingData = {}) => {
     id: thread.id,
     title: bookingData.service_name || thread.title,
     jobId: bookingData.booking_id ? `#SOMA-${String(bookingData.booking_id).padStart(5, '0')}` : thread.jobId,
-    price: bookingData.negotiated_price || bookingData.total_price
-      ? `$${Number(bookingData.negotiated_price || bookingData.total_price || 0).toFixed(2)}`
+    price: bookingData.negotiated_price != null || bookingData.total_price != null
+      ? `$${Number(bookingData.negotiated_price ?? bookingData.total_price ?? 0).toFixed(2)}`
       : thread.price,
+    negotiated_price: negotiatedPriceValue,
     day: formattedDay,
     monthYear: formattedMonthYear,
     timeRange: bookingData.booking_time || thread.timeRange,
@@ -701,13 +707,21 @@ const [activeThreadId, setActiveThreadId] = useState(
       const saved = response?.data?.data?.negotiated_price;
       const formatted = `$${Number(saved ?? numeric).toFixed(2)}`;
 
-      setThreads((prev) =>
-        prev.map((thread) =>
+      setThreads((prev) => {
+        const updatedThreads = prev.map((thread) =>
           String(thread.sourceRequestId || thread.id) === activeKey
-            ? { ...thread, price: formatted }
+            ? {
+              ...thread,
+              price: formatted,
+              negotiatedPrice: Number(saved ?? numeric),
+              hasNegotiatedPrice: true
+            }
             : thread
-        )
-      );
+        );
+
+        saveChatThreads(updatedThreads);
+        return updatedThreads;
+      });
       lastPriceSyncRef.current.threadId = activeKey;
       lastPriceSyncRef.current.price = String(formatted).replace(/[^0-9.]/g, '');
       hasPriceDraftRef.current = false;
@@ -719,7 +733,7 @@ const [activeThreadId, setActiveThreadId] = useState(
         if (Array.isArray(parsed)) {
           const updated = parsed.map((job) =>
             String(job?.sourceRequestId || job?.id) === activeKey
-              ? { ...job, price: formatted }
+              ? { ...job, price: formatted, negotiated_price: Number(saved ?? numeric) }
               : job
           );
           localStorage.setItem(getConfirmedMyJobsStorageKey(), JSON.stringify(updated));
@@ -784,6 +798,7 @@ const [activeThreadId, setActiveThreadId] = useState(
     ? `${activeThread.monthYear} ${activeThread.day}, ${formatTimeRangeLabel(activeThread.timeRange, 'Time pending')}`
     : '';
   const allVisibleSelected = visibleThreads.length > 0 && selectedThreadIds.length === visibleThreads.length;
+  const hasSubmittedNegotiatedPrice = Boolean(activeThread?.hasNegotiatedPrice || activeThread?.negotiatedPrice != null);
 
   return (
     <div className="cleaner-messages-page">
@@ -971,29 +986,37 @@ const [activeThreadId, setActiveThreadId] = useState(
                     </div>
                     <span className="my-jobs-price-badge">Cleaner</span>
                   </div>
-                  <label className="my-jobs-price-label" htmlFor="negotiatedPrice">
-                    Submit agreed price
-                  </label>
-                  <div className="my-jobs-price-input">
-                    <input
-                      id="negotiatedPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={priceInput}
-                      onFocus={() => setIsPriceInputFocused(true)}
-                      onBlur={() => setIsPriceInputFocused(false)}
-                      onChange={(e) => {
-                        hasPriceDraftRef.current = true;
-                        setPriceInput(e.target.value);
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <button type="button" className="my-jobs-price-submit" onClick={handleSubmitPrice}>
-                    Submit agreed price
-                  </button>
-                  {priceStatus && <p className="my-jobs-price-status">{priceStatus}</p>}
+                  {hasSubmittedNegotiatedPrice ? (
+                    <p className="my-jobs-price-status">
+                      {priceStatus || 'Negotiated price submitted for this booking.'}
+                    </p>
+                  ) : (
+                    <>
+                      <label className="my-jobs-price-label" htmlFor="negotiatedPrice">
+                        Submit agreed price
+                      </label>
+                      <div className="my-jobs-price-input">
+                        <input
+                          id="negotiatedPrice"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={priceInput}
+                          onFocus={() => setIsPriceInputFocused(true)}
+                          onBlur={() => setIsPriceInputFocused(false)}
+                          onChange={(e) => {
+                            hasPriceDraftRef.current = true;
+                            setPriceInput(e.target.value);
+                          }}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <button type="button" className="my-jobs-price-submit" onClick={handleSubmitPrice}>
+                        Submit agreed price
+                      </button>
+                      {priceStatus && <p className="my-jobs-price-status">{priceStatus}</p>}
+                    </>
+                  )}
                 </div>
 
               </aside>
