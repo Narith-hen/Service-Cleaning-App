@@ -26,7 +26,6 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
     { icon: <MessageOutlined />, label: 'Messages', path: '/cleaner/messages' },
     { icon: <DollarOutlined />, label: 'Earnings', path: '/cleaner/earnings' },
     { icon: <StarOutlined />, label: 'Reviews', path: '/cleaner/reviews' },
-    { icon: <SettingOutlined />, label: 'Settings', path: '/cleaner/settings' },
   ];
 
   const handleLogout = async () => {
@@ -67,8 +66,17 @@ const CleanerSidebar = ({ darkMode, isCompact = false, isOpen = true, onClose = 
         ))}
       </nav>
 
-      {/* Logout Button */}
+      {/* Footer Actions */}
       <div className="sidebar-footer">
+        <NavLink
+          to="/cleaner/settings"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={() => isCompact && onClose()}
+        >
+          <span className="nav-icon"><SettingOutlined /></span>
+          <span className="nav-label">Settings</span>
+        </NavLink>
+
         <button
           className="logout-btn"
           onClick={async () => {
