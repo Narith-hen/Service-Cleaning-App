@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const rawBaseUrl = 'http://localhost:5000';
 const API_URL = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
 const AUTH_USER_UPDATED_EVENT = 'auth-user-updated';
 const AUTH_INVALIDATION_MESSAGES = new Set([
