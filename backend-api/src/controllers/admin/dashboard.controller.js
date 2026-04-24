@@ -151,6 +151,7 @@ const getAdminDashboard = async (req, res, next) => {
     const reviewTextColumn = resolveReviewTextColumn(reviewColumns);
     const customerNameExpr = buildUserNameExpression('u', userColumns, `CONCAT('User #', b.user_id)`);
     const cleanerUserNameExpr = buildUserNameExpression('c', userColumns, 'NULL');
+    const cleanerDisplayNameExpr = `COALESCE(NULLIF(cp.company_name, ''), ${cleanerUserNameExpr}, CONCAT('Cleaner #', b.cleaner_id))`;
     const reviewerNameExpr = buildUserNameExpression('u', userColumns, `CONCAT('Customer #', r.user_id)`);
     const reviewerAvatarExpr = userColumns.has('avatar') ? 'u.avatar' : 'NULL';
 
@@ -236,11 +237,8 @@ const getAdminDashboard = async (req, res, next) => {
           ${customerNameExpr} AS customer_name,
           ${userColumns.has('avatar') ? 'u.avatar' : 'NULL'} AS customer_avatar,
           u.email AS customer_email,
-          COALESCE(
-            ${cleanerUserNameExpr},
-            NULLIF(cp.company_name, ''),
-            CONCAT('Cleaner #', b.cleaner_id)
-          ) AS cleaner_name,
+          ${cleanerDisplayNameExpr} AS cleaner_display_name,
+          ${cleanerDisplayNameExpr} AS cleaner_name,
           COALESCE(cp.profile_image, ${userColumns.has('avatar') ? 'c.avatar' : 'NULL'}) AS cleaner_avatar,
           s.name AS service_name,
           s.description AS service_description
@@ -331,6 +329,7 @@ const getAdminDashboard = async (req, res, next) => {
           customer_name: row.customer_name || null,
           customer_avatar: row.customer_avatar || null,
           customer_email: row.customer_email || null,
+          cleaner_display_name: row.cleaner_display_name || null,
           cleaner_name: row.cleaner_name || null,
           cleaner_avatar: row.cleaner_avatar || null,
           service_name: row.service_name || null,

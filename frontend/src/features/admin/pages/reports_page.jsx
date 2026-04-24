@@ -10,6 +10,7 @@ import '../../../styles/admin/reports_page.css';
 import { useTranslation } from '../../../contexts/translation_context';
 import { useTheme } from '../../../contexts/theme_context';
 import { reportService } from '../services/reportService';
+import { getCleanerDisplayName } from '../utils/cleanerProfile';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -370,70 +371,73 @@ const ReportsPage = () => {
                   <td className="empty-row" colSpan={6}>{errorMessage}</td>
                 </tr>
               ) : recentTransactions.length > 0 ? (
-                recentTransactions.map((transaction) => (
-                  <tr key={`${transaction?.booking_id}-${transaction?.paid_at}`}>
-                    <td>#{toSafeNumber(transaction?.booking_id)}</td>
-                    <td>
-                      <div className="report-entity-cell">
-                        <span className="report-entity-avatar service">
-                          {transaction?.service_image ? (
-                            <img
-                              src={toAbsoluteImageUrl(transaction.service_image)}
-                              alt={transaction?.service_name || 'Cleaning Service'}
-                              className="report-entity-image"
-                            />
-                          ) : (
-                            getInitials(transaction?.service_name, 'SV')
-                          )}
-                        </span>
-                        <div className="report-primary-cell">
-                          <strong>{transaction?.service_name || 'Cleaning Service'}</strong>
-                          <span>{String(transaction?.payment_method || 'Unknown method').replace(/_/g, ' ')}</span>
+                recentTransactions.map((transaction) => {
+                  const cleanerName = getCleanerDisplayName(transaction, transaction?.cleaner_id ? 'Cleaner' : 'Cleaner pending');
+                  return (
+                    <tr key={`${transaction?.booking_id}-${transaction?.paid_at}`}>
+                      <td>#{toSafeNumber(transaction?.booking_id)}</td>
+                      <td>
+                        <div className="report-entity-cell">
+                          <span className="report-entity-avatar service">
+                            {transaction?.service_image ? (
+                              <img
+                                src={toAbsoluteImageUrl(transaction.service_image)}
+                                alt={transaction?.service_name || 'Cleaning Service'}
+                                className="report-entity-image"
+                              />
+                            ) : (
+                              getInitials(transaction?.service_name, 'SV')
+                            )}
+                          </span>
+                          <div className="report-primary-cell">
+                            <strong>{transaction?.service_name || 'Cleaning Service'}</strong>
+                            <span>{String(transaction?.payment_method || 'Unknown method').replace(/_/g, ' ')}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="report-entity-cell">
-                        <span className="report-entity-avatar">
-                          {transaction?.customer_avatar ? (
-                            <img
-                              src={toAbsoluteImageUrl(transaction.customer_avatar)}
-                              alt={transaction?.customer_name || 'Customer'}
-                              className="report-entity-image"
-                            />
-                          ) : (
-                            getInitials(transaction?.customer_name, 'CU')
-                          )}
-                        </span>
-                        <div className="report-primary-cell">
-                          <strong>{transaction?.customer_name || 'Customer'}</strong>
-                          <span>{transaction?.customer_email || 'No email provided'}</span>
+                      </td>
+                      <td>
+                        <div className="report-entity-cell">
+                          <span className="report-entity-avatar">
+                            {transaction?.customer_avatar ? (
+                              <img
+                                src={toAbsoluteImageUrl(transaction.customer_avatar)}
+                                alt={transaction?.customer_name || 'Customer'}
+                                className="report-entity-image"
+                              />
+                            ) : (
+                              getInitials(transaction?.customer_name, 'CU')
+                            )}
+                          </span>
+                          <div className="report-primary-cell">
+                            <strong>{transaction?.customer_name || 'Customer'}</strong>
+                            <span>{transaction?.customer_email || 'No email provided'}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="report-entity-cell">
-                        <span className="report-entity-avatar">
-                          {transaction?.cleaner_avatar ? (
-                            <img
-                              src={toAbsoluteImageUrl(transaction.cleaner_avatar)}
-                              alt={transaction?.cleaner_name || 'Cleaner pending'}
-                              className="report-entity-image"
-                            />
-                          ) : (
-                            getInitials(transaction?.cleaner_name, 'CL')
-                          )}
-                        </span>
-                        <div className="report-primary-cell">
-                          <strong>{transaction?.cleaner_name || 'Cleaner pending'}</strong>
-                          <span>{transaction?.cleaner_email || 'No email provided'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="report-amount-cell">{formatCurrency(transaction?.amount)}</td>
-                    <td>{formatDateTime(transaction?.paid_at)}</td>
-                  </tr>
-                ))
+                      </td>
+                      <td>
+                          <div className="report-entity-cell">
+                            <span className="report-entity-avatar">
+                              {transaction?.cleaner_avatar ? (
+                                <img
+                                  src={toAbsoluteImageUrl(transaction.cleaner_avatar)}
+                                  alt={cleanerName}
+                                  className="report-entity-image"
+                                />
+                              ) : (
+                                getInitials(cleanerName, 'CL')
+                              )}
+                            </span>
+                            <div className="report-primary-cell">
+                              <strong>{cleanerName}</strong>
+                              <span>{transaction?.cleaner_email || 'No email provided'}</span>
+                            </div>
+                          </div>
+                      </td>
+                      <td className="report-amount-cell">{formatCurrency(transaction?.amount)}</td>
+                      <td>{formatDateTime(transaction?.paid_at)}</td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td className="empty-row" colSpan={6}>No completed payments found for this range.</td>

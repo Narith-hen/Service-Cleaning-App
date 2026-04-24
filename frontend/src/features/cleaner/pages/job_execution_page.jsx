@@ -16,6 +16,7 @@ import '../../../styles/cleaner/my_jobs.scss';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import api from '../../../services/api';
 import { getCleanerScopedStorageKey } from '../utils/storageKeys';
+import { getCustomerDisplayName } from '../utils/customerProfile';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 
 const getConfirmedMyJobsStorageKey = () => getCleanerScopedStorageKey('cleaner_confirmed_my_jobs');
@@ -145,7 +146,7 @@ const JobExecutionPage = () => {
   const elapsedHours = Math.floor(elapsedSeconds / 3600);
   const elapsedMinutes = Math.floor((elapsedSeconds % 3600) / 60);
   const elapsedDisplaySeconds = elapsedSeconds % 60;
-  const customerName = bookingDetails?.customer_full_name || bookingDetails?.customer_name || currentJob.customer;
+  const customerName = getCustomerDisplayName({ ...currentJob, ...bookingDetails });
   const customerId = String(bookingDetails?.user_id || currentJob.customerId || '');
   const customerPhone = bookingDetails?.customer_phone || currentJob.customerPhone || '';
   const customerEmail = bookingDetails?.customer_email || currentJob.customerEmail || '';
@@ -362,7 +363,7 @@ const JobExecutionPage = () => {
             <span className="meta-icon"><UserOutlined /></span>
             <div>
               <small>CUSTOMER</small>
-              <strong>{currentJob.customer}</strong>
+              <strong>{customerName}</strong>
             </div>
           </div>
 

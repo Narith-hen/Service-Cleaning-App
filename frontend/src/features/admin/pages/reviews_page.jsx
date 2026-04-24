@@ -12,6 +12,7 @@ import { Modal, Select, notification } from 'antd';
 import '../../../styles/admin/reviews_page.css';
 import { reviewService } from '../services/reviewService';
 import { useTranslation } from '../../../contexts/translation_context';
+import { getCleanerDisplayName } from '../utils/cleanerProfile';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -87,7 +88,7 @@ const normalizeReviewRow = (review) => ({
   customerName: review?.reviewer_name || 'Customer',
   customerEmail: review?.reviewer_email || 'No email provided',
   customerAvatar: toAbsoluteImageUrl(review?.reviewer_avatar || ''),
-  cleanerName: review?.cleaner_name || 'Cleaner pending',
+  cleanerName: getCleanerDisplayName(review, review?.cleaner_id ? 'Cleaner' : 'Cleaner pending'),
   cleanerEmail: review?.cleaner_email || 'No email provided',
   cleanerAvatar: toAbsoluteImageUrl(review?.cleaner_avatar || ''),
   serviceName: review?.service_name || 'Cleaning Service',

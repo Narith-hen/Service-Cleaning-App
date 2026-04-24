@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import api from '../../../services/api';
 import {
     buildCleanerNotifications,
+    dispatchCleanerNotificationsUpdated,
     loadCleanerNotifications,
     saveCleanerNotifications
 } from '../utils/notificationSync';
@@ -71,6 +72,7 @@ export const useNotificationStore = create(
                     unreadCount: notifications.filter(n => !n.is_read && n.id !== notificationId).length
                 });
                 saveCleanerNotifications(nextNotifications);
+                dispatchCleanerNotificationsUpdated();
             },
 
             // Mark all as read
@@ -93,12 +95,26 @@ export const useNotificationStore = create(
                     unreadCount: 0
                 });
                 saveCleanerNotifications(nextNotifications);
+                dispatchCleanerNotificationsUpdated();
             },
 
             // Delete notification
-            deleteNotification: (notificationId) => {
+            deleteNotification: async (notificationId) => {
                 const { notifications } = get();
                 const notification = notifications.find(n => n.id === notificationId);
+                if (!notification) return false;
+
+                if (notification?.source === 'backend' && notification.backendId) {
+                    try {
+                        await api.delete(`/notifications/${notification.backendId}`);
+                    } catch (error) {
+                        set({
+                            error: error?.response?.data?.message || 'Failed to delete notification'
+                        });
+                        return false;
+                    }
+                }
+
                 const remaining = notifications.filter(n => n.id !== notificationId);
                 const persisted = notifications.map((entry) =>
                     entry.id === notificationId ? { ...entry, dismissed: true, is_read: true } : entry
@@ -111,12 +127,15 @@ export const useNotificationStore = create(
                         : Math.max(0, get().unreadCount - 1)
                 });
                 saveCleanerNotifications(persisted);
+                dispatchCleanerNotificationsUpdated();
+                return true;
             },
 
             // Clear all notifications
             clearAll: () => {
                 set({ notifications: [], unreadCount: 0 });
                 saveCleanerNotifications([]);
+                dispatchCleanerNotificationsUpdated();
             },
 
             // Reset error

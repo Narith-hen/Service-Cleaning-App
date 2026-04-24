@@ -19,6 +19,7 @@ import { useTranslation } from '../../../contexts/translation_context';
 import { bookingRows } from '../data/bookings_data';
 import { starterCleaners } from '../data/cleaners_data';
 import { adminService } from '../services/adminService';
+import { getCleanerDisplayName } from '../utils/cleanerProfile';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -53,7 +54,7 @@ const toSafeNumber = (value, fallback = 0) => {
 
 const mapTopCleaner = (cleaner) => ({
   id: String(cleaner?.id || cleaner?.cleaner_id || cleaner?.cleanerCode || cleaner?.cleaner_code || ''),
-  name: cleaner?.name || cleaner?.companyName || cleaner?.company_name || cleaner?.username || 'Cleaner',
+  name: getCleanerDisplayName(cleaner, 'Cleaner'),
   profileImage: toAbsoluteImageUrl(cleaner?.profileImage || cleaner?.profile_image || cleaner?.avatar || ''),
   totalJobs: toSafeNumber(cleaner?.totalJobs ?? cleaner?.total_jobs),
   rating: toSafeNumber(cleaner?.rating ?? cleaner?.avg_rating),
@@ -73,7 +74,7 @@ const mapRecentBooking = (booking) => ({
     booking?.service ||
     booking?.title ||
     'Cleaning Service',
-  cleaner: booking?.cleaner_name || booking?.cleaner || 'Unassigned',
+  cleaner: getCleanerDisplayName(booking, booking?.cleaner_id ? 'Cleaner' : 'Unassigned'),
   cleanerAvatar: toAbsoluteImageUrl(
     booking?.cleaner_avatar || booking?.cleanerAvatar || booking?.cleaner?.avatar || ''
   ),

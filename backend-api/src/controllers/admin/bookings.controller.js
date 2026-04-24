@@ -46,6 +46,7 @@ const getAllBookings = async (req, res, next) => {
     const userColumns = await getTableColumns(promiseDb, 'users');
     const customerNameExpr = buildUserNameExpression('u', userColumns, `CONCAT('User #', b.user_id)`);
     const cleanerUserNameExpr = buildUserNameExpression('c', userColumns, 'NULL');
+    const cleanerDisplayNameExpr = `COALESCE(NULLIF(cp.company_name, ''), ${cleanerUserNameExpr}, CONCAT('Cleaner #', b.cleaner_id))`;
 
     const whereClauses = [];
     const params = [];
@@ -72,7 +73,8 @@ const getAllBookings = async (req, res, next) => {
           ${customerNameExpr} AS user_name,
           ${userColumns.has('avatar') ? 'u.avatar' : 'NULL'} AS customer_avatar,
           u.email AS user_email,
-          COALESCE(${cleanerUserNameExpr}, NULLIF(cp.company_name, ''), CONCAT('Cleaner #', b.cleaner_id)) AS cleaner_name,
+          ${cleanerDisplayNameExpr} AS cleaner_display_name,
+          ${cleanerDisplayNameExpr} AS cleaner_name,
           COALESCE(NULLIF(cp.company_email, ''), ${userColumns.has('email') ? 'c.email' : 'NULL'}) AS cleaner_email,
           COALESCE(cp.profile_image, ${userColumns.has('avatar') ? 'c.avatar' : 'NULL'}) AS cleaner_avatar,
           s.name AS service_name,
@@ -130,6 +132,7 @@ const assignCleaner = async (req, res, next) => {
     const userColumns = await getTableColumns(promiseDb, 'users');
     const customerNameExpr = buildUserNameExpression('u', userColumns, `CONCAT('User #', b.user_id)`);
     const cleanerUserNameExpr = buildUserNameExpression('c', userColumns, 'NULL');
+    const cleanerDisplayNameExpr = `COALESCE(NULLIF(cp.company_name, ''), ${cleanerUserNameExpr}, CONCAT('Cleaner #', b.cleaner_id))`;
 
     if (!bookingId || !cleanerId) {
       return next(new AppError('Valid booking_id and cleaner_id are required', 400));
@@ -149,7 +152,8 @@ const assignCleaner = async (req, res, next) => {
         SELECT
           b.*,
           ${customerNameExpr} AS user_name,
-          COALESCE(${cleanerUserNameExpr}, NULLIF(cp.company_name, ''), CONCAT('Cleaner #', b.cleaner_id)) AS cleaner_name,
+          ${cleanerDisplayNameExpr} AS cleaner_display_name,
+          ${cleanerDisplayNameExpr} AS cleaner_name,
           s.name AS service_name
         FROM bookings b
         LEFT JOIN users u ON u.user_id = b.user_id

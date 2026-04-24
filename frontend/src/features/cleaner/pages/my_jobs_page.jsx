@@ -33,6 +33,7 @@ import customerAvatar3 from '../../../assets/narith.png';
 import CleanerMessagePanel from '../components/cleaner_message_panel';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import { getCleanerScopedStorageKey } from '../utils/storageKeys';
+import { getCustomerDisplayName } from '../utils/customerProfile';
 import api from '../../../services/api';
 import '../../../styles/cleaner/my_jobs.scss';
 
@@ -324,7 +325,7 @@ const mapApiJobToUiJob = (job) => {
       : '',
     timeRange: job?.booking_time || '',
     location: job?.user?.address || job?.address || 'Location pending',
-    customer: job?.user?.username || 'Customer',
+    customer: getCustomerDisplayName(job),
     customerId: String(job?.user_id || job?.user?.user_id || ''),
     customerPhone: job?.user?.phone_number || '',
     customerEmail: job?.user?.email || job?.customer_email || '',

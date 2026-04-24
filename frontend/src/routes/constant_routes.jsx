@@ -50,6 +50,7 @@ export const ROUTES = {
     CLEANERS: '/admin/cleaners',
     SERVICES: '/admin/services',
     BOOKINGS: '/admin/bookings',
+    NOTIFICATIONS: '/admin/notifications',
     REVIEWS: '/admin/reviews',
     PAYMENTS: '/admin/payments',
     REPORTS: '/admin/reports',

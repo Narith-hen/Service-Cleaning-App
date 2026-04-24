@@ -1,43 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   BellOutlined,
-  CheckOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import { useTheme } from "../../../contexts/theme_context";
 import { useAuth } from "../../../hooks/useAuth";
 import { useTranslation } from "../../../contexts/translation_context";
 import { useNotificationStore } from "../../../features/admin/stores/notification.store";
-import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from 'date-fns';
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../../styles/admin/header.css";
 
 const AdminHeader = () => {
   const { darkMode } = useTheme();
   const { user, logout } = useAuth();
   const { ta } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const {
-    notifications,
     unreadCount,
-    loading,
     fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
   } = useNotificationStore();
 
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const notificationRef = useRef(null);
   const profileRef = useRef(null);
-  const notificationButtonRef = useRef(null);
   const profileButtonRef = useRef(null);
 
   const fullName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || ta('Admin User');
@@ -54,15 +41,6 @@ const AdminHeader = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target) &&
-        notificationButtonRef.current &&
-        !notificationButtonRef.current.contains(event.target)
-      ) {
-        setIsNotificationOpen(false);
-      }
-
-      if (
         profileRef.current &&
         !profileRef.current.contains(event.target) &&
         profileButtonRef.current &&
@@ -76,27 +54,14 @@ const AdminHeader = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleNotificationClick = (notification) => {
-    if (!notification.is_read) {
-      markAsRead(notification.id);
-    }
-    if (notification.link) {
-      navigate(notification.link);
-    }
-    setIsNotificationOpen(false);
-  };
-
   const handleBellClick = () => {
-    setIsNotificationOpen(!isNotificationOpen);
     setIsProfileOpen(false);
-    if (!isNotificationOpen) {
-      fetchNotifications(true);
-    }
+    fetchNotifications(true);
+    navigate('/admin/notifications');
   };
 
   const handleProfileClick = () => {
     setIsProfileOpen(!isProfileOpen);
-    setIsNotificationOpen(false);
   };
 
   const handleLogout = async () => {
@@ -107,45 +72,12 @@ const AdminHeader = () => {
     setIsProfileOpen(false);
   };
 
-  const handleMarkAllAsRead = (e) => {
-    e.stopPropagation();
-    markAllAsRead();
-  };
-
-  const handleDeleteNotification = (e, id) => {
-    e.stopPropagation();
-    deleteNotification(id);
-  };
-
-  const getNotificationIcon = (type) => {
-    switch (type?.toLowerCase()) {
-      case 'success':
-        return <CheckCircleOutlined style={{ color: '#10b981' }} />;
-      case 'error':
-        return <CloseCircleOutlined style={{ color: '#ef4444' }} />;
-      case 'warning':
-        return <WarningOutlined style={{ color: '#f59e0b' }} />;
-      case 'info':
-      default:
-        return <InfoCircleOutlined style={{ color: '#3b82f6' }} />;
-    }
-  };
-
-  const formatTime = (timestamp) => {
-    try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-    } catch {
-      return '';
-    }
-  };
-
   return (
     <header className={`admin-header ${darkMode ? 'dark-mode' : ''}`}>
       <div className="header-controls">
         <div className="dropdown-wrapper">
           <button
-            ref={notificationButtonRef}
-            className={`header-icon-btn ${isNotificationOpen ? 'active' : ''}`}
+            className={`header-icon-btn ${location.pathname.startsWith('/admin/notifications') ? 'active' : ''}`}
             onClick={handleBellClick}
             title={ta('Notifications')}
           >
@@ -154,66 +86,6 @@ const AdminHeader = () => {
               <span className="badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
             )}
           </button>
-
-          {isNotificationOpen && (
-            <div className="dropdown-menu notifications-dropdown" ref={notificationRef}>
-              <div className="dropdown-header">
-                <h3>{ta('Notifications')}</h3>
-                {unreadCount > 0 && (
-                  <button className="mark-read-btn" onClick={handleMarkAllAsRead}>
-                    <CheckOutlined /> {ta('Mark all read')}
-                  </button>
-                )}
-              </div>
-
-              <div className="dropdown-list">
-                {loading ? (
-                  <div className="dropdown-empty">{ta('Loading...')}</div>
-                ) : notifications.length === 0 ? (
-                  <div className="dropdown-empty">
-                    <BellOutlined />
-                    <p>{ta('No notifications')}</p>
-                  </div>
-                ) : (
-                  notifications.slice(0, 5).map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`dropdown-item ${!notification.is_read ? 'unread' : ''}`}
-                      onClick={() => handleNotificationClick(notification)}
-                    >
-                      <div className="item-icon">{getNotificationIcon(notification.type)}</div>
-                      <div className="item-content">
-                        <div className="item-header">
-                          <span className="item-title">{notification.title}</span>
-                          <span className="item-time">{formatTime(notification.created_at)}</span>
-                        </div>
-                        <p className="item-preview">{notification.message}</p>
-                      </div>
-                      <button
-                        className="item-delete"
-                        onClick={(e) => handleDeleteNotification(e, notification.id)}
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {notifications.length > 0 && (
-                <div className="dropdown-footer">
-                  <button
-                    onClick={() => {
-                      navigate('/notifications');
-                      setIsNotificationOpen(false);
-                    }}
-                  >
-                    {ta('View all notifications')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <div className="dropdown-wrapper">

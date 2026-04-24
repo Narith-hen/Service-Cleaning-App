@@ -44,6 +44,7 @@ const getNotificationIcon = (type) => {
 const NotificationPage = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
+  const [deletingIds, setDeletingIds] = useState([]);
   const {
     notifications,
     unreadCount,
@@ -83,6 +84,21 @@ const NotificationPage = () => {
     }
     if (notification.link) {
       navigate(notification.link);
+    }
+  };
+
+  const handleDeleteNotification = async (notification) => {
+    if (!notification?.id) return;
+
+    const confirmed = window.confirm('Delete this notification?');
+    if (!confirmed) return;
+
+    const notificationId = notification.id;
+    setDeletingIds((prev) => (prev.includes(notificationId) ? prev : [...prev, notificationId]));
+    try {
+      await deleteNotification(notificationId);
+    } finally {
+      setDeletingIds((prev) => prev.filter((id) => id !== notificationId));
     }
   };
 
@@ -157,8 +173,11 @@ const NotificationPage = () => {
                   className="cleaner-notification-delete"
                   onClick={(event) => {
                     event.stopPropagation();
-                    deleteNotification(notification.id);
+                    handleDeleteNotification(notification);
                   }}
+                  aria-label={`Delete notification ${notification.title}`}
+                  title="Delete notification"
+                  disabled={deletingIds.includes(notification.id)}
                 >
                   <DeleteOutlined />
                 </button>

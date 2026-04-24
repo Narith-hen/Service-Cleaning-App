@@ -11,6 +11,7 @@ import { Line } from '@ant-design/charts';
 import '../../../styles/admin/analytics_page.css';
 import { useTranslation } from '../../../contexts/translation_context';
 import { reportService } from '../services/reportService';
+import { getCleanerDisplayName } from '../utils/cleanerProfile';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -283,32 +284,35 @@ const AnalyticsPage = () => {
             {loading ? (
               <div className="analytics-empty-state small">Loading cleaners...</div>
             ) : topCleaners.length > 0 ? (
-              topCleaners.map((cleaner) => (
-                <article key={cleaner?.cleaner_id} className="analytics-cleaner-item">
-                  <div className="analytics-cleaner-main">
-                    <span className="analytics-avatar">
-                      {cleaner?.cleaner_avatar ? (
-                        <img
-                          src={toAbsoluteImageUrl(cleaner.cleaner_avatar)}
-                          alt={cleaner?.cleaner_name || 'Cleaner'}
-                          className="analytics-avatar-image"
-                        />
-                      ) : (
-                        getInitials(cleaner?.cleaner_name)
-                      )}
-                    </span>
-                    <div>
-                      <strong>{cleaner?.cleaner_name || 'Cleaner'}</strong>
-                      <span>{cleaner?.cleaner_email || 'No email provided'}</span>
+              topCleaners.map((cleaner) => {
+                const cleanerName = getCleanerDisplayName(cleaner, 'Cleaner');
+                return (
+                  <article key={cleaner?.cleaner_id} className="analytics-cleaner-item">
+                    <div className="analytics-cleaner-main">
+                      <span className="analytics-avatar">
+                        {cleaner?.cleaner_avatar ? (
+                          <img
+                            src={toAbsoluteImageUrl(cleaner.cleaner_avatar)}
+                            alt={cleanerName}
+                            className="analytics-avatar-image"
+                          />
+                        ) : (
+                          getInitials(cleanerName)
+                        )}
+                      </span>
+                      <div>
+                        <strong>{cleanerName}</strong>
+                        <span>{cleaner?.cleaner_email || 'No email provided'}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="analytics-cleaner-stats">
-                    <span><CheckCircleOutlined /> {toSafeNumber(cleaner?.completed_jobs)} jobs</span>
-                    <span><StarOutlined /> {toSafeNumber(cleaner?.average_rating).toFixed(1)}</span>
-                    <span><ClockCircleOutlined /> {toSafeNumber(cleaner?.total_reviews)} reviews</span>
-                  </div>
-                </article>
-              ))
+                    <div className="analytics-cleaner-stats">
+                      <span><CheckCircleOutlined /> {toSafeNumber(cleaner?.completed_jobs)} jobs</span>
+                      <span><StarOutlined /> {toSafeNumber(cleaner?.average_rating).toFixed(1)}</span>
+                      <span><ClockCircleOutlined /> {toSafeNumber(cleaner?.total_reviews)} reviews</span>
+                    </div>
+                  </article>
+                );
+              })
             ) : (
               <div className="analytics-empty-state small">No cleaner performance data found.</div>
             )}

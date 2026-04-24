@@ -18,6 +18,7 @@ import {
   getRealtimeSocket
 } from '../../../services/socketService';
 import { getCleanerScopedStorageKey } from '../utils/storageKeys';
+import { getCustomerDisplayName } from '../utils/customerProfile';
 import '../../../styles/cleaner/my_jobs.scss';
 import '../../../styles/cleaner/messages.scss';
 
@@ -181,7 +182,7 @@ const normalizeThread = (job, index) => {
   monthYear: job?.monthYear || derivedDateParts.monthYear,
   timeRange: job?.timeRange || job?.booking_time || '09:00 AM - 12:00 PM',
   location: job?.location || job?.address || job?.customerAddress || 'Phnom Penh, Cambodia',
-  customer: job?.customer || job?.customer_name || job?.customer_username || job?.user?.username || 'Customer',
+  customer: getCustomerDisplayName(job),
   customerId: job?.customerId || job?.customer_id || '3',
   customerAvatar: normalizeAssetUrl(job?.customerAvatar || job?.customer_avatar || job?.user?.avatar || ''),
   customerPhone: job?.customerPhone || job?.customer_phone || job?.user?.phone_number || '',
@@ -232,7 +233,7 @@ const extractRealtimeMessage = (payload) => {
 
 const mergeThreadWithBooking = (thread, bookingData = {}) => {
   const negotiatedPriceValue = bookingData.negotiated_price ?? thread.negotiatedPrice ?? thread.negotiated_price ?? null;
-  const customerName = bookingData.customer_full_name || bookingData.customer_name || thread.customer;
+  const customerName = getCustomerDisplayName({ ...thread, ...bookingData });
   const dateValue = bookingData.booking_date ? new Date(bookingData.booking_date) : null;
   const formattedDay = dateValue && !Number.isNaN(dateValue.getTime())
     ? String(dateValue.getDate()).padStart(2, '0')
@@ -527,7 +528,11 @@ const [activeThreadId, setActiveThreadId] = useState(
             bookingId,
             sourceRequestId: bookingId,
             id: bookingId,
-            customer: message?.sender?.username || 'Customer'
+            customer: getCustomerDisplayName(
+              message?.sender && typeof message.sender === 'object'
+                ? message.sender
+                : { customer: message?.sender }
+            )
           }, 0),
           ...prev
         ]);

@@ -15,6 +15,7 @@ import AdminReports from "../features/admin/pages/reports_page";
 import AdminAnalytics from "../features/admin/pages/analytics_page";
 import AdminSettings from "../features/admin/pages/settings_page";
 import AdminProfile from "../features/admin/pages/profile_page";
+import AdminNotifications from "../features/admin/pages/notifications_page";
 
 export const adminRoutes = {
   path: '/admin',
@@ -79,6 +80,10 @@ export const adminRoutes = {
     {
       path: 'settings',
       element: <AdminSettings />
+    },
+    {
+      path: 'notifications',
+      element: <AdminNotifications />
     },
     {
       path: 'settings/general',

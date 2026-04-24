@@ -10,9 +10,11 @@ import {
   SyncOutlined,
 } from '@ant-design/icons';
 import { Modal, Select } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 import '../../../styles/admin/bookings_page.css';
 import { bookingService } from '../services/bookingService';
 import { useTranslation } from '../../../contexts/translation_context';
+import { getCleanerDisplayName } from '../utils/cleanerProfile';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const apiHost = rawApiBaseUrl.endsWith('/api') ? rawApiBaseUrl.slice(0, -4) : rawApiBaseUrl;
@@ -23,6 +25,11 @@ const BOOKING_REVIEW_RANGE_OPTIONS = [
   { value: 'month', label: 'Monthly' },
   { value: 'total', label: 'All' }
 ];
+
+const getInitialBookingSearch = (searchParams) => {
+  const bookingId = String(searchParams.get('bookingId') || '').trim();
+  return bookingId ? `#${bookingId}` : '';
+};
 
 const toAbsoluteImageUrl = (imageUrl) => {
   if (!imageUrl) return '';
@@ -213,7 +220,7 @@ const resolveDisplayStatus = (row) => {
 const mapBookingRow = (row) => {
   const bookingId = row?.booking_id ?? row?.id ?? null;
   const displayStatus = resolveDisplayStatus(row);
-  const cleanerName = row?.cleaner_display_name || row?.cleaner_name || row?.cleaner_username || '';
+  const cleanerName = getCleanerDisplayName(row, row?.cleaner_id ? 'Cleaner' : 'Unassigned');
   const bookingTimeSource = row?.booking_time || row?.start_time || row?.created_at;
   const bookingDateSource = row?.booking_date || row?.created_at;
 
@@ -364,10 +371,11 @@ const fetchAllBookings = async () => {
 
 const BookingsPage = () => {
   const { ta } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(() => getInitialBookingSearch(searchParams));
   const [statusFilter, setStatusFilter] = useState('All');
   const [serviceFilter, setServiceFilter] = useState('All');
   const [bookingReviewRange, setBookingReviewRange] = useState('total');
@@ -404,6 +412,14 @@ const BookingsPage = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const nextSearchText = getInitialBookingSearch(searchParams);
+    setPage(1);
+    setSearchText((currentValue) => (
+      currentValue === nextSearchText ? currentValue : nextSearchText
+    ));
+  }, [searchParams]);
 
   const serviceOptions = useMemo(() => {
     const services = Array.from(new Set(

@@ -15,6 +15,7 @@ import { deriveServiceTone, formatDateParts, toMoney } from '../../../utils/book
 import api from '../../../services/api';
 import { dispatchCleanerNotificationsUpdated } from '../utils/notificationSync';
 import { getCleanerScopedStorageKey } from '../utils/storageKeys';
+import { getCustomerDisplayName } from '../utils/customerProfile';
 
 const SOCKET_URL = import.meta.env.VITE_REALTIME_SERVER_URL || 'http://localhost:3000';
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -92,11 +93,7 @@ const mapBookingToRequest = (booking) => {
     service: booking.service_name || booking.service?.name || 'Cleaning',
     serviceImage: booking.service_image || booking.service?.image || '',
     serviceTone: deriveServiceTone(booking.service_name || booking.service?.name || ''),
-    customer:
-      booking.customer_name ||
-      [booking.first_name, booking.last_name].filter(Boolean).join(' ').trim() ||
-      booking.user?.username ||
-      'Customer',
+    customer: getCustomerDisplayName(booking),
     customerAvatar: normalizeAssetUrl(
       booking.customer_avatar ||
       booking.customerAvatar ||

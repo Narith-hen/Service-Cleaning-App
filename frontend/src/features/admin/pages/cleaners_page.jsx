@@ -13,6 +13,7 @@ import {
 import { Button, Form, Input, Modal, Select, notification } from 'antd';
 import { cleanerService } from '../services/cleanerService';
 import { useTranslation } from '../../../contexts/translation_context';
+import { getCleanerDisplayName } from '../utils/cleanerProfile';
 import '../../../styles/admin/cleaners_page.css';
 
 const statusFilters = ['All', 'Active', 'Suspended', 'Inactive'];
@@ -90,7 +91,7 @@ const mapCleanerFromApi = (item) => ({
     || `ROW-${item.phone || item.phone_number || 'UNKNOWN'}`
   ),
   cleanerCode: item.cleaner_code || item.cleanerCode || null,
-  name: item.name || item.companyName || item.company_name || 'Cleaner',
+  name: getCleanerDisplayName(item, 'Cleaner'),
   email: item.email || item.companyEmail || item.company_email || '',
   phone: item.phone || item.phone_number || '',
   profileImage: toAbsoluteImageUrl(item.profileImage || item.profile_image || item.avatar || ''),

@@ -200,6 +200,11 @@
   color: #ef4444;
 }
 
+.cleaner-notification-delete:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
 .cleaner-notification-empty {
   border: 1px dashed #dbe3ed;
   border-radius: 18px;
